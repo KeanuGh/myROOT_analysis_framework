@@ -1,0 +1,8 @@
+# don't push pycharm stuff
+.idea/
+
+# nor jupyter checkpoints
+.ipynb_checkpoints/
+
+# don't upload the data to gitlab you dingus
+data/*
