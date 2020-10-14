@@ -64,7 +64,7 @@ hWpT_hi = bh.Histogram(bh.axis.Regular(20, 0, 200),
 hWpT_hi.fill(WpT_hi['MC_WZneutrino_pt_born'].to_numpy(),
              WpT_hi['MC_WZmu_el_pt_born'].to_numpy(),
              weight=WpT_hi['weight'].to_numpy(),
-             threads=6
+             threads=6,
              )
 mesh2 = ax2.pcolormesh(*hWpT_hi.axes.edges.T, hWpT_hi.view().T, norm=LogNorm())
 fig.colorbar(mesh2, ax=ax2, fraction=0.046, pad=0.04)
