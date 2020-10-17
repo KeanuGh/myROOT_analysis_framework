@@ -1,4 +1,4 @@
-from src.utils.cutfile_parser import *
+from utils.cutfile_parser import *
 from collections import OrderedDict
 
 # test list of dicts
