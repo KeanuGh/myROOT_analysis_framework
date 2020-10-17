@@ -1,4 +1,5 @@
 from src.utils.cutfile_parser import *
+from collections import OrderedDict
 
 # test list of dicts
 test_cut_list_of_dicts = [
@@ -66,14 +67,21 @@ class TestExtractCutVariables(object):
             f"Expected: {expected_output}. Actual: {actual_output}"
 
 
+# TODO: MAKE SURE CUTS CUTGROUPS ARE APPLIED SEQUENTIALLY, OR IT DOESN'T MAKE SENSE
+
 class TestGenCutroups(object):
     def test_cutgroups(self):
-        expected_output = [
-            ['group1', 'cut_1'],
-            ['group2', 'cut_2', 'cut_3'],
-            ['group3', 'cut_4', 'cut_5'],
-        ]
+        # must be ordered dict because cuts need to be applied in the same order as in cutfile
+        expected_output = OrderedDict([
+            ('group1', ['cut_1']),
+            ('group2', ['cut_2', 'cut_3']),
+            ('group3', ['cut_4', 'cut_5']),
+        ])
         actual_output = gen_cutgroups(test_cut_list_of_dicts)
 
+        # check output
         assert expected_output == actual_output, \
             f"Expected: {expected_output}. Actual: {actual_output}"
+        # check type
+        assert type(expected_output) == actual_output, \
+            f"Cutgroup output is of unexpected type. Expected: {type(expected_output)}. Actual: {type(actual_output)}"

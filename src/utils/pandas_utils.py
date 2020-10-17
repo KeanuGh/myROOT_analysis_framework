@@ -1,12 +1,12 @@
 import uproot4 as uproot
 from utils.cutfile_parser import extract_cut_variables
 import pandas as pd
+from typing import List
 
 
-def build_analysis_dataframe(cut_list_dicts: list, vars_to_cut: list,
+def build_analysis_dataframe(cut_list_dicts: List[dict], vars_to_cut: List[str],
                              input_root_file: str, TTree_name: str, pkl_filepath: str) -> pd.DataFrame:
     """
-
     :param cut_list_dicts:
     :param vars_to_cut:
     :param input_root_file:

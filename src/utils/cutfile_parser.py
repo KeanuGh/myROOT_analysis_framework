@@ -2,6 +2,8 @@ import sys
 import os
 from filecmp import cmp
 from glob import glob
+from typing import Tuple, List, OrderedDict
+from collections import OrderedDict as ODict
 
 # file containing cuts
 cutfile = '../options/cutfile.txt'
@@ -45,7 +47,7 @@ def parse_cutlines(cutline: str) -> dict:
     return cut_dict
 
 
-def parse_cutfile(file: str) -> tuple:
+def parse_cutfile(file: str) -> Tuple[List[dict], List[str], dict]:
     """
     generates pythonic outputs from input cutfile
     Cutfile should be formatted with headers [CUTS], [OUTPUTS] and [OPTIONS]
@@ -113,7 +115,7 @@ def parse_cutfile(file: str) -> tuple:
     return cuts_list_of_dicts, output_vars_list, options_dict
 
 
-def extract_cut_variables(cut_dicts: list, vars_list: list) -> list:
+def extract_cut_variables(cut_dicts: List[dict], vars_list: List[str]) -> List[str]:
     """
     gets which variables are needed to extract from root file based on cutfile parser output
     uses outputs from parse_cutfile()
@@ -123,11 +125,10 @@ def extract_cut_variables(cut_dicts: list, vars_list: list) -> list:
 
 
 # create cut_groups
-def gen_cutgroups(cut_list_of_dicts: list) -> list:
+def gen_cutgroups(cut_list_of_dicts: List[dict]) -> OrderedDict[str, List[str]]:
     """
-    Creates list of lists, where each sublist contains the names of all cuts within a cutgroup
-    (cuts to be applied all at once)
-    First element of each group is the group name
+    Creates an ordererd dictionary, where the keys are strings containing the name of the group,
+    and the values are a list of all the cuts to be applied at once (the cutgroup)
     """
     cutgroups = []
 
@@ -135,15 +136,15 @@ def gen_cutgroups(cut_list_of_dicts: list) -> list:
         # if group exists, add cut name to group
         curr_groups = [group[0] for group in cutgroups]
         if cut_dict['group'] in curr_groups:
-            cutgroups[curr_groups.index(cut_dict['group'])].append(cut_dict['name'])
+            cutgroups[curr_groups.index(cut_dict['group'])][1].append(cut_dict['name'])
         # else make new group and add group label as first element
         else:
-            cutgroups.append([cut_dict['group'], cut_dict['name']])
+            cutgroups.append((cut_dict['group'], [cut_dict['name']]))
 
-    return cutgroups
+    return ODict(cutgroups)
 
 
-def compare_backup(current_cutfile: str, backup_filepath: str, pkl_filepath: str) -> tuple:
+def compare_backup(current_cutfile: str, backup_filepath: str, pkl_filepath: str) -> Tuple[bool, bool]:
     """
     compares current cutfile to backups and decides whether to rebuild dataframe and save new backup cutfile
     :param current_cutfile: current cutfile
@@ -153,6 +154,10 @@ def compare_backup(current_cutfile: str, backup_filepath: str, pkl_filepath: str
     """
 
     cut_list_dicts, vars_to_cut, options_dict = parse_cutfile(current_cutfile)
+
+    is_pkl_file = os.path.isfile(pkl_filepath)
+    if is_pkl_file:
+        print("Datafile found")
 
     # default behaviour: don't build if you don't need to (it's slow and painful)
     build_dataframe = False
@@ -186,15 +191,15 @@ def compare_backup(current_cutfile: str, backup_filepath: str, pkl_filepath: str
         # make backup
         make_backup = True
         # if pickle file already exists
-        if os.path.isfile(pkl_filepath):
+        if is_pkl_file:
+            yn = input(f"No cutfile backups found in {backup_filepath}. Continue with current pickle file? (y/n) ")
             while True:
-                yn = input(f"No cutfile backups found in {backup_filepath}. Continue with current pickle file? (y/n) ")
                 if yn.lower() in ('yes', 'y'):
                     print(f"Using dataframe {pkl_filepath}")
                     break
                 elif yn.lower() in ('no', 'n'):
+                    yn = input("Rebuild dataframe? (y/n) ")
                     while True:
-                        yn = input("Rebuild dataframe? (y/n) ")
                         if yn.lower() in ('no', 'n'):
                             sys.exit("Exiting")
                         elif yn.lower() in ('yes', 'y'):
@@ -202,14 +207,27 @@ def compare_backup(current_cutfile: str, backup_filepath: str, pkl_filepath: str
                             print("Rebuilding dataframe...")
                             break
                         else:
-                            print("yes or no")
+                            yn = input("yes or no ")
                     break
                 else:
-                    print("yes or no")
+                    yn = input("yes or no ")
         # if no backup or pickle file, rebuild
         else:
             build_dataframe = True
             print("Building dataframe...")
+
+    # check pickle file is actually there before trying to read from it
+    if not build_dataframe and not is_pkl_file:
+        yn = input(f"Pickle datafile not found at {pkl_filepath}. Rebuild? (y/n) ")
+        while True:
+            if yn.lower() in ('yes', 'y'):
+                build_dataframe = True
+                print("Rebuilding dataframe...")
+                break
+            elif yn.lower() in ('no', 'n'):
+                sys.exit("Exiting")
+            else:
+                yn = input("yes or no ")
 
     return build_dataframe, make_backup
 
