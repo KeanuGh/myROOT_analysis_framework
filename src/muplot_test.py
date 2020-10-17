@@ -22,7 +22,7 @@ def main():
                    {'axes.titlelocation': 'right'},
                    ])
 
-    filename = "../data/wminmunu_MC.root"
+    filename = '../data/wminmunu_MC.root'
 
     # extract data
     print(f"opening file {filename}...")
