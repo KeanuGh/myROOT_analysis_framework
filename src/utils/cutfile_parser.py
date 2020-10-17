@@ -3,15 +3,12 @@ import os
 from filecmp import cmp
 from glob import glob
 from typing import Tuple, List, OrderedDict
-from collections import OrderedDict as ODict
-
-# file containing cuts
-cutfile = '../options/cutfile.txt'
+import collections
 
 
-def parse_cutlines(cutline: str) -> dict:
+def parse_cutlines(cutline: str, sep='\t') -> dict:
     """
-    processes each line of cuts into dictionary of cut options.
+    processes each line of cuts into dictionary of cut options. with separator sep
     For a cut range add each less/more than as separate cuts and add into same group
 
     name: name of cut to be printed and used in plot labels
@@ -24,7 +21,7 @@ def parse_cutlines(cutline: str) -> dict:
            !!!SUFFIXES FOR CUTS IN GROUP MUST BE THE SAME!!!
     is_symmetric: either 'true' or false, take abs value of cut (eg for eta or phi)
     """
-    cutline_split = cutline.split('\t')
+    cutline_split = cutline.split(sep)
 
     # if badly formatted
     if len(cutline_split) != 7:
@@ -47,12 +44,12 @@ def parse_cutlines(cutline: str) -> dict:
     return cut_dict
 
 
-def parse_cutfile(file: str) -> Tuple[List[dict], List[str], dict]:
+def parse_cutfile(file: str, sep='\t') -> Tuple[List[dict], List[str], dict]:
     """
     generates pythonic outputs from input cutfile
     Cutfile should be formatted with headers [CUTS], [OUTPUTS] and [OPTIONS]
 
-    Each line under [CUTS] header contains the tab-separated values:
+    Each line under [CUTS] header contains the 'sep'-separated values (detault: tab):
     - name: name of cut to be printed and used in plot labels
     - cut_var: variable in root file to cut on
     - moreless: '<' or '>'
@@ -63,7 +60,7 @@ def parse_cutfile(file: str) -> Tuple[List[dict], List[str], dict]:
 
     Each line under [OUTPUTS] should be a variable in root file
 
-    Each line under [OPTIONS] header should be '[option]\t[value]'
+    Each line under [OPTIONS] header should be '[option]<sep>[value]'
     - sequential: (bool) whether each cut should be applied sequentially so a cutflow can be generated
     """
     # open file
@@ -78,7 +75,7 @@ def parse_cutfile(file: str) -> Tuple[List[dict], List[str], dict]:
                 continue
 
             # append cut dictionary
-            cuts_list_of_dicts.append(parse_cutlines(cutline))
+            cuts_list_of_dicts.append(parse_cutlines(cutline, sep=sep))
 
         # get output variables
         output_vars_list = []
@@ -97,17 +94,19 @@ def parse_cutfile(file: str) -> Tuple[List[dict], List[str], dict]:
             if option.startswith('#') or len(option) < 2:
                 continue
 
-            option = option.split('\t')
+            option = option.split(sep)
 
-            # options should be formatted as '[option]\t[value]'
+            # options should be formatted as '[option]>sep>[value]'
             if len(option) != 2:
-                raise Exception(f'Badly Formatted option {option}')
+                raise Exception(f'Badly Formatted option {sep.join(option)}')
 
             # convert booleans
             if option[1].lower() == 'true':
                 option[1] = True
             elif option[1].lower() == 'false':
                 option[1] = False
+            else:
+                raise ValueError(f"Option '{option[0]}' should be true or false (case insensitive)")
 
             # fill dict
             options_dict[option[0]] = option[1]
@@ -141,7 +140,7 @@ def gen_cutgroups(cut_list_of_dicts: List[dict]) -> OrderedDict[str, List[str]]:
         else:
             cutgroups.append((cut_dict['group'], [cut_dict['name']]))
 
-    return ODict(cutgroups)
+    return collections.OrderedDict(cutgroups)
 
 
 def compare_backup(current_cutfile: str, backup_filepath: str, pkl_filepath: str) -> Tuple[bool, bool]:
@@ -233,6 +232,7 @@ def compare_backup(current_cutfile: str, backup_filepath: str, pkl_filepath: str
 
 
 if __name__ == '__main__':
+    cutfile = '../options/cutfile.txt'
     cuts, outputs, options = parse_cutfile(cutfile)
     print(cuts)
     print(outputs)

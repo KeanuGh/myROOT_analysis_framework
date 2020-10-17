@@ -7,7 +7,7 @@ import mplhep as hep
 # styles
 plt.style.use([hep.style.ATLAS])
 
-filename = '../data/wminmunu_MC.root'
+filename = '../../data/wminmunu_MC.root'
 
 # extract
 truth = uproot.open(filename)["truth"]
@@ -75,5 +75,5 @@ ax2.set_ylabel("muon $p_{T}$ [GeV]")
 
 fig.set_figheight(15)
 fig.set_figwidth(15)
-plt.savefig("WCuts.png")
+plt.savefig("../../outputs/quickscript_outputs/WCuts.png")
 plt.show()
