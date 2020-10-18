@@ -1,6 +1,5 @@
 import pandas as pd
 from typing import Optional
-from utils.axis_labels import labels_xs
 import uproot4 as uproot
 from utils.cutfile_parser import extract_cut_variables
 from utils.axis_labels import labels_xs
@@ -8,28 +7,34 @@ from typing import List
 from warnings import warn
 
 
-def build_analysis_dataframe(cut_list_dicts: List[dict], vars_to_cut: List[str],
-                             input_root_file: str, TTree_name: str, pkl_filepath: str) -> pd.DataFrame:
+def build_analysis_dataframe(cut_list_dicts: List[dict], vars_to_cut: List[str], root_filepath: str, TTree_name: str,
+                             pkl_filepath: Optional[str] = None,
+                             extra_vars: Optional[List[str]] = None) -> pd.DataFrame:
     """
-    :param cut_list_dicts:
-    :param vars_to_cut:
-    :param input_root_file:
-    :param TTree_name:
-    :param pkl_filepath:
-    :return: output dataframe containing columns
+    Builds a dataframe from cutfile inputs
+    :param cut_list_dicts: list of cut dictionaries
+    :param vars_to_cut: list of strings of variables in file to cut on
+    :param root_filepath: path to input root file
+    :param TTree_name: name of TTree to extract ntuples from
+    :param pkl_filepath: path of pickle file to save dataframe. if None, does not save
+    :param extra_vars: list of any extra variables wanting to extract
+    :return: output dataframe containing columns corresponding to necessary variables
     """
     # create list of all necessary values extract
     vars_to_extract = extract_cut_variables(cut_list_dicts, vars_to_cut)
-    # strictly necessary variables
+    # strictly necessary variable(s)
     vars_to_extract.append('weight_mc')
+    # extras
+    if extra_vars:
+        vars_to_extract += extra_vars
 
     # extract pandas dataframe from root file with necessary variables
-    tree = uproot.open(input_root_file)[TTree_name]
+    tree = uproot.open(root_filepath)[TTree_name]
 
     # check vars exist in file
     unexpected_vars = [unexpected_var for unexpected_var in vars_to_extract if unexpected_var not in tree.keys()]
     if unexpected_vars:
-        raise ValueError(f"Variable not found in root file '{input_root_file}' {TTree_name} tree: {unexpected_vars}")
+        raise ValueError(f"Variable not found in root file '{root_filepath}' {TTree_name} tree: {unexpected_vars}")
 
     # check if vars are contained in label dictionary
     unexpected_vars = [unexpected_var for unexpected_var in vars_to_extract if unexpected_var not in labels_xs]
@@ -41,8 +46,9 @@ def build_analysis_dataframe(cut_list_dicts: List[dict], vars_to_cut: List[str],
     tree_df = tree.arrays(library='pd', filter_name=vars_to_extract)
 
     # print into pickle file for easier read/write
-    pd.to_pickle(tree_df, pkl_filepath)
-    print(f"Dataframe built and saved in {pkl_filepath}")
+    if pkl_filepath:
+        pd.to_pickle(tree_df, pkl_filepath)
+        print(f"Dataframe built and saved in {pkl_filepath}")
 
     return tree_df
 
@@ -55,7 +61,7 @@ def gen_weight_column(df: pd.DataFrame, weight_mc_col: str = 'weight_mc', scale:
     return df[weight_mc_col].map(lambda w: scale if w > 0 else -1 * scale)
 
 
-def rescale_to_GeV(df: pd.DataFrame, inplace: bool = False) -> Optional[pd.DataFrame]:
+def rescale_to_gev(df: pd.DataFrame, inplace: bool = False) -> Optional[pd.DataFrame]:
     """rescales to GeV because athena's default output is in MeV for some reason"""
     GeV_columns = [column for column in df.columns
                    if (column in labels_xs) and ('[GeV]' in labels_xs[column]['xlabel'])]
@@ -64,7 +70,7 @@ def rescale_to_GeV(df: pd.DataFrame, inplace: bool = False) -> Optional[pd.DataF
         return df
 
 
-def get_crosssection(df: pd.DataFrame, n_events = None, weight_mc_col: str = 'weight_mc'):
+def get_crosssection(df: pd.DataFrame, n_events=None, weight_mc_col: str = 'weight_mc'):
     """
     Calculates cross-section of data in dataframe
     :param df: input dataframe
@@ -91,3 +97,46 @@ def get_luminosity(df: pd.DataFrame, xs=None, weight_col: str = 'weight'):
         xs = get_crosssection(df)
 
     return df[weight_col].sum() / xs
+
+
+def apply_cuts(df: pd.DataFrame, cut_dicts: List[dict], cut_label: str = ' CUT', printout=True) -> None:
+    """
+    Creates boolean columns in dataframe corresponding to each cut
+    :param df: input dataframe
+    :param cut_dicts: list of dictionaries for each cut to apply
+    :param cut_label: label to be added to column names for boolean columns
+    :return: None, this function applies inplace.
+    :param printout: whether to print a summary of cuts
+    """
+    print("applying cuts...")
+    for cut in cut_dicts:
+        if not cut['is_symmetric']:
+            if cut['moreless'] == '>':
+                df[cut['name'] + cut_label] = df[cut['cut_var']] > cut['cut_val']
+            elif cut['moreless'] == '<':
+                df[cut['name'] + cut_label] = df[cut['cut_var']] < cut['cut_val']
+            else:
+                raise ValueError(f"Unexpected comparison operator: {cut['moreless']}. Currently accepts '>' or '<'.")
+
+        else:
+            # take absolute value instead
+            if cut['moreless'] == '>':
+                df[cut['name'] + cut_label] = df[cut['cut_var']].abs() > cut['cut_val']
+            elif cut['moreless'] == '<':
+                df[cut['name'] + cut_label] = df[cut['cut_var']].abs() < cut['cut_val']
+            else:
+                raise ValueError(f"Unexpected comparison operator: {cut['moreless']}. Currently accepts '>' or '<'.")
+
+    if printout:
+        # print cutflow output
+        name_len = max([len(cut['name']) for cut in cut_dicts])
+        var_len = max([len(cut['cut_var']) for cut in cut_dicts])
+        print("\n========== CUTS USED ============")
+        for cut in cut_dicts:
+            if not cut['is_symmetric']:
+                print(f"{cut['name']:<{name_len}}: "
+                      f"{cut['cut_var']:>{var_len}} {cut['moreless']} {cut['cut_val']}")
+            else:
+                print(f"{cut['name']:<{name_len}}: "
+                      f"{cut['cut_var']:>{var_len}} {cut['moreless']} |{cut['cut_val']}|")
+        print('\n')

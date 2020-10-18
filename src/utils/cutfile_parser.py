@@ -162,7 +162,7 @@ def compare_backup(current_cutfile: str, backup_filepath: str, pkl_filepath: str
     build_dataframe = False
 
     # check if backup exists
-    if os.listdir(backup_filepath) != 0:
+    if len(os.listdir(backup_filepath)) != 0:
         print("Cutfile backups found")
         latest_backup = max(glob(backup_filepath + '*'), key=os.path.getctime)
         print(f"Latest backup: {latest_backup}")
