@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import boost_histogram as bh
-from utils.plotting_tools import get_sumw2_1d
+from utils.plotting_utils import get_sumw2_1d
 
 # Make 1-d histogram with 5 logarithmic bins from 1e0 to 1e5
 h = bh.Histogram(

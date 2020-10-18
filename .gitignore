@@ -19,8 +19,11 @@ venv.bak/
 .ipynb_checkpoints/
 
 # don't upload the data to gitlab you dingus
-data/
-outputs/
+*.root
+*.pkl
 
 # or the .gitignore
 .gitignore
+
+# pytest
+.pytest_cache/
