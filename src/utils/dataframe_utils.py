@@ -7,9 +7,13 @@ from typing import List
 from warnings import warn
 
 
-def build_analysis_dataframe(cut_list_dicts: List[dict], vars_to_cut: List[str], root_filepath: str, TTree_name: str,
+def build_analysis_dataframe(cut_list_dicts: List[dict],
+                             vars_to_cut: List[str],
+                             root_filepath: str,
+                             TTree_name: str,
                              pkl_filepath: Optional[str] = None,
-                             extra_vars: Optional[List[str]] = None) -> pd.DataFrame:
+                             extra_vars: Optional[List[str]] = None
+                             ) -> pd.DataFrame:
     """
     Builds a dataframe from cutfile inputs
     :param cut_list_dicts: list of cut dictionaries
@@ -54,7 +58,10 @@ def build_analysis_dataframe(cut_list_dicts: List[dict], vars_to_cut: List[str],
 
 
 # TODO: WRAP THESE INTO A CUSTOM DATAFRAME CLASS?
-def gen_weight_column(df: pd.DataFrame, weight_mc_col: str = 'weight_mc', scale: float = 1) -> pd.Series:
+def gen_weight_column(df: pd.DataFrame,
+                      weight_mc_col: str = 'weight_mc',
+                      scale: float = 1
+                      ) -> pd.Series:
     """Returns series of weights based off weight_mc column"""
     if weight_mc_col not in df.columns:
         raise ValueError(f"'{weight_mc_col}' column does not exist.")
@@ -70,7 +77,7 @@ def rescale_to_gev(df: pd.DataFrame, inplace: bool = False) -> Optional[pd.DataF
         return df
 
 
-def get_crosssection(df: pd.DataFrame, n_events=None, weight_mc_col: str = 'weight_mc'):
+def get_cross_section(df: pd.DataFrame, n_events=None, weight_mc_col: str = 'weight_mc'):
     """
     Calculates cross-section of data in dataframe
     :param df: input dataframe
@@ -94,12 +101,16 @@ def get_luminosity(df: pd.DataFrame, xs=None, weight_col: str = 'weight'):
     if not xs:
         if 'weight_mc' not in df.columns:
             raise Exception("weight_mc column missing in dataframe")
-        xs = get_crosssection(df)
+        xs = get_cross_section(df)
 
     return df[weight_col].sum() / xs
 
 
-def apply_cuts(df: pd.DataFrame, cut_dicts: List[dict], cut_label: str = ' CUT', printout=True) -> None:
+def create_cut_columns(df: pd.DataFrame,
+                       cut_dicts: List[dict],
+                       cut_label: str = ' CUT',
+                       printout=True
+                       ) -> None:
     """
     Creates boolean columns in dataframe corresponding to each cut
     :param df: input dataframe

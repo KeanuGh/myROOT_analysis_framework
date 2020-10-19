@@ -4,6 +4,7 @@
 Muon $|#eta|$	MC_WZmu_el_eta_born	<	2.4	_etaCut	eta cut	true
 Muon $p_{T}$	MC_WZmu_el_pt_born	>	25	_pTCut	pT cut	false
 Neutrino $p_{T}$	MC_WZneutrino_pt_born	>	25	_pTCut	pT cut	false
+W $p_{T}$	MC_WZ_pt	>	150	_WpTCut	W pT	false
 
 [OUTPUTS]
 # variables to process

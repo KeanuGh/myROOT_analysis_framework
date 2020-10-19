@@ -143,7 +143,10 @@ def gen_cutgroups(cut_list_of_dicts: List[dict]) -> OrderedDict[str, List[str]]:
     return collections.OrderedDict(cutgroups)
 
 
-def compare_backup(current_cutfile: str, backup_filepath: str, pkl_filepath: str) -> Tuple[bool, bool]:
+def compare_backup(current_cutfile: str,
+                   backup_filepath: str,
+                   pkl_filepath: str
+                   ) -> Tuple[bool, bool]:
     """
     compares current cutfile to backups and decides whether to rebuild dataframe and save new backup cutfile
     :param current_cutfile: current cutfile
