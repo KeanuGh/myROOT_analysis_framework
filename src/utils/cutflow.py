@@ -5,7 +5,10 @@ from time import strftime
 
 
 class Cutflow:
-    def __init__(self, df: pd.DataFrame, cut_dicts: List[Dict], cut_label: str = ' CUT'):
+    def __init__(self, df: pd.DataFrame,
+                 cut_dicts: List[Dict],
+                 cut_label: str = ' CUT'
+                 ):
         # create copy of dataframe to apply cuts to
         cutflow_df = df.copy()
         del df
@@ -102,7 +105,7 @@ class Cutflow:
         fig.savefig(filepath)
         print(f"Cutflow histogram saved to {filepath}")
 
-    def print_latex_table(self, filepath: str):
+    def print_latex_table(self, filepath: str) -> None:
         """Prints a latex table containing cutflow to file in filepath with date and time"""
         latex_filepath = filepath + "cutflow_" + strftime("%Y-%m-%d_%H-%M-%S") + ".tex"
 
@@ -116,7 +119,7 @@ class Cutflow:
                 n_events = self.cutflow_n_events[i]
                 ratio = self.cutflow_ratio[i]
                 cum_ratio = self.cutflow_cum[i]
-
                 f.write(f"{cutname} & {n_events} & {ratio:.3f} & {cum_ratio:.3f} \\\\\n")
+            f.write("\\end{tabular}")
 
         print(f"Saved LaTeX cutflow table in {latex_filepath}")

@@ -7,7 +7,7 @@ import mplhep as hep
 # styles
 plt.style.use([hep.style.ATLAS])
 
-filename = '../../data/wminmunu_MC.root'
+filename = '../data/wminmunu_MC.root'
 
 # extract
 truth = uproot.open(filename)["truth"]
