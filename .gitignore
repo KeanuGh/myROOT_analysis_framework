@@ -1,7 +1,6 @@
 # python
-src/__pycache__/
-src/utils/__pycache__/__init__.cpython-38.pyc
-tests/utils/__pycache__/
+*/__pycache__/*
+
 # Environments
 .env
 .venv
