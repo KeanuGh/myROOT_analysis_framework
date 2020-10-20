@@ -27,19 +27,29 @@ def parse_cutlines(cutline: str, sep='\t') -> dict:
     if len(cutline_split) != 7:
         raise Exception(f"Check cutfile. Line {cutline} is badly formatted.")
 
+    name = cutline_split[0]
+    cut_var = cutline_split[1]
+    moreless = cutline_split[2]
+    cut_val = float(cutline_split[3])
+    suffix = cutline_split[4]
+    group = cutline_split[5]
+    is_symmetric = cutline_split[6].lower()
+
     # check values
-    if cutline_split[2] not in ('>', '<'):
+    if moreless not in ('>', '<'):
         raise ValueError(f"Unexpected comparison operator: {cutline_split[2]}. Currently accepts '>' or '<'.")
+    if is_symmetric not in ('true', 'false'):
+        raise ValueError(f"is_symmetric value must be true or false. Found: {is_symmetric}")
 
     # fill dictionary
     cut_dict = {
-        'name': cutline_split[0],
-        'cut_var': cutline_split[1],
-        'moreless': cutline_split[2],
-        'cut_val': float(cutline_split[3]),
-        'suffix': cutline_split[4],
-        'group': cutline_split[5],
-        'is_symmetric': True if cutline_split[6].lower() == 'true' else False,
+        'name': name,
+        'cut_var': cut_var,
+        'moreless': cut_var,
+        'cut_val': cut_val,
+        'suffix': suffix,
+        'group': group,
+        'is_symmetric': True if is_symmetric == 'true' else False,
     }
     return cut_dict
 

@@ -1,6 +1,9 @@
 import matplotlib.pyplot as plt
 import mplhep as hep
 import pandas as pd
+from shutil import copyfile
+import time
+import os
 
 # project imports
 from utils.cutflow import Cutflow
@@ -9,11 +12,6 @@ from utils.plotting_utils import plot_overlay_and_acceptance
 from utils.dataframe_utils import (build_analysis_dataframe, create_cut_columns,
                                    gen_weight_column, rescale_to_gev,
                                    get_cross_section, get_luminosity)
-
-# for file manipulation
-from shutil import copyfile
-import time
-import os
 
 
 class Analysis:
@@ -43,7 +41,10 @@ class Analysis:
     backup_cutfiles_dir = backup_dir + 'cutfiles/'  # cutfile backups
     latex_table_dir = out_dir + "LaTeX_cutflow_table/"  # where to print latex cutflow table
 
-    def __init__(self):
+    def __init__(self, lepton: str):
+        # set lepton_name
+        self.lepton_name = lepton
+
         # ============================
         # ======  READ CUTFILE =======
         # ============================
@@ -73,7 +74,6 @@ class Analysis:
         self.cutgroups = gen_cutgroups(self.cut_dicts)
 
         # map weights column
-        n_events_tot = len(self.tree_df.index)  # this will be useful later
         self.tree_df['weight'] = gen_weight_column(self.tree_df)
 
         # rescale MeV columns to GeV
@@ -90,10 +90,8 @@ class Analysis:
         # ===============================
         # ==== CALCULATING LUMI & XS ====
         # ===============================
-        self.cross_section = get_cross_section(self.tree_df,
-                                               n_events=n_events_tot)
-        self.lumi = get_luminosity(self.tree_df,
-                                   xs=self.cross_section)
+        self.cross_section = get_cross_section(self.tree_df)
+        self.lumi = get_luminosity(self.tree_df, xs=self.cross_section)
 
         # ===============================
         # ========== CUTFLOW ============
@@ -130,6 +128,7 @@ class Analysis:
                                         cut_label=self.cut_label,
                                         not_log=not_log,
                                         n_threads=self.n_threads,
+                                        lepton=self.lepton_name
                                         )
 
     def gen_cutflow_hist(self, ratio: bool = False, cummulative: bool = False):
@@ -155,7 +154,7 @@ class Analysis:
 
 
 if __name__ == '__main__':
-    my_analysis = Analysis()
+    my_analysis = Analysis('tau')
 
     # pipeline
     my_analysis.plot_with_cuts()

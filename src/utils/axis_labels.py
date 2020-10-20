@@ -97,51 +97,51 @@ labels_xs = {
         'ylabel': r'$\frac{d\sigma}{dp_{T}}$ [fb GeV$^{-1}$]',
     },
     'MC_WZmu_el_phi_born': {
-        'xlabel': r'Born muon \phi',
+        'xlabel': r'Born {lepton_name} \phi',
         'ylabel': r'$\frac{d\sigma}{d\phi}$ [fb]',
     },
     'MC_WZmu_el_phi_bare': {
-        'xlabel': r'bare muon \phi',
+        'xlabel': r'bare {lepton_name} \phi',
         'ylabel': r'$\frac{d\sigma}{d\phi}$ [fb]',
     },
     'MC_WZmu_el_phi_dres': {
-        'xlabel': r'dressed muon \phi',
+        'xlabel': r'dressed {lepton_name} \phi',
         'ylabel': r'$\frac{d\sigma}{d\phi}$ [fb]',
     },
     'MC_WZmu_el_eta_born': {
-        'xlabel': r'Born muon \eta',
+        'xlabel': r'Born {lepton_name} \eta',
         'ylabel': r'$\frac{d\sigma}{d\eta}$ [fb]',
     },
     'MC_WZmu_el_eta_bare': {
-        'xlabel': r'bare muon \eta',
+        'xlabel': r'bare {lepton_name} \eta',
         'ylabel': r'$\frac{d\sigma}{d\eta}$ [fb]',
     },
     'MC_WZmu_el_eta_dres': {
-        'xlabel': r'dressed muon \eta',
+        'xlabel': r'dressed {lepton_name} \eta',
         'ylabel': r'$\frac{d\sigma}{d\eta}$ [fb]',
     },
     'MC_WZmu_el_pt_born': {
-        'xlabel': r'Born muon $p_{T}$ [GeV]',
+        'xlabel': r'Born {lepton_name} $p_{T}$ [GeV]',
         'ylabel': r'$\frac{d\sigma}{dp_{T}}$ [fb GeV$^{-1}$]',
     },
     'MC_WZmu_el_pt_bare': {
-        'xlabel': r'bare muon $p_{T}$ [GeV]',
+        'xlabel': r'bare {lepton_name} $p_{T}$ [GeV]',
         'ylabel': r'$\frac{d\sigma}{dp_{T}}$ [fb GeV$^{-1}$]',
     },
     'MC_WZmu_el_pt_dres': {
-        'xlabel': r'dressed muon $p_{T}$ [GeV]',
+        'xlabel': r'dressed {lepton_name} $p_{T}$ [GeV]',
         'ylabel': r'$\frac{d\sigma}{dp_{T}}$ [fb GeV$^{-1}$]',
     },
     'MC_WZmu_el_m_born': {
-        'xlabel': r'Born muon mass [GeV]',
+        'xlabel': r'Born {lepton_name} mass [GeV]',
         'ylabel': r'$\frac{d\sigma}{dm}$ [fb GeV$^{-1}$]',
     },
     'MC_WZmu_el_m_bare': {
-        'xlabel': r'bare muon mass [GeV]',
+        'xlabel': r'bare {lepton_name} mass [GeV]',
         'ylabel': r'$\frac{d\sigma}{dm}$ [fb GeV$^{-1}$]',
     },
     'MC_WZmu_el_m_dres': {
-        'xlabel': r'dressed muon mass [GeV]',
+        'xlabel': r'dressed {lepton_name} mass [GeV]',
         'ylabel': r'$\frac{d\sigma}{dm}$ [fb GeV$^{-1}$]',
     },
     'MC_WZ_pt': {
