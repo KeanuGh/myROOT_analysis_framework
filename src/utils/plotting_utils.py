@@ -52,6 +52,7 @@ def plot_overlay_and_acceptance(var_name: str,
                                 lumi,
                                 dir_path: str,
                                 cut_label: str,
+                                lepton: str,
                                 not_log: Optional[List[str]] = None,
                                 plot_width=10,
                                 plot_height=10,
@@ -127,7 +128,7 @@ def plot_overlay_and_acceptance(var_name: str,
         fig_ax.set_xlim(*binrange)
     else:
         fig_ax.set_xlim(*eta_binrange)
-    fig_ax.set_xlabel(xlabel)
+    fig_ax.set_xlabel(xlabel.format(lepton=lepton))
     fig_ax.set_ylabel(ylabel)
     fig_ax.legend()
     hep.box_aspect(fig_ax)  # makes just the main figure a square (& too small)
@@ -137,7 +138,7 @@ def plot_overlay_and_acceptance(var_name: str,
         accept_ax.set_xlim(*binrange)
     else:
         accept_ax.set_xlim(*eta_binrange)
-    accept_ax.set_xlabel(xlabel)
+    accept_ax.set_xlabel(xlabel.format(lepton=lepton))
     accept_ax.set_ylabel("Acceptance")
     accept_ax.legend()
     hep.box_aspect(accept_ax)

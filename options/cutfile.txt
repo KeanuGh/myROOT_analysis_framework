@@ -1,7 +1,7 @@
 [CUTS]
 # Name	Variable	</>	Cut (in GeV if applicable)	suffix	Group Symmetric
 # !!REMEMBER DEFAULT ANALYSISTOP OUTPUT IS IN MeV NOT GeV!!
-Muon $|#eta|$	MC_WZmu_el_eta_born	<	2.4	_etaCut	eta cut	true
+Muon $|\eta|$	MC_WZmu_el_eta_born	<	2.4	_etaCut	eta cut	true
 Muon $p_{T}$	MC_WZmu_el_pt_born	>	25	_pTCut	pT cut	false
 Neutrino $p_{T}$	MC_WZneutrino_pt_born	>	25	_pTCut	pT cut	false
 W $p_{T}$	MC_WZ_pt	>	150	_WpTCut	W pT	false
