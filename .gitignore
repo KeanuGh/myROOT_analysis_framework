@@ -26,3 +26,6 @@ venv.bak/
 
 # pytest
 .pytest_cache/
+
+# testing a run script. will push later once I figure it out
+run/

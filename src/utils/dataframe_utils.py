@@ -1,29 +1,31 @@
 import pandas as pd
 from typing import Optional
-import uproot4 as uproot
+import uproot
 from utils.cutfile_parser import extract_cut_variables
 from utils.axis_labels import labels_xs
 from typing import List
 from warnings import warn
 
 
+# TODO: write custom dataframe class that can be either pandas or dask
 def build_analysis_dataframe(cut_list_dicts: List[dict],
                              vars_to_cut: List[str],
                              root_filepath: str,
-                             TTree_name: str,
+                             TTree: str,
                              pkl_filepath: Optional[str] = None,
                              extra_vars: Optional[List[str]] = None
                              ) -> pd.DataFrame:
     """
-    Builds a dataframe from cutfile inputs
+    Builds a dataframe from _cutfile inputs
     :param cut_list_dicts: list of cut dictionaries
     :param vars_to_cut: list of strings of variables in file to cut on
     :param root_filepath: path to input root file
-    :param TTree_name: name of TTree to extract ntuples from
+    :param TTree: name of TTree to extract ntuples from
     :param pkl_filepath: path of pickle file to save dataframe. if None, does not save
     :param extra_vars: list of any extra variables wanting to extract
     :return: output dataframe containing columns corresponding to necessary variables
     """
+    print("Building Dataframe...")
     # create list of all necessary values extract
     vars_to_extract = extract_cut_variables(cut_list_dicts, vars_to_cut)
     # strictly necessary variable(s)
@@ -33,21 +35,21 @@ def build_analysis_dataframe(cut_list_dicts: List[dict],
         vars_to_extract += extra_vars
 
     # extract pandas dataframe from root file with necessary variables
-    tree = uproot.open(root_filepath)[TTree_name]
-
-    # check vars exist in file
-    unexpected_vars = [unexpected_var for unexpected_var in vars_to_extract if unexpected_var not in tree.keys()]
-    if unexpected_vars:
-        raise ValueError(f"Variable not found in root file '{root_filepath}' {TTree_name} tree: {unexpected_vars}")
-
-    # check if vars are contained in label dictionary
-    unexpected_vars = [unexpected_var for unexpected_var in vars_to_extract if unexpected_var not in labels_xs]
-    if unexpected_vars:
-        warn(f"Warning: variable(s) {unexpected_vars} not contained in labels dictionary. "
-             f"Some undexpected behaviour may occur")
+    tree_gen = uproot.pandas.iterate(root_filepath, treepath='truth', branches=vars_to_extract)
 
     # extract variables from tree
-    tree_df = tree.arrays(library='pd', filter_name=vars_to_extract)
+    tree_df = pd.concat([data for data in tree_gen])
+
+    # check vars exist in file
+    if unexpected_vars := [unexpected_var for unexpected_var in vars_to_extract
+                           if unexpected_var not in tree_df.columns]:
+        raise ValueError(f"Variable(s) not found in root file '{root_filepath}' {TTree} tree: {unexpected_vars}")
+
+    # check if vars are contained in label dictionary
+    if unexpected_vars := [unexpected_var for unexpected_var in vars_to_extract
+                           if unexpected_var not in labels_xs]:
+        warn(f"Warning: variable(s) {unexpected_vars} not contained in labels dictionary. "
+             f"Some unexpected behaviour may occur")
 
     # print into pickle file for easier read/write
     if pkl_filepath:

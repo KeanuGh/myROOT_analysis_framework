@@ -71,7 +71,7 @@ class TestExtractCutVariables(object):
 
 class TestGenCutroups(object):
     def test_cutgroups(self):
-        # must be ordered dict because cuts need to be applied in the same order as in cutfile
+        # must be ordered dict because cuts need to be applied in the same order as in _cutfile
         expected_output = OrderedDict([
             ('group1', ['cut_1']),
             ('group2', ['cut_2', 'cut_3']),
