@@ -10,7 +10,7 @@ Neutrino $p_{T}$	MC_WZneutrino_pt_born	>	25	_pTCut	pT cut	false
 MC_WZ_dilep_m_born
 MC_WZ_dilep_m_bare
 MC_WZ_dilep_m_dres
-MC_WZmu_el_eta_born
+MC_WZ_pt
 
 [OPTIONS]
 # case-insensitive

@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import mplhep as hep
 import pandas as pd
+from typing import Optional, List
 from shutil import copyfile
 import time
 import os
@@ -27,32 +28,32 @@ class Analysis:
                    ])
 
     # options
-    TTree_name = 'truth'  # name of TTree to extract from root file
+    TTree = 'truth'  # name of TTree to extract from root file
     cut_label = ' CUT'  # label to use for boolean cut columns in dataframe
 
     # filepaths
-    input_root_file = '../../data/wminmunu_MC.root'
-    cutfile = '../../options/cutfile.txt'
     out_dir = '../../outputs/'  # where outputs go
     out_plots_dir = out_dir + 'plots/'  # where plots go
-    pkl_df_filepath = out_dir + TTree_name + '_df.pkl'  # pickle file containing extracted data
+    pkl_df_filepath = out_dir + 'data/' + TTree + '_df.pkl'  # pickle file containing extracted data
     # pkl_hist_filepath = out_dir + "histograms.pkl"  # pickle file to place histograms into
     backup_dir = '../../analysis_save_state/'  # where backups go
-    backup_cutfiles_dir = backup_dir + 'cutfiles/'  # cutfile backups
+    backup_cutfiles_dir = backup_dir + 'cutfiles/'  # _cutfile backups
     latex_table_dir = out_dir + "LaTeX_cutflow_table/"  # where to print latex cutflow table
 
-    def __init__(self, lepton: str):
-        # set lepton_name
-        self.lepton_name = lepton
+    def __init__(self, root_path: str, cutfile: str, lepton: str,
+                 force_rebuild: bool = False):
+        # set
+        self._lepton_name = lepton
+        self._cutfile = cutfile
 
         # ============================
         # ======  READ CUTFILE =======
         # ============================
-        # parse cutfile
-        self.cut_dicts, self.vars_to_cut, self.options = parse_cutfile(self.cutfile)
+        # parse _cutfile
+        self.cut_dicts, self.vars_to_cut, self.options = parse_cutfile(self._cutfile)
 
-        # check if cutfile backups exist
-        self._build_dataframe, self._make_backup = compare_backup(self.cutfile,
+        # check if _cutfile backups exist
+        self._build_dataframe, self._make_backup = compare_backup(self._cutfile,
                                                                   self.backup_cutfiles_dir,
                                                                   self.pkl_df_filepath)
 
@@ -60,11 +61,11 @@ class Analysis:
         # ==== EXTRACT & CLEAN DATA =====
         # ===============================
         # TODO: py-TChaining (maybe use pyROOT to actually TChain?) or awkward-arrays
-        if self._build_dataframe:
+        if self._build_dataframe or force_rebuild:
             self.tree_df = build_analysis_dataframe(self.cut_dicts,
                                                     self.vars_to_cut,
-                                                    self.input_root_file,
-                                                    self.TTree_name,
+                                                    root_path,
+                                                    self.TTree,
                                                     pkl_filepath=self.pkl_df_filepath
                                                     )
         else:
@@ -102,22 +103,33 @@ class Analysis:
         if self._make_backup or len(os.listdir(self.latex_table_dir)) == 0:
             self.Cutflow.print_latex_table(self.latex_table_dir)
 
-        # if new cutfile, save backup
+        # if new _cutfile, save backup
         if self._make_backup:
             cutfile_backup_filepath = self.backup_cutfiles_dir + "cutfile_" + time.strftime("%Y-%m-%d_%H-%M-%S")
-            copyfile(self.cutfile, cutfile_backup_filepath)
-            print(f"Backup cutfile saved in {cutfile_backup_filepath}")
+            copyfile(self._cutfile, cutfile_backup_filepath)
+            print(f"Backup _cutfile saved in {cutfile_backup_filepath}")
 
     # ===============================
     # =========== PLOTS =============
     # ===============================
-    def plot_with_cuts(self):
+    def plot_with_cuts(self, scaling: Optional[str] = None, not_log_add: Optional[List[str]] = None):
+        """
+        Plots each variable to cut from _cutfile with each cutgroup applied
+        :param scaling: either 'xs':     cross section scaling,
+                               'widths': divided by bin widths,
+                               None:     No scaling
+                        y-axis labels set accordingly
+        :param not_log_add: Any extra variables that shouldn't be binned in log(x).
+                            Currently defaults only '_eta_' and '_phi_'
+        """
         # any of the substrings in this list shouldn't be binned logarithmically
         # (may need to double check this as it can cause problems if the substrings appear elsewhere)
         not_log = [
             '_phi_',
             '_eta_',
         ]
+        if not_log_add:
+            not_log += not_log_add
 
         for var_to_plot in self.vars_to_cut:
             plot_overlay_and_acceptance(var_to_plot,
@@ -128,7 +140,8 @@ class Analysis:
                                         cut_label=self.cut_label,
                                         not_log=not_log,
                                         n_threads=self.n_threads,
-                                        lepton=self.lepton_name
+                                        lepton=self._lepton_name,
+                                        scaling=scaling,
                                         )
 
     def gen_cutflow_hist(self, ratio: bool = False, cummulative: bool = False):
@@ -154,10 +167,14 @@ class Analysis:
 
 
 if __name__ == '__main__':
-    my_analysis = Analysis('tau')
+    my_analysis = Analysis(root_path='../../data/mc16d_wmintaunu/*',
+                           cutfile='../../options/cutfile.txt',
+                           lepton='tau',
+                           force_rebuild=False
+                           )
 
     # pipeline
-    my_analysis.plot_with_cuts()
+    my_analysis.plot_with_cuts(scaling='xs')
     my_analysis.gen_cutflow_hist(ratio=True, cummulative=True)
     my_analysis.cutflow_printout()
     my_analysis.kinematics_printouts()

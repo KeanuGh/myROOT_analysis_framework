@@ -4,6 +4,7 @@ from filecmp import cmp
 from glob import glob
 from typing import Tuple, List, OrderedDict
 import collections
+from distutils.util import strtobool
 
 
 def parse_cutlines(cutline: str, sep='\t') -> dict:
@@ -25,7 +26,7 @@ def parse_cutlines(cutline: str, sep='\t') -> dict:
 
     # if badly formatted
     if len(cutline_split) != 7:
-        raise Exception(f"Check cutfile. Line {cutline} is badly formatted.")
+        raise Exception(f"Check _cutfile. Line {cutline} is badly formatted.")
 
     name = cutline_split[0]
     cut_var = cutline_split[1]
@@ -33,30 +34,28 @@ def parse_cutlines(cutline: str, sep='\t') -> dict:
     cut_val = float(cutline_split[3])
     suffix = cutline_split[4]
     group = cutline_split[5]
-    is_symmetric = cutline_split[6].lower()
+    is_symmetric = bool(strtobool(cutline_split[6].lower()))  # converts string to boolean
 
     # check values
     if moreless not in ('>', '<'):
         raise ValueError(f"Unexpected comparison operator: {cutline_split[2]}. Currently accepts '>' or '<'.")
-    if is_symmetric not in ('true', 'false'):
-        raise ValueError(f"is_symmetric value must be true or false. Found: {is_symmetric}")
 
     # fill dictionary
     cut_dict = {
         'name': name,
         'cut_var': cut_var,
-        'moreless': cut_var,
+        'moreless': moreless,
         'cut_val': cut_val,
         'suffix': suffix,
         'group': group,
-        'is_symmetric': True if is_symmetric == 'true' else False,
+        'is_symmetric': is_symmetric,
     }
     return cut_dict
 
 
 def parse_cutfile(file: str, sep='\t') -> Tuple[List[dict], List[str], dict]:
     """
-    generates pythonic outputs from input cutfile
+    generates pythonic outputs from input _cutfile
     Cutfile should be formatted with headers [CUTS], [OUTPUTS] and [OPTIONS]
 
     Each line under [CUTS] header contains the 'sep'-separated values (detault: tab):
@@ -110,23 +109,15 @@ def parse_cutfile(file: str, sep='\t') -> Tuple[List[dict], List[str], dict]:
             if len(option) != 2:
                 raise Exception(f'Badly Formatted option {sep.join(option)}')
 
-            # convert booleans
-            if option[1].lower() == 'true':
-                option[1] = True
-            elif option[1].lower() == 'false':
-                option[1] = False
-            else:
-                raise ValueError(f"Option '{option[0]}' should be true or false (case insensitive)")
-
             # fill dict
-            options_dict[option[0]] = option[1]
+            options_dict[option[0]] = bool(strtobool(option[1].lower()))  # converts string to boolean
 
     return cuts_list_of_dicts, output_vars_list, options_dict
 
 
 def extract_cut_variables(cut_dicts: List[dict], vars_list: List[str]) -> List[str]:
     """
-    gets which variables are needed to extract from root file based on cutfile parser output
+    gets which variables are needed to extract from root file based on _cutfile parser output
     uses outputs from parse_cutfile()
     """
     extract_vars = [cut_dict['cut_var'] for cut_dict in cut_dicts]
@@ -158,11 +149,11 @@ def compare_backup(current_cutfile: str,
                    pkl_filepath: str
                    ) -> Tuple[bool, bool]:
     """
-    compares current cutfile to backups and decides whether to rebuild dataframe and save new backup cutfile
-    :param current_cutfile: current cutfile
+    compares current _cutfile to backups and decides whether to rebuild dataframe and save new backup _cutfile
+    :param current_cutfile: current _cutfile
     :param backup_filepath: path to dir of backups
     :param pkl_filepath: pickle file containing data in pandas dataframe
-    :return: tuple of bools: (whether to rebuild dataframe, whether to save cutfile backup)
+    :return: tuple of bools: (whether to rebuild dataframe, whether to save _cutfile backup)
     """
 
     cut_list_dicts, vars_to_cut, options_dict = parse_cutfile(current_cutfile)
@@ -193,7 +184,7 @@ def compare_backup(current_cutfile: str,
             current_variables = extract_cut_variables(cut_list_dicts, vars_to_cut)
             backup_variables = extract_cut_variables(BACKUP_cutfile_dicts, BACKUP_cutfile_outputs)
 
-            # if cutfile contains different variables, extract necessary variables from root file and put into pickle
+            # if _cutfile contains different variables, extract necessary variables from root file and put into pickle
             # file for quicker read/write in pandas
             if not set(current_variables) == set(backup_variables):
                 build_dataframe = True
@@ -204,7 +195,7 @@ def compare_backup(current_cutfile: str,
         make_backup = True
         # if pickle file already exists
         if is_pkl_file:
-            yn = input(f"No cutfile backups found in {backup_filepath}. Continue with current pickle file? (y/n) ")
+            yn = input(f"No _cutfile backups found in {backup_filepath}. Continue with current pickle file? (y/n) ")
             while True:
                 if yn.lower() in ('yes', 'y'):
                     print(f"Using dataframe {pkl_filepath}")
@@ -216,7 +207,6 @@ def compare_backup(current_cutfile: str,
                             sys.exit("Exiting")
                         elif yn.lower() in ('yes', 'y'):
                             build_dataframe = True
-                            print("Rebuilding dataframe...")
                             break
                         else:
                             yn = input("yes or no ")
@@ -226,7 +216,6 @@ def compare_backup(current_cutfile: str,
         # if no backup or pickle file, rebuild
         else:
             build_dataframe = True
-            print("Building dataframe...")
 
     # check pickle file is actually there before trying to read from it
     if not build_dataframe and not is_pkl_file:
@@ -234,7 +223,6 @@ def compare_backup(current_cutfile: str,
         while True:
             if yn.lower() in ('yes', 'y'):
                 build_dataframe = True
-                print("Rebuilding dataframe...")
                 break
             elif yn.lower() in ('no', 'n'):
                 sys.exit("Exiting")
@@ -245,7 +233,7 @@ def compare_backup(current_cutfile: str,
 
 
 if __name__ == '__main__':
-    cutfile = '../options/cutfile.txt'
+    cutfile = '../options/_cutfile.txt'
     cuts, outputs, options = parse_cutfile(cutfile)
     print(cuts)
     print(outputs)

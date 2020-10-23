@@ -1,5 +1,10 @@
 # labels for cross-sections
 labels_xs = {
+    # this first one is so it doesn't throw up a warning when building the dataframe. Don't actually plot this
+    'weight_mc': {
+        'xlabel': r'weight_mc',
+        'ylabel': r'Entries',
+    },
     'PDFinfo_X1': {
         'xlabel': r'x',
         'ylabel': r'$\frac{d\sigma}{dx}$ [fb]',
@@ -97,51 +102,51 @@ labels_xs = {
         'ylabel': r'$\frac{d\sigma}{dp_{T}}$ [fb GeV$^{-1}$]',
     },
     'MC_WZmu_el_phi_born': {
-        'xlabel': r'Born {lepton_name} \phi',
+        'xlabel': r'Born %s \phi',
         'ylabel': r'$\frac{d\sigma}{d\phi}$ [fb]',
     },
     'MC_WZmu_el_phi_bare': {
-        'xlabel': r'bare {lepton_name} \phi',
+        'xlabel': r'bare %s \phi',
         'ylabel': r'$\frac{d\sigma}{d\phi}$ [fb]',
     },
     'MC_WZmu_el_phi_dres': {
-        'xlabel': r'dressed {lepton_name} \phi',
+        'xlabel': r'dressed %s \phi',
         'ylabel': r'$\frac{d\sigma}{d\phi}$ [fb]',
     },
     'MC_WZmu_el_eta_born': {
-        'xlabel': r'Born {lepton_name} \eta',
+        'xlabel': r'Born %s \eta',
         'ylabel': r'$\frac{d\sigma}{d\eta}$ [fb]',
     },
     'MC_WZmu_el_eta_bare': {
-        'xlabel': r'bare {lepton_name} \eta',
+        'xlabel': r'bare %s \eta',
         'ylabel': r'$\frac{d\sigma}{d\eta}$ [fb]',
     },
     'MC_WZmu_el_eta_dres': {
-        'xlabel': r'dressed {lepton_name} \eta',
+        'xlabel': r'dressed %s \eta',
         'ylabel': r'$\frac{d\sigma}{d\eta}$ [fb]',
     },
     'MC_WZmu_el_pt_born': {
-        'xlabel': r'Born {lepton_name} $p_{T}$ [GeV]',
+        'xlabel': r'Born %s $p_{T}$ [GeV]',
         'ylabel': r'$\frac{d\sigma}{dp_{T}}$ [fb GeV$^{-1}$]',
     },
     'MC_WZmu_el_pt_bare': {
-        'xlabel': r'bare {lepton_name} $p_{T}$ [GeV]',
+        'xlabel': r'bare %s $p_{T}$ [GeV]',
         'ylabel': r'$\frac{d\sigma}{dp_{T}}$ [fb GeV$^{-1}$]',
     },
     'MC_WZmu_el_pt_dres': {
-        'xlabel': r'dressed {lepton_name} $p_{T}$ [GeV]',
+        'xlabel': r'dressed %s $p_{T}$ [GeV]',
         'ylabel': r'$\frac{d\sigma}{dp_{T}}$ [fb GeV$^{-1}$]',
     },
     'MC_WZmu_el_m_born': {
-        'xlabel': r'Born {lepton_name} mass [GeV]',
+        'xlabel': r'Born %s mass [GeV]',
         'ylabel': r'$\frac{d\sigma}{dm}$ [fb GeV$^{-1}$]',
     },
     'MC_WZmu_el_m_bare': {
-        'xlabel': r'bare {lepton_name} mass [GeV]',
+        'xlabel': r'bare %s mass [GeV]',
         'ylabel': r'$\frac{d\sigma}{dm}$ [fb GeV$^{-1}$]',
     },
     'MC_WZmu_el_m_dres': {
-        'xlabel': r'dressed {lepton_name} mass [GeV]',
+        'xlabel': r'dressed %s mass [GeV]',
         'ylabel': r'$\frac{d\sigma}{dm}$ [fb GeV$^{-1}$]',
     },
     'MC_WZ_pt': {
