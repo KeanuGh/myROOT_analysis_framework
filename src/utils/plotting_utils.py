@@ -10,20 +10,27 @@ import pandas as pd
 
 from utils.dataframe_utils import get_luminosity
 
+# set ATLAS style plots
+plt.style.use([hep.style.ATLAS,
+               {'font.sans-serif': ['Tex Gyre Heros']},  # use when helvetica isn't installed
+               ])
 
-def scale_to_crosssection(hist: bh.Histogram, luminosity) -> None:
+
+def scale_to_crosssection(hist: bh.Histogram, luminosity) -> bh.Histogram:
     """Scales histogram to cross-section. Currently undefined for multidimensional histograms"""
     if len(hist.axes) != 1:
         raise Exception("Currently undefined behaviour for multi-dimentional histograms")
     hist /= luminosity
     hist /= hist.axes[0].widths
+    return hist
 
 
-def scale_by_bin_widths(hist: bh.Histogram) -> None:
+def scale_by_bin_widths(hist: bh.Histogram) -> bh.Histogram:
     """Divides number of entries in bins by bin width"""
     if len(hist.axes) != 1:
         raise Exception("Currently undefined behaviour for multi-dimentional histograms")
     hist /= hist.axes[0].widths
+    return hist
 
 
 def get_sumw2_1d(hist: bh.Histogram) -> np.array:
@@ -55,6 +62,67 @@ def get_axis_labels(var_name: str) -> Tuple[Optional[str], Optional[str]]:
     return xlabel, ylabel
 
 
+def scale_hist(scaling: str, hist: bh.Histogram,
+               lumi: Optional = None, df: Optional[pd.DataFrame] = None) -> bh.Histogram:
+    """Scales histogram by option either 'xs': cross-section, 'widths': by bin-width, or None"""
+    if scaling == 'xs':
+        if not lumi and not df:
+            raise Exception("Must supply either luminosity or dataframe")
+        elif not lumi:
+            lumi = get_luminosity(df)
+        hist = scale_to_crosssection(hist, luminosity=lumi)
+    elif scaling == 'widths':
+        hist = scale_by_bin_widths(hist)
+    elif not scaling:
+        pass
+    else:
+        raise ValueError("Scaling currently supports cross-section 'xs', by bin-width 'widths' or None")
+    return hist
+
+
+def plot_cutgroup(var_name: str,
+                  df: pd.DataFrame,
+                  cutgroup: str,
+                  cutgroups: OrderedDict[str, List[str]],
+                  axis: plt.axes,
+                  cut_label: str,
+                  lumi: Optional[float] = None,
+                  scaling: Optional[str] = None,
+                  is_logbins: bool = True,
+                  n_bins: int = 30,
+                  binrange: tuple = (1, 500),
+                  eta_binrange: tuple = (-20, 20),
+                  n_threads: int = 1
+                  ) -> bh.Histogram:
+    """plots variable with cutgroup applied"""
+
+    # get column names for boolean columns in dataframe containing the cuts
+    cut_rows = [cut_name + cut_label for cut_name in cutgroups[cutgroup]]
+
+    # setup
+    if is_logbins:
+        h_cut = bh.Histogram(bh.axis.Regular(n_bins, *binrange, transform=bh.axis.transform.log),
+                             storage=bh.storage.Weight())
+    else:
+        h_cut = bh.Histogram(bh.axis.Regular(n_bins, *eta_binrange),
+                             storage=bh.storage.Weight())
+
+    # perform cut and fill
+    cut_df = df[df[cut_rows].any(1)]
+    h_cut.fill(cut_df[var_name], weight=cut_df['weight'], threads=n_threads)  # fill
+
+    # scale
+    h_cut = scale_hist(scaling=scaling, hist=h_cut, lumi=lumi)
+
+    cut_yerr = get_root_sumw2_1d(h_cut)  # get sum of weights squared
+
+    # plot
+    hep.histplot(h_cut.view().value, bins=h_cut.axes[0].edges,
+                 ax=axis, yerr=cut_yerr, label=cutgroup)
+
+    return h_cut
+
+
 def plot_overlay_and_acceptance(var_name: str,
                                 df: pd.DataFrame,
                                 cutgroups: OrderedDict[str, List[str]],
@@ -71,6 +139,8 @@ def plot_overlay_and_acceptance(var_name: str,
                                 eta_binrange: tuple = (-20, 20),
                                 n_threads: int = 1,
                                 ) -> None:
+    """Plots overlay of cutgroups and acceptance (ratio) plots"""
+
     if not_log is None:
         not_log = []
     print(f"Generating histogram for {var_name}...")
@@ -101,14 +171,7 @@ def plot_overlay_and_acceptance(var_name: str,
     h_inclusive.fill(df[var_name], weight=df['weight'], threads=n_threads)  # fill
 
     # scale
-    if scaling == 'cs':
-        if not lumi:
-            lumi = get_luminosity(df)
-        scale_to_crosssection(h_inclusive, luminosity=lumi)
-    elif scaling == 'widths':
-        scale_by_bin_widths(h_inclusive)
-    elif scaling is not None:
-        warn(f"Warning: Scaling value {scaling} unknown")
+    h_inclusive = scale_hist(hist=h_inclusive, scaling=scaling, lumi=lumi)
 
     yerr = get_root_sumw2_1d(h_inclusive)  # get sum of weights squared
 
@@ -120,32 +183,13 @@ def plot_overlay_and_acceptance(var_name: str,
     # ================
     for cutgroup in cutgroups.keys():
         print(f"    - generating cutgroup '{cutgroup}'")
-        # get column names for boolean columns in dataframe containing the cuts
-        cut_rows = [cut_name + cut_label for cut_name in cutgroups[cutgroup]]
 
-        # setup
-        if is_logbins:
-            h_cut = bh.Histogram(bh.axis.Regular(n_bins, *binrange, transform=bh.axis.transform.log),
-                                 storage=bh.storage.Weight())
-        else:
-            h_cut = bh.Histogram(bh.axis.Regular(n_bins, *eta_binrange),
-                                 storage=bh.storage.Weight())
-
-        # perform cut and fill
-        cut_df = df[df[cut_rows].any(1)]
-        h_cut.fill(cut_df[var_name], weight=cut_df['weight'], threads=n_threads)  # fill
-
-        # scale
-        if scaling == 'cs':
-            scale_to_crosssection(h_inclusive, luminosity=lumi)
-        elif scaling == 'widths':
-            scale_by_bin_widths(h_inclusive)
-
-        cut_yerr = get_root_sumw2_1d(h_cut)  # get sum of weights squared
-
-        # plot
-        hep.histplot(h_cut.view().value, bins=h_cut.axes[0].edges,
-                     ax=fig_ax, yerr=cut_yerr, label=cutgroup)
+        h_cut = plot_cutgroup(var_name=var_name, df=df, cut_label=cut_label,
+                              cutgroup=cutgroup, cutgroups=cutgroups,
+                              axis=fig_ax, lumi=lumi, scaling=scaling,
+                              is_logbins=is_logbins, n_bins=n_bins,
+                              binrange=binrange, eta_binrange=eta_binrange,
+                              n_threads=n_threads)
 
         # RATIO PLOT
         # ================
@@ -189,7 +233,7 @@ def plot_overlay_and_acceptance(var_name: str,
 
     # save figure
     hep.atlas.label(data=False, ax=fig_ax, paper=False, year=datetime.now().year)
-    out_png_file = dir_path + f"{var_name}_XS.png"
+    out_png_file = dir_path + f"{var_name}_{str(scaling)}.png"
     fig.savefig(out_png_file)
     print(f"Figure saved to {out_png_file}")
     plt.clf()  # clear for next plot

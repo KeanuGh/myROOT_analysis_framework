@@ -1,5 +1,3 @@
-import matplotlib.pyplot as plt
-import mplhep as hep
 import pandas as pd
 from typing import Optional, List
 from os import cpu_count
@@ -20,11 +18,6 @@ class Analysis:
     # ===========================
     # multithreading
     n_threads = cpu_count() // 2
-
-    # set ATLAS style plots
-    plt.style.use([hep.style.ATLAS,
-                   {'font.sans-serif': ['Tex Gyre Heros']},  # use when helvetica isn't installed
-                   ])
 
     # options
     TTree = 'truth'  # name of TTree to extract from root file
@@ -48,10 +41,10 @@ class Analysis:
         # ============================
         # ======  READ CUTFILE =======
         # ============================
-        # parse _cutfile
+        # parse cutfile
         self.cut_dicts, self.vars_to_cut, self.options = parse_cutfile(self._cutfile)
 
-        # check if _cutfile backups exist
+        # check if cutfile backups exist
         self._build_dataframe, self._make_backup = compare_cutfile_backup(self._cutfile,
                                                                           self.backup_cutfiles_dir,
                                                                           self.pkl_df_filepath)
@@ -103,13 +96,14 @@ class Analysis:
             if identical_to_backup(latex_file, backup_file=last_backup):
                 delete_file(latex_file)
 
-        # if new _cutfile, save backup
+        # if new cutfile, save backup
         if self._make_backup:
             backup_cutfile(self.backup_cutfiles_dir, self._cutfile)
 
     # ===============================
     # =========== PLOTS =============
     # ===============================
+    # TODO: save outputs in separate directory for each new cutfile
     def plot_with_cuts(self, scaling: Optional[str] = None, not_log_add: Optional[List[str]] = None) -> None:
         """
         Plots each variable to cut from _cutfile with each cutgroup applied
@@ -142,13 +136,16 @@ class Analysis:
                                         scaling=scaling,
                                         )
 
-    def gen_cutflow_hist(self, ratio: bool = False, cummulative: bool = False):
+    def gen_cutflow_hist(self, event: bool = True, ratio: bool = False, cummulative: bool = False, a_ratio: bool = False):
         """Generates and saves cutflow histograms"""
-        self.Cutflow.print_histogram(filepath=self.out_plots_dir)
+        if event:
+            self.Cutflow.print_histogram(filepath=self.out_plots_dir, kind='event')
         if ratio:
-            self.Cutflow.print_histogram(filepath=self.out_plots_dir, ratio=True)
+            self.Cutflow.print_histogram(filepath=self.out_plots_dir, kind='ratio')
         if cummulative:
-            self.Cutflow.print_histogram(filepath=self.out_plots_dir, cummulative=True)
+            self.Cutflow.print_histogram(filepath=self.out_plots_dir, kind='cummulative')
+        if a_ratio:
+            self.Cutflow.print_histogram(filepath=self.out_plots_dir, kind='a_ratio')
 
     # ===============================
     # ========= PRINTOUTS ===========
