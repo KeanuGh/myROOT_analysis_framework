@@ -1,10 +1,11 @@
 import sys
 import os
-from filecmp import cmp
-from glob import glob
+import time
+from shutil import copyfile
 from typing import Tuple, List, OrderedDict
 import collections
 from distutils.util import strtobool
+from utils.file_utils import identical_to_backup, get_last_backup, is_dir_empty, get_filename
 
 
 def parse_cutlines(cutline: str, sep='\t') -> dict:
@@ -26,7 +27,7 @@ def parse_cutlines(cutline: str, sep='\t') -> dict:
 
     # if badly formatted
     if len(cutline_split) != 7:
-        raise Exception(f"Check _cutfile. Line {cutline} is badly formatted.")
+        raise Exception(f"Check cutfile. Line {cutline} is badly formatted.")
 
     name = cutline_split[0]
     cut_var = cutline_split[1]
@@ -144,14 +145,14 @@ def gen_cutgroups(cut_list_of_dicts: List[dict]) -> OrderedDict[str, List[str]]:
     return collections.OrderedDict(cutgroups)
 
 
-def compare_backup(current_cutfile: str,
-                   backup_filepath: str,
-                   pkl_filepath: str
-                   ) -> Tuple[bool, bool]:
+def compare_cutfile_backup(current_cutfile: str,
+                           backup_dirpath: str,
+                           pkl_filepath: str
+                           ) -> Tuple[bool, bool]:
     """
     compares current _cutfile to backups and decides whether to rebuild dataframe and save new backup _cutfile
     :param current_cutfile: current _cutfile
-    :param backup_filepath: path to dir of backups
+    :param backup_dirpath: path to dir of backups
     :param pkl_filepath: pickle file containing data in pandas dataframe
     :return: tuple of bools: (whether to rebuild dataframe, whether to save _cutfile backup)
     """
@@ -166,17 +167,12 @@ def compare_backup(current_cutfile: str,
     build_dataframe = False
 
     # check if backup exists
-    if len(os.listdir(backup_filepath)) != 0:
-        print("Cutfile backups found")
-        latest_backup = max(glob(backup_filepath + '*'), key=os.path.getctime)
-        print(f"Latest backup: {latest_backup}")
-
-        # make backup if new cutfile
-        make_backup = not cmp(current_cutfile, latest_backup)
-
+    if not is_dir_empty(backup_dirpath):
         # if cutfiles are different, check if dataframe variables need an update
-        if make_backup:
+        if make_backup := not identical_to_backup(current_cutfile, backup_dir=backup_dirpath):
             print("New cutfile, will save backup.")
+            latest_backup = get_last_backup(backup_dirpath)
+
             # check if variables to extract from root file are the same as before. If yes, use previous pkl file.
             # if not, extract again from root file.
             BACKUP_cutfile_dicts, BACKUP_cutfile_outputs, _ = parse_cutfile(latest_backup)
@@ -195,7 +191,7 @@ def compare_backup(current_cutfile: str,
         make_backup = True
         # if pickle file already exists
         if is_pkl_file:
-            yn = input(f"No _cutfile backups found in {backup_filepath}. Continue with current pickle file? (y/n) ")
+            yn = input(f"No cutfile backups found in {backup_dirpath}. Continue with current pickle file? (y/n) ")
             while True:
                 if yn.lower() in ('yes', 'y'):
                     print(f"Using dataframe {pkl_filepath}")
@@ -232,9 +228,8 @@ def compare_backup(current_cutfile: str,
     return build_dataframe, make_backup
 
 
-if __name__ == '__main__':
-    cutfile = '../options/_cutfile.txt'
-    cuts, outputs, options = parse_cutfile(cutfile)
-    print(cuts)
-    print(outputs)
-    print(options)
+def backup_cutfile(path: str, cutfile: str) -> None:
+    curr_filename = get_filename(cutfile).rstrip('.txt')
+    cutfile_backup_filepath = path+curr_filename+'_'+time.strftime("%Y-%m-%d_%H-%M-%S")+".txt"
+    copyfile(cutfile, cutfile_backup_filepath)
+    print(f"Backup _cutfile saved in {cutfile_backup_filepath}")

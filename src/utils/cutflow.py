@@ -105,8 +105,11 @@ class Cutflow:
         fig.savefig(filepath)
         print(f"Cutflow histogram saved to {filepath}")
 
-    def print_latex_table(self, filepath: str) -> None:
-        """Prints a latex table containing cutflow to file in filepath with date and time"""
+    def print_latex_table(self, filepath: str) -> str:
+        """
+        Prints a latex table containing cutflow to file in filepath with date and time.
+        Returns the name of the printed table
+        """
         latex_filepath = filepath + "cutflow_" + strftime("%Y-%m-%d_%H-%M-%S") + ".tex"
 
         with open(latex_filepath, "w") as f:
@@ -123,3 +126,4 @@ class Cutflow:
             f.write("\\end{tabular}")
 
         print(f"Saved LaTeX cutflow table in {latex_filepath}")
+        return latex_filepath

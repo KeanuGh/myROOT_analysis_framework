@@ -1,7 +1,7 @@
 import pandas as pd
 from typing import Optional
-import uproot
-from utils.cutfile_parser import extract_cut_variables
+import uproot4 as uproot
+from utils.cutfile_utils import extract_cut_variables
 from utils.axis_labels import labels_xs
 from typing import List
 from warnings import warn
@@ -29,13 +29,13 @@ def build_analysis_dataframe(cut_list_dicts: List[dict],
     # create list of all necessary values extract
     vars_to_extract = extract_cut_variables(cut_list_dicts, vars_to_cut)
     # strictly necessary variable(s)
-    vars_to_extract.append('weight_mc')
+    vars_to_extract.add('weight_mc')
     # extras
     if extra_vars:
         vars_to_extract += extra_vars
 
     # extract pandas dataframe from root file with necessary variables
-    tree_gen = uproot.pandas.iterate(root_filepath, treepath='truth', branches=vars_to_extract)
+    tree_gen = uproot.iterate(root_filepath+':'+TTree, branches=vars_to_extract, library='pd')
 
     # extract variables from tree
     tree_df = pd.concat([data for data in tree_gen])

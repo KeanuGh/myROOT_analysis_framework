@@ -49,7 +49,7 @@ def get_axis_labels(var_name: str) -> Tuple[Optional[str], Optional[str]]:
         ylabel = labels_xs[var_name]['ylabel']
     else:
         warn(f"Axis labels for {var_name} not found in in label lookup dictionary."
-             f"Axis labels blank.", UserWarning)
+             f"They will be left blank.", UserWarning)
         xlabel = None
         ylabel = None
     return xlabel, ylabel
