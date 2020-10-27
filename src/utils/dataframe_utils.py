@@ -70,13 +70,12 @@ def gen_weight_column(df: pd.DataFrame,
     return df[weight_mc_col].map(lambda w: scale if w > 0 else -1 * scale)
 
 
-def rescale_to_gev(df: pd.DataFrame, inplace: bool = False) -> Optional[pd.DataFrame]:
+def rescale_to_gev(df: pd.DataFrame) -> pd.DataFrame:
     """rescales to GeV because athena's default output is in MeV for some reason"""
     GeV_columns = [column for column in df.columns
                    if (column in labels_xs) and ('[GeV]' in labels_xs[column]['xlabel'])]
     df[GeV_columns] /= 1000
-    if not inplace:
-        return df
+    return df
 
 
 def get_cross_section(df: pd.DataFrame, n_events=None, weight_mc_col: str = 'weight_mc'):
