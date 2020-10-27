@@ -29,7 +29,7 @@ def build_analysis_dataframe(cut_list_dicts: List[dict],
     # create list of all necessary values extract
     vars_to_extract = extract_cut_variables(cut_list_dicts, vars_to_cut)
     # strictly necessary variable(s)
-    vars_to_extract.add('weight_mc')
+    vars_to_extract.append('weight_mc')
     # extras
     if extra_vars:
         vars_to_extract += extra_vars

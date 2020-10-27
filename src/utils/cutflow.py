@@ -9,9 +9,9 @@ class Cutflow:
                  cut_dicts: List[Dict],
                  cut_label: str = ' CUT'
                  ):
-        # create copy of dataframe to apply cuts to
+        # create copy of dataframe to apply cuts to (just the cut columns)
+        df = df[[col for col in df.columns if cut_label in col]]
         cutflow_df = df.copy()
-        del df
 
         # set input fields
         self._cut_dicts = cut_dicts
@@ -20,6 +20,7 @@ class Cutflow:
         # list of cutflow labels
         self.cutflow_labels = ['Inclusive'] + [cut['name'] for cut in self._cut_dicts]
 
+        self.cutflow_a_ratio = []  # contains ratio of each separate cut to inclusive sample
         self.cutflow_ratio = []  # contains ratio of each cut to previous cut
         self.cutflow_cum = []  # contains ratio of each cut to inclusive sample
         self.cutflow_n_events = []  # contains number of events passing each cut
@@ -39,6 +40,7 @@ class Cutflow:
             self.cutflow_n_events.append(n_events_left)
             self.cutflow_ratio.append(n_events_left / prev_n)
             self.cutflow_cum.append(n_events_left / self._n_events_tot)
+            self.cutflow_a_ratio.append(len(df[df[cut['name']+cut_label]].index) / self._n_events_tot)
             prev_n = n_events_left
 
     def terminal_printout(self) -> None:
@@ -67,41 +69,56 @@ class Cutflow:
                   f"{ratio:.3f} "
                   f"{cum_ratio:.3f}")
 
-    def print_histogram(self, filepath: str, ratio: bool = False, cummulative: bool = False, **kwargs) -> None:
+    def print_histogram(self, filepath: str, kind: str, **kwargs) -> None:
         """
         Generates and saves a cutflow histogram
         :param filepath: path to directory to save plots into
-        :param ratio: whether to plot ratios
-        :param cummulative: whether to plot cummulative
+        :param kind: which cutflow type. options:
+                    'ratio': ratio of cut to previous cut
+                    'cummulative': ratio of all current cuts to acceptance
+                    'a_ratio': ratio of only current cut to acceptance
+                    'event': number of events passing through each cut
         :param kwargs: keyword arguments to pass to plt.bar()
         :return: None
         """
-        if ratio and cummulative:
-            raise Exception("Cutflow histogram cannot be both cummulative and non-cummulative")
-
         # assign histogram options for each type
-        if ratio:
-            filepath += 'cutflow_ratio.png'
-            y_ax_vals = self.cutflow_ratio
-            ylabel = 'Acceptance ratio'
-        elif cummulative:
-            filepath += 'cutflow_cummulative.png'
-            y_ax_vals = self.cutflow_cum
-            ylabel = 'Cummulative acceptance ratio'
-        else:
-            filepath += 'cutflow.png'
-            y_ax_vals = self.cutflow_n_events
-            ylabel = 'Events'
+        cuthist_options = {
+            'ratio': {
+                'filepath': filepath + 'cutflow_ratio.png',
+                'y_ax_vals': self.cutflow_ratio,
+                'ylabel': 'Cutflow ratio',
+            },
+            'cummulative': {
+                'filepath': filepath + 'cutflow_cummulative.png',
+                'y_ax_vals': self.cutflow_cum,
+                'ylabel': 'Cummulative cutflow ratio',
+            },
+            'a_ratio': {
+                'filepath': filepath + 'cutflow_acceptance_ratio.png',
+                'y_ax_vals': self.cutflow_a_ratio,
+                'ylabel': 'Cut ratio to accpetance',
+            },
+            'event': {
+                'filepath': filepath + 'cutflow.png',
+                'y_ax_vals': self.cutflow_n_events,
+                'ylabel': 'Events',
+            },
+        }
+        if kind not in cuthist_options.keys():
+            raise Exception(f"Unknown cutflow histogram type {kind}. "
+                            f"Possible types: {', '.join(cuthist_options.keys())}")
 
         fig, ax = plt.subplots()
 
         # plot
         # TODO: make cut groups the same colour
-        ax.bar(x=self.cutflow_labels, height=y_ax_vals, color='w', edgecolor='k', width=1.0, **kwargs)
+        ax.bar(x=self.cutflow_labels, height=cuthist_options[kind]['y_ax_vals'],
+               color='w', edgecolor='k', width=1.0, **kwargs)
         ax.set_xlabel("cut")
-        ax.set_ylabel(ylabel)
+        ax.set_ylabel(cuthist_options[kind]['ylabel'])
         ax.grid(b=True, which='both', axis='y')
 
+        filepath = cuthist_options[kind]['filepath']
         fig.savefig(filepath)
         print(f"Cutflow histogram saved to {filepath}")
 
