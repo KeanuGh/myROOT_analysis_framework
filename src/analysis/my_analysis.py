@@ -2,13 +2,12 @@ import matplotlib.pyplot as plt
 import mplhep as hep
 import pandas as pd
 from typing import Optional, List
-from shutil import copyfile
-import time
-import os
+from os import cpu_count
 
 # project imports
 from utils.cutflow import Cutflow
-from utils.cutfile_parser import parse_cutfile, gen_cutgroups, compare_backup
+from utils.cutfile_utils import parse_cutfile, gen_cutgroups, compare_cutfile_backup, backup_cutfile
+from utils.file_utils import identical_to_backup, delete_file, is_dir_empty, get_last_backup
 from utils.plotting_utils import plot_overlay_and_acceptance
 from utils.dataframe_utils import (build_analysis_dataframe, create_cut_columns,
                                    gen_weight_column, rescale_to_gev,
@@ -20,7 +19,7 @@ class Analysis:
     # ========= SETUP ===========
     # ===========================
     # multithreading
-    n_threads = os.cpu_count() // 2
+    n_threads = cpu_count() // 2
 
     # set ATLAS style plots
     plt.style.use([hep.style.ATLAS,
@@ -53,21 +52,19 @@ class Analysis:
         self.cut_dicts, self.vars_to_cut, self.options = parse_cutfile(self._cutfile)
 
         # check if _cutfile backups exist
-        self._build_dataframe, self._make_backup = compare_backup(self._cutfile,
-                                                                  self.backup_cutfiles_dir,
-                                                                  self.pkl_df_filepath)
+        self._build_dataframe, self._make_backup = compare_cutfile_backup(self._cutfile,
+                                                                          self.backup_cutfiles_dir,
+                                                                          self.pkl_df_filepath)
 
         # ===============================
         # ==== EXTRACT & CLEAN DATA =====
         # ===============================
-        # TODO: py-TChaining (maybe use pyROOT to actually TChain?) or awkward-arrays
         if self._build_dataframe or force_rebuild:
             self.tree_df = build_analysis_dataframe(self.cut_dicts,
                                                     self.vars_to_cut,
                                                     root_path,
                                                     self.TTree,
-                                                    pkl_filepath=self.pkl_df_filepath
-                                                    )
+                                                    pkl_filepath=self.pkl_df_filepath)
         else:
             self.tree_df = pd.read_pickle(self.pkl_df_filepath)
 
@@ -99,20 +96,21 @@ class Analysis:
         # ===============================
         self.Cutflow = Cutflow(self.tree_df, self.cut_dicts, self.cut_label)
 
-        # plot latex table if it doesn't exist
-        if self._make_backup or len(os.listdir(self.latex_table_dir)) == 0:
-            self.Cutflow.print_latex_table(self.latex_table_dir)
+        # plot latex table if it doesn't exist and is different to the last file
+        if self._make_backup or is_dir_empty(self.latex_table_dir):
+            last_backup = get_last_backup(self.latex_table_dir)
+            latex_file = self.Cutflow.print_latex_table(self.latex_table_dir)
+            if identical_to_backup(latex_file, backup_file=last_backup):
+                delete_file(latex_file)
 
         # if new _cutfile, save backup
         if self._make_backup:
-            cutfile_backup_filepath = self.backup_cutfiles_dir + "cutfile_" + time.strftime("%Y-%m-%d_%H-%M-%S")
-            copyfile(self._cutfile, cutfile_backup_filepath)
-            print(f"Backup _cutfile saved in {cutfile_backup_filepath}")
+            backup_cutfile(self.backup_cutfiles_dir, self._cutfile)
 
     # ===============================
     # =========== PLOTS =============
     # ===============================
-    def plot_with_cuts(self, scaling: Optional[str] = None, not_log_add: Optional[List[str]] = None):
+    def plot_with_cuts(self, scaling: Optional[str] = None, not_log_add: Optional[List[str]] = None) -> None:
         """
         Plots each variable to cut from _cutfile with each cutgroup applied
         :param scaling: either 'xs':     cross section scaling,
@@ -145,7 +143,7 @@ class Analysis:
                                         )
 
     def gen_cutflow_hist(self, ratio: bool = False, cummulative: bool = False):
-        # plot histograms
+        """Generates and saves cutflow histograms"""
         self.Cutflow.print_histogram(filepath=self.out_plots_dir)
         if ratio:
             self.Cutflow.print_histogram(filepath=self.out_plots_dir, ratio=True)
@@ -155,11 +153,12 @@ class Analysis:
     # ===============================
     # ========= PRINTOUTS ===========
     # ===============================
-    def cutflow_printout(self):
+    def cutflow_printout(self) -> None:
+        """Prints cutflow table to terminal"""
         self.Cutflow.terminal_printout()
 
-    def kinematics_printouts(self):
-        # kinematics printout
+    def kinematics_printouts(self) -> None:
+        """Prints some kinematic variables to terminal"""
         print(f"\n========== KINEMATICS ===========\n"
               f"cross-section: {self.cross_section:.2f} fb\n"
               f"luminosity   : {self.lumi:.2f} fb-1\n"
