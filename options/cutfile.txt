@@ -8,9 +8,9 @@ Neutrino $p_{T}$	MC_WZneutrino_pt_born	>	25	_pTCut	pT cut	false
 [OUTPUTS]
 # variables to process
 MC_WZ_dilep_m_born
-MC_WZ_dilep_m_bare
-MC_WZ_dilep_m_dres
 MC_WZmu_el_eta_born
+MC_WZmu_el_phi_born
+MC_WZmu_el_pt_born
 
 [OPTIONS]
 # case-insensitive

@@ -1,11 +1,11 @@
 import pandas as pd
 from typing import Optional, List
-from os import cpu_count
+import os
 
 # project imports
 from utils.cutflow import Cutflow
 from utils.cutfile_utils import parse_cutfile, gen_cutgroups, compare_cutfile_backup, backup_cutfile
-from utils.file_utils import identical_to_backup, delete_file, is_dir_empty, get_last_backup
+from utils.file_utils import identical_to_backup, delete_file, is_dir_empty, get_last_backup, get_filename
 from utils.plotting_utils import plot_overlay_and_acceptance
 from utils.dataframe_utils import (build_analysis_dataframe, create_cut_columns,
                                    gen_weight_column, rescale_to_gev,
@@ -17,7 +17,7 @@ class Analysis:
     # ========= SETUP ===========
     # ===========================
     # multithreading
-    n_threads = cpu_count() // 2
+    n_threads = os.cpu_count() // 2
 
     # options
     TTree = 'truth'  # name of TTree to extract from root file
@@ -41,6 +41,8 @@ class Analysis:
         # ============================
         # ======  READ CUTFILE =======
         # ============================
+        cutfile_name = get_filename(self._cutfile)
+
         # parse cutfile
         self.cut_dicts, self.vars_to_cut, self.options = parse_cutfile(self._cutfile)
 
@@ -48,6 +50,11 @@ class Analysis:
         self._build_dataframe, self._make_backup = compare_cutfile_backup(self._cutfile,
                                                                           self.backup_cutfiles_dir,
                                                                           self.pkl_df_filepath)
+
+        # which directory to place plots
+        self.plot_dir = self.out_plots_dir+cutfile_name.rstrip('.txt')+'/'
+        if not os.path.exists(self.plot_dir):
+            os.makedirs(self.plot_dir)
 
         # ===============================
         # ==== EXTRACT & CLEAN DATA =====
@@ -68,7 +75,7 @@ class Analysis:
         self.tree_df['weight'] = gen_weight_column(self.tree_df)
 
         # rescale MeV columns to GeV
-        rescale_to_gev(self.tree_df, inplace=True)
+        rescale_to_gev(self.tree_df)
 
         # ===============================
         # ======= APPLYING CUTS =========
@@ -82,7 +89,7 @@ class Analysis:
         # ==== CALCULATING LUMI & XS ====
         # ===============================
         self.cross_section = get_cross_section(self.tree_df)
-        self.lumi = get_luminosity(self.tree_df, xs=self.cross_section)
+        self.luminosity = get_luminosity(self.tree_df, xs=self.cross_section)
 
         # ===============================
         # ========== CUTFLOW ============
@@ -127,8 +134,8 @@ class Analysis:
             plot_overlay_and_acceptance(var_to_plot,
                                         df=self.tree_df,
                                         cutgroups=self.cutgroups,
-                                        lumi=self.lumi,
-                                        dir_path=self.out_plots_dir,
+                                        lumi=self.luminosity,
+                                        dir_path=self.plot_dir,
                                         cut_label=self.cut_label,
                                         not_log=not_log,
                                         n_threads=self.n_threads,
@@ -139,13 +146,13 @@ class Analysis:
     def gen_cutflow_hist(self, event: bool = True, ratio: bool = False, cummulative: bool = False, a_ratio: bool = False):
         """Generates and saves cutflow histograms"""
         if event:
-            self.Cutflow.print_histogram(filepath=self.out_plots_dir, kind='event')
+            self.Cutflow.print_histogram(filepath=self.plot_dir, kind='event')
         if ratio:
-            self.Cutflow.print_histogram(filepath=self.out_plots_dir, kind='ratio')
+            self.Cutflow.print_histogram(filepath=self.plot_dir, kind='ratio')
         if cummulative:
-            self.Cutflow.print_histogram(filepath=self.out_plots_dir, kind='cummulative')
+            self.Cutflow.print_histogram(filepath=self.plot_dir, kind='cummulative')
         if a_ratio:
-            self.Cutflow.print_histogram(filepath=self.out_plots_dir, kind='a_ratio')
+            self.Cutflow.print_histogram(filepath=self.plot_dir, kind='a_ratio')
 
     # ===============================
     # ========= PRINTOUTS ===========
@@ -158,13 +165,13 @@ class Analysis:
         """Prints some kinematic variables to terminal"""
         print(f"\n========== KINEMATICS ===========\n"
               f"cross-section: {self.cross_section:.2f} fb\n"
-              f"luminosity   : {self.lumi:.2f} fb-1\n"
+              f"luminosity   : {self.luminosity:.2f} fb-1\n"
               )
 
 
 if __name__ == '__main__':
     my_analysis = Analysis(root_path='../../data/mc16d_wmintaunu/*',
-                           cutfile='../../options/cutfile.txt',
+                           cutfile='../../options/cutfile_taus',
                            lepton='tau',
                            force_rebuild=False
                            )
