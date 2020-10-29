@@ -114,6 +114,7 @@ def set_fig_1d_axis_options(axis: plt.axes, var_name: str, lepton: str, bins: Un
                             scaling: Optional[str] = None, is_logbins: bool = True, logy: bool = False) -> plt.axes:
     """
     Sets my default axis options
+
     :param axis: axis to change
     :param var_name: name of variable being plotted
     :param bins: tuple of bins in y (n_bins, start, stop) or list of bin edge
@@ -166,6 +167,7 @@ def histplot_1d(var_x: pd.Series,
                 ) -> bh.Histogram:
     """
     Plots variable as histogram onto given figure axis
+
     :param var_x: 1D series (or iterable) of variable to plot
     :param weights: 1D series (or iterable) w/ same dimensions as var_x
     :param bins: tuple of bins in y (n_bins, start, stop) or list of bin edges
@@ -223,7 +225,7 @@ def plot_overlay_and_acceptance_cutgroups(df: pd.DataFrame,
                                           lepton: str,
                                           lumi: Optional[float] = None,
                                           scaling: Optional[str] = None,
-                                          not_log: Optional[List[str]] = None,
+                                          is_logbins: bool = False,
                                           plot_width=10,
                                           plot_height=10,
                                           n_threads: int = 1,
@@ -231,13 +233,7 @@ def plot_overlay_and_acceptance_cutgroups(df: pd.DataFrame,
     """Plots overlay of cutgroups and acceptance (ratio) plots"""
     # TODO: default bin ranges for phi and eta
     # TODO: put ratio plot under main plot
-
-    if not_log is None:
-        not_log = []
     fig, (fig_ax, accept_ax) = plt.subplots(1, 2)
-
-    # whether or not bins should be logarithmic bins
-    is_logbins = not any(map(var_to_plot.__contains__, not_log))
 
     # INCLUSIVE PLOT
     # ================
@@ -263,6 +259,7 @@ def plot_overlay_and_acceptance_cutgroups(df: pd.DataFrame,
         h_cut = histplot_1d(var_x=var_cut, weights=weight_cut,
                             bins=bins, fig_axis=fig_ax,
                             lumi=lumi, scaling=scaling,
+                            label=cutgroup,
                             is_logbins=is_logbins,
                             n_threads=n_threads
                             )

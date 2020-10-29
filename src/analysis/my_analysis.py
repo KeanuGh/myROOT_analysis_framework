@@ -1,6 +1,7 @@
 import pandas as pd
 from typing import Optional, List, Union
 import os
+from numpy import pi
 
 # project imports
 from utils.cutflow import Cutflow
@@ -33,10 +34,20 @@ class Analysis:
     latex_table_dir = out_dir + "LaTeX_cutflow_table/"  # where to print latex cutflow table
 
     def __init__(self, root_path: str, cutfile: str, lepton: str,
-                 force_rebuild: bool = False):
+                 force_rebuild: bool = False,
+                 phibins: Union[tuple, list] = (20, -2 * pi, 2 * pi),
+                 etabins: Union[tuple, list] = (20, -10, 10),
+                 ):
+
         # set
         self._lepton_name = lepton
         self._cutfile = cutfile
+
+        # special binning
+        self._special_binning = {
+            '_eta_': etabins,
+            '_phi_': phibins,
+        }
 
         # ============================
         # ======  READ CUTFILE =======
@@ -134,6 +145,17 @@ class Analysis:
             not_log += not_log_add
 
         for var_to_plot in self.vars_to_cut:
+            # whether or not bins should be logarithmic bins
+            is_logbins = not any(map(var_to_plot.__contains__, not_log))
+            if not is_logbins:
+                # set bins for special variables
+                sp_var = [sp_var for sp_var in not_log if sp_var in var_to_plot]
+                if len(sp_var) != 1:
+                    raise Exception(f"Expected one matching variable for spcial binning. Got {sp_var}")
+                in_bins = self._special_binning[sp_var[0]]
+            else:
+                in_bins = bins
+
             print(f"Generating histogram for {var_to_plot}...")
             plot_overlay_and_acceptance_cutgroups(df=self.tree_df,
                                                   var_to_plot=var_to_plot,
@@ -142,11 +164,11 @@ class Analysis:
                                                   lumi=self.luminosity,
                                                   dir_path=self.plot_dir,
                                                   cut_label=self.cut_label,
-                                                  not_log=not_log,
+                                                  is_logbins=is_logbins,
                                                   n_threads=self.n_threads,
                                                   lepton=self._lepton_name,
                                                   scaling=scaling,
-                                                  bins=bins,
+                                                  bins=in_bins,
                                                   )
 
     def gen_cutflow_hist(self,
