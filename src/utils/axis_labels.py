@@ -18,27 +18,27 @@ labels_xs = {
         'ylabel': r'$\frac{d\sigma}{dQ}$ [fb GeV$^{-1}$]',
     },
     'MC_WZ_dilep_phi_born': {
-        'xlabel': r'Born dilepton \phi',
+        'xlabel': r'Born dilepton $\phi$',
         'ylabel': r'$\frac{d\sigma}{d\phi}$ [fb]',
     },
     'MC_WZ_dilep_phi_bare': {
-        'xlabel': r'bare dilepton \phi',
+        'xlabel': r'bare dilepton $\phi$',
         'ylabel': r'$\frac{d\sigma}{d\phi}$ [fb]',
     },
     'MC_WZ_dilep_phi_dres': {
-        'xlabel': r'dressed dilepton \phi',
+        'xlabel': r'dressed dilepton $\phi$',
         'ylabel': r'$\frac{d\sigma}{d\phi}$ [fb]',
     },
     'MC_WZ_dilep_eta_born': {
-        'xlabel': r'Born dilepton \eta',
+        'xlabel': r'Born dilepton $\eta$',
         'ylabel': r'$\frac{d\sigma}{d\eta}$ [fb]',
     },
     'MC_WZ_dilep_eta_bare': {
-        'xlabel': r'bare dilepton \eta',
+        'xlabel': r'bare dilepton $\eta$',
         'ylabel': r'$\frac{d\sigma}{d\eta}$ [fb]',
     },
     'MC_WZ_dilep_eta_dres': {
-        'xlabel': r'dressed dilepton \eta',
+        'xlabel': r'dressed dilepton $\eta$',
         'ylabel': r'$\frac{d\sigma}{d\eta}$ [fb]',
     },
     'MC_WZ_dilep_pt_born': {
@@ -66,15 +66,27 @@ labels_xs = {
         'ylabel': r'$\frac{d\sigma}{dm_{ll}}$ [fb GeV$^{-1}$]',
     },
     'MC_WZneutrino_phi_born': {
-        'xlabel': r'Born neutrino \phi',
+        'xlabel': r'Born neutrino $\phi$',
         'ylabel': r'$\frac{d\sigma}{d\phi}$ [fb]',
     },
     'MC_WZneutrino_phi_bare': {
-        'xlabel': r'bare neutrino \phi',
+        'xlabel': r'bare neutrino $\phi$',
         'ylabel': r'$\frac{d\sigma}{d\phi}$ [fb]',
     },
     'MC_WZneutrino_phi_dres': {
-        'xlabel': r'dressed neutrino \phi',
+        'xlabel': r'dressed neutrino $\phi$',
+        'ylabel': r'$\frac{d\sigma}{d\phi}$ [fb]',
+    },
+    'MC_WZneutrino_eta_born': {
+        'xlabel': r'Born neutrino $\eta$',
+        'ylabel': r'$\frac{d\sigma}{d\phi}$ [fb]',
+    },
+    'MC_WZneutrino_eta_bare': {
+        'xlabel': r'bare neutrino $\eta$',
+        'ylabel': r'$\frac{d\sigma}{d\phi}$ [fb]',
+    },
+    'MC_WZneutrino_eta_dres': {
+        'xlabel': r'dressed neutrino $\eta$',
         'ylabel': r'$\frac{d\sigma}{d\phi}$ [fb]',
     },
     'MC_WZneutrino_m_born': {
@@ -102,27 +114,27 @@ labels_xs = {
         'ylabel': r'$\frac{d\sigma}{dp_{T}}$ [fb GeV$^{-1}$]',
     },
     'MC_WZmu_el_phi_born': {
-        'xlabel': r'Born %s \phi',
+        'xlabel': r'Born %s $\phi$',
         'ylabel': r'$\frac{d\sigma}{d\phi}$ [fb]',
     },
     'MC_WZmu_el_phi_bare': {
-        'xlabel': r'bare %s \phi',
+        'xlabel': r'bare %s $\phi$',
         'ylabel': r'$\frac{d\sigma}{d\phi}$ [fb]',
     },
     'MC_WZmu_el_phi_dres': {
-        'xlabel': r'dressed %s \phi',
+        'xlabel': r'dressed %s $\phi$',
         'ylabel': r'$\frac{d\sigma}{d\phi}$ [fb]',
     },
     'MC_WZmu_el_eta_born': {
-        'xlabel': r'Born %s \eta',
+        'xlabel': r'Born %s $\eta$',
         'ylabel': r'$\frac{d\sigma}{d\eta}$ [fb]',
     },
     'MC_WZmu_el_eta_bare': {
-        'xlabel': r'bare %s \eta',
+        'xlabel': r'bare %s $\eta$',
         'ylabel': r'$\frac{d\sigma}{d\eta}$ [fb]',
     },
     'MC_WZmu_el_eta_dres': {
-        'xlabel': r'dressed %s \eta',
+        'xlabel': r'dressed %s $\eta$',
         'ylabel': r'$\frac{d\sigma}{d\eta}$ [fb]',
     },
     'MC_WZmu_el_pt_born': {
@@ -154,11 +166,11 @@ labels_xs = {
         'ylabel': r'$\frac{d\sigma}{dp_{T}}$ [fb GeV$^{-1}$]',
     },
     'MC_WZ_phi': {
-        'xlabel': r'dressed W \phi',
+        'xlabel': r'dressed W $\phi$',
         'ylabel': r'$\frac{d\sigma}{d\phi}$ [fb]',
     },
     'MC_WZ_eta': {
-        'xlabel': r'dressed W \eta',
+        'xlabel': r'dressed W $\eta$',
         'ylabel': r'$\frac{d\sigma}{d\eta}$ [fb]',
     },
     'MC_WZ_m': {

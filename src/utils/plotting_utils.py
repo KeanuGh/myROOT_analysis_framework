@@ -178,7 +178,7 @@ def histplot_1d(var_x: pd.Series,
     :param scaling: | type of scaling applied to histogram. either:
                     | - 'xs': cross-section
                     | - 'widths': by bin-width,
-                    |  -  None: No scaling
+                    | -  None: No scaling
     :param label: optional label for histogram (eg for legend)
     :param is_logbins: whether it should be binned logarithmically
     :param n_threads: multithreading: number of threads used to fill histogram
@@ -215,29 +215,30 @@ def histplot_1d(var_x: pd.Series,
     return h_cut
 
 
-def plot_overlay_and_acceptance_cutgroups(df: pd.DataFrame,
-                                          var_to_plot: str,
-                                          weights: pd.Series,
-                                          cutgroups: OrderedDict[str, List[str]],
-                                          dir_path: str,
-                                          cut_label: str,
-                                          bins: Union[tuple, list],
-                                          lepton: str,
-                                          lumi: Optional[float] = None,
-                                          scaling: Optional[str] = None,
-                                          is_logbins: bool = False,
-                                          plot_width=10,
-                                          plot_height=10,
-                                          n_threads: int = 1,
-                                          ) -> None:
+def plot_1d_overlay_and_acceptance_cutgroups(
+        df: pd.DataFrame,
+        var_to_plot: str,
+        cutgroups: OrderedDict[str, List[str]],
+        dir_path: str,
+        cut_label: str,
+        bins: Union[tuple, list],
+        lepton: str,
+        weight_col: str = 'weight',
+        lumi: Optional[float] = None,
+        scaling: Optional[str] = None,
+        is_logbins: bool = False,
+        plot_width=10,
+        plot_height=10,
+        n_threads: int = 1,
+) -> None:
     """Plots overlay of cutgroups and acceptance (ratio) plots"""
-    # TODO: default bin ranges for phi and eta
+    # TODO: write docs for this function
     # TODO: put ratio plot under main plot
     fig, (fig_ax, accept_ax) = plt.subplots(1, 2)
 
     # INCLUSIVE PLOT
     # ================
-    h_inclusive = histplot_1d(var_x=df[var_to_plot], weights=weights,
+    h_inclusive = histplot_1d(var_x=df[var_to_plot], weights=df[weight_col],
                               bins=bins, fig_axis=fig_ax,
                               yerr='sumw2',
                               lumi=lumi, scaling=scaling,
@@ -290,12 +291,11 @@ def plot_overlay_and_acceptance_cutgroups(df: pd.DataFrame,
     fig.set_figwidth(plot_width * 2)
 
     # save figure
-    hep.atlas.label(ax=fig_ax)
     hep.atlas.text("Internal", loc=0, ax=fig_ax)
     out_png_file = dir_path + f"{var_to_plot}_{str(scaling)}.png"
     fig.savefig(out_png_file)
     print(f"Figure saved to {out_png_file}")
-    plt.clf()  # clear for next plot
+    fig.clf()  # clear for next plot
 
 
 def histplot_2d(out_path: str,
@@ -305,41 +305,42 @@ def histplot_2d(out_path: str,
                 title: str,
                 lepton: Optional[str] = None,
                 n_threads: int = 1,
-                is_log: bool = True,
+                is_z_log: bool = True,
+                # is_x_log: bool = True, is_y_log: bool = True,  # Perhaps add this in later
                 is_square: bool = True,
                 ) -> bh.Histogram:
     """
-    Plots a 2d histogram
+    Plots and prints out 2d histogram. Does not support axis transforms (yet!)
 
     :param out_path: path to save figure
     :param var_x: pandas series of var to plot on x axis
     :param var_y: pandas series of var to plot on y axis
     :param xbins: tuple of bins in x (n_bins, start, stop) or list of bin edges
     :param ybins: tuple of bins in y (n_bins, start, stop) or list of bin edges
-    :param weights: series of weights
+    :param weights: series of weights to apply to axes
     :param title: plot title
     :param lepton: label of lepton used
     :param n_threads: number of threads for filling
-    :param is_log: whether z-axis should be scaled logarithmically
+    :param is_z_log: whether z-axis should be scaled logarithmically
     :param is_square: whether to set square aspect ratio
+    :param axis_scale: argument to pass to the ax.axis() method to decide how to scale axis
     :return: histogram
     """
     fig, ax = plt.subplots()
 
     # setup and fill histogram
-    hist_2d = bh.Histogram(get_axis(xbins),
-                           get_axis(ybins))
+    hist_2d = bh.Histogram(get_axis(xbins), get_axis(ybins))
     hist_2d.fill(var_x, var_y, weight=weights, threads=n_threads)
 
     # setup colour mesh (log or not)
-    if is_log:
+    if is_z_log:
         mesh = ax.pcolormesh(*hist_2d.axes.edges.T, hist_2d.view().T, norm=LogNorm())
     else:
         mesh = ax.pcolormesh(*hist_2d.axes.edges.T, hist_2d.view().T)
     fig.colorbar(mesh, ax=ax, fraction=0.046, pad=0.04)
 
     if is_square:  # square aspect ratio
-        ax.set_aspect('equal')
+        ax.set_aspect(1 / ax.get_data_ratio())
 
     # get axis labels
     xlabel, _ = get_axis_labels(str(var_x.name), lepton)
@@ -348,6 +349,41 @@ def histplot_2d(out_path: str,
     ax.set_title(title)
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
-    plt.savefig(out_path)
 
+    plt.savefig(out_path)
+    print(f"printed 2d histogram to {out_path}")
+    plt.close(fig)
     return hist_2d
+
+
+def plot_2d_cutgroups(
+        df: pd.DataFrame,
+        x_var: str, y_var: str,
+        xbins: Union[tuple, list], ybins: Union[tuple, list],
+        cutgroups: OrderedDict[str, List[str]],
+        dir_path: str,
+        cut_label: str,
+        lepton: str,
+        is_logz: bool = True,
+        n_threads: int = 1,
+) -> None:
+    for cutgroup in cutgroups:
+        print(f"    - generating cutgroup '{cutgroup}'")
+
+        cut_df = cut_on_cutgroup(df, cutgroups, cutgroup, cut_label)
+        weight_cut = cut_df['weight']
+        x_vars = cut_df[x_var]
+        y_vars = cut_df[y_var]
+
+        out_png_file = dir_path + f"2d_{x_var}-{y_var}_{cutgroup}.png"
+        histplot_2d(
+            out_path=out_png_file,
+            var_x=x_vars, var_y=y_vars,
+            xbins=xbins, ybins=ybins,
+            weights=weight_cut,
+            title=cutgroup,
+            lepton=lepton,
+            is_z_log=is_logz,
+            n_threads=n_threads
+        )
+

@@ -2,7 +2,7 @@ import sys
 import os
 import time
 from shutil import copyfile
-from typing import Tuple, List, OrderedDict
+from typing import Tuple, List, OrderedDict, Dict
 import collections
 from distutils.util import strtobool
 from utils.file_utils import identical_to_backup, get_last_backup, is_dir_empty, get_filename
@@ -54,7 +54,7 @@ def parse_cutlines(cutline: str, sep='\t') -> dict:
     return cut_dict
 
 
-def parse_cutfile(file: str, sep='\t') -> Tuple[List[dict], List[str], dict]:
+def parse_cutfile(file: str, sep='\t') -> Tuple[List[dict], List[str], Dict[str, bool]]:
     """
     | generates pythonic outputs from input _cutfile
     | Cutfile should be formatted with headers [CUTS], [OUTPUTS] and [OPTIONS]
