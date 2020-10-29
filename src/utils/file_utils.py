@@ -37,3 +37,9 @@ def delete_file(file: str) -> None:
 def get_filename(filepath: str) -> str:
     """gets the name of file contained in path"""
     return Path(filepath).name
+
+
+def makedir(dirpath: str) -> None:
+    """creates directory if it doesn't exist"""
+    if not os.path.exists(dirpath):
+        os.makedirs(dirpath)

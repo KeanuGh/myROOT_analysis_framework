@@ -3,7 +3,7 @@ from typing import Optional
 import uproot4 as uproot
 from utils.cutfile_utils import extract_cut_variables
 from utils.axis_labels import labels_xs
-from typing import List
+from typing import List, OrderedDict, Union
 from warnings import warn
 
 
@@ -152,3 +152,14 @@ def create_cut_columns(df: pd.DataFrame,
                 print(f"{cut['name']:<{name_len}}: "
                       f"{cut['cut_var']:>{var_len}} {cut['moreless']} |{cut['cut_val']}|")
         print('\n')
+
+
+def cut_on_cutgroup(df: pd.DataFrame,
+                    cutgroups: OrderedDict[str, List[str]],
+                    group: str,
+                    cut_label: str,
+                    ) -> pd.DataFrame:
+    """Cuts on cutgroup on input dataframe or series"""
+    cut_rows = [cut_name + cut_label for cut_name in cutgroups[group]]
+    cut_data = df[df[cut_rows].any(1)]
+    return cut_data

@@ -1,12 +1,12 @@
 import pandas as pd
-from typing import Optional, List
+from typing import Optional, List, Union
 import os
 
 # project imports
 from utils.cutflow import Cutflow
 from utils.cutfile_utils import parse_cutfile, gen_cutgroups, compare_cutfile_backup, backup_cutfile
-from utils.file_utils import identical_to_backup, delete_file, is_dir_empty, get_last_backup, get_filename
-from utils.plotting_utils import plot_overlay_and_acceptance
+from utils.file_utils import identical_to_backup, delete_file, is_dir_empty, get_last_backup, get_filename, makedir
+from utils.plotting_utils import plot_overlay_and_acceptance_cutgroups
 from utils.dataframe_utils import (build_analysis_dataframe, create_cut_columns,
                                    gen_weight_column, rescale_to_gev,
                                    get_cross_section, get_luminosity)
@@ -51,10 +51,9 @@ class Analysis:
                                                                           self.backup_cutfiles_dir,
                                                                           self.pkl_df_filepath)
 
-        # which directory to place plots
-        self.plot_dir = self.out_plots_dir+cutfile_name.rstrip('.txt')+'/'
-        if not os.path.exists(self.plot_dir):
-            os.makedirs(self.plot_dir)
+        # place plots in outputs/plots/<cutfile name>
+        self.plot_dir = self.out_plots_dir + cutfile_name.rstrip('.txt') + '/'
+        makedir(self.plot_dir)
 
         # ===============================
         # ==== EXTRACT & CLEAN DATA =====
@@ -111,9 +110,13 @@ class Analysis:
     # =========== PLOTS =============
     # ===============================
     # TODO: save outputs in separate directory for each new cutfile
-    def plot_with_cuts(self, scaling: Optional[str] = None, not_log_add: Optional[List[str]] = None) -> None:
+    def plot_with_cuts(self, scaling: Optional[str] = None,
+                       bins: Union[tuple, list] = (30, 1, 500),
+                       not_log_add: Optional[List[str]] = None) -> None:
         """
         Plots each variable to cut from _cutfile with each cutgroup applied
+
+        :param bins: tuple of bins in x (n_bins, start, stop) or list of bin edges
         :param scaling: either 'xs':     cross section scaling,
                                'widths': divided by bin widths,
                                None:     No scaling
@@ -131,28 +134,38 @@ class Analysis:
             not_log += not_log_add
 
         for var_to_plot in self.vars_to_cut:
-            plot_overlay_and_acceptance(var_to_plot,
-                                        df=self.tree_df,
-                                        cutgroups=self.cutgroups,
-                                        lumi=self.luminosity,
-                                        dir_path=self.plot_dir,
-                                        cut_label=self.cut_label,
-                                        not_log=not_log,
-                                        n_threads=self.n_threads,
-                                        lepton=self._lepton_name,
-                                        scaling=scaling,
-                                        )
+            print(f"Generating histogram for {var_to_plot}...")
+            plot_overlay_and_acceptance_cutgroups(df=self.tree_df,
+                                                  var_to_plot=var_to_plot,
+                                                  weights=self.tree_df['weight'],
+                                                  cutgroups=self.cutgroups,
+                                                  lumi=self.luminosity,
+                                                  dir_path=self.plot_dir,
+                                                  cut_label=self.cut_label,
+                                                  not_log=not_log,
+                                                  n_threads=self.n_threads,
+                                                  lepton=self._lepton_name,
+                                                  scaling=scaling,
+                                                  bins=bins,
+                                                  )
 
-    def gen_cutflow_hist(self, event: bool = True, ratio: bool = False, cummulative: bool = False, a_ratio: bool = False):
+    def gen_cutflow_hist(self,
+                         event: bool = True,
+                         ratio: bool = False,
+                         cummulative: bool = False,
+                         a_ratio: bool = False
+                         ):
         """Generates and saves cutflow histograms"""
         if event:
-            self.Cutflow.print_histogram(filepath=self.plot_dir, kind='event')
+            self.Cutflow.print_histogram(self.plot_dir, 'event')
         if ratio:
-            self.Cutflow.print_histogram(filepath=self.plot_dir, kind='ratio')
+            self.Cutflow.print_histogram(self.plot_dir, 'ratio')
         if cummulative:
-            self.Cutflow.print_histogram(filepath=self.plot_dir, kind='cummulative')
+            self.Cutflow.print_histogram(self.plot_dir, 'cummulative')
         if a_ratio:
-            self.Cutflow.print_histogram(filepath=self.plot_dir, kind='a_ratio')
+            self.Cutflow.print_histogram(self.plot_dir, 'a_ratio')
+
+    # def make_all_2dplots(self):
 
     # ===============================
     # ========= PRINTOUTS ===========
