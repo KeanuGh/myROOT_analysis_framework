@@ -7,7 +7,8 @@ from time import strftime
 class Cutflow:
     def __init__(self, df: pd.DataFrame,
                  cut_dicts: List[Dict],
-                 cut_label: str = ' CUT'
+                 cut_label: str = ' CUT',
+                 sequential: bool = True
                  ):
         # create copy of dataframe to apply cuts to (just the cut columns)
         df = df[[col for col in df.columns if cut_label in col]]
@@ -21,12 +22,12 @@ class Cutflow:
         self.cutflow_labels = ['Inclusive'] + [cut['name'] for cut in self._cut_dicts]
 
         self.cutflow_a_ratio = []  # contains ratio of each separate cut to inclusive sample
+        self.cutflow_n_events = []  # contains number of events passing each cut
         self.cutflow_ratio = []  # contains ratio of each cut to previous cut
         self.cutflow_cum = []  # contains ratio of each cut to inclusive sample
-        self.cutflow_n_events = []  # contains number of events passing each cut
 
         # generate cutflow
-        self._n_events_tot = len(cutflow_df.index)
+        self._n_events_tot = len(df.index)
         self.cutflow_n_events.append(self._n_events_tot)
         self.cutflow_ratio.append(1.0)
         self.cutflow_cum.append(1.0)
@@ -54,7 +55,7 @@ class Cutflow:
         print(f"\n=========== CUTFLOW =============")
         print("Cut " + " " * (max_name_len - 3) +
               "Events " + " " * (max_n_len - 6) +
-              "Ratio Cum. Ratio")
+              "Ratio A. Ratio Cum. Ratio")
         # first line is inclusive sample
         print("Inclusive " + " " * (max_name_len - 9) + f"{self._n_events_tot} -     -")
 
@@ -63,10 +64,12 @@ class Cutflow:
             n_events = self.cutflow_n_events[i]
             ratio = self.cutflow_ratio[i]
             cum_ratio = self.cutflow_cum[i]
+            a_ratio = self.cutflow_a_ratio[i]
 
             print(f"{cutname:<{max_name_len}} "
                   f"{n_events:<{max_n_len}} "
-                  f"{ratio:.3f} "
+                  f"{ratio:.3f}    "
+                  f"{a_ratio:.3f} "
                   f"{cum_ratio:.3f}")
 
     def print_histogram(self, filepath: str, kind: str, **kwargs) -> None:
@@ -123,12 +126,12 @@ class Cutflow:
         fig.savefig(filepath)
         print(f"Cutflow histogram saved to {filepath}")
 
-    def print_latex_table(self, filepath: str) -> str:
+    def print_latex_table(self, filepath: str, cutfile_name: str = '') -> str:
         """
         Prints a latex table containing cutflow to file in filepath with date and time.
         Returns the name of the printed table
         """
-        latex_filepath = filepath + "cutflow_" + strftime("%Y-%m-%d_%H-%M-%S") + ".tex"
+        latex_filepath = filepath + cutfile_name + "cutflow_" + strftime("%Y-%m-%d_%H-%M-%S") + ".tex"
 
         with open(latex_filepath, "w") as f:
             f.write("\\begin{tabular}{|c||c|c|c|}\n"
