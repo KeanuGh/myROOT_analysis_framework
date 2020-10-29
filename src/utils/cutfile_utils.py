@@ -10,24 +10,24 @@ from utils.file_utils import identical_to_backup, get_last_backup, is_dir_empty,
 
 def parse_cutlines(cutline: str, sep='\t') -> dict:
     """
-    processes each line of cuts into dictionary of cut options. with separator sep
-    For a cut range add each less/more than as separate cuts and add into same group
-
-    name: name of cut to be printed and used in plot labels
-    cut_var: variable in root file to cut on
-    moreless: < or >
-    cut_val: value of cut on variable
-    suffix: suffix to be added onto plot names
-    group: each cut with same group label will be applied all at once.
-           group labels will be printed in plot legends if sequential, as title if not.
-           !!!SUFFIXES FOR CUTS IN GROUP MUST BE THE SAME!!!
-    is_symmetric: either 'true' or false, take abs value of cut (eg for eta or phi)
+    | processes each line of cuts into dictionary of cut options. with separator sep
+    | For a cut range add each less/more than as separate cuts and add into same group
+    |
+    | name: name of cut to be printed and used in plot labels
+    | cut_var: variable in root file to cut on
+    | moreless: < or >
+    | cut_val: value of cut on variable
+    | suffix: suffix to be added onto plot names
+    | group: each cut with same group label will be applied all at once.
+    |        group labels will be printed in plot legends if sequential, as title if not.
+    |        !!!SUFFIXES FOR CUTS IN GROUP MUST BE THE SAME!!!
+    | is_symmetric: either 'true' or false, take abs value of cut (eg for eta or phi)
     """
     cutline_split = cutline.split(sep)
 
     # if badly formatted
     if len(cutline_split) != 7:
-        raise Exception(f"Check cutfile. Line {cutline} is badly formatted.")
+        raise SyntaxError(f"Check cutfile. Line {cutline} is badly formatted.")
 
     name = cutline_split[0]
     cut_var = cutline_split[1]
@@ -39,7 +39,7 @@ def parse_cutlines(cutline: str, sep='\t') -> dict:
 
     # check values
     if moreless not in ('>', '<'):
-        raise ValueError(f"Unexpected comparison operator: {cutline_split[2]}. Currently accepts '>' or '<'.")
+        raise SyntaxError(f"Unexpected comparison operator: {cutline_split[2]}. Currently accepts '>' or '<'.")
 
     # fill dictionary
     cut_dict = {
@@ -56,22 +56,21 @@ def parse_cutlines(cutline: str, sep='\t') -> dict:
 
 def parse_cutfile(file: str, sep='\t') -> Tuple[List[dict], List[str], dict]:
     """
-    generates pythonic outputs from input _cutfile
-    Cutfile should be formatted with headers [CUTS], [OUTPUTS] and [OPTIONS]
-
-    Each line under [CUTS] header contains the 'sep'-separated values (detault: tab):
-    - name: name of cut to be printed and used in plot labels
-    - cut_var: variable in root file to cut on
-    - moreless: '<' or '>'
-    - cut_val: value of cut on variable
-    - suffix: suffix to be added onto plot names
-    - group: each cut with same group number will be applied all at once.
-             !!!SUFFIXES FOR CUTS IN GROUP MUST BE THE SAME!!!
-
-    Each line under [OUTPUTS] should be a variable in root file
-
-    Each line under [OPTIONS] header should be '[option]<sep>[value]'
-    - sequential: (bool) whether each cut should be applied sequentially so a cutflow can be generated
+    | generates pythonic outputs from input _cutfile
+    | Cutfile should be formatted with headers [CUTS], [OUTPUTS] and [OPTIONS]
+    | Each line under [CUTS] header contains the 'sep'-separated values (detault: tab):
+    | - name: name of cut to be printed and used in plot labels
+    | - cut_var: variable in root file to cut on
+    | - moreless: '<' or '>'
+    | - cut_val: value of cut on variable
+    | - suffix: suffix to be added onto plot names
+    | - group: each cut with same group number will be applied all at once.
+    |          !!!SUFFIXES FOR CUTS IN GROUP MUST BE THE SAME!!!
+    |
+    | Each line under [OUTPUTS] should be a variable in root file
+    |
+    | Each line under [OPTIONS] header should be '[option]<sep>[value]'
+    | - sequential: (bool) whether each cut should be applied sequentially so a cutflow can be generated
     """
     # open file
     with open(file, 'r') as f:

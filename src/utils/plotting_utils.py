@@ -1,14 +1,14 @@
-from datetime import datetime
 import boost_histogram as bh
 import matplotlib.pyplot as plt
+from matplotlib.colors import LogNorm
 import mplhep as hep
 import numpy as np
-from typing import Tuple, Optional, List, OrderedDict
-from utils.axis_labels import labels_xs
+from typing import Tuple, Optional, List, OrderedDict, Union, Iterable
 from warnings import warn
 import pandas as pd
 
-from utils.dataframe_utils import get_luminosity
+from utils.dataframe_utils import get_luminosity, cut_on_cutgroup
+from utils.axis_labels import labels_xs
 
 # set ATLAS style plots
 plt.style.use([hep.style.ATLAS,
@@ -49,11 +49,18 @@ def get_root_sumw2_1d(hist: bh.Histogram) -> np.array:
     return np.array([np.sqrt(hist[idx].variance) for idx, _ in enumerate(hist.axes[0])])
 
 
-def get_axis_labels(var_name: str) -> Tuple[Optional[str], Optional[str]]:
+def get_axis_labels(var_name: str, lepton: str = 'lepton') -> Tuple[Optional[str], Optional[str]]:
     """Gets label for corresponting variable in axis labels dictionary"""
     if var_name in labels_xs:
         xlabel = labels_xs[var_name]['xlabel']
         ylabel = labels_xs[var_name]['ylabel']
+
+        # convert x label string for correct lepton if applicable
+        try:
+            xlabel = xlabel % lepton
+        except TypeError:
+            pass
+
     else:
         warn(f"Axis labels for {var_name} not found in in label lookup dictionary."
              f"They will be left blank.", UserWarning)
@@ -80,149 +87,203 @@ def scale_hist(scaling: str, hist: bh.Histogram,
     return hist
 
 
-def plot_cutgroup(var_name: str,
-                  df: pd.DataFrame,
-                  cutgroup: str,
-                  cutgroups: OrderedDict[str, List[str]],
-                  axis: plt.axes,
-                  cut_label: str,
-                  lumi: Optional[float] = None,
-                  scaling: Optional[str] = None,
-                  is_logbins: bool = True,
-                  n_bins: int = 30,
-                  binrange: tuple = (1, 500),
-                  eta_binrange: tuple = (-20, 20),
-                  n_threads: int = 1
-                  ) -> bh.Histogram:
-    """plots variable with cutgroup applied"""
+def get_axis(bins: Union[tuple, list],
+             transform: bh.axis.transform = None
+             ) -> bh.axis.Axis:
+    """
+    Returns the correct type of boost-histogram axis based on the input bins.
 
-    # get column names for boolean columns in dataframe containing the cuts
-    cut_rows = [cut_name + cut_label for cut_name in cutgroups[cutgroup]]
-
-    # setup
-    if is_logbins:
-        h_cut = bh.Histogram(bh.axis.Regular(n_bins, *binrange, transform=bh.axis.transform.log),
-                             storage=bh.storage.Weight())
+    :param bins: tuple of bins in x (n_bins, start, stop) or list of bin edges.
+                 In the first case returns an axis of type Regular(), othewise of type Variable().
+                 Raises error if not formatted in one of these ways.
+    :param transform: transform to pass to axis constructor
+    """
+    if isinstance(bins, tuple):
+        if len(bins) != 3:
+            raise ValueError("Tuple of bins should be formatted like (n_bins, start, stop).")
+        return bh.axis.Regular(*bins, transform=transform)
+    elif isinstance(bins, list):
+        if transform is not None:
+            warn("Transforms cannot be passed to variable bin types")
+        return bh.axis.Variable(bins)
     else:
-        h_cut = bh.Histogram(bh.axis.Regular(n_bins, *eta_binrange),
-                             storage=bh.storage.Weight())
+        raise TypeError("Bins must be formatted as either tuple (n_bins, start, stop) or a list of bin edges.")
 
-    # perform cut and fill
-    cut_df = df[df[cut_rows].any(1)]
-    h_cut.fill(cut_df[var_name], weight=cut_df['weight'], threads=n_threads)  # fill
+
+def set_fig_1d_axis_options(axis: plt.axes, var_name: str, lepton: str, bins: Union[tuple, list],
+                            scaling: Optional[str] = None, is_logbins: bool = True, logy: bool = False) -> plt.axes:
+    """
+    Sets my default axis options
+    :param axis: axis to change
+    :param var_name: name of variable being plotted
+    :param bins: tuple of bins in y (n_bins, start, stop) or list of bin edge
+    :param lepton: lepton name to pass to axis labels
+    :param scaling: scaling used in plot
+    :param is_logbins: whether bins are logarithmic
+    :param logy: whether to set logarithmic bins where appropriate
+    :return: changed axis (also works in place)
+    """
+    # get axis labels (x label, y label)
+    xlabel, ylabel = get_axis_labels(str(var_name), lepton)
+
+    if logy:
+        # log y axis, unless plotting Bjorken X
+        if 'PDFinfo_X' not in var_name:
+            axis.semilogy()
+
+    # apply axis limits
+    if is_logbins:  # set axis edge at 0
+        if isinstance(bins, tuple):
+            axis.set_xlim(bins[1], bins[2])
+        elif isinstance(bins, list):
+            axis.set_xlim(bins[0], bins[-1])
+        else:
+            raise TypeError("Bins must be formatted as either tuple (n_bins, start, stop) or a list of bin edges. "
+                            f"Given input was {bins}")
+
+    # set axis labels
+    axis.set_xlabel(xlabel)
+    if scaling == 'xs':
+        axis.set_ylabel(ylabel)
+    elif scaling == 'widths':
+        axis.set_ylabel('Entries / bin width')
+    elif scaling is None:
+        axis.set_ylabel('Entries')
+
+    return axis
+
+
+def histplot_1d(var_x: pd.Series,
+                weights: pd.Series,
+                bins: Union[tuple, list],
+                fig_axis: plt.axes,
+                yerr: Union[str, Iterable] = 'sumw2',
+                lumi: Optional[float] = None,
+                scaling: Optional[str] = None,
+                label: Optional[str] = None,
+                is_logbins: bool = True,
+                n_threads: int = 1
+                ) -> bh.Histogram:
+    """
+    Plots variable as histogram onto given figure axis
+    :param var_x: 1D series (or iterable) of variable to plot
+    :param weights: 1D series (or iterable) w/ same dimensions as var_x
+    :param bins: tuple of bins in y (n_bins, start, stop) or list of bin edges
+    :param fig_axis: figure axis to plot onto
+    :param yerr:| 1D series (or iterable) of y-errors.
+                | if 'SumW2' (case-insensitive), calculates sumw2 errors
+    :param lumi: luminostity of sample if scaling by cross-section
+    :param scaling: | type of scaling applied to histogram. either:
+                    | - 'xs': cross-section
+                    | - 'widths': by bin-width,
+                    |  -  None: No scaling
+    :param label: optional label for histogram (eg for legend)
+    :param is_logbins: whether it should be binned logarithmically
+    :param n_threads: multithreading: number of threads used to fill histogram
+    :return: histogram object
+    """
+
+    # axis transformation
+    if is_logbins:
+        ax_transform = bh.axis.transform.log
+    else:
+        ax_transform = None
+
+    # Construct histogram. Gets proper axis type based on bins given
+    h_cut = bh.Histogram(get_axis(bins, ax_transform), storage=bh.storage.Weight())
+
+    # fill
+    h_cut.fill(var_x, weight=weights, threads=n_threads)
+
+    # rescale scale
+    if scaling:
+        h_cut = scale_hist(scaling=scaling, hist=h_cut, lumi=lumi)
 
     # scale
-    h_cut = scale_hist(scaling=scaling, hist=h_cut, lumi=lumi)
-
-    cut_yerr = get_root_sumw2_1d(h_cut)  # get sum of weights squared
+    if isinstance(yerr, str):
+        if yerr.lower() == 'sumw2':
+            yerr = get_root_sumw2_1d(h_cut)  # get sum of weights squared
+        else:
+            raise ValueError("possible y error string value(s): 'sumw2'")
 
     # plot
     hep.histplot(h_cut.view().value, bins=h_cut.axes[0].edges,
-                 ax=axis, yerr=cut_yerr, label=cutgroup)
+                 ax=fig_axis, yerr=yerr, label=label)
 
     return h_cut
 
 
-def plot_overlay_and_acceptance(var_name: str,
-                                df: pd.DataFrame,
-                                cutgroups: OrderedDict[str, List[str]],
-                                dir_path: str,
-                                cut_label: str,
-                                lepton: str,
-                                lumi: Optional[float] = None,
-                                scaling: Optional[str] = None,
-                                not_log: Optional[List[str]] = None,
-                                plot_width=10,
-                                plot_height=10,
-                                n_bins: int = 30,
-                                binrange: tuple = (1, 500),
-                                eta_binrange: tuple = (-20, 20),
-                                n_threads: int = 1,
-                                ) -> None:
+def plot_overlay_and_acceptance_cutgroups(df: pd.DataFrame,
+                                          var_to_plot: str,
+                                          weights: pd.Series,
+                                          cutgroups: OrderedDict[str, List[str]],
+                                          dir_path: str,
+                                          cut_label: str,
+                                          bins: Union[tuple, list],
+                                          lepton: str,
+                                          lumi: Optional[float] = None,
+                                          scaling: Optional[str] = None,
+                                          not_log: Optional[List[str]] = None,
+                                          plot_width=10,
+                                          plot_height=10,
+                                          n_threads: int = 1,
+                                          ) -> None:
     """Plots overlay of cutgroups and acceptance (ratio) plots"""
+    # TODO: default bin ranges for phi and eta
+    # TODO: put ratio plot under main plot
 
     if not_log is None:
         not_log = []
-    print(f"Generating histogram for {var_name}...")
     fig, (fig_ax, accept_ax) = plt.subplots(1, 2)
 
     # whether or not bins should be logarithmic bins
-    is_logbins = not any(map(var_name.__contains__, not_log))
-
-    # get axis labels (x label, y label)
-    xlabel, ylabel = get_axis_labels(var_name)
-
-    # convert x label string for correct lepton if applicable
-    try:
-        xlabel = xlabel % lepton
-    except TypeError:
-        pass
+    is_logbins = not any(map(var_to_plot.__contains__, not_log))
 
     # INCLUSIVE PLOT
     # ================
-    # setup inclusive histogram
-    if is_logbins:
-        h_inclusive = bh.Histogram(bh.axis.Regular(n_bins, *binrange, transform=bh.axis.transform.log),
-                                   storage=bh.storage.Weight())
-    else:
-        h_inclusive = bh.Histogram(bh.axis.Regular(n_bins, *eta_binrange),
-                                   storage=bh.storage.Weight())
-
-    h_inclusive.fill(df[var_name], weight=df['weight'], threads=n_threads)  # fill
-
-    # scale
-    h_inclusive = scale_hist(hist=h_inclusive, scaling=scaling, lumi=lumi)
-
-    yerr = get_root_sumw2_1d(h_inclusive)  # get sum of weights squared
-
-    # plot
-    hep.histplot(h_inclusive.view().value, bins=h_inclusive.axes[0].edges,
-                 ax=fig_ax, yerr=yerr, label='Inclusive')
-
+    h_inclusive = histplot_1d(var_x=df[var_to_plot], weights=weights,
+                              bins=bins, fig_axis=fig_ax,
+                              yerr='sumw2',
+                              lumi=lumi, scaling=scaling,
+                              label='Inclusive',
+                              is_logbins=is_logbins, n_threads=n_threads
+                              )
     # PLOT CUTS
     # ================
     for cutgroup in cutgroups.keys():
         print(f"    - generating cutgroup '{cutgroup}'")
 
-        h_cut = plot_cutgroup(var_name=var_name, df=df, cut_label=cut_label,
-                              cutgroup=cutgroup, cutgroups=cutgroups,
-                              axis=fig_ax, lumi=lumi, scaling=scaling,
-                              is_logbins=is_logbins, n_bins=n_bins,
-                              binrange=binrange, eta_binrange=eta_binrange,
-                              n_threads=n_threads)
+        # TODO: cut on full dataframes with groups above this loop
+        #  so the cuts don't need to be repeated for each plotted variable
+
+        cut_df = cut_on_cutgroup(df, cutgroups, cutgroup, cut_label)
+        weight_cut = cut_df['weight']
+        var_cut = cut_df[var_to_plot]
+
+        h_cut = histplot_1d(var_x=var_cut, weights=weight_cut,
+                            bins=bins, fig_axis=fig_ax,
+                            lumi=lumi, scaling=scaling,
+                            is_logbins=is_logbins,
+                            n_threads=n_threads
+                            )
 
         # RATIO PLOT
         # ================
         hep.histplot(h_cut.view().value / h_inclusive.view().value,
                      bins=h_cut.axes[0].edges, ax=accept_ax, label=cutgroup)
 
-    # log y axis, unless plotting Bjorken X
-    if 'PDFinfo_X' not in var_name:
-        fig_ax.semilogy()
-
-    # apply axis options
-    if is_logbins:  # set axis edge at 0
-        fig_ax.set_xlim(*binrange)
-    else:
-        fig_ax.set_xlim(*eta_binrange)
-    fig_ax.set_xlabel(xlabel)
-
-    if scaling == 'xs':
-        fig_ax.set_ylabel(ylabel)
-    elif scaling == 'widths':
-        fig_ax.set_ylabel('Entries / bin width')
-    elif scaling is None:
-        fig_ax.set_ylabel('Entries')
-
+    # AXIS FORMATTING
+    # ==================
+    # figure plot
+    fig_ax = set_fig_1d_axis_options(axis=fig_ax, var_name=var_to_plot, bins=bins,
+                                     scaling=scaling, is_logbins=is_logbins,
+                                     lepton=lepton, logy=True)
     fig_ax.legend()
     hep.box_aspect(fig_ax)  # makes just the main figure a square (& too small)
 
     # ratio plot
-    if is_logbins:  # set axis edge at 0
-        accept_ax.set_xlim(*binrange)
-    else:
-        accept_ax.set_xlim(*eta_binrange)
-    accept_ax.set_xlabel(xlabel)
+    set_fig_1d_axis_options(axis=accept_ax, var_name=var_to_plot, bins=bins,
+                            is_logbins=is_logbins, lepton=lepton)
     accept_ax.set_ylabel("Acceptance")
     accept_ax.legend()
     hep.box_aspect(accept_ax)
@@ -232,8 +293,64 @@ def plot_overlay_and_acceptance(var_name: str,
     fig.set_figwidth(plot_width * 2)
 
     # save figure
-    hep.atlas.label(data=False, ax=fig_ax, paper=False, year=datetime.now().year)
-    out_png_file = dir_path + f"{var_name}_{str(scaling)}.png"
+    hep.atlas.label(ax=fig_ax)
+    hep.atlas.text("Internal", loc=0, ax=fig_ax)
+    out_png_file = dir_path + f"{var_to_plot}_{str(scaling)}.png"
     fig.savefig(out_png_file)
     print(f"Figure saved to {out_png_file}")
     plt.clf()  # clear for next plot
+
+
+def histplot_2d(out_path: str,
+                var_x: pd.Series, var_y: pd.Series,
+                xbins: Union[tuple, list], ybins: Union[tuple, list],
+                weights: pd.Series,
+                title: str,
+                lepton: Optional[str] = None,
+                n_threads: int = 1,
+                is_log: bool = True,
+                is_square: bool = True,
+                ) -> bh.Histogram:
+    """
+    Plots a 2d histogram
+
+    :param out_path: path to save figure
+    :param var_x: pandas series of var to plot on x axis
+    :param var_y: pandas series of var to plot on y axis
+    :param xbins: tuple of bins in x (n_bins, start, stop) or list of bin edges
+    :param ybins: tuple of bins in y (n_bins, start, stop) or list of bin edges
+    :param weights: series of weights
+    :param title: plot title
+    :param lepton: label of lepton used
+    :param n_threads: number of threads for filling
+    :param is_log: whether z-axis should be scaled logarithmically
+    :param is_square: whether to set square aspect ratio
+    :return: histogram
+    """
+    fig, ax = plt.subplots()
+
+    # setup and fill histogram
+    hist_2d = bh.Histogram(get_axis(xbins),
+                           get_axis(ybins))
+    hist_2d.fill(var_x, var_y, weight=weights, threads=n_threads)
+
+    # setup colour mesh (log or not)
+    if is_log:
+        mesh = ax.pcolormesh(*hist_2d.axes.edges.T, hist_2d.view().T, norm=LogNorm())
+    else:
+        mesh = ax.pcolormesh(*hist_2d.axes.edges.T, hist_2d.view().T)
+    fig.colorbar(mesh, ax=ax, fraction=0.046, pad=0.04)
+
+    if is_square:  # square aspect ratio
+        ax.set_aspect('equal')
+
+    # get axis labels
+    xlabel, _ = get_axis_labels(str(var_x.name), lepton)
+    ylabel, _ = get_axis_labels(str(var_y.name), lepton)
+
+    ax.set_title(title)
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    plt.savefig(out_path)
+
+    return hist_2d

@@ -72,6 +72,7 @@ class Cutflow:
     def print_histogram(self, filepath: str, kind: str, **kwargs) -> None:
         """
         Generates and saves a cutflow histogram
+
         :param filepath: path to directory to save plots into
         :param kind: which cutflow type. options:
                     'ratio': ratio of cut to previous cut
