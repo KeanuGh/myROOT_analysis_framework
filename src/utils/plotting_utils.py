@@ -197,11 +197,11 @@ def histplot_1d(var_x: pd.Series,
     # fill
     h_cut.fill(var_x, weight=weights, threads=n_threads)
 
-    # rescale scale
+    # rescale global_scale
     if scaling:
         h_cut = scale_hist(scaling=scaling, hist=h_cut, lumi=lumi)
 
-    # scale
+    # global_scale
     if isinstance(yerr, str):
         if yerr.lower() == 'sumw2':
             yerr = get_root_sumw2_1d(h_cut)  # get sum of weights squared
@@ -293,7 +293,7 @@ def plot_1d_overlay_and_acceptance_cutgroups(
     # save figure
     hep.atlas.text("Internal", loc=0, ax=fig_ax)
     out_png_file = dir_path + f"{var_to_plot}_{str(scaling)}.png"
-    fig.savefig(out_png_file)
+    fig.savefig(out_png_file, bbox_inches='tight')
     print(f"Figure saved to {out_png_file}")
     fig.clf()  # clear for next plot
 
@@ -323,7 +323,6 @@ def histplot_2d(out_path: str,
     :param n_threads: number of threads for filling
     :param is_z_log: whether z-axis should be scaled logarithmically
     :param is_square: whether to set square aspect ratio
-    :param axis_scale: argument to pass to the ax.axis() method to decide how to scale axis
     :return: histogram
     """
     fig, ax = plt.subplots()
@@ -346,11 +345,11 @@ def histplot_2d(out_path: str,
     xlabel, _ = get_axis_labels(str(var_x.name), lepton)
     ylabel, _ = get_axis_labels(str(var_y.name), lepton)
 
-    ax.set_title(title)
+    ax.set_title(title, loc='right')
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
 
-    plt.savefig(out_path)
+    fig.savefig(out_path, bbox_inches='tight')
     print(f"printed 2d histogram to {out_path}")
     plt.close(fig)
     return hist_2d
