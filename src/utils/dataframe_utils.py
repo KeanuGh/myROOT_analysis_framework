@@ -62,18 +62,20 @@ def build_analysis_dataframe(cut_list_dicts: List[dict],
 # TODO: WRAP THESE INTO A CUSTOM DATAFRAME CLASS?
 def gen_weight_column(df: pd.DataFrame,
                       weight_mc_col: str = 'weight_mc',
-                      scale: float = 1
+                      global_scale: float = 1.
                       ) -> pd.Series:
     """Returns series of weights based off weight_mc column"""
+    print("Mapping weights column...")
     if weight_mc_col not in df.columns:
         raise ValueError(f"'{weight_mc_col}' column does not exist.")
-    return df[weight_mc_col].map(lambda w: scale if w > 0 else -1 * scale)
+    return df[weight_mc_col].map(lambda w: global_scale if w > 0 else -1 * global_scale)
 
 
 def rescale_to_gev(df: pd.DataFrame) -> pd.DataFrame:
     """rescales to GeV because athena's default output is in MeV for some reason"""
     GeV_columns = [column for column in df.columns
                    if (column in labels_xs) and ('[GeV]' in labels_xs[column]['xlabel'])]
+    print(f"Rescaling {len(GeV_columns)} columns to GeV...")
     df[GeV_columns] /= 1000
     return df
 

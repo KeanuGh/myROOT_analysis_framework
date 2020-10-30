@@ -3,6 +3,7 @@ from typing import Optional, List, Union, Tuple
 import os
 from numpy import pi
 from itertools import combinations
+from warnings import warn
 
 # project imports
 from utils.cutflow import Cutflow
@@ -81,9 +82,11 @@ class Analysis:
                                                     self.TTree,
                                                     pkl_filepath=self.pkl_df_filepath)
         else:
+            print(f"Reading data from {self.pkl_df_filepath}...")
             self.tree_df = pd.read_pickle(self.pkl_df_filepath)
 
         # extract cutgroups
+        print("Extracting cutgroups...")
         self.cutgroups = gen_cutgroups(self.cut_dicts)
 
         # map weights column
@@ -110,16 +113,15 @@ class Analysis:
         # ========== CUTFLOW ============
         # ===============================
         # don't product cutflow (for now) if not sequential
-        # TODO: non-sequential cutflow
-        if self.options['sequential']:
-            self.Cutflow = Cutflow(self.tree_df, self.cut_dicts, self.cut_label)
+        self.cutflow = Cutflow(self.tree_df, self.cut_dicts, self.cut_label,
+                               sequential=self.options['sequential'])
 
-            # plot latex table if it doesn't exist and is different to the last file
-            if self._make_backup or is_dir_empty(self.latex_table_dir):
-                last_backup = get_last_backup(self.latex_table_dir)
-                latex_file = self.Cutflow.print_latex_table(self.latex_table_dir, cutfile_name)
-                if identical_to_backup(latex_file, backup_file=last_backup):
-                    delete_file(latex_file)
+        # plot latex table if it doesn't exist and is different to the last file
+        if self._make_backup or is_dir_empty(self.latex_table_dir):
+            last_backup = get_last_backup(self.latex_table_dir)
+            latex_file = self.cutflow.print_latex_table(self.latex_table_dir, cutfile_name)
+            if identical_to_backup(latex_file, backup_file=last_backup):
+                delete_file(latex_file)
 
         # if new cutfile, save backup
         if self._make_backup:
@@ -128,7 +130,8 @@ class Analysis:
     # ===============================
     # =========== PLOTS =============
     # ===============================
-    # TODO: save outputs in separate directory for each new cutfile
+    # TODO: simple functions that take variables as input and plot 1d/2d histograms with/without a cut
+    # TODO: save histograms to pickle file
     def plot_with_cuts(self,
                        scaling: Optional[str] = None,
                        bins: Union[tuple, list] = (30, 1, 500),
@@ -178,17 +181,22 @@ class Analysis:
                          a_ratio: bool = False
                          ):
         """Generates and saves cutflow histograms"""
-        if not self.options['sequential']:
-            raise Exception("No cutflow available for non-sequential cuts")
-
         if event:
-            self.Cutflow.print_histogram(self.plot_dir, 'event')
+            self.cutflow.print_histogram(self.plot_dir, 'event')
         if ratio:
-            self.Cutflow.print_histogram(self.plot_dir, 'ratio')
+            self.cutflow.print_histogram(self.plot_dir, 'ratio')
         if cummulative:
-            self.Cutflow.print_histogram(self.plot_dir, 'cummulative')
+            if self.options['sequential']:
+                self.cutflow.print_histogram(self.plot_dir, 'cummulative')
+            else:
+                warn("Sequential cuts cannot generate a cummulative cutflow")
         if a_ratio:
-            self.Cutflow.print_histogram(self.plot_dir, 'a_ratio')
+            if self.options['sequential']:
+                self.cutflow.print_histogram(self.plot_dir, 'a_ratio')
+            else:
+                warn("Sequential cuts can't generate cummulative cutflow. "
+                     "Ratio of cuts to acceptance will be generated instead.")
+                self.cutflow.print_histogram(self.plot_dir, 'ratio')
 
     def make_all_cutgroup_2dplots(self, bins: Union[tuple, list] = (20, 0, 200)):
         if len(self.vars_to_cut) < 2:
@@ -218,9 +226,7 @@ class Analysis:
     # ===============================
     def cutflow_printout(self) -> None:
         """Prints cutflow table to terminal"""
-        if not self.options['sequential']:
-            raise Exception("No cutflow available for non-sequential cuts")
-        self.Cutflow.terminal_printout()
+        self.cutflow.terminal_printout()
 
     def kinematics_printouts(self) -> None:
         """Prints some kinematic variables to terminal"""
@@ -259,6 +265,6 @@ if __name__ == '__main__':
     # pipeline
     my_analysis.plot_with_cuts(scaling='xs')
     my_analysis.make_all_cutgroup_2dplots()
-    # my_analysis.gen_cutflow_hist(ratio=True, cummulative=True)
-    # my_analysis.cutflow_printout()
+    my_analysis.gen_cutflow_hist(ratio=True)
+    my_analysis.cutflow_printout()
     my_analysis.kinematics_printouts()

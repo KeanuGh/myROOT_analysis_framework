@@ -112,6 +112,13 @@ def parse_cutfile(file: str, sep='\t') -> Tuple[List[dict], List[str], Dict[str,
             # fill dict
             options_dict[option[0]] = bool(strtobool(option[1].lower()))  # converts string to boolean
 
+            # Options necessary for the analysis to run (remember to add to this when adding new options)
+            necessary_options = [
+                'sequential',
+            ]
+            if missing_options := [opt for opt in necessary_options if opt not in options_dict.keys()]:
+                raise Exception(f"Missing option(s) in cutfile: {', '.join(missing_options)}")
+
     return cuts_list_of_dicts, output_vars_list, options_dict
 
 
