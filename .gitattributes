@@ -1,0 +1,2 @@
+# stop jupyter notebook files taking up all the language statistics
+*.ipynb linguist-vendored
