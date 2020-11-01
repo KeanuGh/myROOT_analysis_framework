@@ -18,6 +18,7 @@ plt.style.use([hep.style.ATLAS,
 
 def scale_to_crosssection(hist: bh.Histogram, luminosity) -> bh.Histogram:
     """Scales histogram to cross-section. Currently undefined for multidimensional histograms"""
+    # TODO: rescale weights too to get errors correct
     if len(hist.axes) != 1:
         raise Exception("Currently undefined behaviour for multi-dimentional histograms")
     hist /= luminosity

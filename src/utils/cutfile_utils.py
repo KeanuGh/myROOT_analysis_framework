@@ -189,6 +189,8 @@ def compare_cutfile_backup(current_cutfile: str,
             # if _cutfile contains different variables, extract necessary variables from root file and put into pickle
             # file for quicker read/write in pandas
             if not set(current_variables) == set(backup_variables):
+                print(f"New variables found; dataframe will be rebuilt.\n"
+                      f" Current cutfile variables: {current_variables}. Previous: {backup_variables}")
                 build_dataframe = True
 
     # if backup doesn't exit, make backup and check if there is already a pickle file
@@ -217,6 +219,7 @@ def compare_cutfile_backup(current_cutfile: str,
                     yn = input("yes or no ")
         # if no backup or pickle file, rebuild
         else:
+            print("No picke file found. Will rebuild dataframe")
             build_dataframe = True
 
     # check pickle file is actually there before trying to read from it
