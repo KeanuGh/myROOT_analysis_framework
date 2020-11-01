@@ -25,7 +25,8 @@ def build_analysis_dataframe(cut_list_dicts: List[dict],
     :param extra_vars: list of any extra variables wanting to extract
     :return: output dataframe containing columns corresponding to necessary variables
     """
-    print("Building Dataframe...")
+    print("Extracting variables:\n{}".format('\n'.join(vars_to_cut)))
+    print("\nBuilding Dataframe...")
     # create list of all necessary values extract
     vars_to_extract = extract_cut_variables(cut_list_dicts, vars_to_cut)
     # strictly necessary variable(s)
@@ -35,10 +36,9 @@ def build_analysis_dataframe(cut_list_dicts: List[dict],
         vars_to_extract += extra_vars
 
     # extract pandas dataframe from root file with necessary variables
-    tree_gen = uproot.iterate(root_filepath+':'+TTree, branches=vars_to_extract, library='pd')
-
-    # extract variables from tree
-    tree_df = pd.concat([data for data in tree_gen])
+    tree_df = uproot.concatenate(root_filepath + ':' + TTree,
+                                 filter_name=vars_to_extract,
+                                 library='pd')
 
     # check vars exist in file
     if unexpected_vars := [unexpected_var for unexpected_var in vars_to_extract
@@ -163,5 +163,5 @@ def cut_on_cutgroup(df: pd.DataFrame,
                     ) -> pd.DataFrame:
     """Cuts on cutgroup on input dataframe or series"""
     cut_rows = [cut_name + cut_label for cut_name in cutgroups[group]]
-    cut_data = df[df[cut_rows].any(1)]
+    cut_data = df[df[cut_rows].all(1)]
     return cut_data

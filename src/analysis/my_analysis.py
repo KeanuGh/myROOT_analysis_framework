@@ -8,7 +8,7 @@ from warnings import warn
 # project imports
 from utils.cutflow import Cutflow
 from utils.cutfile_utils import parse_cutfile, gen_cutgroups, compare_cutfile_backup, backup_cutfile
-from utils.file_utils import identical_to_backup, delete_file, is_dir_empty, get_last_backup, get_filename, makedir
+from utils.file_utils import identical_to_backup, delete_file, get_last_backup, get_filename, makedir
 from utils.plotting_utils import plot_1d_overlay_and_acceptance_cutgroups, plot_2d_cutgroups
 from utils.dataframe_utils import (build_analysis_dataframe, create_cut_columns,
                                    gen_weight_column, rescale_to_gev,
@@ -37,9 +37,20 @@ class Analysis:
 
     def __init__(self, root_path: str, cutfile: str, lepton: str,
                  force_rebuild: bool = False,
+                 grouped_cutflow: bool = True,
                  phibins: Union[tuple, list] = (20, -2 * pi, 2 * pi),
                  etabins: Union[tuple, list] = (20, -10, 10),
                  ):
+        """
+        TODO
+        :param root_path:
+        :param cutfile:
+        :param lepton:
+        :param force_rebuild:
+        :param grouped_cutflow:
+        :param phibins:
+        :param etabins:
+        """
 
         # set
         self._lepton_name = lepton
@@ -58,7 +69,7 @@ class Analysis:
         # ============================
         # ======  READ CUTFILE =======
         # ============================
-        cutfile_name = get_filename(self._cutfile)
+        self._cutfile_name = get_filename(self._cutfile)
 
         # parse cutfile
         self.cut_dicts, self.vars_to_cut, self.options = parse_cutfile(self._cutfile)
@@ -69,7 +80,7 @@ class Analysis:
                                                                           self.pkl_df_filepath)
 
         # place plots in outputs/plots/<cutfile name>
-        self.plot_dir = self.out_plots_dir + cutfile_name.rstrip('.txt') + '/'
+        self.plot_dir = self.out_plots_dir + self._cutfile_name.rstrip('.txt') + '/'
         makedir(self.plot_dir)
 
         # ===============================
@@ -112,16 +123,11 @@ class Analysis:
         # ===============================
         # ========== CUTFLOW ============
         # ===============================
-        # don't product cutflow (for now) if not sequential
-        self.cutflow = Cutflow(self.tree_df, self.cut_dicts, self.cut_label,
+        self.cutflow = Cutflow(df=self.tree_df,
+                               cut_dicts=self.cut_dicts,
+                               cutgroups=self.cutgroups if grouped_cutflow else None,
+                               cut_label=self.cut_label,
                                sequential=self.options['sequential'])
-
-        # plot latex table if it doesn't exist and is different to the last file
-        if self._make_backup or is_dir_empty(self.latex_table_dir):
-            last_backup = get_last_backup(self.latex_table_dir)
-            latex_file = self.cutflow.print_latex_table(self.latex_table_dir, cutfile_name)
-            if identical_to_backup(latex_file, backup_file=last_backup):
-                delete_file(latex_file)
 
         # if new cutfile, save backup
         if self._make_backup:
@@ -235,6 +241,20 @@ class Analysis:
               f"luminosity   : {self.luminosity:.2f} fb-1\n"
               )
 
+    def print_cutflow_latex_table(self, check_backup: bool = True) -> None:
+        """
+        Prints a latex table of cutflow. By default first checks if a current backup exists and will not print if
+        backup is identical
+        :param check_backup: default true. Checks if backup of current cutflow already exists and if so does not print
+        :return: None
+        """
+        if check_backup:
+            last_backup = get_last_backup(self.latex_table_dir)
+        latex_file = self.cutflow.print_latex_table(self.latex_table_dir, self._cutfile_name)
+        if check_backup and \
+                identical_to_backup(latex_file, backup_file=last_backup):
+            delete_file(latex_file)
+
     # ===============================
     # ========== PRIVATE ============
     # ===============================
@@ -263,8 +283,9 @@ if __name__ == '__main__':
                            )
 
     # pipeline
-    my_analysis.plot_with_cuts(scaling='xs')
-    my_analysis.make_all_cutgroup_2dplots()
+    # my_analysis.plot_with_cuts(scaling='xs')
+    # my_analysis.make_all_cutgroup_2dplots()
     my_analysis.gen_cutflow_hist(ratio=True)
     my_analysis.cutflow_printout()
     my_analysis.kinematics_printouts()
+    my_analysis.print_cutflow_latex_table()
