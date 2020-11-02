@@ -141,7 +141,8 @@ class Analysis:
     def plot_with_cuts(self,
                        scaling: Optional[str] = None,
                        bins: Union[tuple, list] = (30, 1, 500),
-                       not_log_add: Optional[List[str]] = None
+                       not_log_add: Optional[List[str]] = None,
+                       log_x: bool = False
                        ) -> None:
         """
         Plots each variable to cut from _cutfile with each cutgroup applied
@@ -153,6 +154,7 @@ class Analysis:
                         y-axis labels set accordingly
         :param not_log_add: Any extra variables that shouldn't be binned in log(x).
                             Currently defaults only '_eta_' and '_phi_'
+        :param log_x: log x axis
         """
         # any of the substrings in this list shouldn't be binned logarithmically
         # (may need to double check this as it can cause problems if the substrings appear elsewhere)
@@ -174,6 +176,7 @@ class Analysis:
                 dir_path=self.plot_dir,
                 cut_label=self.cut_label,
                 is_logbins=is_logbins,
+                log_x=log_x,
                 n_threads=self._n_threads,
                 lepton=self._lepton_name,
                 scaling=scaling,
@@ -283,7 +286,7 @@ if __name__ == '__main__':
                            )
 
     # pipeline
-    # my_analysis.plot_with_cuts(scaling='xs')
+    my_analysis.plot_with_cuts(scaling='xs')
     # my_analysis.make_all_cutgroup_2dplots()
     my_analysis.gen_cutflow_hist(ratio=True)
     my_analysis.cutflow_printout()
