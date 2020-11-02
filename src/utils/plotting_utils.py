@@ -17,20 +17,29 @@ plt.style.use([hep.style.ATLAS,
 
 
 def scale_to_crosssection(hist: bh.Histogram, luminosity) -> bh.Histogram:
-    """Scales histogram to cross-section. Currently undefined for multidimensional histograms"""
-    # TODO: rescale weights too to get errors correct
+    """
+    Scales histogram to cross-section. Currently undefined for multidimensional histograms.
+    Also rescales weight if able
+    """
     if len(hist.axes) != 1:
         raise Exception("Currently undefined behaviour for multi-dimentional histograms")
-    hist /= luminosity
-    hist /= hist.axes[0].widths
+    factor = (luminosity * hist.axes[0].widths)
+    hist /= factor
+    if hasattr(hist.view(), 'variance'):
+        hist.view().variance /= factor
     return hist
 
 
 def scale_by_bin_widths(hist: bh.Histogram) -> bh.Histogram:
-    """Divides number of entries in bins by bin width"""
+    """
+    Divides number of entries in bins by bin width. Also rescales weight if able.
+    """
     if len(hist.axes) != 1:
         raise Exception("Currently undefined behaviour for multi-dimentional histograms")
-    hist /= hist.axes[0].widths
+    factor = hist.axes[0].widths
+    hist /= factor
+    if hasattr(hist.view(), 'variance'):
+        hist.view().variance /= factor
     return hist
 
 
@@ -112,7 +121,8 @@ def get_axis(bins: Union[tuple, list],
 
 
 def set_fig_1d_axis_options(axis: plt.axes, var_name: str, lepton: str, bins: Union[tuple, list],
-                            scaling: Optional[str] = None, is_logbins: bool = True, logy: bool = False) -> plt.axes:
+                            scaling: Optional[str] = None, is_logbins: bool = True,
+                            logy: bool = False, logx: bool = False) -> plt.axes:
     """
     Sets my default axis options
 
@@ -142,6 +152,8 @@ def set_fig_1d_axis_options(axis: plt.axes, var_name: str, lepton: str, bins: Un
         else:
             raise TypeError("Bins must be formatted as either tuple (n_bins, start, stop) or a list of bin edges. "
                             f"Given input was {bins}")
+        if logx:
+            axis.semilogx()
 
     # set axis labels
     axis.set_xlabel(xlabel)
@@ -164,6 +176,7 @@ def histplot_1d(var_x: pd.Series,
                 scaling: Optional[str] = None,
                 label: Optional[str] = None,
                 is_logbins: bool = True,
+                color = None,
                 n_threads: int = 1
                 ) -> bh.Histogram:
     """
@@ -182,6 +195,7 @@ def histplot_1d(var_x: pd.Series,
                     | -  None: No scaling
     :param label: optional label for histogram (eg for legend)
     :param is_logbins: whether it should be binned logarithmically
+    :param color: colour of plot
     :param n_threads: multithreading: number of threads used to fill histogram
     :return: histogram object
     """
@@ -211,7 +225,7 @@ def histplot_1d(var_x: pd.Series,
 
     # plot
     hep.histplot(h_cut.view().value, bins=h_cut.axes[0].edges,
-                 ax=fig_axis, yerr=yerr, label=label)
+                 ax=fig_axis, yerr=yerr, label=label, color=color)
 
     return h_cut
 
@@ -228,6 +242,7 @@ def plot_1d_overlay_and_acceptance_cutgroups(
         lumi: Optional[float] = None,
         scaling: Optional[str] = None,
         is_logbins: bool = False,
+        log_x: bool = False,
         plot_width=10,
         plot_height=10,
         n_threads: int = 1,
@@ -269,14 +284,15 @@ def plot_1d_overlay_and_acceptance_cutgroups(
         # RATIO PLOT
         # ================
         hep.histplot(h_cut.view().value / h_inclusive.view().value,
-                     bins=h_cut.axes[0].edges, ax=accept_ax, label=cutgroup)
+                     bins=h_cut.axes[0].edges, ax=accept_ax, label=cutgroup,
+                     color=fig_ax.get_lines()[-1].get_color())
 
     # AXIS FORMATTING
     # ==================
     # figure plot
     fig_ax = set_fig_1d_axis_options(axis=fig_ax, var_name=var_to_plot, bins=bins,
                                      scaling=scaling, is_logbins=is_logbins,
-                                     lepton=lepton, logy=True)
+                                     lepton=lepton, logy=True, logx=log_x)
     fig_ax.legend()
     hep.box_aspect(fig_ax)  # makes just the main figure a square (& too small)
 
@@ -386,4 +402,3 @@ def plot_2d_cutgroups(
             is_z_log=is_logz,
             n_threads=n_threads
         )
-

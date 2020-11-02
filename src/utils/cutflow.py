@@ -5,7 +5,6 @@ from time import strftime
 
 
 class Cutflow:
-    # TODO: option for grouping by cutgroup rather than just cuts
     def __init__(self, df: pd.DataFrame,
                  cut_dicts: List[Dict],
                  cutgroups: Optional[OrderedDict[str, List[str]]] = None,
@@ -210,7 +209,7 @@ class Cutflow:
         ax.set_xlabel("Cut")
         ax.tick_params(axis='x', which='both', bottom=False, top=False)  # disable ticks on x axis
         ax.set_xticks(ax.get_xticks())  # REMOVE IN THE FUTURE - PLACED TO AVOID WARNING - BUG IN MATPLOTLIB 3.3.2
-        ax.set_xticklabels(labels=self.cutflow_labels, rotation='130')
+        ax.set_xticklabels(labels=self.cutflow_labels, rotation='-40')
         ax.set_ylabel(self._cuthist_options[kind]['ylabel'])
         ax.grid(b=True, which='both', axis='y', alpha=0.3)
 
