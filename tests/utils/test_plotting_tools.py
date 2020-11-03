@@ -1,6 +1,6 @@
 import boost_histogram as bh
 import pytest
-from utils.plotting_utils import get_sumw2_1d, get_axis_labels
+from utils.plotting_utils import get_sumw2, get_axis_labels
 
 
 class TestGetSumW21D(object):
@@ -21,7 +21,7 @@ class TestGetSumW21D(object):
         h.fill(x, weight=2)
 
         expected_output = [4.0, 4.0, 4.0, 4.0, 4.0]
-        actual_output = get_sumw2_1d(h)
+        actual_output = get_sumw2(h)
 
         assert expected_output == actual_output, f"Expected: {expected_output}. Actual: {actual_output}"
 

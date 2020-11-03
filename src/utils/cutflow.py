@@ -12,12 +12,15 @@ class Cutflow:
                  sequential: bool = True,
                  ):
         """
-        TODO
-        :param df:
-        :param cut_dicts:
-        :param cutgroups:
-        :param cut_label:
-        :param sequential:
+        Generates cutflow object that keeps track of various properties and ratios of selections made in analysis
+
+        :param df: Input analysis dataframe with boolean cut rows.
+        :param cut_dicts: Dictionary of cufts made.
+        :param cutgroups: Optional ordered dictionary of cut groups. If suppled, will organise cutflow in terms of
+                          cutgroups rather than individual cuts.
+        :param cut_label: Label for boolean cut rows in dataframe
+        :param sequential: Whether or not to organise cutflow as each cut happening one after the other
+                           or each cut separately. Default True. If false, plots each cut separately.
         """
         # When sequential cuts, apply each cut one after each other in the order they were input into the cutfile
         self._is_sequential = sequential
@@ -45,23 +48,23 @@ class Cutflow:
             df = df[[col for col in df.columns if cut_label in col]]
 
             # special variables only for sequential cuts
-            self.cutflow_a_ratio = []  # contains ratio of each separate cut to inclusive sample
-            self.cutflow_cum = []  # contains ratio of each cut to inclusive sample
+            self.cutflow_a_ratio = [1.0]  # contains ratio of each separate cut to inclusive sample
+            self.cutflow_cum = [1.0]  # contains ratio of each cut to inclusive sample
 
             # generate cutflow
             prev_n = self._n_events_tot  # saves the last cut in loop
             curr_cut_columns = []  # which cuts have already passed
             if self._cutgroups:
                 # loop over groups
-                for group in self._cutgroups:
-                    curr_cut_columns += self._cutgroups[group]
+                for group in self._cutgroups.values():
+                    curr_cut_columns += [cut + cut_label for cut in group]
                     # number of events passing current cut & all previous cuts
                     n_events_left = len(df[df[curr_cut_columns].all(1)].index)
                     # append calculations to cutflow arrays
                     self.cutflow_n_events.append(n_events_left)
                     self.cutflow_ratio.append(n_events_left / prev_n)
                     self.cutflow_cum.append(n_events_left / self._n_events_tot)
-                    self.cutflow_a_ratio.append(len(df[df[group + cut_label]].index) / self._n_events_tot)
+                    self.cutflow_a_ratio.append(len(df[df[[cut + cut_label for cut in group]].all(1)].index) / self._n_events_tot)
                     prev_n = n_events_left
             else:
                 # loop over individual cuts
@@ -73,7 +76,7 @@ class Cutflow:
                     self.cutflow_n_events.append(n_events_left)
                     self.cutflow_ratio.append(n_events_left / prev_n)
                     self.cutflow_cum.append(n_events_left / self._n_events_tot)
-                    self.cutflow_a_ratio.append(len(df[df[cut + cut_label]].index) / self._n_events_tot)
+                    self.cutflow_a_ratio.append(len(df[df[cut + cut_label].all(1)].index) / self._n_events_tot)
                     prev_n = n_events_left
 
             # assign histogram options for each type
@@ -153,7 +156,7 @@ class Cutflow:
                   "Events " + " " * (max_n_len - 6) +
                   "Ratio A. Ratio Cum. Ratio")
             # first line is inclusive sample
-            print("Inclusive " + " " * (max_name_len - 9) + f"{self._n_events_tot} -     -     -")
+            print("Inclusive " + " " * (max_name_len - 9) + f"{self._n_events_tot} -     -        -")
 
             # print line
             for i, cutname in enumerate(self.cutflow_labels[1:]):
@@ -163,8 +166,8 @@ class Cutflow:
                 a_ratio = self.cutflow_a_ratio[i + 1]
                 print(f"{cutname:<{max_name_len}} "
                       f"{n_events:<{max_n_len}} "
-                      f"{ratio:.3f}    "
-                      f"{a_ratio:.3f} "
+                      f"{ratio:.3f} "
+                      f"{a_ratio:.3f}    "
                       f"{cum_ratio:.3f}")
         else:
             # cutflow printout

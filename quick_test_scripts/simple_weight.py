@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import boost_histogram as bh
-from utils.plotting_utils import get_sumw2_1d
+from utils.plotting_utils import get_sumw2
 
 # Make 1-d histogram with 5 logarithmic bins from 1e0 to 1e5
 h = bh.Histogram(
@@ -24,5 +24,5 @@ for idx, (lower, upper) in enumerate(h.axes[0]):
     val = h[idx]
     print(f"bin {idx} in [{lower:g}, {upper:g}): {val.value} +/- {val.variance ** .5}")
 
-sumw2 = get_sumw2_1d(h)
+sumw2 = get_sumw2(h)
 print(sumw2, type(sumw2))
