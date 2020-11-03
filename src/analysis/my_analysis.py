@@ -14,6 +14,8 @@ from utils.dataframe_utils import (build_analysis_dataframe, create_cut_columns,
                                    gen_weight_column, rescale_to_gev,
                                    get_cross_section, get_luminosity)
 
+# TODO: Generate logs
+
 
 class Analysis:
     # ===========================
@@ -42,7 +44,7 @@ class Analysis:
                  etabins: Union[tuple, list] = (20, -10, 10),
                  ):
         """
-        TODO
+        TODO __init__ doc string
         :param root_path:
         :param cutfile:
         :param lepton:
@@ -78,6 +80,10 @@ class Analysis:
         self._build_dataframe, self._make_backup = compare_cutfile_backup(self._cutfile,
                                                                           self.backup_cutfiles_dir,
                                                                           self.pkl_df_filepath)
+
+        # if new cutfile, save backup
+        if self._make_backup:
+            backup_cutfile(self.backup_cutfiles_dir, self._cutfile)
 
         # place plots in outputs/plots/<cutfile name>
         self.plot_dir = self.out_plots_dir + self._cutfile_name.rstrip('.txt') + '/'
@@ -128,10 +134,6 @@ class Analysis:
                                cutgroups=self.cutgroups if grouped_cutflow else None,
                                cut_label=self.cut_label,
                                sequential=self.options['sequential'])
-
-        # if new cutfile, save backup
-        if self._make_backup:
-            backup_cutfile(self.backup_cutfiles_dir, self._cutfile)
 
     # ===============================
     # =========== PLOTS =============
@@ -187,9 +189,23 @@ class Analysis:
                          event: bool = True,
                          ratio: bool = False,
                          cummulative: bool = False,
-                         a_ratio: bool = False
-                         ):
-        """Generates and saves cutflow histograms"""
+                         a_ratio: bool = False,
+                         all_plots: bool = False,
+                         ) -> None:
+        """
+        Generates and saves cutflow histograms. Choose which cutflow histogram option to print. Default: only by-event.
+
+        :param event: y-axis is number of events passing each cut
+        :param ratio: ratio of each subsequent cut if sequential,
+                      else ratio of events passing each cut to inclusive sample
+        :param cummulative: ratio of each cut to the previous cut
+        :param a_ratio: ratio of cut to inclusive sample
+        :param all_plots: it True, plot all
+        :return: None
+        """
+        if all_plots:
+            event = ratio = cummulative = a_ratio = True
+
         if event:
             self.cutflow.print_histogram(self.plot_dir, 'event')
         if ratio:
@@ -280,15 +296,15 @@ class Analysis:
 
 if __name__ == '__main__':
     my_analysis = Analysis(root_path='../../data/mc16d_wmintaunu/*',
-                           cutfile='../../options/wpt_cuts.txt',
+                           cutfile='../../options/cutfile.txt',
                            lepton='tau',
                            force_rebuild=False
                            )
 
     # pipeline
-    my_analysis.plot_with_cuts(scaling='xs')
+    # my_analysis.plot_with_cuts(scaling='xs')
     # my_analysis.make_all_cutgroup_2dplots()
-    my_analysis.gen_cutflow_hist(ratio=True)
+    my_analysis.gen_cutflow_hist(all_plots=True)
     my_analysis.cutflow_printout()
     my_analysis.kinematics_printouts()
     my_analysis.print_cutflow_latex_table()

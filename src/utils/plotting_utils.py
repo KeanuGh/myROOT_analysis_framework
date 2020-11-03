@@ -13,6 +13,7 @@ from utils.axis_labels import labels_xs
 # set ATLAS style plots
 plt.style.use([hep.style.ATLAS,
                {'font.sans-serif': ['Tex Gyre Heros']},  # use when helvetica isn't installed
+               {'errorbar.capsize': 5},
                ])
 
 
@@ -25,8 +26,6 @@ def scale_to_crosssection(hist: bh.Histogram, luminosity) -> bh.Histogram:
         raise Exception("Currently undefined behaviour for multi-dimentional histograms")
     factor = (luminosity * hist.axes[0].widths)
     hist /= factor
-    if hasattr(hist.view(), 'variance'):
-        hist.view().variance /= factor
     return hist
 
 
@@ -38,25 +37,19 @@ def scale_by_bin_widths(hist: bh.Histogram) -> bh.Histogram:
         raise Exception("Currently undefined behaviour for multi-dimentional histograms")
     factor = hist.axes[0].widths
     hist /= factor
-    if hasattr(hist.view(), 'variance'):
-        hist.view().variance /= factor
     return hist
 
 
-def get_sumw2_1d(hist: bh.Histogram) -> np.array:
-    """Returns numpy array of sum of weights squared in 1d boost-histogram histogram"""
-    if len(hist.axes) != 1:
-        raise Exception("Currently undefined behaviour for multi-dimentional histograms")
+def get_sumw2(hist: bh.Histogram) -> np.array:
+    """Returns numpy array of sum of weights squared in oost-histogram histogram"""
     # variances are sum of weights squared in each histogram bin
-    return np.array([hist[idx].variance for idx, _ in enumerate(hist.axes[0])])
+    return hist.view().variance
 
 
-def get_root_sumw2_1d(hist: bh.Histogram) -> np.array:
-    """Returns numpy array of root of sum of weights squared in 1d boost-histogram histogram"""
-    if len(hist.axes) != 1:
-        raise Exception("Currently undefined behaviour for multi-dimentional histograms")
+def get_root_sumw2(hist: bh.Histogram) -> np.array:
+    """Returns numpy array of root of sum of weights squared in boost-histogram histogram"""
     # variances are sum of weights squared in each histogram bin
-    return np.array([np.sqrt(hist[idx].variance) for idx, _ in enumerate(hist.axes[0])])
+    return np.sqrt(hist.view().variance)
 
 
 def get_axis_labels(var_name: str, lepton: str = 'lepton') -> Tuple[Optional[str], Optional[str]]:
@@ -132,6 +125,7 @@ def set_fig_1d_axis_options(axis: plt.axes, var_name: str, lepton: str, bins: Un
     :param lepton: lepton name to pass to axis labels
     :param scaling: scaling used in plot
     :param is_logbins: whether bins are logarithmic
+    :param logx: bool whether to set log axis
     :param logy: whether to set logarithmic bins where appropriate
     :return: changed axis (also works in place)
     """
@@ -219,7 +213,7 @@ def histplot_1d(var_x: pd.Series,
     # global_scale
     if isinstance(yerr, str):
         if yerr.lower() == 'sumw2':
-            yerr = get_root_sumw2_1d(h_cut)  # get sum of weights squared
+            yerr = get_root_sumw2(h_cut)  # get sum of weights squared
         else:
             raise ValueError("possible y error string value(s): 'sumw2'")
 
