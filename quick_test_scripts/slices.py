@@ -36,7 +36,7 @@ ti = time.time()
 df = uproot.concatenate(paths + ':truth', filter_name=cols, library='pd')
 print(len(df.index))
 sumw = uproot.concatenate(paths + ':sumWeights', filter_name=['totalEventsWeighted', 'dsid'], library='pd')
-sumw.groupby('dsid').sum()
+sumw = sumw.groupby('dsid').sum()
 df = pd.merge(df, sumw, left_on='mcChannelNumber', right_on='dsid', sort=False)  # THIS IS WRONG
 print(len(df.index))
 tl = time.time()
