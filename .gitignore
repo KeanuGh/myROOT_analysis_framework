@@ -20,6 +20,7 @@ venv.bak/
 # don't upload the data to gitlab you dingus
 *.root
 *.pkl
+/data/mc16a_wmintaunu_SLICES/prelim_mc16a_highmass_wmintaunu.txt
 
 # or the .gitignore
 .gitignore
