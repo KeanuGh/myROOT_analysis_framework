@@ -67,7 +67,7 @@ def gen_weight_column(df: pd.DataFrame,
     """Returns series of weights based off weight_mc column"""
     print("Mapping weights column...")
     if weight_mc_col not in df.columns:
-        raise ValueError(f"'{weight_mc_col}' column does not exist.")
+        raise KeyError(f"'{weight_mc_col}' column does not exist.")
     return df[weight_mc_col].map(lambda w: global_scale if w > 0 else -1 * global_scale)
 
 
@@ -102,10 +102,7 @@ def get_luminosity(df: pd.DataFrame, xs=None, weight_col: str = 'weight'):
     :return: luminosity
     """
     if not xs:
-        if 'weight_mc' not in df.columns:
-            raise Exception("weight_mc column missing in dataframe")
         xs = get_cross_section(df)
-
     return df[weight_col].sum() / xs
 
 
