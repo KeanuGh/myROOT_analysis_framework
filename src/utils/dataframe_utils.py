@@ -3,8 +3,10 @@ from typing import Optional
 import uproot4 as uproot
 from utils.cutfile_utils import extract_cut_variables
 from utils.axis_labels import labels_xs
-from typing import List, OrderedDict, Union
+import analysis.config as config
+from typing import List, OrderedDict
 from warnings import warn
+import time
 
 
 # TODO: write custom dataframe class that can be either pandas or dask
@@ -26,7 +28,6 @@ def build_analysis_dataframe(cut_list_dicts: List[dict],
     :return: output dataframe containing columns corresponding to necessary variables
     """
     print("Extracting variables:\n{}".format('\n'.join(vars_to_cut)))
-    print("\nBuilding Dataframe...")
     # create list of all necessary values extract
     vars_to_extract = extract_cut_variables(cut_list_dicts, vars_to_cut)
     # strictly necessary variable(s)
@@ -35,10 +36,23 @@ def build_analysis_dataframe(cut_list_dicts: List[dict],
     if extra_vars:
         vars_to_extract += extra_vars
 
-    # extract pandas dataframe from root file with necessary variables
-    tree_df = uproot.concatenate(root_filepath + ':' + TTree,
-                                 filter_name=vars_to_extract,
-                                 library='pd')
+    t1 = time.time()
+    # If importing inclusive sample
+    if not config.slices:
+        # extract pandas dataframe from root file with necessary variables
+        tree_df = uproot.concatenate(root_filepath + ':' + TTree,
+                                     filter_name=vars_to_extract,
+                                     library='pd')
+    # if importing mass slices
+    else:
+        vars_to_extract += ['mcChannelNumber']  # to keep track of dataset IDs (DSIDs)
+        tree_df = uproot.concatenate(root_filepath + ':' + TTree, filter_name=vars_to_extract, library='pd')
+        sumw = uproot.concatenate(root_filepath + ':sumWeights', filter_name=['totalEventsWeighted', 'dsid'], library='pd')
+        sumw = sumw.groupby('dsid').sum()
+        tree_df = pd.merge(tree_df, sumw, left_on='mcChannelNumber', right_on='dsid', sort=False)
+        tree_df.rename(columns={'mcChannelNumber': 'DSID'}, inplace=True)
+    t2 = time.time()
+    print(f"time to build dataframe: {t2 - t1:.2f}s")
 
     # check vars exist in file
     if unexpected_vars := [unexpected_var for unexpected_var in vars_to_extract
@@ -49,7 +63,7 @@ def build_analysis_dataframe(cut_list_dicts: List[dict],
     if unexpected_vars := [unexpected_var for unexpected_var in vars_to_extract
                            if unexpected_var not in labels_xs]:
         warn(f"Warning: variable(s) {unexpected_vars} not contained in labels dictionary. "
-             f"Some unexpected behaviour may occur")
+             f"Some unexpected behaviour may occur.")
 
     # print into pickle file for easier read/write
     if pkl_filepath:
@@ -69,6 +83,19 @@ def gen_weight_column(df: pd.DataFrame,
     if weight_mc_col not in df.columns:
         raise KeyError(f"'{weight_mc_col}' column does not exist.")
     return df[weight_mc_col].map(lambda w: global_scale if w > 0 else -1 * global_scale)
+
+
+def gen_weight_column_slices(df: pd.DataFrame,
+                             weight_mc_col: str = 'weight_mc',
+                             tot_weighted_events_col: str = 'totalEventsWeighted',
+                             global_scale: float = 1.,
+                             ) -> pd.Series:
+    """Returns series of weights for mass slices based off weight_mc column and total events weighed"""
+    if weight_mc_col not in df.columns:
+        raise KeyError(f"'{weight_mc_col}' column not in dataframe.")
+    if tot_weighted_events_col not in df.columns:
+        raise KeyError(f"'{tot_weighted_events_col}' column not in dataframe.")
+    return global_scale * (df['weight_mc'] * df['weight_mc'].abs()) / df[tot_weighted_events_col]
 
 
 def rescale_to_gev(df: pd.DataFrame) -> pd.DataFrame:

@@ -151,13 +151,24 @@ def gen_cutgroups(cut_list_of_dicts: List[dict]) -> OrderedDict[str, List[str]]:
     return collections.OrderedDict(cutgroups)
 
 
-def compare_cutfile_backup(current_cutfile: str,
-                           backup_dirpath: str,
-                           pkl_filepath: str
-                           ) -> Tuple[bool, bool]:
+def if_make_cutfile_backup(current_cutfile: str, backup_dirpath: str) -> bool:
+    """Decides if a backup cutfile should be made"""
+    if not is_dir_empty(backup_dirpath):
+        make_backup = not identical_to_backup(current_cutfile, backup_dir=backup_dirpath)
+    else:
+        make_backup = True
+    return make_backup
+
+
+def if_build_dataframe(current_cutfile: str,
+                       will_backup_cutfile: bool,
+                       backup_dirpath: str,
+                       pkl_filepath: str
+                       ) -> Tuple[bool, bool]:
     """
     compares current _cutfile to backups and decides whether to rebuild dataframe and save new backup _cutfile
     :param current_cutfile: current _cutfile
+    :param will_backup_cutfile: whether or not the cutfile will be backed up
     :param backup_dirpath: path to dir of backups
     :param pkl_filepath: pickle file containing data in pandas dataframe
     :return: tuple of bools: (whether to rebuild dataframe, whether to save _cutfile backup)
@@ -175,7 +186,7 @@ def compare_cutfile_backup(current_cutfile: str,
     # check if backup exists
     if not is_dir_empty(backup_dirpath):
         # if cutfiles are different, check if dataframe variables need an update
-        if make_backup := not identical_to_backup(current_cutfile, backup_dir=backup_dirpath):
+        if will_backup_cutfile:
             print("New cutfile, will save backup.")
             latest_backup = get_last_backup(backup_dirpath)
 
@@ -195,8 +206,6 @@ def compare_cutfile_backup(current_cutfile: str,
 
     # if backup doesn't exit, make backup and check if there is already a pickle file
     else:
-        # make backup
-        make_backup = True
         # if pickle file already exists
         if is_pkl_file:
             yn = input(f"No cutfile backups found in {backup_dirpath}. Continue with current pickle file? (y/n) ")
@@ -239,6 +248,6 @@ def compare_cutfile_backup(current_cutfile: str,
 
 def backup_cutfile(path: str, cutfile: str) -> None:
     curr_filename = get_filename(cutfile).rstrip('.txt')
-    cutfile_backup_filepath = path+curr_filename+'_'+time.strftime("%Y-%m-%d_%H-%M-%S")+".txt"
+    cutfile_backup_filepath = path + curr_filename + '_' + time.strftime("%Y-%m-%d_%H-%M-%S") + ".txt"
     copyfile(cutfile, cutfile_backup_filepath)
     print(f"Backup _cutfile saved in {cutfile_backup_filepath}")
