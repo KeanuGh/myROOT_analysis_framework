@@ -1,19 +1,38 @@
 import pandas as pd
-from typing import Optional, List, Union, Tuple
-import os
-from numpy import pi
+from typing import Optional, List, Union, Tuple, Dict
 from itertools import combinations
 from warnings import warn
 
 # project imports
 import analysis.config as config
-from utils.cutflow import Cutflow
-from utils.cutfile_utils import parse_cutfile, gen_cutgroups, compare_cutfile_backup, backup_cutfile
-from utils.file_utils import identical_to_backup, delete_file, get_last_backup, get_filename, makedir
-from utils.plotting_utils import plot_1d_overlay_and_acceptance_cutgroups, plot_2d_cutgroups
-from utils.dataframe_utils import (build_analysis_dataframe, create_cut_columns,
-                                   gen_weight_column, rescale_to_gev,
-                                   get_cross_section, get_luminosity)
+from analysis.cutflow import Cutflow
+from utils.plotting_utils import (
+    plot_1d_overlay_and_acceptance_cutgroups,
+    plot_2d_cutgroups
+)
+from utils.cutfile_utils import (
+    parse_cutfile,
+    gen_cutgroups,
+    if_build_dataframe,
+    if_make_cutfile_backup,
+    backup_cutfile
+)
+from utils.file_utils import (
+    identical_to_backup,
+    delete_file,
+    get_last_backup,
+    get_filename, makedir
+)
+from utils.dataframe_utils import (
+    build_analysis_dataframe,
+    create_cut_columns,
+    gen_weight_column,
+    gen_weight_column_slices,
+    rescale_to_gev,
+    get_cross_section,
+    get_luminosity
+)
+
 
 # TODO: Generate logs
 
@@ -22,44 +41,49 @@ class Analysis:
     # ===========================
     # ========= SETUP ===========
     # ===========================
-    # multithreading
-    _n_threads = os.cpu_count() // 2
 
     # options
-    TTree = 'truth'  # name of TTree to extract from root file
     cut_label = ' CUT'  # label to use for boolean cut columns in dataframe
 
     # filepaths
     out_plots_dir = config.out_plots_dir
-    pkl_df_filepath = config.pkl_df_filepath.format(TTree)
     # pkl_hist_filepath = config.pkl_hist_filepath
     backup_cutfiles_dir = config.backup_cutfiles_dir
     latex_table_dir = config.latex_table_dir
 
-    def __init__(self, root_path: str,
+    def __init__(self, data: Dict[str, Dict[str]],
                  cutfile: str,
-                 lepton: str,
+                 lepton: Optional[str],
                  force_rebuild: bool = False,
                  grouped_cutflow: bool = True,
-                 mass_slices: bool = False,
-                 phibins: Union[tuple, list] = (20, -2 * pi, 2 * pi),
-                 etabins: Union[tuple, list] = (20, -10, 10),
+                 global_lumi: Optional[float] = None,
+                 phibins: Optional[Union[tuple, list]] = None,
+                 etabins: Optional[Union[tuple, list]] = None,
                  ):
         """
         TODO __init__ doc string
-        :param root_path:
+        - Currently loops over each substep for each dataframe rather than looping over the entire analysis.
+        - Currently applies the same cuts to ALL dataframes. Instead I could allow each dataframe to read in its own
+          cutfile
+        I may want to change these behaviours later.
+
+        :param data: Dictionary of dictionaries containing paths to root files and the tree to extract from each.
+        The key to the top-level dictionary is the label assigned to the dataset. This variable will eventually contain
+        the entire dataframe and the path to its backup pickle file under 'df' and 'pkl_path' keys.
         :param cutfile:
         :param lepton:
         :param force_rebuild:
         :param grouped_cutflow:
-        :param mass_slices:
         :param phibins:
         :param etabins:
         """
+        self.data = data
 
-        # set
-        config.lepton = lepton
-        config.slices = mass_slices
+        # set analysis options
+        if lepton:
+            config.lepton = lepton
+        if global_lumi:
+            config.lumi = global_lumi
         self._cutfile = cutfile
         self._not_log = [
             '_phi_',
@@ -67,27 +91,46 @@ class Analysis:
         ]
 
         # variables that require special (default) binning
+        if not etabins:
+            config.etabins = etabins
+        if not phibins:
+            config.phibins = phibins
         self._special_binning = {
-            '_eta_': etabins,
-            '_phi_': phibins,
+            '_eta_': config.etabins,
+            '_phi_': config.phibins,
         }
 
+        # generate dataframe pickle filepaths
+        for name in data:
+            self.data[name]['pkl_path'] = config.pkl_df_filepath.format(name)
+
         # ============================
-        # ======  READ CUTFILE =======
+        # ===== PROCESS CUTFILE ======
         # ============================
+        # the name of the cutfile sets the name of the analysis for
         self._cutfile_name = get_filename(self._cutfile)
 
         # parse cutfile
         self.cut_dicts, self.vars_to_cut, self.options = parse_cutfile(self._cutfile)
 
-        # check if cutfile backups exist
-        self._build_dataframe, self._make_backup = compare_cutfile_backup(self._cutfile,
-                                                                          self.backup_cutfiles_dir,
-                                                                          self.pkl_df_filepath)
+        # extract cutgroups
+        print("Extracting cutgroups...")
+        self.cutgroups = gen_cutgroups(self.cut_dicts)
+
+        # check if a backup of the input cutfile should be made
+        self._make_backup = if_make_cutfile_backup(self._cutfile, self.backup_cutfiles_dir)
 
         # if new cutfile, save backup
         if self._make_backup:
             backup_cutfile(self.backup_cutfiles_dir, self._cutfile)
+
+        # check which dataframes need to be rebuilt
+        for name in self.data:
+            data[name]['rebuild'] = if_build_dataframe(self._cutfile,
+                                                       self._make_backup,
+                                                       self.backup_cutfiles_dir,
+                                                       data[name]['pkl_path']
+                                                       )
 
         # place plots in outputs/plots/<cutfile name>
         self.plot_dir = self.out_plots_dir + self._cutfile_name.rstrip('.txt') + '/'
@@ -96,39 +139,45 @@ class Analysis:
         # ===============================
         # ==== EXTRACT & CLEAN DATA =====
         # ===============================
-        if self._build_dataframe or force_rebuild:
-            self.tree_df = build_analysis_dataframe(self.cut_dicts,
-                                                    self.vars_to_cut,
-                                                    root_path,
-                                                    self.TTree,
-                                                    pkl_filepath=self.pkl_df_filepath)
-        else:
-            print(f"Reading data from {self.pkl_df_filepath}...")
-            self.tree_df = pd.read_pickle(self.pkl_df_filepath)
-
-        # extract cutgroups
-        print("Extracting cutgroups...")
-        self.cutgroups = gen_cutgroups(self.cut_dicts)
+        for name in self.data:
+            if self.data[name]['rebuild'] or force_rebuild:
+                print(f"\nBuilding {name} dataframe...")
+                self.data[name]['df'] = build_analysis_dataframe(self.cut_dicts,
+                                                                 self.vars_to_cut,
+                                                                 self.data[name]['path'],
+                                                                 self.data[name]['TTree'],
+                                                                 self.data[name]['pkl_path']
+                                                                 )
+            else:
+                print(f"Reading data for {name} dataframe from {self.data[name]['pkl_path']}...")
+                self.data[name]['df'] = pd.read_pickle(self.data[name]['pkl_path'])
 
         # map weights column
-        self.tree_df['weight'] = gen_weight_column(self.tree_df)
+        for name in self.data:
+            if self.data[name]['slices']:
+                self.data[name]['df']['weight'] = gen_weight_column_slices(self.data[name]['df'])
+            else:
+                self.data[name]['df']['weight'] = gen_weight_column(self.data[name]['df'])
 
         # rescale MeV columns to GeV
-        rescale_to_gev(self.tree_df)
+        for name in self.data:
+            rescale_to_gev(self.data[name]['df'])
 
         # ===============================
         # ======= APPLYING CUTS =========
         # ===============================
-        create_cut_columns(self.tree_df,
-                           cut_dicts=self.cut_dicts,
-                           cut_label=self.cut_label,
-                           printout=True)
+        for name in self.data:
+            create_cut_columns(self.data[name]['df'],
+                               cut_dicts=self.cut_dicts,
+                               cut_label=self.cut_label,
+                               printout=True)
 
         # ===============================
         # ==== CALCULATING LUMI & XS ====
         # ===============================
-        self.cross_section = get_cross_section(self.tree_df)
-        self.luminosity = get_luminosity(self.tree_df, xs=self.cross_section)
+        for name in self.data:
+            self.cross_section = get_cross_section(self.tree_df)
+            self.luminosity = get_luminosity(self.tree_df, xs=self.cross_section)
 
         # ===============================
         # ========== CUTFLOW ============
@@ -183,7 +232,6 @@ class Analysis:
                 cut_label=self.cut_label,
                 is_logbins=is_logbins,
                 log_x=log_x,
-                n_threads=self._n_threads,
                 scaling=scaling,
                 bins=in_bins,
             )
@@ -245,7 +293,6 @@ class Analysis:
                               cutgroups=self.cutgroups,
                               dir_path=self.plot_dir,
                               cut_label=self.cut_label,
-                              n_threads=self._n_threads,
                               )
 
     # ===============================
@@ -297,7 +344,15 @@ class Analysis:
 
 
 if __name__ == '__main__':
-    my_analysis = Analysis(root_path='../../data/mc16d_wmintaunu/*',
+
+    data_dict = {'truth': {
+        'path': '../../data/mc16d_wmintaunu/*',
+        'TTree': 'truth',
+        'slices': False
+        }
+    }
+
+    my_analysis = Analysis(data=data_dict,
                            cutfile='../../options/cutfile.txt',
                            lepton='tau',
                            force_rebuild=False

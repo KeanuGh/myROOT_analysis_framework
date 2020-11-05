@@ -1,9 +1,25 @@
-# name of lepton
-lepton = 'lepton'
-# whether importing mass slices
-slices = False
+"""
+Contains default global variables for analysis
+"""
+from math import pi
+import os
 
-# filepaths
+# OS SETTINGS
+# ====================
+n_threads = os.cpu_count() // 2  # number of threads used for filling histograms
+
+# MISC SETTINGS
+# ====================
+lepton = 'lepton'  # name of lepton
+lumi = 140.  # global luminosity to rescale to
+
+# DEFAULT BINNINGS
+# ====================
+phibins = (20, -2 * pi, 2 * pi)
+etabins = (20, -10, 10)
+
+# FILEPATHS
+# ====================
 out_dir = '../../outputs/'  # where outputs go
 out_plots_dir = out_dir + 'plots/'  # where plots go
 pkl_df_filepath = out_dir + 'data/{}_df.pkl'  # pickle file containing extracted data, format to used TTree
