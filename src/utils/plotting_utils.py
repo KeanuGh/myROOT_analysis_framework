@@ -7,13 +7,16 @@ from typing import Tuple, Optional, List, OrderedDict, Union, Iterable
 from warnings import warn
 import pandas as pd
 
+import analysis.config as config
 from utils.dataframe_utils import get_luminosity, cut_on_cutgroup
 from utils.axis_labels import labels_xs
 
-# set ATLAS style plots
+# set plot style
 plt.style.use([hep.style.ATLAS,
                {'font.sans-serif': ['Tex Gyre Heros']},  # use when helvetica isn't installed
                {'errorbar.capsize': 5},
+               {'axes.labelsize': 23},
+               {'axes.labelpad': 23},
                ])
 
 
@@ -52,7 +55,7 @@ def get_root_sumw2(hist: bh.Histogram) -> np.array:
     return np.sqrt(hist.view().variance)
 
 
-def get_axis_labels(var_name: str, lepton: str = 'lepton') -> Tuple[Optional[str], Optional[str]]:
+def get_axis_labels(var_name: str) -> Tuple[Optional[str], Optional[str]]:
     """Gets label for corresponting variable in axis labels dictionary"""
     if var_name in labels_xs:
         xlabel = labels_xs[var_name]['xlabel']
@@ -60,7 +63,7 @@ def get_axis_labels(var_name: str, lepton: str = 'lepton') -> Tuple[Optional[str
 
         # convert x label string for correct lepton if applicable
         try:
-            xlabel = xlabel % lepton
+            xlabel = xlabel % config.lepton
         except TypeError:
             pass
 
@@ -113,7 +116,7 @@ def get_axis(bins: Union[tuple, list],
         raise TypeError("Bins must be formatted as either tuple (n_bins, start, stop) or a list of bin edges.")
 
 
-def set_fig_1d_axis_options(axis: plt.axes, var_name: str, lepton: str, bins: Union[tuple, list],
+def set_fig_1d_axis_options(axis: plt.axes, var_name: str, bins: Union[tuple, list],
                             scaling: Optional[str] = None, is_logbins: bool = True,
                             logy: bool = False, logx: bool = False) -> plt.axes:
     """
@@ -122,7 +125,6 @@ def set_fig_1d_axis_options(axis: plt.axes, var_name: str, lepton: str, bins: Un
     :param axis: axis to change
     :param var_name: name of variable being plotted
     :param bins: tuple of bins in y (n_bins, start, stop) or list of bin edge
-    :param lepton: lepton name to pass to axis labels
     :param scaling: scaling used in plot
     :param is_logbins: whether bins are logarithmic
     :param logx: bool whether to set log axis
@@ -130,7 +132,7 @@ def set_fig_1d_axis_options(axis: plt.axes, var_name: str, lepton: str, bins: Un
     :return: changed axis (also works in place)
     """
     # get axis labels (x label, y label)
-    xlabel, ylabel = get_axis_labels(str(var_name), lepton)
+    xlabel, ylabel = get_axis_labels(str(var_name))
 
     if logy:
         # log y axis, unless plotting Bjorken X
@@ -170,7 +172,7 @@ def histplot_1d(var_x: pd.Series,
                 scaling: Optional[str] = None,
                 label: Optional[str] = None,
                 is_logbins: bool = True,
-                color = None,
+                color: Optional[str] = None,
                 n_threads: int = 1
                 ) -> bh.Histogram:
     """
@@ -231,7 +233,6 @@ def plot_1d_overlay_and_acceptance_cutgroups(
         dir_path: str,
         cut_label: str,
         bins: Union[tuple, list],
-        lepton: str,
         weight_col: str = 'weight',
         lumi: Optional[float] = None,
         scaling: Optional[str] = None,
@@ -286,13 +287,13 @@ def plot_1d_overlay_and_acceptance_cutgroups(
     # figure plot
     fig_ax = set_fig_1d_axis_options(axis=fig_ax, var_name=var_to_plot, bins=bins,
                                      scaling=scaling, is_logbins=is_logbins,
-                                     lepton=lepton, logy=True, logx=log_x)
+                                     logy=True, logx=log_x)
     fig_ax.legend()
     hep.box_aspect(fig_ax)  # makes just the main figure a square (& too small)
 
     # ratio plot
     set_fig_1d_axis_options(axis=accept_ax, var_name=var_to_plot, bins=bins,
-                            is_logbins=is_logbins, lepton=lepton)
+                            is_logbins=is_logbins)
     accept_ax.set_ylabel("Acceptance")
     accept_ax.legend()
     hep.box_aspect(accept_ax)
@@ -314,7 +315,6 @@ def histplot_2d(out_path: str,
                 xbins: Union[tuple, list], ybins: Union[tuple, list],
                 weights: pd.Series,
                 title: str,
-                lepton: Optional[str] = None,
                 n_threads: int = 1,
                 is_z_log: bool = True,
                 # is_x_log: bool = True, is_y_log: bool = True,  # Perhaps add this in later
@@ -330,7 +330,6 @@ def histplot_2d(out_path: str,
     :param ybins: tuple of bins in y (n_bins, start, stop) or list of bin edges
     :param weights: series of weights to apply to axes
     :param title: plot title
-    :param lepton: label of lepton used
     :param n_threads: number of threads for filling
     :param is_z_log: whether z-axis should be scaled logarithmically
     :param is_square: whether to set square aspect ratio
@@ -353,8 +352,8 @@ def histplot_2d(out_path: str,
         ax.set_aspect(1 / ax.get_data_ratio())
 
     # get axis labels
-    xlabel, _ = get_axis_labels(str(var_x.name), lepton)
-    ylabel, _ = get_axis_labels(str(var_y.name), lepton)
+    xlabel, _ = get_axis_labels(str(var_x.name))
+    ylabel, _ = get_axis_labels(str(var_y.name))
 
     ax.set_title(title, loc='right')
     ax.set_xlabel(xlabel)
@@ -373,7 +372,6 @@ def plot_2d_cutgroups(
         cutgroups: OrderedDict[str, List[str]],
         dir_path: str,
         cut_label: str,
-        lepton: str,
         is_logz: bool = True,
         n_threads: int = 1,
 ) -> None:
@@ -392,7 +390,6 @@ def plot_2d_cutgroups(
             xbins=xbins, ybins=ybins,
             weights=weight_cut,
             title=cutgroup,
-            lepton=lepton,
             is_z_log=is_logz,
             n_threads=n_threads
         )

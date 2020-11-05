@@ -6,6 +6,7 @@ from itertools import combinations
 from warnings import warn
 
 # project imports
+import analysis.config as config
 from utils.cutflow import Cutflow
 from utils.cutfile_utils import parse_cutfile, gen_cutgroups, compare_cutfile_backup, backup_cutfile
 from utils.file_utils import identical_to_backup, delete_file, get_last_backup, get_filename, makedir
@@ -29,17 +30,18 @@ class Analysis:
     cut_label = ' CUT'  # label to use for boolean cut columns in dataframe
 
     # filepaths
-    out_dir = '../../outputs/'  # where outputs go
-    out_plots_dir = out_dir + 'plots/'  # where plots go
-    pkl_df_filepath = out_dir + 'data/' + TTree + '_df.pkl'  # pickle file containing extracted data
-    # pkl_hist_filepath = out_dir + "histograms.pkl"  # pickle file to place histograms into
-    backup_dir = '../../analysis_save_state/'  # where backups go
-    backup_cutfiles_dir = backup_dir + 'cutfiles/'  # _cutfile backups
-    latex_table_dir = out_dir + "LaTeX_cutflow_table/"  # where to print latex cutflow table
+    out_plots_dir = config.out_plots_dir
+    pkl_df_filepath = config.pkl_df_filepath.format(TTree)
+    # pkl_hist_filepath = config.pkl_hist_filepath
+    backup_cutfiles_dir = config.backup_cutfiles_dir
+    latex_table_dir = config.latex_table_dir
 
-    def __init__(self, root_path: str, cutfile: str, lepton: str,
+    def __init__(self, root_path: str,
+                 cutfile: str,
+                 lepton: str,
                  force_rebuild: bool = False,
                  grouped_cutflow: bool = True,
+                 mass_slices: bool = False,
                  phibins: Union[tuple, list] = (20, -2 * pi, 2 * pi),
                  etabins: Union[tuple, list] = (20, -10, 10),
                  ):
@@ -50,12 +52,14 @@ class Analysis:
         :param lepton:
         :param force_rebuild:
         :param grouped_cutflow:
+        :param mass_slices:
         :param phibins:
         :param etabins:
         """
 
         # set
-        self._lepton_name = lepton
+        config.lepton = lepton
+        config.slices = mass_slices
         self._cutfile = cutfile
         self._not_log = [
             '_phi_',
@@ -180,7 +184,6 @@ class Analysis:
                 is_logbins=is_logbins,
                 log_x=log_x,
                 n_threads=self._n_threads,
-                lepton=self._lepton_name,
                 scaling=scaling,
                 bins=in_bins,
             )
@@ -242,7 +245,6 @@ class Analysis:
                               cutgroups=self.cutgroups,
                               dir_path=self.plot_dir,
                               cut_label=self.cut_label,
-                              lepton=self._lepton_name,
                               n_threads=self._n_threads,
                               )
 
