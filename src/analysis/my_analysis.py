@@ -5,8 +5,7 @@ from warnings import warn
 
 # project imports
 import analysis.config as config
-from analysis.cutflow import Cutflow
-from analysis.dataclass import Data
+from analysis.dataclass import Dataset
 from utils.plotting_utils import (
     plot_1d_overlay_and_acceptance_cutgroups,
     plot_2d_cutgroups
@@ -25,13 +24,9 @@ from utils.file_utils import (
     get_filename, makedir
 )
 from utils.dataframe_utils import (
-    build_analysis_dataframe,
-    create_cut_columns,
     gen_weight_column,
     gen_weight_column_slices,
     rescale_to_gev,
-    get_cross_section,
-    get_luminosity
 )
 
 
@@ -49,7 +44,7 @@ class Analysis:
     backup_cutfiles_dir = config.backup_cutfiles_dir
     latex_table_dir = config.latex_table_dir
 
-    def __init__(self, data_dict: Dict[str, Dict[str]],
+    def __init__(self, data_dict: Dict[str, Dict],
                  cutfile: str,
                  lepton: Optional[str],
                  force_rebuild: bool = False,
@@ -68,6 +63,7 @@ class Analysis:
         | - May want to put all methods that act on only a single dataset into the Data class
         | - figure out how to access the a particular dataset by doing analysis.dataname?? (like df.column)
         | - Need to figure out logging
+        | - need to differentiate latex filenames
 
         :param data_dict: Dictionary of dictionaries containing paths to root files and the tree to extract from each.
         The key to the top-level dictionary is the label assigned to the dataset.
@@ -79,22 +75,27 @@ class Analysis:
         """
         # check input
         for name, dic in data_dict.items():
-            assert set(dic.keys()) == {'name', 'path', 'TTree', 'slices'}, \
+            assert set(dic.keys()) == {'path', 'TTree', 'slices'}, \
                 f"{data_dict[name]} improperly formatted. Possible missing values."
-            assert isinstance(dic['name'], str), "Dataset name must be a string."
+            assert isinstance(name, str), "Dataset name must be a string."
             assert isinstance(dic['path'], str), "Path to root file must be a string."
             assert isinstance(dic['TTree'], str), "TTree name must be a string."
             assert isinstance(dic['slices'], bool), "'slices' variable must be boolean."
 
         # build Data classes in name:Data dictionary containing initial values
-        self.data = {
-            name: Data(name=dic['name'], datapath=dic['path'], TTree_name=dic['TTree'], is_slices=dic['slices'])
-            for name, dic in data_dict
+        self.datasets = {
+            name: Dataset(name=name,
+                          datapath=dic['path'],
+                          TTree_name=dic['TTree'],
+                          is_slices=dic['slices'])
+            for name, dic in data_dict.items()
         }
 
         # set analysis options
-        if lepton: config.lepton = lepton
-        if global_lumi: config.lumi = global_lumi
+        if lepton:
+            config.lepton = lepton
+        if global_lumi:
+            config.lumi = global_lumi
         self._cutfile = cutfile
         self._not_log = [
             '_phi_',
@@ -102,8 +103,10 @@ class Analysis:
         ]
 
         # variables that require special (default) binning
-        if etabins: config.etabins = etabins
-        if phibins: config.phibins = phibins
+        if etabins:
+            config.etabins = etabins
+        if phibins:
+            config.phibins = phibins
         self._special_binning = {
             '_eta_': config.etabins,
             '_phi_': config.phibins,
@@ -130,12 +133,11 @@ class Analysis:
             backup_cutfile(self.backup_cutfiles_dir, self._cutfile)
 
         # check which dataframes need to be rebuilt
-        for name in self.data:
-            self.data[name].rebuild = if_build_dataframe(self._cutfile,
-                                                         self._make_backup,
-                                                         self.backup_cutfiles_dir,
-                                                         self.data[name].pkl_path
-                                                         )
+        for name in self.datasets:
+            self.datasets[name].rebuild = if_build_dataframe(self._cutfile,
+                                                             self._make_backup,
+                                                             self.backup_cutfiles_dir,
+                                                             self.datasets[name].pkl_path)
 
         # place plots in outputs/plots/<cutfile name>
         self.plot_dir = self.out_plots_dir + self._cutfile_name.rstrip('.txt') + '/'
@@ -144,77 +146,64 @@ class Analysis:
         # ===============================
         # ==== EXTRACT & CLEAN DATA =====
         # ===============================
-        for name in self.data:
-            if self.data[name].rebuild or force_rebuild:
+        for name in self.datasets:
+            if self.datasets[name].rebuild or force_rebuild:
                 print(f"\nBuilding {name} dataframe...")
-                self.data[name].df = build_analysis_dataframe(self.cut_dicts,
-                                                              self.vars_to_cut,
-                                                              self.data[name]['path'],
-                                                              self.data[name]['TTree'],
-                                                              self.data[name]['pkl_path']
-                                                              )
+                self.datasets[name].build_df(self.cut_dicts, self.vars_to_cut)
             else:
-                print(f"Reading data for {name} dataframe from {self.data[name]['pkl_path']}...")
-                self.data[name].df = pd.read_pickle(self.data[name].pkl_path)
+                print(f"Reading data for {name} dataframe from {self.datasets[name].pkl_path}...")
+                self.datasets[name].df = pd.read_pickle(self.datasets[name].pkl_path)
 
         # map weights column
-        for name in self.data:
-            if self.data[name].is_slices:
-                self.data[name].df['weight'] = gen_weight_column_slices(self.data[name]['df'])
+        for name in self.datasets:
+            if self.datasets[name].is_slices:
+                self.datasets[name].df['weight'] = gen_weight_column_slices(self.datasets[name].df)
             else:
-                self.data[name].df['weight'] = gen_weight_column(self.data[name]['df'])
+                self.datasets[name].df['weight'] = gen_weight_column(self.datasets[name].df)
 
         # rescale MeV columns to GeV
-        for name in self.data:
-            rescale_to_gev(self.data[name].df)
+        for name in self.datasets:
+            rescale_to_gev(self.datasets[name].df)
 
         # ===============================
         # ======= APPLYING CUTS =========
         # ===============================
-        for name in self.data:
-            self.data[name].create_cut_columns(cut_dicts=self.cut_dicts,
-                                               cut_label=self.cut_label,
-                                               printout=True)
-            # create_cut_columns(self.data[name].df,
-            #                    cut_dicts=self.cut_dicts,
-            #                    cut_label=self.cut_label,
-            #                    printout=True)
+        for name in self.datasets:
+            self.datasets[name].create_cut_columns(cut_dicts=self.cut_dicts,
+                                                   cut_label=self.cut_label,
+                                                   printout=True)
 
         # ===============================
         # ==== CALCULATING LUMI & XS ====
         # ===============================
-        for name in self.data:
-            self.data[name].gen_cross_section()
-            self.data[name].gen_luminosity()
+        for name in self.datasets:
+            self.datasets[name].gen_cross_section()
+            self.datasets[name].gen_luminosity()
 
         # ===============================
         # ========== CUTFLOW ============
         # ===============================
-        for name in self.data:
-            self.data[name].gen_cutflow(cut_dicts=self.cut_dicts,
-                                        cutgroups=self.cutgroups if grouped_cutflow else None,
-                                        cut_label=self.cut_label,
-                                        sequential=self.options['sequential'])
-            # self.data[name].cutflow = Cutflow(df=self.data[name]['df'],
-            #                                   cut_dicts=self.cut_dicts,
-            #                                   cutgroups=self.cutgroups if grouped_cutflow else None,
-            #                                   cut_label=self.cut_label,
-            #                                   sequential=self.options['sequential'])
+        for name in self.datasets:
+            self.datasets[name].gen_cutflow(cut_dicts=self.cut_dicts,
+                                            cutgroups=self.cutgroups if grouped_cutflow else None,
+                                            cut_label=self.cut_label,
+                                            sequential=self.options['sequential'])
 
     # ===============================
     # =========== PLOTS =============
     # ===============================
-    # TODO: simple functions that take variables as input and plot 1d/2d histograms with/without a cut
     # TODO: save histograms to pickle file
     def plot_with_cuts(self,
+                       ds_name: str,
                        scaling: Optional[str] = None,
                        bins: Union[tuple, list] = (30, 1, 500),
                        not_log_add: Optional[List[str]] = None,
                        log_x: bool = False
                        ) -> None:
         """
-        Plots each variable to cut from _cutfile with each cutgroup applied
+        Plots each variable in specific Dataset to cut from cutfile with each cutgroup applied
 
+        :param ds_name: name of Dataset class to plot
         :param bins: tuple of bins in x (n_bins, start, stop) or list of bin edges
         :param scaling: either 'xs':     cross section scaling,
                                'widths': divided by bin widths,
@@ -237,10 +226,10 @@ class Analysis:
 
             print(f"Generating histogram for {var_to_plot}...")
             plot_1d_overlay_and_acceptance_cutgroups(
-                df=self.tree_df,
+                df=self.datasets[ds_name].df,
                 var_to_plot=var_to_plot,
                 cutgroups=self.cutgroups,
-                lumi=self.luminosity,
+                lumi=self.datasets[ds_name].luminosity,
                 dir_path=self.plot_dir,
                 cut_label=self.cut_label,
                 is_logbins=is_logbins,
@@ -250,7 +239,7 @@ class Analysis:
             )
 
     def gen_cutflow_hist(self,
-                         data_name: str,
+                         ds_name: str,
                          event: bool = True,
                          ratio: bool = False,
                          cummulative: bool = False,
@@ -260,6 +249,7 @@ class Analysis:
         """
         Generates and saves cutflow histograms. Choose which cutflow histogram option to print. Default: only by-event.
 
+        :param ds_name: Name of dataset to plot
         :param event: y-axis is number of events passing each cut
         :param ratio: ratio of each subsequent cut if sequential,
                       else ratio of events passing each cut to inclusive sample
@@ -268,28 +258,27 @@ class Analysis:
         :param all_plots: it True, plot all
         :return: None
         """
-
         if all_plots:
             event = ratio = cummulative = a_ratio = True
 
         if event:
-            self.cutflow.print_histogram(self.plot_dir, 'event')
+            self.datasets[ds_name].cutflow.print_histogram(self.plot_dir, 'event')
         if ratio:
-            self.cutflow.print_histogram(self.plot_dir, 'ratio')
+            self.datasets[ds_name].cutflow.print_histogram(self.plot_dir, 'ratio')
         if cummulative:
             if self.options['sequential']:
-                self.cutflow.print_histogram(self.plot_dir, 'cummulative')
+                self.datasets[ds_name].cutflow.print_histogram(self.plot_dir, 'cummulative')
             else:
                 warn("Sequential cuts cannot generate a cummulative cutflow")
         if a_ratio:
             if self.options['sequential']:
-                self.cutflow.print_histogram(self.plot_dir, 'a_ratio')
+                self.datasets[ds_name].cutflow.print_histogram(self.plot_dir, 'a_ratio')
             else:
                 warn("Sequential cuts can't generate cummulative cutflow. "
                      "Ratio of cuts to acceptance will be generated instead.")
-                self.cutflow.print_histogram(self.plot_dir, 'ratio')
+                self.datasets[ds_name].cutflow.print_histogram(self.plot_dir, 'ratio')
 
-    def make_all_cutgroup_2dplots(self, bins: Union[tuple, list] = (20, 0, 200)):
+    def make_all_cutgroup_2dplots(self, ds_name: str, bins: Union[tuple, list] = (20, 0, 200)):
         if len(self.vars_to_cut) < 2:
             raise Exception("Need at least two plotting variables to make 2D plot")
 
@@ -302,7 +291,7 @@ class Analysis:
             if not ybins:
                 ybins = bins
             print(f"Generating 2d histogram for {x_var}-{y_var}...")
-            plot_2d_cutgroups(self.tree_df,
+            plot_2d_cutgroups(self.datasets[ds_name].df,
                               x_var=x_var, y_var=y_var,
                               xbins=xbins, ybins=ybins,
                               cutgroups=self.cutgroups,
@@ -313,27 +302,30 @@ class Analysis:
     # ===============================
     # ========= PRINTOUTS ===========
     # ===============================
-    def cutflow_printout(self) -> None:
+    def cutflow_printout(self, ds_name: str) -> None:
         """Prints cutflow table to terminal"""
-        self.cutflow.terminal_printout()
+        self.datasets[ds_name].cutflow.terminal_printout()
 
     def kinematics_printouts(self) -> None:
         """Prints some kinematic variables to terminal"""
-        print(f"\n========== KINEMATICS ===========\n"
-              f"cross-section: {self.cross_section:.2f} fb\n"
-              f"luminosity   : {self.luminosity:.2f} fb-1\n"
-              )
+        print(f"\n========== KINEMATICS ===========")
+        for name in self.datasets:
+            print(name+":\n=================================")
+            print(f"cross-section: {self.datasets[name].cross_section:.2f} fb\n"
+                  f"luminosity   : {self.datasets[name].luminosity:.2f} fb-1\n"
+                  )
 
-    def print_cutflow_latex_table(self, check_backup: bool = True) -> None:
+    def print_cutflow_latex_table(self, ds_name: str, check_backup: bool = True) -> None:
         """
         Prints a latex table of cutflow. By default first checks if a current backup exists and will not print if
         backup is identical
+        :param ds_name:
         :param check_backup: default true. Checks if backup of current cutflow already exists and if so does not print
         :return: None
         """
         if check_backup:
             last_backup = get_last_backup(self.latex_table_dir)
-        latex_file = self.cutflow.print_latex_table(self.latex_table_dir, self._cutfile_name)
+        latex_file = self.datasets[ds_name].cutflow.print_latex_table(self.latex_table_dir, filename_prefix=ds_name)
         if check_backup and \
                 identical_to_backup(latex_file, backup_file=last_backup):
             delete_file(latex_file)
@@ -341,8 +333,8 @@ class Analysis:
     # ===============================
     # ========== PRIVATE ============
     # ===============================
-    def __check_single_datafile(func):
-        def wrapper()
+    # def __check_single_datafile(self):
+    #
 
     def __getbins(self, var_to_plot) -> Tuple[bool, Optional[tuple]]:
         """
@@ -362,8 +354,9 @@ class Analysis:
 
 
 if __name__ == '__main__':
+    dataset_name = 'truth_inclusive'
     data = {
-        'truth_inclusive': {
+        dataset_name: {
             'path': '../../data/mc16d_wmintaunu/*',
             'TTree': 'truth',
             'slices': False
@@ -377,9 +370,9 @@ if __name__ == '__main__':
                            )
 
     # pipeline
-    # my_analysis.plot_with_cuts(scaling='xs')
-    # my_analysis.make_all_cutgroup_2dplots()
-    my_analysis.gen_cutflow_hist(all_plots=True)
-    my_analysis.cutflow_printout()
+    my_analysis.plot_with_cuts(scaling='xs', ds_name=dataset_name)
+    my_analysis.make_all_cutgroup_2dplots(dataset_name)
+    my_analysis.gen_cutflow_hist(dataset_name, all_plots=True)
+    my_analysis.cutflow_printout(dataset_name)
     my_analysis.kinematics_printouts()
-    my_analysis.print_cutflow_latex_table()
+    my_analysis.print_cutflow_latex_table(dataset_name)

@@ -3,27 +3,21 @@ from typing import Optional
 import uproot4 as uproot
 from utils.cutfile_utils import extract_cut_variables
 from utils.axis_labels import labels_xs
-import analysis.config as config
 from typing import List, OrderedDict
 from warnings import warn
 import time
 
 
-# TODO: write custom dataframe class that can be either pandas or dask
-def build_analysis_dataframe(cut_list_dicts: List[dict],
+def build_analysis_dataframe(data,  # This type hint is left blank to avoid a circular import
+                             cut_list_dicts: List[dict],
                              vars_to_cut: List[str],
-                             root_filepath: str,
-                             TTree: str,
-                             pkl_filepath: Optional[str] = None,
                              extra_vars: Optional[List[str]] = None
                              ) -> pd.DataFrame:
     """
-    Builds a dataframe from _cutfile inputs
+    Builds a dataframe from cutfile inputs
+    :param data: Dataset class containing is_slices, TTree_name, datapath and pkl_path
     :param cut_list_dicts: list of cut dictionaries
     :param vars_to_cut: list of strings of variables in file to cut on
-    :param root_filepath: path to input root file
-    :param TTree: name of TTree to extract ntuples from
-    :param pkl_filepath: path of pickle file to save dataframe. if None, does not save
     :param extra_vars: list of any extra variables wanting to extract
     :return: output dataframe containing columns corresponding to necessary variables
     """
@@ -38,16 +32,16 @@ def build_analysis_dataframe(cut_list_dicts: List[dict],
 
     t1 = time.time()
     # If importing inclusive sample
-    if not config.slices:
+    if not data.is_slices:
         # extract pandas dataframe from root file with necessary variables
-        tree_df = uproot.concatenate(root_filepath + ':' + TTree,
+        tree_df = uproot.concatenate(data.datapath + ':' + data.TTree_name,
                                      filter_name=vars_to_extract,
                                      library='pd')
     # if importing mass slices
     else:
         vars_to_extract += ['mcChannelNumber']  # to keep track of dataset IDs (DSIDs)
-        tree_df = uproot.concatenate(root_filepath + ':' + TTree, filter_name=vars_to_extract, library='pd')
-        sumw = uproot.concatenate(root_filepath + ':sumWeights', filter_name=['totalEventsWeighted', 'dsid'], library='pd')
+        tree_df = uproot.concatenate(data.datapath + ':' + data.TTree_name, filter_name=vars_to_extract, library='pd')
+        sumw = uproot.concatenate(data.datapath + ':sumWeights', filter_name=['totalEventsWeighted', 'dsid'], library='pd')
         sumw = sumw.groupby('dsid').sum()
         tree_df = pd.merge(tree_df, sumw, left_on='mcChannelNumber', right_on='dsid', sort=False)
         tree_df.rename(columns={'mcChannelNumber': 'DSID'}, inplace=True)
@@ -57,7 +51,7 @@ def build_analysis_dataframe(cut_list_dicts: List[dict],
     # check vars exist in file
     if unexpected_vars := [unexpected_var for unexpected_var in vars_to_extract
                            if unexpected_var not in tree_df.columns]:
-        raise ValueError(f"Variable(s) not found in root file '{root_filepath}' {TTree} tree: {unexpected_vars}")
+        raise ValueError(f"Variable(s) not found in root file '{data.datapath}' {data.TTree_name} tree: {unexpected_vars}")
 
     # check if vars are contained in label dictionary
     if unexpected_vars := [unexpected_var for unexpected_var in vars_to_extract
@@ -66,9 +60,9 @@ def build_analysis_dataframe(cut_list_dicts: List[dict],
              f"Some unexpected behaviour may occur.")
 
     # print into pickle file for easier read/write
-    if pkl_filepath:
-        pd.to_pickle(tree_df, pkl_filepath)
-        print(f"Dataframe built and saved in {pkl_filepath}")
+    if data.pkl_path:
+        pd.to_pickle(tree_df, data.pkl_path)
+        print(f"Dataframe built and saved in {data.pkl_path}")
 
     return tree_df
 

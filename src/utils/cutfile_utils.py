@@ -164,7 +164,7 @@ def if_build_dataframe(current_cutfile: str,
                        will_backup_cutfile: bool,
                        backup_dirpath: str,
                        pkl_filepath: str
-                       ) -> Tuple[bool, bool]:
+                       ) -> bool:
     """
     compares current _cutfile to backups and decides whether to rebuild dataframe and save new backup _cutfile
     :param current_cutfile: current _cutfile
@@ -243,7 +243,7 @@ def if_build_dataframe(current_cutfile: str,
             else:
                 yn = input("yes or no ")
 
-    return build_dataframe, make_backup
+    return build_dataframe
 
 
 def backup_cutfile(path: str, cutfile: str) -> None:
