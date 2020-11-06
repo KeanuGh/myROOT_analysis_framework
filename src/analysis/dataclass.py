@@ -8,7 +8,7 @@ import utils.dataframe_utils as df_utils
 
 
 @dataclass
-class Data:
+class Dataset:
     """
     My Data class. (Will) contain(s) all the variables needed for a singular analysis dataset.
     Perhaps put all methods that act only on one dataset into here
@@ -17,7 +17,7 @@ class Data:
     datapath: str  # path to root file(s)
     TTree_name: str  # name of TTree to extract
     is_slices: bool = False  # whether input data is in mass slices
-    rebuild: bool = False  # whether dataframe should be rebuilt
+    rebuild: bool = False  # whether dataframe is rebuilt
     # field(repr=False) stops these vars showing up when .__repr__() is called
     cutflow: Cutflow = field(default=None, repr=False)  # stores cutflow object
     df: pd.DataFrame = field(default=None, repr=False)  # stores dataframe
@@ -27,17 +27,19 @@ class Data:
 
     def __post_init__(self):
         """ this all runs after the __init__ """
-        # initialise pickle filepath
+        # initialise pickle filepath with given name
         if not self.pkl_path:
             self.pkl_path = config.pkl_df_filepath.format(self.name)
 
     # Variable setting
     # ===================
     def gen_cross_section(self) -> None:
+        """Calculates dataset cross-section"""
         self.__check_df()
         self.cross_section = df_utils.get_cross_section(self.df)
 
     def gen_luminosity(self) -> None:
+        """Calculates dataset luminosity"""
         self.__check_df()
         self.luminosity = df_utils.get_luminosity(self.df, xs=self.cross_section)
 
@@ -47,12 +49,20 @@ class Data:
                     ) -> None:
         """Creates the cutflow class for this analysis"""
         self.cutflow = Cutflow(self.df,
-                               cut_dicts=cut_dicts, cutgroups=cutgroups, cut_label=cut_label,
+                               cut_dicts=cut_dicts,
+                               cutgroups=cutgroups,
+                               cut_label=cut_label,
                                sequential=sequential)
 
     # Dataframe utils
     # ===================
+    def build_df(self, cut_list_dicts: List[dict], vars_to_cut: List[str],
+                 extra_vars: Optional[List[str]] = None) -> None:
+        """Builds dataframe based on 'datapath', 'TTree_name' and 'is_slices'. Prints pickle file to 'pkl_path'"""
+        self.df = df_utils.build_analysis_dataframe(self, cut_list_dicts, vars_to_cut, extra_vars)
+
     def create_cut_columns(self, cut_dicts: List[Dict], cut_label: str = ' CUT', printout=True) -> None:
+        """Creates columns in dataframe that contain boolean values corresponding to cuts. """
         df_utils.create_cut_columns(self.df, cut_dicts, cut_label, printout)
 
     # Private

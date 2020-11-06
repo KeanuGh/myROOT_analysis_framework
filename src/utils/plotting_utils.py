@@ -2,7 +2,6 @@ import boost_histogram as bh
 import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
 import mplhep as hep
-from mplhep import label as label_base
 import numpy as np
 from typing import Tuple, Optional, List, OrderedDict, Union, Iterable
 from warnings import warn

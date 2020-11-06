@@ -12,7 +12,7 @@ class Cutflow:
                  sequential: bool = True,
                  ):
         """
-        Generates cutflow object that keeps track of various properties and ratios of selections made in analysis
+        Generates cutflow object that keeps track of various properties and ratios of selections made on given dataset
 
         :param df: Input analysis dataframe with boolean cut rows.
         :param cut_dicts: Dictionary of cufts made.
@@ -220,12 +220,12 @@ class Cutflow:
         fig.savefig(filepath)
         print(f"Cutflow histogram saved to {filepath}")
 
-    def print_latex_table(self, filepath: str, cutfile_name: str = '') -> str:
+    def print_latex_table(self, filepath: str, filename_prefix: str = '') -> str:
         """
         Prints a latex table containing cutflow to file in filepath with date and time.
         Returns the name of the printed table
         """
-        latex_filepath = filepath + cutfile_name.rstrip('.txt') + "_cutflow_" + strftime("%Y-%m-%d_%H-%M-%S") + ".tex"
+        latex_filepath = filepath + filename_prefix + "_cutflow_" + strftime("%Y-%m-%d_%H-%M-%S") + ".tex"
 
         if self._is_sequential:
             with open(latex_filepath, "w") as f:
