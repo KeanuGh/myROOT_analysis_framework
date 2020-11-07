@@ -1,6 +1,7 @@
 import pandas as pd
 from typing import Optional
 import uproot4 as uproot
+import analysis.config as config
 from utils.cutfile_utils import extract_cut_variables
 from utils.axis_labels import labels_xs
 from typing import List, OrderedDict
@@ -129,18 +130,18 @@ def get_luminosity(df: pd.DataFrame, xs=None, weight_col: str = 'weight'):
 
 def create_cut_columns(df: pd.DataFrame,
                        cut_dicts: List[dict],
-                       cut_label: str = ' CUT',
                        printout=True
                        ) -> None:
     """
     Creates boolean columns in dataframe corresponding to each cut
     :param df: input dataframe
     :param cut_dicts: list of dictionaries for each cut to apply
-    :param cut_label: label to be added to column names for boolean columns
     :return: None, this function applies inplace.
     :param printout: whether to print a summary of cuts
     """
     print("applying cuts...")
+    cut_label = config.cut_label  # get cut label from config
+
     for cut in cut_dicts:
         if not cut['is_symmetric']:
             if cut['moreless'] == '>':
@@ -177,9 +178,8 @@ def create_cut_columns(df: pd.DataFrame,
 def cut_on_cutgroup(df: pd.DataFrame,
                     cutgroups: OrderedDict[str, List[str]],
                     group: str,
-                    cut_label: str,
                     ) -> pd.DataFrame:
     """Cuts on cutgroup on input dataframe or series"""
-    cut_rows = [cut_name + cut_label for cut_name in cutgroups[group]]
+    cut_rows = [cut_name + config.cut_label for cut_name in cutgroups[group]]
     cut_data = df[df[cut_rows].all(1)]
     return cut_data

@@ -55,7 +55,7 @@ def get_root_sumw2(hist: bh.Histogram) -> np.array:
     return np.sqrt(hist.view().variance)
 
 
-def get_axis_labels(var_name: str) -> Tuple[Optional[str], Optional[str]]:
+def get_axis_labels(var_name: str, lepton: str) -> Tuple[Optional[str], Optional[str]]:
     """Gets label for corresponting variable in axis labels dictionary"""
     if var_name in labels_xs:
         xlabel = labels_xs[var_name]['xlabel']
@@ -63,7 +63,7 @@ def get_axis_labels(var_name: str) -> Tuple[Optional[str], Optional[str]]:
 
         # convert x label string for correct lepton if applicable
         try:
-            xlabel = xlabel % config.lepton
+            xlabel = xlabel % lepton
         except TypeError:
             pass
 
@@ -116,7 +116,7 @@ def get_axis(bins: Union[tuple, list],
         raise TypeError("Bins must be formatted as either tuple (n_bins, start, stop) or a list of bin edges.")
 
 
-def set_fig_1d_axis_options(axis: plt.axes, var_name: str, bins: Union[tuple, list],
+def set_fig_1d_axis_options(axis: plt.axes, var_name: str, bins: Union[tuple, list], lepton: str,
                             scaling: Optional[str] = None, is_logbins: bool = True,
                             logy: bool = False, logx: bool = False) -> plt.axes:
     """
@@ -125,6 +125,7 @@ def set_fig_1d_axis_options(axis: plt.axes, var_name: str, bins: Union[tuple, li
     :param axis: axis to change
     :param var_name: name of variable being plotted
     :param bins: tuple of bins in y (n_bins, start, stop) or list of bin edge
+    :param lepton: name of lepton for axis label
     :param scaling: scaling used in plot
     :param is_logbins: whether bins are logarithmic
     :param logx: bool whether to set log axis
@@ -132,7 +133,7 @@ def set_fig_1d_axis_options(axis: plt.axes, var_name: str, bins: Union[tuple, li
     :return: changed axis (also works in place)
     """
     # get axis labels (x label, y label)
-    xlabel, ylabel = get_axis_labels(str(var_name))
+    xlabel, ylabel = get_axis_labels(str(var_name), lepton)
 
     if logy:
         # log y axis, unless plotting Bjorken X
@@ -172,8 +173,8 @@ def histplot_1d(var_x: pd.Series,
                 scaling: Optional[str] = None,
                 label: Optional[str] = None,
                 is_logbins: bool = True,
-                color: Optional[str] = None,
-                n_threads: int = config.n_threads
+                n_threads: int = config.n_threads,
+                **kwargs
                 ) -> bh.Histogram:
     """
     Plots variable as histogram onto given figure axis
@@ -191,8 +192,8 @@ def histplot_1d(var_x: pd.Series,
                     | -  None: No scaling
     :param label: optional label for histogram (eg for legend)
     :param is_logbins: whether it should be binned logarithmically
-    :param color: colour of plot
     :param n_threads: multithreading: number of threads used to fill histogram
+    :param kwargs: keyword arguments to be passed to plotting function (eg color, linewidth...)
     :return: histogram object
     """
 
@@ -221,17 +222,16 @@ def histplot_1d(var_x: pd.Series,
 
     # plot
     hep.histplot(hist.view().value, bins=hist.axes[0].edges,
-                 ax=fig_axis, yerr=yerr, label=label, color=color)
+                 ax=fig_axis, yerr=yerr, label=label, **kwargs)
 
     return hist
 
 
 def plot_1d_overlay_and_acceptance_cutgroups(
         df: pd.DataFrame,
+        lepton: str,
         var_to_plot: str,
         cutgroups: OrderedDict[str, List[str]],
-        dir_path: str,
-        cut_label: str,
         bins: Union[tuple, list],
         weight_col: str = 'weight',
         lumi: Optional[float] = None,
@@ -240,12 +240,13 @@ def plot_1d_overlay_and_acceptance_cutgroups(
         log_x: bool = False,
         plot_width=10,
         plot_height=10,
-        plot_label: Optional[str] = None
+        plot_label: Optional[str] = None,
 ) -> None:
     """Plots overlay of cutgroups and acceptance (ratio) plots"""
     # TODO: write docs for this function
-    # TODO: put ratio plot under main plot
-    fig, (fig_ax, accept_ax) = plt.subplots(1, 2)
+    fig, (fig_ax, accept_ax) = plt.subplots(2, 1,
+                                            figsize=(plot_width*1.2, plot_height),
+                                            gridspec_kw={'height_ratios': [3, 1]})
 
     # INCLUSIVE PLOT
     # ================
@@ -255,7 +256,7 @@ def plot_1d_overlay_and_acceptance_cutgroups(
                               lumi=lumi, scaling=scaling,
                               label='Inclusive',
                               is_logbins=is_logbins,
-                              )
+                              color='k', linewidth=2)
     # PLOT CUTS
     # ================
     for cutgroup in cutgroups.keys():
@@ -264,7 +265,7 @@ def plot_1d_overlay_and_acceptance_cutgroups(
         # TODO: cut on full dataframes with groups above this loop
         #  so the cuts don't need to be repeated for each plotted variable
 
-        cut_df = cut_on_cutgroup(df, cutgroups, cutgroup, cut_label)
+        cut_df = cut_on_cutgroup(df, cutgroups, cutgroup)
         weight_cut = cut_df['weight']
         var_cut = cut_df[var_to_plot]
 
@@ -272,8 +273,7 @@ def plot_1d_overlay_and_acceptance_cutgroups(
                             bins=bins, fig_axis=fig_ax,
                             lumi=lumi, scaling=scaling,
                             label=cutgroup,
-                            is_logbins=is_logbins,
-                            )
+                            is_logbins=is_logbins)
 
         # RATIO PLOT
         # ================
@@ -283,33 +283,29 @@ def plot_1d_overlay_and_acceptance_cutgroups(
 
     # AXIS FORMATTING
     # ==================
+    fig.tight_layout()
+
     # figure plot
     fig_ax = set_fig_1d_axis_options(axis=fig_ax, var_name=var_to_plot, bins=bins,
                                      scaling=scaling, is_logbins=is_logbins,
-                                     logy=True, logx=log_x)
+                                     logy=True, logx=log_x, lepton=lepton)
     fig_ax.legend()
-    hep.box_aspect(fig_ax)  # makes just the main figure a square (& too small)
+    fig_ax.axes.xaxis.set_visible(False)
 
     # ratio plot
-    set_fig_1d_axis_options(axis=accept_ax, var_name=var_to_plot, bins=bins,
-                            is_logbins=is_logbins)
+    set_fig_1d_axis_options(axis=accept_ax, var_name=var_to_plot, bins=bins, is_logbins=is_logbins, lepton=lepton)
     accept_ax.set_ylabel("Acceptance")
-    accept_ax.legend()
-    hep.box_aspect(accept_ax)
-
-    # set dimensions manually
-    fig.set_figheight(plot_height)
-    fig.set_figwidth(plot_width * 2)
 
     # save figure
     hep.atlas.label(data=True, paper=True, llabel="Internal", loc=0, ax=fig_ax, rlabel=plot_label)
-    out_png_file = dir_path + f"{var_to_plot}_{str(scaling)}.png"
+    out_png_file = config.plot_dir + f"{var_to_plot}_{str(scaling)}.png"
     fig.savefig(out_png_file, bbox_inches='tight')
     print(f"Figure saved to {out_png_file}")
     fig.clf()  # clear for next plot
 
 
 def histplot_2d(out_path: str,
+                lepton: str,
                 var_x: pd.Series, var_y: pd.Series,
                 xbins: Union[tuple, list], ybins: Union[tuple, list],
                 weights: pd.Series,
@@ -323,6 +319,7 @@ def histplot_2d(out_path: str,
     Plots and prints out 2d histogram. Does not support axis transforms (yet!)
 
     :param out_path: path to save figure
+    :param lepton: name of lepton
     :param var_x: pandas series of var to plot on x axis
     :param var_y: pandas series of var to plot on y axis
     :param xbins: tuple of bins in x (n_bins, start, stop) or list of bin edges
@@ -351,8 +348,8 @@ def histplot_2d(out_path: str,
         ax.set_aspect(1 / ax.get_data_ratio())
 
     # get axis labels
-    xlabel, _ = get_axis_labels(str(var_x.name))
-    ylabel, _ = get_axis_labels(str(var_y.name))
+    xlabel, _ = get_axis_labels(str(var_x.name), lepton)
+    ylabel, _ = get_axis_labels(str(var_y.name), lepton)
 
     ax.set_title(title, loc='right')
     ax.set_xlabel(xlabel)
@@ -365,37 +362,36 @@ def histplot_2d(out_path: str,
 
 
 def plot_2d_cutgroups(df: pd.DataFrame,
+                      lepton: str,
                       x_var: str, y_var: str,
                       xbins: Union[tuple, list], ybins: Union[tuple, list],
                       cutgroups: OrderedDict[str, List[str]],
-                      dir_path: str,
-                      cut_label: str = ' CUT',
                       is_logz: bool = True,
                       ) -> None:
     """
     Runs over cutgroups in dictrionary and plots 2d histogram for each group
 
     :param df: Input dataframe
+    :param lepton: name of lepton for axis labels
     :param x_var: column in dataframe to plot on x axis
     :param y_var: column in dataframe to plot on y axis
     :param xbins: binning in x
     :param ybins: binning in y
     :param cutgroups: ordered dictionary of cutgroups
-    :param dir_path: path to print plot
-    :param cut_label: label of cut columns in dataframe
     :param is_logz: whether display z-axis logarithmically
     """
     for cutgroup in cutgroups:
         print(f"    - generating cutgroup '{cutgroup}'")
 
-        cut_df = cut_on_cutgroup(df, cutgroups, cutgroup, cut_label)
+        cut_df = cut_on_cutgroup(df, cutgroups, cutgroup)
         weight_cut = cut_df['weight']
         x_vars = cut_df[x_var]
         y_vars = cut_df[y_var]
 
-        out_png_file = dir_path + f"2d_{x_var}-{y_var}_{cutgroup}.png"
+        out_png_file = config.plot_dir + f"2d_{x_var}-{y_var}_{cutgroup}.png"
         histplot_2d(
             out_path=out_png_file,
+            lepton=lepton,
             var_x=x_vars, var_y=y_vars,
             xbins=xbins, ybins=ybins,
             weights=weight_cut,
@@ -405,8 +401,8 @@ def plot_2d_cutgroups(df: pd.DataFrame,
 
 
 def plot_mass_slices(df: pd.DataFrame,
+                     lepton: str,
                      xvar: str,
-                     dir_path: str,
                      xbins: Union[tuple, list] = (100, 300, 10000),
                      logbins: bool = True,
                      logx: bool = False,
@@ -443,9 +439,9 @@ def plot_mass_slices(df: pd.DataFrame,
     if logx:
         plt.semilogx()
     hep.atlas.label(data=True, paper=True, llabel="Internal", loc=0, ax=ax, rlabel=plot_label)
-    ax.set_xlabel(labels_xs[xvar]['xlabel'].format(config.lepton))
+    ax.set_xlabel(labels_xs[xvar]['xlabel'].format(lepton))
     ax.set_ylabel(labels_xs[xvar]['ylabel'])
 
-    path = dir_path + f"{xvar}_mass_slices_full.png"
+    path = config.plot_dir + f"{xvar}_mass_slices_full.png"
     fig.savefig(path, bbox_inches='tight')
     print(f"Figure saved to {path}")

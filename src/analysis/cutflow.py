@@ -2,15 +2,14 @@ import pandas as pd
 from typing import Dict, List, OrderedDict, Optional
 import matplotlib.pyplot as plt
 from time import strftime
+import analysis.config as config
 
 
 class Cutflow:
     def __init__(self, df: pd.DataFrame,
                  cut_dicts: List[Dict],
                  cutgroups: Optional[OrderedDict[str, List[str]]] = None,
-                 cut_label: str = ' CUT',
-                 sequential: bool = True,
-                 ):
+                 sequential: bool = True):
         """
         Generates cutflow object that keeps track of various properties and ratios of selections made on given dataset
 
@@ -18,7 +17,6 @@ class Cutflow:
         :param cut_dicts: Dictionary of cufts made.
         :param cutgroups: Optional ordered dictionary of cut groups. If suppled, will organise cutflow in terms of
                           cutgroups rather than individual cuts.
-        :param cut_label: Label for boolean cut rows in dataframe
         :param sequential: Whether or not to organise cutflow as each cut happening one after the other
                            or each cut separately. Default True. If false, plots each cut separately.
         """
@@ -33,7 +31,6 @@ class Cutflow:
 
         # set input fields
         self._cut_dicts = cut_dicts
-        self._cut_label = cut_label
 
         # list of cutflow labels (necessary for all cutflows)
         if self._cutgroups:
@@ -45,7 +42,7 @@ class Cutflow:
 
         if self._is_sequential:
             # extract only the cut columns from the dataframe
-            df = df[[col for col in df.columns if cut_label in col]]
+            df = df[[col for col in df.columns if config.cut_label in col]]
 
             # special variables only for sequential cuts
             self.cutflow_a_ratio = [1.0]  # contains ratio of each separate cut to inclusive sample
@@ -57,26 +54,26 @@ class Cutflow:
             if self._cutgroups:
                 # loop over groups
                 for group in self._cutgroups.values():
-                    curr_cut_columns += [cut + cut_label for cut in group]
+                    curr_cut_columns += [cut + config.cut_label for cut in group]
                     # number of events passing current cut & all previous cuts
                     n_events_left = len(df[df[curr_cut_columns].all(1)].index)
                     # append calculations to cutflow arrays
                     self.cutflow_n_events.append(n_events_left)
                     self.cutflow_ratio.append(n_events_left / prev_n)
                     self.cutflow_cum.append(n_events_left / self._n_events_tot)
-                    self.cutflow_a_ratio.append(len(df[df[[cut + cut_label for cut in group]].all(1)].index) / self._n_events_tot)
+                    self.cutflow_a_ratio.append(len(df[df[[cut + config.cut_label for cut in group]].all(1)].index) / self._n_events_tot)
                     prev_n = n_events_left
             else:
                 # loop over individual cuts
                 for cut in self.cutflow_labels:
-                    curr_cut_columns.append(cut + cut_label)
+                    curr_cut_columns.append(cut + config.cut_label)
                     # number of events passing current cut & all previous cuts
                     n_events_left = len(df[df[curr_cut_columns].all(1)].index)
                     # append calculations to cutflow arrays
                     self.cutflow_n_events.append(n_events_left)
                     self.cutflow_ratio.append(n_events_left / prev_n)
                     self.cutflow_cum.append(n_events_left / self._n_events_tot)
-                    self.cutflow_a_ratio.append(len(df[df[cut + cut_label].all(1)].index) / self._n_events_tot)
+                    self.cutflow_a_ratio.append(len(df[df[cut + config.cut_label].all(1)].index) / self._n_events_tot)
                     prev_n = n_events_left
 
             # assign histogram options for each type
@@ -105,7 +102,7 @@ class Cutflow:
 
         else:
             # extract only the cut columns from the dataframe
-            df = df[[col for col in df.columns if cut_label in col]]
+            df = df[[col for col in df.columns if config.cut_label in col]]
 
             # if not a sequential cutflow, only print out the number of events passing each cut and the ratio with
             # the inclusive sample
@@ -113,7 +110,7 @@ class Cutflow:
                 # loop over groups
                 for group in self._cutgroups.values():
                     # calculations
-                    cut_cols = [cut + cut_label for cut in group]
+                    cut_cols = [cut + config.cut_label for cut in group]
                     n_events_cut = len(df[df[cut_cols].all(1)].index)
                     del cut_cols
                     self.cutflow_n_events.append(n_events_cut)
@@ -121,7 +118,7 @@ class Cutflow:
             else:
                 for cut in cut_dicts:
                     # calculations
-                    n_events_cut = len(df[df[cut['name'] + cut_label].all(1)].index)
+                    n_events_cut = len(df[df[cut['name'] + config.cut_label].all(1)].index)
                     self.cutflow_n_events.append(n_events_cut)
                     self.cutflow_ratio.append(n_events_cut / self._n_events_tot)
 
@@ -188,11 +185,10 @@ class Cutflow:
                       f"{n_events:<{max_n_len}} "
                       f"{ratio:.3f}    ")
 
-    def print_histogram(self, filepath: str, kind: str, **kwargs) -> None:
+    def print_histogram(self, kind: str, **kwargs) -> None:
         """
         Generates and saves a cutflow histogram
 
-        :param filepath: path to directory to save plots into
         :param kind: which cutflow type. options:
                     'ratio': ratio of cut to previous cut
                     'cummulative': ratio of all current cuts to acceptance
@@ -216,7 +212,7 @@ class Cutflow:
         ax.set_ylabel(self._cuthist_options[kind]['ylabel'])
         ax.grid(b=True, which='both', axis='y', alpha=0.3)
 
-        filepath = self._cuthist_options[kind]['filepath'].format(filepath)
+        filepath = self._cuthist_options[kind]['filepath'].format(config.plot_dir)
         fig.savefig(filepath)
         print(f"Cutflow histogram saved to {filepath}")
 
