@@ -21,7 +21,8 @@ from utils.file_utils import (
     identical_to_backup,
     delete_file,
     get_last_backup,
-    get_filename, makedir
+    get_filename,
+    makedir
 )
 from utils.dataframe_utils import (
     gen_weight_column,
@@ -46,7 +47,6 @@ class Analysis:
 
     def __init__(self, data_dict: Dict[str, Dict],
                  cutfile: str,
-                 lepton: Optional[str],
                  force_rebuild: bool = False,
                  grouped_cutflow: bool = True,
                  global_lumi: Optional[float] = None,
@@ -75,11 +75,12 @@ class Analysis:
         """
         # check input
         for name, dic in data_dict.items():
-            assert set(dic.keys()) == {'path', 'TTree', 'slices'}, \
-                f"{data_dict[name]} improperly formatted. Possible missing values."
+            assert {'path', 'TTree', 'slices'}.issubset(set(dic.keys())), \
+                f"{data_dict[name]} improperly formatted. 'path', 'TTree', and 'slices' required."
             assert isinstance(name, str), "Dataset name must be a string."
             assert isinstance(dic['path'], str), "Path to root file must be a string."
             assert isinstance(dic['TTree'], str), "TTree name must be a string."
+            assert isinstance(dic['lepton'], str), "Lepton name must be a string."
             assert isinstance(dic['slices'], bool), "'slices' variable must be boolean."
 
         # build Data classes in name:Data dictionary containing initial values
@@ -92,8 +93,6 @@ class Analysis:
         }
 
         # set analysis options
-        if lepton:
-            config.lepton = lepton
         if global_lumi:
             config.lumi = global_lumi
         self._cutfile = cutfile
@@ -140,8 +139,8 @@ class Analysis:
                                                              self.datasets[name].pkl_path)
 
         # place plots in outputs/plots/<cutfile name>
-        self.plot_dir = self.out_plots_dir + self._cutfile_name.rstrip('.txt') + '/'
-        makedir(self.plot_dir)
+        config.plot_dir = self.out_plots_dir + self._cutfile_name.rstrip('.txt') + '/'
+        makedir(config.plot_dir)
 
         # ===============================
         # ==== EXTRACT & CLEAN DATA =====
@@ -169,9 +168,7 @@ class Analysis:
         # ======= APPLYING CUTS =========
         # ===============================
         for name in self.datasets:
-            self.datasets[name].create_cut_columns(cut_dicts=self.cut_dicts,
-                                                   cut_label=self.cut_label,
-                                                   printout=True)
+            self.datasets[name].create_cut_columns(cut_dicts=self.cut_dicts, printout=True)
 
         # ===============================
         # ==== CALCULATING LUMI & XS ====
@@ -186,7 +183,6 @@ class Analysis:
         for name in self.datasets:
             self.datasets[name].gen_cutflow(cut_dicts=self.cut_dicts,
                                             cutgroups=self.cutgroups if grouped_cutflow else None,
-                                            cut_label=self.cut_label,
                                             sequential=self.options['sequential'])
 
     # ===============================
@@ -227,15 +223,15 @@ class Analysis:
             print(f"Generating histogram for {var_to_plot}...")
             plot_1d_overlay_and_acceptance_cutgroups(
                 df=self.datasets[ds_name].df,
+                lepton=self.datasets[ds_name].lepton,
                 var_to_plot=var_to_plot,
                 cutgroups=self.cutgroups,
                 lumi=self.datasets[ds_name].luminosity,
-                dir_path=self.plot_dir,
-                cut_label=self.cut_label,
                 is_logbins=is_logbins,
                 log_x=log_x,
                 scaling=scaling,
                 bins=in_bins,
+                plot_label=ds_name
             )
 
     def gen_cutflow_hist(self,
@@ -262,21 +258,21 @@ class Analysis:
             event = ratio = cummulative = a_ratio = True
 
         if event:
-            self.datasets[ds_name].cutflow.print_histogram(self.plot_dir, 'event')
+            self.datasets[ds_name].cutflow.print_histogram('event')
         if ratio:
-            self.datasets[ds_name].cutflow.print_histogram(self.plot_dir, 'ratio')
+            self.datasets[ds_name].cutflow.print_histogram('ratio')
         if cummulative:
             if self.options['sequential']:
-                self.datasets[ds_name].cutflow.print_histogram(self.plot_dir, 'cummulative')
+                self.datasets[ds_name].cutflow.print_histogram('cummulative')
             else:
                 warn("Sequential cuts cannot generate a cummulative cutflow")
         if a_ratio:
             if self.options['sequential']:
-                self.datasets[ds_name].cutflow.print_histogram(self.plot_dir, 'a_ratio')
+                self.datasets[ds_name].cutflow.print_histogram('a_ratio')
             else:
                 warn("Sequential cuts can't generate cummulative cutflow. "
                      "Ratio of cuts to acceptance will be generated instead.")
-                self.datasets[ds_name].cutflow.print_histogram(self.plot_dir, 'ratio')
+                self.datasets[ds_name].cutflow.print_histogram('ratio')
 
     def make_all_cutgroup_2dplots(self, ds_name: str, bins: Union[tuple, list] = (20, 0, 200)):
         if len(self.vars_to_cut) < 2:
@@ -292,11 +288,10 @@ class Analysis:
                 ybins = bins
             print(f"Generating 2d histogram for {x_var}-{y_var}...")
             plot_2d_cutgroups(self.datasets[ds_name].df,
+                              lepton=self.datasets[ds_name].lepton,
                               x_var=x_var, y_var=y_var,
                               xbins=xbins, ybins=ybins,
                               cutgroups=self.cutgroups,
-                              dir_path=self.plot_dir,
-                              cut_label=self.cut_label,
                               )
 
     # ===============================
@@ -310,7 +305,7 @@ class Analysis:
         """Prints some kinematic variables to terminal"""
         print(f"\n========== KINEMATICS ===========")
         for name in self.datasets:
-            print(name+":\n=================================")
+            print(name + ":\n---------------------------------")
             print(f"cross-section: {self.datasets[name].cross_section:.2f} fb\n"
                   f"luminosity   : {self.datasets[name].luminosity:.2f} fb-1\n"
                   )
@@ -334,7 +329,6 @@ class Analysis:
     # ========== PRIVATE ============
     # ===============================
     # def __check_single_datafile(self):
-    #
 
     def __getbins(self, var_to_plot) -> Tuple[bool, Optional[tuple]]:
         """
@@ -359,20 +353,20 @@ if __name__ == '__main__':
         dataset_name: {
             'path': '../../data/mc16d_wmintaunu/*',
             'TTree': 'truth',
-            'slices': False
+            'slices': False,
+            'lepton': 'tau'
         }
     }
 
     my_analysis = Analysis(data_dict=data,
                            cutfile='../../options/cutfile.txt',
-                           lepton='tau',
                            force_rebuild=False
                            )
 
     # pipeline
     my_analysis.plot_with_cuts(scaling='xs', ds_name=dataset_name)
-    my_analysis.make_all_cutgroup_2dplots(dataset_name)
-    my_analysis.gen_cutflow_hist(dataset_name, all_plots=True)
-    my_analysis.cutflow_printout(dataset_name)
-    my_analysis.kinematics_printouts()
-    my_analysis.print_cutflow_latex_table(dataset_name)
+    # my_analysis.make_all_cutgroup_2dplots(dataset_name)
+    # my_analysis.gen_cutflow_hist(dataset_name, all_plots=True)
+    # my_analysis.cutflow_printout(dataset_name)
+    # my_analysis.kinematics_printouts()
+    # my_analysis.print_cutflow_latex_table(dataset_name)

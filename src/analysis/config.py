@@ -10,7 +10,7 @@ n_threads = os.cpu_count() // 2  # number of threads used for filling histograms
 
 # MISC SETTINGS
 # ====================
-lepton = 'lepton'  # name of lepton
+cut_label = ' CUT'
 lumi = 140.  # global luminosity to rescale to
 
 # DEFAULT BINNINGS
@@ -27,3 +27,4 @@ pkl_df_filepath = out_dir + 'data/{}_df.pkl'  # pickle file containing extracted
 backup_dir = '../../analysis_save_state/'  # where backups go
 backup_cutfiles_dir = backup_dir + 'cutfiles/'  # _cutfile backups
 latex_table_dir = out_dir + "LaTeX_cutflow_table/"  # where to print latex cutflow table
+plot_dir = ''  # contains where plots go for this analysis run. Filled in runtime
