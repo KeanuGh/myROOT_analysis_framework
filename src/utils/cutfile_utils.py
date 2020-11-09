@@ -8,7 +8,7 @@ from distutils.util import strtobool
 from utils.file_utils import identical_to_backup, get_last_backup, is_dir_empty, get_filename
 
 
-def parse_cutlines(cutline: str, sep='\t') -> dict:
+def parse_cutline(cutline: str, sep='\t') -> dict:
     """
     | processes each line of cuts into dictionary of cut options. with separator sep
     | For a cut range add each less/more than as separate cuts and add into same group
@@ -56,7 +56,7 @@ def parse_cutlines(cutline: str, sep='\t') -> dict:
 
 def parse_cutfile(file: str, sep='\t') -> Tuple[List[dict], List[str], Dict[str, bool]]:
     """
-    | generates pythonic outputs from input _cutfile
+    | generates pythonic outputs from input cutfile
     | Cutfile should be formatted with headers [CUTS], [OUTPUTS] and [OPTIONS]
     | Each line under [CUTS] header contains the 'sep'-separated values (detault: tab):
     | - name: name of cut to be printed and used in plot labels
@@ -84,7 +84,7 @@ def parse_cutfile(file: str, sep='\t') -> Tuple[List[dict], List[str], Dict[str,
                 continue
 
             # append cut dictionary
-            cuts_list_of_dicts.append(parse_cutlines(cutline, sep=sep))
+            cuts_list_of_dicts.append(parse_cutline(cutline, sep=sep))
 
         # get output variables
         output_vars_list = []
@@ -124,7 +124,7 @@ def parse_cutfile(file: str, sep='\t') -> Tuple[List[dict], List[str], Dict[str,
 
 def extract_cut_variables(cut_dicts: List[dict], vars_list: List[str]) -> List[str]:
     """
-    gets which variables are needed to extract from root file based on _cutfile parser output
+    gets which variables are needed to extract from root file based on cutfile parser output
     uses outputs from parse_cutfile()
     """
     extract_vars = [cut_dict['cut_var'] for cut_dict in cut_dicts]
@@ -166,12 +166,12 @@ def if_build_dataframe(current_cutfile: str,
                        pkl_filepath: str
                        ) -> bool:
     """
-    compares current _cutfile to backups and decides whether to rebuild dataframe and save new backup _cutfile
-    :param current_cutfile: current _cutfile
+    compares current cutfile to backups and decides whether to rebuild dataframe and save new backup cutfile
+    :param current_cutfile: current cutfile
     :param will_backup_cutfile: whether or not the cutfile will be backed up
     :param backup_dirpath: path to dir of backups
     :param pkl_filepath: pickle file containing data in pandas dataframe
-    :return: tuple of bools: (whether to rebuild dataframe, whether to save _cutfile backup)
+    :return: tuple of bools: (whether to rebuild dataframe, whether to save cutfile backup)
     """
 
     cut_list_dicts, vars_to_cut, options_dict = parse_cutfile(current_cutfile)

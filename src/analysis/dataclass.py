@@ -61,7 +61,6 @@ class Dataset:
                  extra_vars: Optional[List[str]] = None) -> None:
         """Builds dataframe based on 'datapath', 'TTree_name' and 'is_slices'. Prints pickle file to 'pkl_path'"""
         self.df = df_utils.build_analysis_dataframe(self, cut_list_dicts, vars_to_cut, extra_vars)
-        self.df = df_utils.rescale_to_gev(self.df)  # cleanup
 
     def create_cut_columns(self, cut_dicts: List[Dict], printout=True) -> None:
         """Creates columns in dataframe that contain boolean values corresponding to cuts. """
