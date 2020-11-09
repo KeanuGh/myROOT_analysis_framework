@@ -6,6 +6,8 @@ from warnings import warn
 # project imports
 import analysis.config as config
 from analysis.dataclass import Dataset
+import utils.decorators as decs
+import utils.file_utils as file_utils
 from utils.plotting_utils import (
     plot_1d_overlay_and_acceptance_cutgroups,
     plot_2d_cutgroups
@@ -16,18 +18,6 @@ from utils.cutfile_utils import (
     if_build_dataframe,
     if_make_cutfile_backup,
     backup_cutfile
-)
-from utils.file_utils import (
-    identical_to_backup,
-    delete_file,
-    get_last_backup,
-    get_filename,
-    makedir
-)
-from utils.dataframe_utils import (
-    gen_weight_column,
-    gen_weight_column_slices,
-    rescale_to_gev,
 )
 
 
@@ -47,6 +37,7 @@ class Analysis:
 
     def __init__(self, data_dict: Dict[str, Dict],
                  cutfile: str,
+                 analysis_name: str = '',
                  force_rebuild: bool = False,
                  grouped_cutflow: bool = True,
                  global_lumi: Optional[float] = None,
@@ -55,7 +46,6 @@ class Analysis:
                  ):
         """
         TODO:
-        | - Currently uses dictionary to hold datasets. Probably be better to use a class
         | - Currently loops over each substep for each dataframe rather than looping over the entire analysis.
         | - Currently applies the same cuts to ALL dataframes. Instead I could allow each dataframe to read in its own
          cutfile
@@ -111,11 +101,10 @@ class Analysis:
             '_phi_': config.phibins,
         }
 
+        # PROCESS CUTFILE
         # ============================
-        # ===== PROCESS CUTFILE ======
-        # ============================
-        # the name of the cutfile sets the name of the analysis for
-        self._cutfile_name = get_filename(self._cutfile)
+        # the name of the cutfile sets the name of the analysis
+        self._cutfile_name = file_utils.get_filename(self._cutfile)
 
         # parse cutfile
         self.cut_dicts, self.vars_to_cut, self.options = parse_cutfile(self._cutfile)
@@ -140,10 +129,9 @@ class Analysis:
 
         # place plots in outputs/plots/<cutfile name>
         config.plot_dir = self.out_plots_dir + self._cutfile_name.rstrip('.txt') + '/'
-        makedir(config.plot_dir)
+        file_utils.makedir(config.plot_dir)
 
-        # ===============================
-        # ==== EXTRACT & CLEAN DATA =====
+        # EXTRACT & CLEAN DATA
         # ===============================
         for name in self.datasets:
             if self.datasets[name].rebuild or force_rebuild:
@@ -153,32 +141,23 @@ class Analysis:
                 print(f"Reading data for {name} dataframe from {self.datasets[name].pkl_path}...")
                 self.datasets[name].df = pd.read_pickle(self.datasets[name].pkl_path)
 
-        # map weights column
-        for name in self.datasets:
-            if self.datasets[name].is_slices:
-                self.datasets[name].df['weight'] = gen_weight_column_slices(self.datasets[name].df)
-            else:
-                self.datasets[name].df['weight'] = gen_weight_column(self.datasets[name].df)
-
-        # rescale MeV columns to GeV
-        for name in self.datasets:
-            rescale_to_gev(self.datasets[name].df)
-
+        # MAP WEIGHTS
         # ===============================
-        # ======= APPLYING CUTS =========
+        for name in self.datasets:
+            self.datasets[name].map_weights()
+
+        # APPLYING CUTS
         # ===============================
         for name in self.datasets:
             self.datasets[name].create_cut_columns(cut_dicts=self.cut_dicts, printout=True)
 
-        # ===============================
-        # ==== CALCULATING LUMI & XS ====
+        # CALCULATING LUMI & XS
         # ===============================
         for name in self.datasets:
             self.datasets[name].gen_cross_section()
             self.datasets[name].gen_luminosity()
 
-        # ===============================
-        # ========== CUTFLOW ============
+        # CUTFLOW
         # ===============================
         for name in self.datasets:
             self.datasets[name].gen_cutflow(cut_dicts=self.cut_dicts,
@@ -189,8 +168,9 @@ class Analysis:
     # =========== PLOTS =============
     # ===============================
     # TODO: save histograms to pickle file
+    @decs.check_single_datafile
     def plot_with_cuts(self,
-                       ds_name: str,
+                       ds_name: Optional[str],
                        scaling: Optional[str] = None,
                        bins: Union[tuple, list] = (30, 1, 500),
                        not_log_add: Optional[List[str]] = None,
@@ -234,8 +214,9 @@ class Analysis:
                 plot_label=ds_name
             )
 
+    @decs.check_single_datafile
     def gen_cutflow_hist(self,
-                         ds_name: str,
+                         ds_name: Optional[str],
                          event: bool = True,
                          ratio: bool = False,
                          cummulative: bool = False,
@@ -274,7 +255,8 @@ class Analysis:
                      "Ratio of cuts to acceptance will be generated instead.")
                 self.datasets[ds_name].cutflow.print_histogram('ratio')
 
-    def make_all_cutgroup_2dplots(self, ds_name: str, bins: Union[tuple, list] = (20, 0, 200)):
+    @decs.check_single_datafile
+    def make_all_cutgroup_2dplots(self, ds_name: Optional[str], bins: Union[tuple, list] = (20, 0, 200)):
         if len(self.vars_to_cut) < 2:
             raise Exception("Need at least two plotting variables to make 2D plot")
 
@@ -294,10 +276,24 @@ class Analysis:
                               cutgroups=self.cutgroups,
                               )
 
+    @decs.check_single_datafile
+    def plot_mass_slices(self, ds_name: Optional[str], xvar: str, **kwargs):
+        """
+        Plots mass slices for input variable xvar if dataset is_slices
+
+        :param ds_name: name of dataset (in slices) to plot
+        :param xvar: variable in dataframe to plot
+        :param kwargs: keyword args to pass to dataclass.plot_mass_slices()
+        """
+        if not xvar:
+            raise ValueError("xvar must be supplied")
+        self.datasets[ds_name].plot_mass_slices(xvar, **kwargs)
+
     # ===============================
     # ========= PRINTOUTS ===========
     # ===============================
-    def cutflow_printout(self, ds_name: str) -> None:
+    @decs.check_single_datafile
+    def cutflow_printout(self, ds_name: Optional[str] = None) -> None:
         """Prints cutflow table to terminal"""
         self.datasets[ds_name].cutflow.terminal_printout()
 
@@ -310,7 +306,8 @@ class Analysis:
                   f"luminosity   : {self.datasets[name].luminosity:.2f} fb-1\n"
                   )
 
-    def print_cutflow_latex_table(self, ds_name: str, check_backup: bool = True) -> None:
+    @decs.check_single_datafile
+    def print_cutflow_latex_table(self, ds_name: Optional[str] = None, check_backup: bool = True) -> None:
         """
         Prints a latex table of cutflow. By default first checks if a current backup exists and will not print if
         backup is identical
@@ -319,17 +316,19 @@ class Analysis:
         :return: None
         """
         if check_backup:
-            last_backup = get_last_backup(self.latex_table_dir)
+            last_backup = file_utils.get_last_backup(self.latex_table_dir)
         latex_file = self.datasets[ds_name].cutflow.print_latex_table(self.latex_table_dir, filename_prefix=ds_name)
         if check_backup and \
-                identical_to_backup(latex_file, backup_file=last_backup):
-            delete_file(latex_file)
+                file_utils.identical_to_backup(latex_file, backup_file=last_backup):
+            file_utils.delete_file(latex_file)
+
+    # ===============================
+    # ========= UTITLITIES ==========
+    # ===============================
 
     # ===============================
     # ========== PRIVATE ============
     # ===============================
-    # def __check_single_datafile(self):
-
     def __getbins(self, var_to_plot) -> Tuple[bool, Optional[tuple]]:
         """
         Returns special bins if variable input requires it. Returns None if not a special variable
@@ -348,12 +347,17 @@ class Analysis:
 
 
 if __name__ == '__main__':
-    dataset_name = 'truth_inclusive'
     data = {
-        dataset_name: {
-            'path': '../../data/mc16d_wmintaunu/*',
+        # 'truth_inclusive': {
+        #     'path': '../../data/mc16d_wmintaunu/*',
+        #     'TTree': 'truth',
+        #     'slices': False,
+        #     'lepton': 'tau'
+        # },
+        'truth_slices': {
+            'path': '../../data/mc16a_wmintaunu_SLICES/*.root',
             'TTree': 'truth',
-            'slices': False,
+            'slices': True,
             'lepton': 'tau'
         }
     }
@@ -364,7 +368,8 @@ if __name__ == '__main__':
                            )
 
     # pipeline
-    my_analysis.plot_with_cuts(scaling='xs', ds_name=dataset_name)
+    my_analysis.plot_mass_slices(xvar='MC_WZ_dilep_m_born', logx=True)
+    # my_analysis.plot_with_cuts(scaling='xs', ds_name='truth_inclusive')
     # my_analysis.make_all_cutgroup_2dplots(dataset_name)
     # my_analysis.gen_cutflow_hist(dataset_name, all_plots=True)
     # my_analysis.cutflow_printout(dataset_name)

@@ -61,10 +61,20 @@ class Dataset:
                  extra_vars: Optional[List[str]] = None) -> None:
         """Builds dataframe based on 'datapath', 'TTree_name' and 'is_slices'. Prints pickle file to 'pkl_path'"""
         self.df = df_utils.build_analysis_dataframe(self, cut_list_dicts, vars_to_cut, extra_vars)
+        self.df = df_utils.rescale_to_gev(self.df)  # cleanup
 
     def create_cut_columns(self, cut_dicts: List[Dict], printout=True) -> None:
         """Creates columns in dataframe that contain boolean values corresponding to cuts. """
+        print(f"Creating cuts for {self.name}...")
         df_utils.create_cut_columns(self.df, cut_dicts, printout)
+
+    def map_weights(self):
+        """Creates weights column in dataset based on dataset type"""
+        print(f"Creating weights for {self.name}...")
+        if self.is_slices:
+            self.df['weight'] = df_utils.gen_weight_column_slices(self.df)
+        else:
+            self.df['weight'] = df_utils.gen_weight_column(self.df)
 
     # Plotting methods
     # ===================
@@ -80,6 +90,7 @@ class Dataset:
         :param logx: whether to apply log bins (only if logbins was passed as tuple)
         :param plot_label: Whether to add dataset name as label to plot
         """
+        self.__check_df()
         if not self.is_slices:
             raise Exception("Dataset does not contain slices.")
 

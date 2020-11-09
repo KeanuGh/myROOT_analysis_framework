@@ -1,3 +1,7 @@
+"""
+PYTEST CURRENTLY NOT WORKING. WILL RESTART WRITING TESTS ONCE I GET IT WORKING AGAIN
+"""
+
 from utils.cutfile_utils import *
 from collections import OrderedDict
 

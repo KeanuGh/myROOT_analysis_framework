@@ -63,7 +63,7 @@ def get_axis_labels(var_name: str, lepton: str) -> Tuple[Optional[str], Optional
 
         # convert x label string for correct lepton if applicable
         try:
-            xlabel = xlabel % lepton
+            xlabel %= lepton
         except TypeError:
             pass
 
@@ -245,7 +245,7 @@ def plot_1d_overlay_and_acceptance_cutgroups(
     """Plots overlay of cutgroups and acceptance (ratio) plots"""
     # TODO: write docs for this function
     fig, (fig_ax, accept_ax) = plt.subplots(2, 1,
-                                            figsize=(plot_width*1.2, plot_height),
+                                            figsize=(plot_width * 1.2, plot_height),
                                             gridspec_kw={'height_ratios': [3, 1]})
 
     # INCLUSIVE PLOT
@@ -414,33 +414,22 @@ def plot_mass_slices(df: pd.DataFrame,
     fig, ax = plt.subplots()
 
     for dsid, mass_slice in df.groupby(id_col):
-        histplot_1d(var_x=mass_slice[xvar],
-                    bins=xbins,
-                    weights=mass_slice[weight_col],
-                    fig_axis=ax,
-                    yerr=None,
-                    label=dsid,
-                    is_logbins=logbins,
-                    scaling='widths'  # already rescaling to cross-section in weights
-                    )
+        histplot_1d(mass_slice[xvar], mass_slice[weight_col], xbins, ax, yerr=None, label=dsid,
+                    is_logbins=logbins, scaling='widths')
 
-    histplot_1d(var_x=df[xvar],
-                bins=xbins,
-                weights=df['weight'],
-                fig_axis=ax,
-                yerr=None,
-                label='Inclusive',
-                is_logbins=logbins,
-                scaling='widths'
-                )
+    histplot_1d(df[xvar], df['weight'], xbins, ax, yerr=None, is_logbins=logbins, scaling='widths',
+                c='k', linewidth=2, label='Inclusive')
 
     ax.legend(fontsize=10, ncol=2, loc='upper right')
     ax.semilogy()
     if logx:
         plt.semilogx()
-    hep.atlas.label(data=True, paper=True, llabel="Internal", loc=0, ax=ax, rlabel=plot_label)
-    ax.set_xlabel(labels_xs[xvar]['xlabel'].format(lepton))
-    ax.set_ylabel(labels_xs[xvar]['ylabel'])
+    hep.label._exp_label(exp='ATLAS', data=True, paper=True, italic=(True, True), ax=ax,
+                         llabel='Internal', rlabel=plot_label)
+
+    xlabel, ylabel = get_axis_labels(xvar, lepton)
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
 
     path = config.plot_dir + f"{xvar}_mass_slices_full.png"
     fig.savefig(path, bbox_inches='tight')
