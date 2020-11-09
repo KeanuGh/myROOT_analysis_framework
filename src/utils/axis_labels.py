@@ -1,10 +1,18 @@
 # labels for cross-sections
 labels_xs = {
-    # this first one is so it doesn't throw up a warning when building the dataframe. Don't actually plot this
+    # DATASET VARIABLES
+    # =======================================================
     'weight_mc': {
         'xlabel': r'weight_mc',
         'ylabel': r'Entries',
     },
+    'DSID': {
+        'xlabel': r'Dataset ID',
+        'ylabel': r'Entries',
+    },
+
+    # KINEMATIC VARIABLES
+    # =======================================================
     'PDFinfo_X1': {
         'xlabel': r'x',
         'ylabel': r'$\frac{d\sigma}{dx}$ [fb]',

@@ -5,7 +5,6 @@ import boost_histogram as bh
 import mplhep as hep
 from mplhep import label as label_base
 import matplotlib.pyplot as plt
-import numpy as np
 
 plt.style.use([hep.style.ATLAS,
                {'font.sans-serif': ['Tex Gyre Heros']},  # use when helvetica isn't installed
@@ -14,12 +13,12 @@ plt.style.use([hep.style.ATLAS,
                ])
 
 
-def scale_and_plot(frame, c=None, linewidth=1, label=None):
+def scale_and_plot(frame, new_lumi: float = 1., c=None, linewidth=1, label=None):
     xs = frame['weight_mc'].abs().sum() / len(frame.index)
     lumi = frame['weight'].sum() / xs
 
     hist = bh.Histogram(bh.axis.Regular(100, 300, 10000, transform=bh.axis.transform.log), storage=bh.storage.Weight())
-    hist.fill(frame['MC_WZ_dilep_m_born'], weight=frame['weight'], threads=6)
+    hist.fill(frame['MC_WZ_dilep_m_born'], weight=new_lumi*frame['weight'], threads=6)
 
     # scale cross-section
     hist /= hist.axes[0].widths
@@ -38,8 +37,7 @@ def main():
     ti = time.time()
     df = uproot.concatenate(paths + ':truth', filter_name=cols, library='pd')
     sumw = uproot.concatenate(paths + ':sumWeights', filter_name=['totalEventsWeighted', 'dsid'], library='pd')
-    sumw = sumw.groupby('dsid').sum()
-    df = pd.merge(df, sumw, left_on='mcChannelNumber', right_on='dsid', sort=False)
+    df = pd.merge(df, sumw.groupby('dsid').sum(), left_on='mcChannelNumber', right_on='dsid', sort=False)
     del sumw
     df.rename(columns={'mcChannelNumber': 'DSID'}, inplace=True)
     tl = time.time()
@@ -61,8 +59,6 @@ def main():
     plt.legend(fontsize=10, ncol=2, loc='upper right')
     plt.semilogy()
     plt.semilogx()
-    # hep.atlas.label(data=True, paper=True,
-    #                 llabel='internal', rlabel=r"$W^-\rightarrow\tau\bar{\nu}$ mass slices")
     label_base._exp_label(exp='ATLAS', data=True, paper=True, italic=(True, True),
                           llabel='Internal', rlabel=r"$W^-\rightarrow\tau\bar{\nu}$ mass slices")
     plt.xlabel("Born dilep m [GeV]")

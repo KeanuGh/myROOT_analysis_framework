@@ -45,7 +45,10 @@ def build_analysis_dataframe(data,  # This type hint is left blank to avoid a ci
         sumw = uproot.concatenate(data.datapath + ':sumWeights', filter_name=['totalEventsWeighted', 'dsid'], library='pd')
         sumw = sumw.groupby('dsid').sum()
         tree_df = pd.merge(tree_df, sumw, left_on='mcChannelNumber', right_on='dsid', sort=False)
+
+        # properly name DSID column
         tree_df.rename(columns={'mcChannelNumber': 'DSID'}, inplace=True)
+        vars_to_extract = vars_to_extract[:-1] + ['DSID']
     t2 = time.time()
     print(f"time to build dataframe: {t2 - t1:.2f}s")
 
@@ -74,7 +77,6 @@ def gen_weight_column(df: pd.DataFrame,
                       global_scale: float = 1.
                       ) -> pd.Series:
     """Returns series of weights based off weight_mc column"""
-    print("Mapping weights column...")
     if weight_mc_col not in df.columns:
         raise KeyError(f"'{weight_mc_col}' column does not exist.")
     return df[weight_mc_col].map(lambda w: global_scale if w > 0 else -1 * global_scale)
@@ -139,7 +141,6 @@ def create_cut_columns(df: pd.DataFrame,
     :return: None, this function applies inplace.
     :param printout: whether to print a summary of cuts
     """
-    print("applying cuts...")
     cut_label = config.cut_label  # get cut label from config
 
     for cut in cut_dicts:

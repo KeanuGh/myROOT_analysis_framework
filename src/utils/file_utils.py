@@ -1,8 +1,9 @@
 import os
 from glob import glob
 from filecmp import cmp
-from typing import Optional
+from typing import Optional, Union, List
 from pathlib import Path
+import analysis.config as config
 
 
 def get_last_backup(backup_dir: str) -> str:
@@ -43,3 +44,34 @@ def makedir(dirpath: str) -> None:
     """creates directory if it doesn't exist"""
     if not os.path.exists(dirpath):
         os.makedirs(dirpath)
+
+
+def file_exists(filepath: str) -> bool:
+    """Does the file exist?"""
+    return os.path.isfile(filepath)
+
+
+def clear_pkl(ds_name: Optional[Union[List[str], str]] = None, clear_all: bool = False) -> None:
+    """
+    Deletes given pkl dataset. If clear_all set as True, clears all pkl_datasets
+
+    :param clear_all: whether to clear all files in dataset pickle dir
+    :param ds_name: OPTIONAL. String or list of string name(s) of dataset(s) to remove
+    """
+    path = config.pkl_df_filepath
+    assert ds_name or clear_all, "Must give a dataset name or clear_all"
+
+    assert not is_dir_empty(path.rstrip('{}_df.pkl')), "Pickle directory empty"
+    if clear_all:
+        delete_file(path.format('*'))
+        return
+    elif isinstance(ds_name, list):
+        for name in ds_name:
+            assert isinstance(name, str), "Dataset name must be a string"
+            assert file_exists(path.format(name)), f"{path.format(name)} does not exist."
+            delete_file(path.format(name))
+    elif isinstance(ds_name, str):
+        assert file_exists(path.format(ds_name)), f"{path.format(ds_name)} does not exist."
+        delete_file(path.format(ds_name))
+    raise ValueError(f"ds_name should supply string or list of string name(s) of dataset(s) to remove")
+
