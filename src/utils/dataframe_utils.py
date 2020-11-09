@@ -63,6 +63,8 @@ def build_analysis_dataframe(data,  # This type hint is left blank to avoid a ci
         warn(f"Warning: variable(s) {unexpected_vars} not contained in labels dictionary. "
              f"Some unexpected behaviour may occur.")
 
+    tree_df = rescale_to_gev(tree_df)  # cleanup
+
     # print into pickle file for easier read/write
     if data.pkl_path:
         pd.to_pickle(tree_df, data.pkl_path)
@@ -71,7 +73,6 @@ def build_analysis_dataframe(data,  # This type hint is left blank to avoid a ci
     return tree_df
 
 
-# TODO: WRAP THESE INTO A CUSTOM DATAFRAME CLASS?
 def gen_weight_column(df: pd.DataFrame,
                       weight_mc_col: str = 'weight_mc',
                       global_scale: float = 1.

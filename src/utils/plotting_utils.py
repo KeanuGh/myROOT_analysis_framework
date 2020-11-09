@@ -6,6 +6,7 @@ import numpy as np
 from typing import Tuple, Optional, List, OrderedDict, Union, Iterable
 from warnings import warn
 import pandas as pd
+import pickle as pkl
 
 import analysis.config as config
 from utils.dataframe_utils import get_luminosity, cut_on_cutgroup
@@ -304,12 +305,11 @@ def plot_1d_overlay_and_acceptance_cutgroups(
     fig.clf()  # clear for next plot
 
 
-def histplot_2d(out_path: str,
-                lepton: str,
-                var_x: pd.Series, var_y: pd.Series,
+def histplot_2d(var_x: pd.Series, var_y: pd.Series,
                 xbins: Union[tuple, list], ybins: Union[tuple, list],
                 weights: pd.Series,
-                title: str,
+                ax: plt.axes,
+                fig: plt.figure,
                 n_threads: int = config.n_threads,
                 is_z_log: bool = True,
                 # is_x_log: bool = True, is_y_log: bool = True,  # Perhaps add this in later
@@ -318,21 +318,18 @@ def histplot_2d(out_path: str,
     """
     Plots and prints out 2d histogram. Does not support axis transforms (yet!)
 
-    :param out_path: path to save figure
-    :param lepton: name of lepton
     :param var_x: pandas series of var to plot on x axis
     :param var_y: pandas series of var to plot on y axis
     :param xbins: tuple of bins in x (n_bins, start, stop) or list of bin edges
     :param ybins: tuple of bins in y (n_bins, start, stop) or list of bin edges
     :param weights: series of weights to apply to axes
-    :param title: plot title
+    :param ax: axis to plot on
+    :param fig: figure to plot on (for colourbar)
     :param n_threads: number of threads for filling
     :param is_z_log: whether z-axis should be scaled logarithmically
     :param is_square: whether to set square aspect ratio
     :return: histogram
     """
-    fig, ax = plt.subplots()
-
     # setup and fill histogram
     hist_2d = bh.Histogram(get_axis(xbins), get_axis(ybins))
     hist_2d.fill(var_x, var_y, weight=weights, threads=n_threads)
@@ -347,17 +344,6 @@ def histplot_2d(out_path: str,
     if is_square:  # square aspect ratio
         ax.set_aspect(1 / ax.get_data_ratio())
 
-    # get axis labels
-    xlabel, _ = get_axis_labels(str(var_x.name), lepton)
-    ylabel, _ = get_axis_labels(str(var_y.name), lepton)
-
-    ax.set_title(title, loc='right')
-    ax.set_xlabel(xlabel)
-    ax.set_ylabel(ylabel)
-
-    fig.savefig(out_path, bbox_inches='tight')
-    print(f"printed 2d histogram to {out_path}")
-    plt.close(fig)
     return hist_2d
 
 
@@ -366,7 +352,9 @@ def plot_2d_cutgroups(df: pd.DataFrame,
                       x_var: str, y_var: str,
                       xbins: Union[tuple, list], ybins: Union[tuple, list],
                       cutgroups: OrderedDict[str, List[str]],
+                      plot_label: str = '',
                       is_logz: bool = True,
+                      to_pkl: bool = False,
                       ) -> None:
     """
     Runs over cutgroups in dictrionary and plots 2d histogram for each group
@@ -378,26 +366,48 @@ def plot_2d_cutgroups(df: pd.DataFrame,
     :param xbins: binning in x
     :param ybins: binning in y
     :param cutgroups: ordered dictionary of cutgroups
+    :param plot_label: plot title
     :param is_logz: whether display z-axis logarithmically
+    :param to_pkl: whether to save histograms as pickle file
     """
+    if to_pkl:
+        hists = dict()
+
     for cutgroup in cutgroups:
         print(f"    - generating cutgroup '{cutgroup}'")
+        fig, ax = plt.subplots()
 
         cut_df = cut_on_cutgroup(df, cutgroups, cutgroup)
         weight_cut = cut_df['weight']
         x_vars = cut_df[x_var]
         y_vars = cut_df[y_var]
 
-        out_png_file = config.plot_dir + f"2d_{x_var}-{y_var}_{cutgroup}.png"
-        histplot_2d(
-            out_path=out_png_file,
-            lepton=lepton,
+        out_path = config.plot_dir + f"2d_{x_var}-{y_var}_{cutgroup}.png"
+        hist = histplot_2d(
             var_x=x_vars, var_y=y_vars,
             xbins=xbins, ybins=ybins,
+            ax=ax, fig=fig,
             weights=weight_cut,
-            title=cutgroup,
             is_z_log=is_logz,
         )
+        if to_pkl:
+            hists[cutgroup] = hist
+
+        # get axis labels
+        xlabel, _ = get_axis_labels(str(x_var), lepton)
+        ylabel, _ = get_axis_labels(str(y_var), lepton)
+
+        hep.label._exp_label(exp='ATLAS', data=True, paper=True, italic=(True, True), ax=ax,
+                             llabel='Internal', rlabel=plot_label+' - '+cutgroup)
+        ax.set_xlabel(xlabel)
+        ax.set_ylabel(ylabel)
+
+        fig.savefig(out_path, bbox_inches='tight')
+        print(f"printed 2d histogram to {out_path}")
+        plt.close(fig)
+
+    if to_pkl:
+        pkl.dump(hists, config.pkl_hist_dir+plot_label+'_2d_cutgroups.pkl')
 
 
 def plot_mass_slices(df: pd.DataFrame,
@@ -408,17 +418,25 @@ def plot_mass_slices(df: pd.DataFrame,
                      logx: bool = False,
                      id_col: str = 'DSID',
                      weight_col: str = 'weight',
-                     plot_label: Optional[str] = None
+                     plot_label: str = '',
+                     to_pkl: bool = False
                      ) -> None:
     """Plots all mass slices as well as inclusive sample (in this case just all given slices together)"""
     fig, ax = plt.subplots()
 
-    for dsid, mass_slice in df.groupby(id_col):
-        histplot_1d(mass_slice[xvar], mass_slice[weight_col], xbins, ax, yerr=None, label=dsid,
-                    is_logbins=logbins, scaling='widths')
+    if to_pkl:
+        hists = dict()  # dictionary to hold mass slice histograms
 
-    histplot_1d(df[xvar], df['weight'], xbins, ax, yerr=None, is_logbins=logbins, scaling='widths',
-                c='k', linewidth=2, label='Inclusive')
+    for dsid, mass_slice in df.groupby(id_col):
+        hist = histplot_1d(mass_slice[xvar], mass_slice[weight_col], xbins, ax, yerr=None, label=dsid,
+                           is_logbins=logbins, scaling='widths')
+        if to_pkl:
+            hists[dsid] = hist
+
+    hist_inc = histplot_1d(df[xvar], df['weight'], xbins, ax, yerr=None, is_logbins=logbins, scaling='widths',
+                           c='k', linewidth=2, label='Inclusive')
+    if to_pkl:
+        hists['Inclusive'] = hist_inc
 
     ax.legend(fontsize=10, ncol=2, loc='upper right')
     ax.semilogy()
@@ -431,6 +449,9 @@ def plot_mass_slices(df: pd.DataFrame,
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
 
-    path = config.plot_dir + f"{xvar}_mass_slices_full.png"
+    name = f"{xvar}_mass_slices_full"
+    if to_pkl:
+        pkl.dump(hists, config.pkl_hist_dir+plot_label+name+'.pkl')
+    path = config.plot_dir + name + 'png'
     fig.savefig(path, bbox_inches='tight')
     print(f"Figure saved to {path}")

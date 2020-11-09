@@ -26,18 +26,14 @@ class Analysis:
     # ========= SETUP ===========
     # ===========================
 
-    # options
-    cut_label = ' CUT'  # label to use for boolean cut columns in dataframe
-
     # filepaths
-    out_plots_dir = config.out_plots_dir
-    # pkl_hist_filepath = config.pkl_hist_filepath
     backup_cutfiles_dir = config.backup_cutfiles_dir
-    latex_table_dir = config.latex_table_dir
+
+    # required dataset args
 
     def __init__(self, data_dict: Dict[str, Dict],
                  cutfile: str,
-                 analysis_name: str = '',
+                 analysis_label: str = '',
                  force_rebuild: bool = False,
                  grouped_cutflow: bool = True,
                  global_lumi: Optional[float] = None,
@@ -63,24 +59,11 @@ class Analysis:
         :param phibins: bins for plotting phi
         :param etabins: bins for plotting eta
         """
-        # check input
-        for name, dic in data_dict.items():
-            assert {'path', 'TTree', 'slices'}.issubset(set(dic.keys())), \
-                f"{data_dict[name]} improperly formatted. 'path', 'TTree', and 'slices' required."
-            assert isinstance(name, str), "Dataset name must be a string."
-            assert isinstance(dic['path'], str), "Path to root file must be a string."
-            assert isinstance(dic['TTree'], str), "TTree name must be a string."
-            assert isinstance(dic['lepton'], str), "Lepton name must be a string."
-            assert isinstance(dic['slices'], bool), "'slices' variable must be boolean."
 
+        # BUILD DATASETS
+        # ============================
         # build Data classes in name:Data dictionary containing initial values
-        self.datasets = {
-            name: Dataset(name=name,
-                          datapath=dic['path'],
-                          TTree_name=dic['TTree'],
-                          is_slices=dic['slices'])
-            for name, dic in data_dict.items()
-        }
+        self.datasets = {name: Dataset(name, **ds) for name, ds in data_dict.items()}
 
         # set analysis options
         if global_lumi:
@@ -103,7 +86,7 @@ class Analysis:
 
         # PROCESS CUTFILE
         # ============================
-        # the name of the cutfile sets the name of the analysis
+        # the name of the cutfile sets directory name for outputs
         self._cutfile_name = file_utils.get_filename(self._cutfile)
 
         # parse cutfile
@@ -127,9 +110,21 @@ class Analysis:
                                                              self.backup_cutfiles_dir,
                                                              self.datasets[name].pkl_path)
 
+        # SET OUTPUT DIRECTORIES
+        # ===========================
+        analysis_output_dir_name = self._cutfile_name.rstrip('.txt')
+
         # place plots in outputs/plots/<cutfile name>
-        config.plot_dir = self.out_plots_dir + self._cutfile_name.rstrip('.txt') + '/'
-        file_utils.makedir(config.plot_dir)
+        config.plot_dir = config.plot_dir.format(analysis_output_dir_name) + '/'
+
+        # set where latex tables go
+        config.latex_table_dir = config.latex_table_dir.format(analysis_output_dir_name)
+
+        # set where pickled histograms go
+        config.pkl_hist_dir = config.pkl_hist_dir.format(analysis_output_dir_name)
+
+        # create directories if they don't exist
+        file_utils.makedir([config.plot_dir, config.latex_table_dir, config.pkl_hist_dir])
 
         # EXTRACT & CLEAN DATA
         # ===============================
@@ -274,6 +269,7 @@ class Analysis:
                               x_var=x_var, y_var=y_var,
                               xbins=xbins, ybins=ybins,
                               cutgroups=self.cutgroups,
+                              plot_label=self.datasets[ds_name].name
                               )
 
     @decs.check_single_datafile
@@ -316,14 +312,14 @@ class Analysis:
         :return: None
         """
         if check_backup:
-            last_backup = file_utils.get_last_backup(self.latex_table_dir)
-        latex_file = self.datasets[ds_name].cutflow.print_latex_table(self.latex_table_dir, filename_prefix=ds_name)
+            last_backup = file_utils.get_last_backup(config.latex_table_dir)
+        latex_file = self.datasets[ds_name].cutflow.print_latex_table(config.latex_table_dir, filename_prefix=ds_name)
         if check_backup and \
                 file_utils.identical_to_backup(latex_file, backup_file=last_backup):
             file_utils.delete_file(latex_file)
 
     # ===============================
-    # ========= UTITLITIES ==========
+    # ========= UTILITIES ===========
     # ===============================
 
     # ===============================
@@ -348,30 +344,30 @@ class Analysis:
 
 if __name__ == '__main__':
     data = {
-        # 'truth_inclusive': {
-        #     'path': '../../data/mc16d_wmintaunu/*',
-        #     'TTree': 'truth',
-        #     'slices': False,
-        #     'lepton': 'tau'
-        # },
+        'truth_inclusive': {
+            'datapath': '../../data/mc16d_wmintaunu/*',
+            'TTree_name': 'truth',
+            'is_slices': False,
+            'lepton': 'tau'
+        },
         'truth_slices': {
-            'path': '../../data/mc16a_wmintaunu_SLICES/*.root',
-            'TTree': 'truth',
-            'slices': True,
+            'datapath': '../../data/mc16a_wmintaunu_SLICES/*.root',
+            'TTree_name': 'truth',
+            'is_slices': True,
             'lepton': 'tau'
         }
     }
 
     my_analysis = Analysis(data_dict=data,
                            cutfile='../../options/cutfile.txt',
-                           force_rebuild=False
+                           force_rebuild=True,
                            )
 
     # pipeline
-    my_analysis.plot_mass_slices(xvar='MC_WZ_dilep_m_born', logx=True)
-    # my_analysis.plot_with_cuts(scaling='xs', ds_name='truth_inclusive')
-    # my_analysis.make_all_cutgroup_2dplots(dataset_name)
-    # my_analysis.gen_cutflow_hist(dataset_name, all_plots=True)
-    # my_analysis.cutflow_printout(dataset_name)
-    # my_analysis.kinematics_printouts()
-    # my_analysis.print_cutflow_latex_table(dataset_name)
+    my_analysis.plot_mass_slices(ds_name='truth_slices', xvar='MC_WZ_dilep_m_born', logx=True)
+    my_analysis.plot_with_cuts(scaling='xs', ds_name='truth_inclusive')
+    my_analysis.make_all_cutgroup_2dplots(ds_name='truth_inclusive')
+    my_analysis.gen_cutflow_hist(ds_name='truth_inclusive', all_plots=True)
+    my_analysis.cutflow_printout(ds_name='truth_inclusive')
+    my_analysis.kinematics_printouts()
+    my_analysis.print_cutflow_latex_table(ds_name='truth_inclusive')
