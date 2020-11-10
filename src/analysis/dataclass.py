@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 import pandas as pd
-from typing import List, Dict, Optional, OrderedDict, Union
+from typing import List, Dict, Optional
 
 from analysis.cutflow import Cutflow
 import analysis.config as config
@@ -45,15 +45,9 @@ class Dataset:
         self.__check_df()
         self.luminosity = df_utils.get_luminosity(self.df, xs=self.cross_section)
 
-    def gen_cutflow(self, cut_dicts: List[Dict],
-                    cutgroups: Optional[OrderedDict[str, List[str]]],
-                    sequential: bool = True,
-                    ) -> None:
+    def gen_cutflow(self, **kwargs) -> None:
         """Creates the cutflow class for this analysis"""
-        self.cutflow = Cutflow(self.df,
-                               cut_dicts=cut_dicts,
-                               cutgroups=cutgroups,
-                               sequential=sequential)
+        self.cutflow = Cutflow(df=self.df, **kwargs)
 
     # Dataframe methods
     # ===================
@@ -77,24 +71,17 @@ class Dataset:
 
     # Plotting methods
     # ===================
-    def plot_mass_slices(self, xvar: str, xbins: Union[tuple, list] = (100, 300, 10000),
-                         logbins: bool = True, logx: bool = False, plot_label: bool = True
-                         ) -> None:
+    def plot_mass_slices(self, **kwargs) -> None:
         """
         Plots mass slices for input variable xvar if dataset is_slices
 
-        :param xvar: variable in dataframe to plot
-        :param xbins: x-axis binning
-        :param logbins: tuple of bins in x (n_bins, start, stop) or list of bin edges
-        :param logx: whether to apply log bins (only if logbins was passed as tuple)
-        :param plot_label: Whether to add dataset name as label to plot
+        :param kwargs: keyword arguments to be passed to plotting_utils.plot_mass_slices()
         """
         self.__check_df()
         if not self.is_slices:
             raise Exception("Dataset does not contain slices.")
 
-        label = self.name if plot_label else None
-        plot_mass_slices(self.df, self.lepton, xvar, xbins, logbins, logx, plot_label=label)
+        plot_mass_slices(self.df, self.lepton, plot_label=self.name, **kwargs)
 
     # Private
     # ===================

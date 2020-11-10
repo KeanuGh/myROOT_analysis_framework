@@ -1,6 +1,7 @@
 import pandas as pd
 from typing import Dict, List, OrderedDict, Optional
 import matplotlib.pyplot as plt
+import mplhep as hep
 from time import strftime
 import analysis.config as config
 
@@ -185,7 +186,7 @@ class Cutflow:
                       f"{n_events:<{max_n_len}} "
                       f"{ratio:.3f}    ")
 
-    def print_histogram(self, kind: str, **kwargs) -> None:
+    def print_histogram(self, kind: str, plot_label: str = '', **kwargs) -> None:
         """
         Generates and saves a cutflow histogram
 
@@ -194,6 +195,7 @@ class Cutflow:
                     'cummulative': ratio of all current cuts to acceptance
                     'a_ratio': ratio of only current cut to acceptance
                     'event': number of events passing through each cut
+        :param plot_label: plot title
         :param kwargs: keyword arguments to pass to plt.bar()
         :return: None
         """
@@ -210,6 +212,7 @@ class Cutflow:
         ax.set_xticks(ax.get_xticks())  # REMOVE IN THE FUTURE - PLACED TO AVOID WARNING - BUG IN MATPLOTLIB 3.3.2
         ax.set_xticklabels(labels=self.cutflow_labels, rotation='-40')
         ax.set_ylabel(self._cuthist_options[kind]['ylabel'])
+        hep.label._exp_label(exp='ATLAS', data=True, paper=True, llabel="Internal", loc=0, ax=ax, rlabel=plot_label)
         ax.grid(b=True, which='both', axis='y', alpha=0.3)
 
         filepath = self._cuthist_options[kind]['filepath'].format(config.plot_dir)

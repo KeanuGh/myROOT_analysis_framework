@@ -29,8 +29,6 @@ class Analysis:
     # filepaths
     backup_cutfiles_dir = config.backup_cutfiles_dir
 
-    # required dataset args
-
     def __init__(self, data_dict: Dict[str, Dict],
                  cutfile: str,
                  analysis_label: str = '',
@@ -169,7 +167,7 @@ class Analysis:
                        scaling: Optional[str] = None,
                        bins: Union[tuple, list] = (30, 1, 500),
                        not_log_add: Optional[List[str]] = None,
-                       log_x: bool = False
+                       **kwargs
                        ) -> None:
         """
         Plots each variable in specific Dataset to cut from cutfile with each cutgroup applied
@@ -182,7 +180,7 @@ class Analysis:
                         y-axis labels set accordingly
         :param not_log_add: Any extra variables that shouldn't be binned in log(x).
                             Currently defaults only '_eta_' and '_phi_'
-        :param log_x: log x axis
+        :param kwargs: keyword arguments to pass to plotting_utils.plot_1d_overlay_and_acceptance_cutgroups()
         """
         # any of the substrings in this list shouldn't be binned logarithmically
         # (may need to double check this as it can cause problems if the substrings appear elsewhere)
@@ -203,10 +201,10 @@ class Analysis:
                 cutgroups=self.cutgroups,
                 lumi=self.datasets[ds_name].luminosity,
                 is_logbins=is_logbins,
-                log_x=log_x,
                 scaling=scaling,
                 bins=in_bins,
-                plot_label=ds_name
+                plot_label=ds_name,
+                **kwargs
             )
 
     @decs.check_single_datafile
@@ -251,7 +249,7 @@ class Analysis:
                 self.datasets[ds_name].cutflow.print_histogram('ratio')
 
     @decs.check_single_datafile
-    def make_all_cutgroup_2dplots(self, ds_name: Optional[str], bins: Union[tuple, list] = (20, 0, 200)):
+    def make_all_cutgroup_2dplots(self, ds_name: Optional[str], bins: Union[tuple, list] = (20, 0, 200), **kwargs):
         if len(self.vars_to_cut) < 2:
             raise Exception("Need at least two plotting variables to make 2D plot")
 
@@ -269,11 +267,11 @@ class Analysis:
                               x_var=x_var, y_var=y_var,
                               xbins=xbins, ybins=ybins,
                               cutgroups=self.cutgroups,
-                              plot_label=self.datasets[ds_name].name
-                              )
+                              plot_label=self.datasets[ds_name].name,
+                              **kwargs)
 
     @decs.check_single_datafile
-    def plot_mass_slices(self, ds_name: Optional[str], xvar: str, **kwargs):
+    def plot_mass_slices(self, ds_name: Optional[str], xvar: str, **kwargs) -> None:
         """
         Plots mass slices for input variable xvar if dataset is_slices
 
@@ -283,7 +281,7 @@ class Analysis:
         """
         if not xvar:
             raise ValueError("xvar must be supplied")
-        self.datasets[ds_name].plot_mass_slices(xvar, **kwargs)
+        self.datasets[ds_name].plot_mass_slices(xvar=xvar, **kwargs)
 
     # ===============================
     # ========= PRINTOUTS ===========
@@ -360,13 +358,13 @@ if __name__ == '__main__':
 
     my_analysis = Analysis(data_dict=data,
                            cutfile='../../options/cutfile.txt',
-                           force_rebuild=True,
+                           force_rebuild=False,
                            )
 
     # pipeline
-    my_analysis.plot_mass_slices(ds_name='truth_slices', xvar='MC_WZ_dilep_m_born', logx=True)
-    my_analysis.plot_with_cuts(scaling='xs', ds_name='truth_inclusive')
-    my_analysis.make_all_cutgroup_2dplots(ds_name='truth_inclusive')
+    my_analysis.plot_mass_slices(ds_name='truth_slices', xvar='MC_WZ_dilep_m_born', logx=True, to_pkl=True)
+    my_analysis.plot_with_cuts(scaling='xs', ds_name='truth_inclusive', to_pkl=True)
+    my_analysis.make_all_cutgroup_2dplots(ds_name='truth_inclusive', to_pkl=True)
     my_analysis.gen_cutflow_hist(ds_name='truth_inclusive', all_plots=True)
     my_analysis.cutflow_printout(ds_name='truth_inclusive')
     my_analysis.kinematics_printouts()
