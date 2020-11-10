@@ -1,7 +1,7 @@
 import ROOT
 from typing import Type
 import boost_histogram as bh
-from numpy import sqrt
+import numpy as np
 
 # this dictionary decides which ROOT constructor needs to be called based on hist type and dimension
 # call it with TH1_constructor[type][n_dims](name, title, *n_bins, *bin_edges)
@@ -48,24 +48,17 @@ def bh_to_root(bh_hist: bh.Histogram, name: str, title: str, hist_type='F') -> T
         raise Exception("ROOT cannot handle Histograms with more than 3 dimensions.")
 
     # TH1 constructor
-    h_root = TH1_constructor[hist_type.upper()][hist_dim](name, title,
-                                                          *[len(ax) for ax in bh_hist.axes],
-                                                          *[ax.edges for ax in bh_hist.axes])
+    args = [arg for t in [(len(ax), ax.edges) for ax in bh_hist.axes] for arg in t]  # extracts n_bins and bin edges
+    h_root = TH1_constructor[hist_type.upper()][hist_dim](name, title, *args)
 
-    # filling bins contents
-    # TODO: what about histograms without weight storage?
-    if hist_dim == 1:
-        h_root.SetBinContent(0, bh_hist[bh.underflow].value)  # underflow bin
-        h_root.SetBinContent(-1, bh_hist[bh.overflow].value)  # overflow bin
-        for i, bin_cont in enumerate(bh_hist.view()):
-            h_root.SetBinContent(i + 1, bin_cont.value)  # bin value
-            h_root.SetBinError(i + 1, sqrt(bin_cont.variance))  # root sum of weights
-    elif hist_dim == 2:
-        for i in (0, 1):
-            h_root.SetBinContent(0, i, bh_hist.axes[i][bh.underflow][1])  # underflow bin
-            h_root.SetBinContent(-1, i, bh_hist.axes[i][bh.overflow][0])  # overflow bin
-            for j, bin_cont in enumerate(bh_hist.axes[i].view()):
-                h_root.SetBinContent(j + 1, i, bin_cont.value)  # bin value
-                h_root.SetBinError(j + 1, i, sqrt(bin_cont.variance))  # root sum of weights
+    # filling bins contents n-dimensionally
+    for idx, bin_cont in np.ndenumerate(bh_hist.view(flow=True)):
+        # for weighted storage
+        if hasattr(bin_cont, 'value'):
+            h_root.SetBinContent(*idx, bin_cont.value)  # bin value
+            h_root.SetBinError(*idx, np.sqrt(bin_cont.variance))  # root sum of weights
+        # unweighted
+        else:
+            h_root.SetBinContent(*idx, bin_cont)  # bin value
 
     return h_root
