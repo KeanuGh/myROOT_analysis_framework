@@ -239,6 +239,7 @@ def plot_1d_overlay_and_acceptance_cutgroups(
         scaling: Optional[str] = None,
         is_logbins: bool = False,
         log_x: bool = False,
+        to_pkl: bool = False,
         plot_width=10,
         plot_height=10,
         plot_label: Optional[str] = None,
@@ -249,6 +250,9 @@ def plot_1d_overlay_and_acceptance_cutgroups(
                                             figsize=(plot_width * 1.2, plot_height),
                                             gridspec_kw={'height_ratios': [3, 1]})
 
+    if to_pkl:
+        hists = dict()
+
     # INCLUSIVE PLOT
     # ================
     h_inclusive = histplot_1d(var_x=df[var_to_plot], weights=df[weight_col],
@@ -258,14 +262,13 @@ def plot_1d_overlay_and_acceptance_cutgroups(
                               label='Inclusive',
                               is_logbins=is_logbins,
                               color='k', linewidth=2)
+    if to_pkl:
+        hists['inclusive'] = h_inclusive
+
     # PLOT CUTS
     # ================
     for cutgroup in cutgroups.keys():
         print(f"    - generating cutgroup '{cutgroup}'")
-
-        # TODO: cut on full dataframes with groups above this loop
-        #  so the cuts don't need to be repeated for each plotted variable
-
         cut_df = cut_on_cutgroup(df, cutgroups, cutgroup)
         weight_cut = cut_df['weight']
         var_cut = cut_df[var_to_plot]
@@ -275,12 +278,16 @@ def plot_1d_overlay_and_acceptance_cutgroups(
                             lumi=lumi, scaling=scaling,
                             label=cutgroup,
                             is_logbins=is_logbins)
+        if to_pkl:
+            hists[cutgroup] = h_cut
 
         # RATIO PLOT
         # ================
-        hep.histplot(h_cut.view().value / h_inclusive.view().value,
-                     bins=h_cut.axes[0].edges, ax=accept_ax, label=cutgroup,
-                     color=fig_ax.get_lines()[-1].get_color())
+        h_cut_ratio = hep.histplot(h_cut.view().value / h_inclusive.view().value,
+                                   bins=h_cut.axes[0].edges, ax=accept_ax, label=cutgroup,
+                                   color=fig_ax.get_lines()[-1].get_color())
+        if to_pkl:
+            hists[cutgroup + '_ratio'] = h_cut_ratio
 
     # AXIS FORMATTING
     # ==================
@@ -298,7 +305,11 @@ def plot_1d_overlay_and_acceptance_cutgroups(
     accept_ax.set_ylabel("Acceptance")
 
     # save figure
-    hep.atlas.label(data=True, paper=True, llabel="Internal", loc=0, ax=fig_ax, rlabel=plot_label)
+    if to_pkl:
+        with open(config.pkl_hist_dir + plot_label + '_' + var_to_plot + '_1d_cutgroups_ratios.pkl', 'wb') as f:
+            pkl.dump(hists, f)
+            print(f"Saved pickle file to {f.name}")
+    hep.label._exp_label(exp='ATLAS', data=True, paper=True, llabel="Internal", loc=0, ax=fig_ax, rlabel=plot_label)
     out_png_file = config.plot_dir + f"{var_to_plot}_{str(scaling)}.png"
     fig.savefig(out_png_file, bbox_inches='tight')
     print(f"Figure saved to {out_png_file}")
@@ -398,7 +409,7 @@ def plot_2d_cutgroups(df: pd.DataFrame,
         ylabel, _ = get_axis_labels(str(y_var), lepton)
 
         hep.label._exp_label(exp='ATLAS', data=True, paper=True, italic=(True, True), ax=ax,
-                             llabel='Internal', rlabel=plot_label+' - '+cutgroup)
+                             llabel='Internal', rlabel=plot_label + ' - ' + cutgroup)
         ax.set_xlabel(xlabel)
         ax.set_ylabel(ylabel)
 
@@ -407,7 +418,9 @@ def plot_2d_cutgroups(df: pd.DataFrame,
         plt.close(fig)
 
     if to_pkl:
-        pkl.dump(hists, config.pkl_hist_dir+plot_label+'_2d_cutgroups.pkl')
+        with open(config.pkl_hist_dir + plot_label + '_2d_cutgroups.pkl', 'wb') as f:
+            pkl.dump(hists, f)
+            print(f"Saved pickle file to {f.name}")
 
 
 def plot_mass_slices(df: pd.DataFrame,
@@ -436,7 +449,7 @@ def plot_mass_slices(df: pd.DataFrame,
     hist_inc = histplot_1d(df[xvar], df['weight'], xbins, ax, yerr=None, is_logbins=logbins, scaling='widths',
                            c='k', linewidth=2, label='Inclusive')
     if to_pkl:
-        hists['Inclusive'] = hist_inc
+        hists['inclusive'] = hist_inc
 
     ax.legend(fontsize=10, ncol=2, loc='upper right')
     ax.semilogy()
@@ -451,7 +464,9 @@ def plot_mass_slices(df: pd.DataFrame,
 
     name = f"{xvar}_mass_slices_full"
     if to_pkl:
-        pkl.dump(hists, config.pkl_hist_dir+plot_label+name+'.pkl')
+        with open(config.pkl_hist_dir + plot_label + '_' + name + '.pkl', 'wb') as f:
+            pkl.dump(hists, f)
+            print(f"Saved pickle file to {f.name}")
     path = config.plot_dir + name + 'png'
     fig.savefig(path, bbox_inches='tight')
     print(f"Figure saved to {path}")
