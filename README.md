@@ -11,5 +11,6 @@ So far it is able to:
 - Organises plots by cutfile name.
 
 ### In the works:
+- converting boost-histograms to ROOT TH1 histograms and back
 - Logging: as soon as I get around to learning how to use the python logging library
 - Unit tests: pytest stopped working for me and I haven't gotten round to fixing it yet. Bugs galore!
