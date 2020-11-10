@@ -283,11 +283,9 @@ def plot_1d_overlay_and_acceptance_cutgroups(
 
         # RATIO PLOT
         # ================
-        h_cut_ratio = hep.histplot(h_cut.view().value / h_inclusive.view().value,
-                                   bins=h_cut.axes[0].edges, ax=accept_ax, label=cutgroup,
-                                   color=fig_ax.get_lines()[-1].get_color())
-        if to_pkl:
-            hists[cutgroup + '_ratio'] = h_cut_ratio
+        hep.histplot(h_cut.view().value / h_inclusive.view().value,
+                     bins=h_cut.axes[0].edges, ax=accept_ax, label=cutgroup,
+                     color=fig_ax.get_lines()[-1].get_color())
 
     # AXIS FORMATTING
     # ==================
@@ -418,7 +416,7 @@ def plot_2d_cutgroups(df: pd.DataFrame,
         plt.close(fig)
 
     if to_pkl:
-        with open(config.pkl_hist_dir + plot_label + '_2d_cutgroups.pkl', 'wb') as f:
+        with open(config.pkl_hist_dir + plot_label + f"{x_var}-{y_var}_2d.pkl", 'wb') as f:
             pkl.dump(hists, f)
             print(f"Saved pickle file to {f.name}")
 

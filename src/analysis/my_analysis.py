@@ -63,7 +63,8 @@ class Analysis:
         # build Data classes in name:Data dictionary containing initial values
         self.datasets = {name: Dataset(name, **ds) for name, ds in data_dict.items()}
 
-        # set analysis options
+        # SET OPTIONS
+        # ============================
         if global_lumi:
             config.lumi = global_lumi
         self._cutfile = cutfile
@@ -71,7 +72,6 @@ class Analysis:
             '_phi_',
             '_eta_',
         ]
-
         # variables that require special (default) binning
         if etabins:
             config.etabins = etabins
@@ -110,7 +110,11 @@ class Analysis:
 
         # SET OUTPUT DIRECTORIES
         # ===========================
-        analysis_output_dir_name = self._cutfile_name.rstrip('.txt')
+        # use analysis label if given as directory to store outputs, otherwise use name of cutfile
+        if analysis_label:
+            analysis_output_dir_name = analysis_label
+        else:
+            analysis_output_dir_name = self._cutfile_name.rstrip('.txt')
 
         # place plots in outputs/plots/<cutfile name>
         config.plot_dir = config.plot_dir.format(analysis_output_dir_name) + '/'
@@ -356,10 +360,7 @@ if __name__ == '__main__':
         }
     }
 
-    my_analysis = Analysis(data_dict=data,
-                           cutfile='../../options/cutfile.txt',
-                           force_rebuild=False,
-                           )
+    my_analysis = Analysis(data, '../../options/cutfile.txt', force_rebuild=False)
 
     # pipeline
     my_analysis.plot_mass_slices(ds_name='truth_slices', xvar='MC_WZ_dilep_m_born', logx=True, to_pkl=True)
