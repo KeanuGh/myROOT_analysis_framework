@@ -1,6 +1,5 @@
 from dataclasses import dataclass, field
 import pandas as pd
-from typing import List, Dict, Optional
 
 from analysis.cutflow import Cutflow
 import analysis.config as config
@@ -11,7 +10,7 @@ from utils.plotting_utils import plot_mass_slices
 @dataclass
 class Dataset:
     """
-    My Data class. (Will) contain(s) all the variables needed for a singular analysis dataset.
+    Dataset class. Contains/will contain all the variables needed for a singular analysis dataset.
     Perhaps put all methods that act only on one dataset into here
     """
     name: str
@@ -28,7 +27,6 @@ class Dataset:
     lepton: str = 'lepton'  # name of lepton in dataset (if applicable)
 
     def __post_init__(self):
-        """ this all runs after the __init__ """
         # initialise pickle filepath with given name
         if not self.pkl_path:
             self.pkl_path = config.pkl_df_filepath.format(self.name)
@@ -47,22 +45,24 @@ class Dataset:
 
     def gen_cutflow(self, **kwargs) -> None:
         """Creates the cutflow class for this analysis"""
-        self.cutflow = Cutflow(df=self.df, **kwargs)
+        self.__check_df()
+        self.cutflow = Cutflow(self.df, **kwargs)
 
     # Dataframe methods
     # ===================
-    def build_df(self, cut_list_dicts: List[dict], vars_to_cut: List[str],
-                 extra_vars: Optional[List[str]] = None) -> None:
+    def build_df(self, **kwargs) -> None:
         """Builds dataframe based on 'datapath', 'TTree_name' and 'is_slices'. Prints pickle file to 'pkl_path'"""
-        self.df = df_utils.build_analysis_dataframe(self, cut_list_dicts, vars_to_cut, extra_vars)
+        self.df = df_utils.build_analysis_dataframe(self, **kwargs)
 
-    def create_cut_columns(self, cut_dicts: List[Dict], printout=True) -> None:
-        """Creates columns in dataframe that contain boolean values corresponding to cuts. """
+    def create_cut_columns(self, **kwargs) -> None:
+        """Creates columns in dataframe that contain boolean values corresponding to cuts."""
+        self.__check_df()
         print(f"Creating cuts for {self.name}...")
-        df_utils.create_cut_columns(self.df, cut_dicts, printout)
+        df_utils.create_cut_columns(self.df, **kwargs)
 
-    def map_weights(self):
+    def map_weights(self) -> None:
         """Creates weights column in dataset based on dataset type"""
+        self.__check_df()
         print(f"Creating weights for {self.name}...")
         if self.is_slices:
             self.df['weight'] = df_utils.gen_weight_column_slices(self.df)
