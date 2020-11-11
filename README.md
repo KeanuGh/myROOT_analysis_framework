@@ -9,8 +9,8 @@ So far it is able to:
 - Read in mass slices and normalise all to a specific luminosity.
 - Backs up cutfiles and latex table when changes are made, and saves the last analysis data in pickle files for faster readin next time round.
 - Organises plots by cutfile name.
+- Converts boost-histograms to ROOT TH1 histograms and back
 
 ### In the works:
-- converting boost-histograms to ROOT TH1 histograms and back
 - Logging: as soon as I get around to learning how to use the python logging library
 - Unit tests: pytest stopped working for me and I haven't gotten round to fixing it yet. Bugs galore!
