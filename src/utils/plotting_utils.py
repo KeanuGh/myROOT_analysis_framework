@@ -343,11 +343,17 @@ def histplot_2d(var_x: pd.Series, var_y: pd.Series,
     hist_2d = bh.Histogram(get_axis(xbins), get_axis(ybins))
     hist_2d.fill(var_x, var_y, weight=weights, threads=n_threads)
 
-    # setup colour mesh (log or not)
     if is_z_log:
-        mesh = ax.pcolormesh(*hist_2d.axes.edges.T, hist_2d.view().T, norm=LogNorm())
+        norm = LogNorm
     else:
-        mesh = ax.pcolormesh(*hist_2d.axes.edges.T, hist_2d.view().T)
+        norm = None
+
+    # setup mesh differently depending on bh storage
+    if hasattr(hist_2d.view(), 'value'):
+        mesh = ax.pcolormesh(*hist_2d.axes.edges.T, hist_2d.view().value.T, norm=norm)
+    else:
+        mesh = ax.pcolormesh(*hist_2d.axes.edges.T, hist_2d.view().T, norm=norm)
+
     fig.colorbar(mesh, ax=ax, fraction=0.046, pad=0.04)
 
     if is_square:  # square aspect ratio
