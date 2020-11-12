@@ -6,8 +6,8 @@ from warnings import warn
 # project imports
 import analysis.config as config
 from analysis.dataclass import Dataset
+from utils import ROOT_utils, file_utils
 import utils.decorators as decs
-import utils.file_utils as file_utils
 from utils.plotting_utils import (
     plot_1d_overlay_and_acceptance_cutgroups,
     plot_2d_cutgroups
@@ -84,9 +84,6 @@ class Analysis:
 
         # PROCESS CUTFILE
         # ============================
-        # the name of the cutfile sets directory name for outputs
-        self._cutfile_name = file_utils.get_filename(self._cutfile)
-
         # parse cutfile
         self.cut_dicts, self.vars_to_cut, self.options = parse_cutfile(self._cutfile)
 
@@ -114,7 +111,7 @@ class Analysis:
         if analysis_label:
             analysis_output_dir_name = analysis_label
         else:
-            analysis_output_dir_name = self._cutfile_name.rstrip('.txt')
+            analysis_output_dir_name = file_utils.get_filename(cutfile)
 
         # place plots in outputs/plots/<cutfile name>
         config.plot_dir = config.plot_dir.format(analysis_output_dir_name) + '/'
@@ -321,10 +318,6 @@ class Analysis:
             file_utils.delete_file(latex_file)
 
     # ===============================
-    # ========= UTILITIES ===========
-    # ===============================
-
-    # ===============================
     # ========== PRIVATE ============
     # ===============================
     def __getbins(self, var_to_plot) -> Tuple[bool, Optional[tuple]]:
@@ -370,3 +363,4 @@ if __name__ == '__main__':
     my_analysis.cutflow_printout(ds_name='truth_inclusive')
     my_analysis.kinematics_printouts()
     my_analysis.print_cutflow_latex_table(ds_name='truth_inclusive')
+    file_utils.convert_pkl_to_root(conv_all=True)

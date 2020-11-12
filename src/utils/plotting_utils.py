@@ -344,7 +344,7 @@ def histplot_2d(var_x: pd.Series, var_y: pd.Series,
     hist_2d.fill(var_x, var_y, weight=weights, threads=n_threads)
 
     if is_z_log:
-        norm = LogNorm
+        norm = LogNorm()
     else:
         norm = None
 
@@ -422,7 +422,7 @@ def plot_2d_cutgroups(df: pd.DataFrame,
         plt.close(fig)
 
     if to_pkl:
-        with open(config.pkl_hist_dir + plot_label + f"{x_var}-{y_var}_2d.pkl", 'wb') as f:
+        with open(config.pkl_hist_dir + plot_label + f"_{x_var}-{y_var}_2d.pkl", 'wb') as f:
             pkl.dump(hists, f)
             print(f"Saved pickle file to {f.name}")
 
