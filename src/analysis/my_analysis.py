@@ -312,10 +312,11 @@ class Analysis:
         """
         if check_backup:
             last_backup = file_utils.get_last_backup(config.latex_table_dir)
-        latex_file = self.datasets[ds_name].cutflow.print_latex_table(config.latex_table_dir, filename_prefix=ds_name)
-        if check_backup and \
-                file_utils.identical_to_backup(latex_file, backup_file=last_backup):
-            file_utils.delete_file(latex_file)
+            latex_file = self.datasets[ds_name].cutflow.print_latex_table(config.latex_table_dir, ds_name)
+            if file_utils.identical_to_backup(latex_file, backup_file=last_backup):
+                file_utils.delete_file(latex_file)
+        else:
+            self.datasets[ds_name].cutflow.print_latex_table(config.latex_table_dir, ds_name)
 
     # ===============================
     # ========== PRIVATE ============
