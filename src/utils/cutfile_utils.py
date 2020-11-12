@@ -247,7 +247,7 @@ def if_build_dataframe(current_cutfile: str,
 
 
 def backup_cutfile(path: str, cutfile: str) -> None:
-    curr_filename = get_filename(cutfile).rstrip('.txt')
+    curr_filename = get_filename(cutfile)
     cutfile_backup_filepath = path + curr_filename + '_' + time.strftime("%Y-%m-%d_%H-%M-%S") + ".txt"
     copyfile(cutfile, cutfile_backup_filepath)
     print(f"Backup _cutfile saved in {cutfile_backup_filepath}")

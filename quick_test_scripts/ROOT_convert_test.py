@@ -82,7 +82,7 @@ def test_root_to_bh_with_weights_1d():
 def test_root_to_bh_with_weights_2d():
     root_hist = ROOT.TH2F('test', 'test;x;entries', 20, -1, 1, 20, -1, 1)
 
-    data2d = np.array(np.array([data, data2]).T)
+    data2d = np.array([data, data2]).T
     rnp.fill_hist(root_hist, data2d, weights=np.full(data2d.shape[0], 2))  # fill
     c4 = ROOT.TCanvas()
     c4.cd()

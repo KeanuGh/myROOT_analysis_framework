@@ -4,7 +4,7 @@ import pandas as pd
 from analysis.cutflow import Cutflow
 import analysis.config as config
 import utils.dataframe_utils as df_utils
-from utils.plotting_utils import plot_mass_slices
+import utils.plotting_utils as plt_utils
 
 
 @dataclass
@@ -81,7 +81,7 @@ class Dataset:
         if not self.is_slices:
             raise Exception("Dataset does not contain slices.")
 
-        plot_mass_slices(self.df, self.lepton, plot_label=self.name, **kwargs)
+        plt_utils.plot_mass_slices(self.df, self.lepton, plot_label=self.name, **kwargs)
 
     # Private
     # ===================
