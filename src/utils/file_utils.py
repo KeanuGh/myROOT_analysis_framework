@@ -1,10 +1,11 @@
 import os
 from glob import glob
 from filecmp import cmp
-from typing import Optional, Union, List
+from typing import Optional, Union, List, Generator
 from pathlib import Path
 import analysis.config as config
 from warnings import warn
+from utils import ROOT_utils
 
 
 def get_last_backup(backup_dir: str) -> Optional[str]:
@@ -40,9 +41,17 @@ def delete_file(file: str) -> None:
     os.remove(file)
 
 
-def get_filename(filepath: str) -> str:
+def get_filename(filepath: str, suffix: bool = False) -> str:
     """gets the name of file contained in path"""
-    return Path(filepath).name
+    if suffix:
+        return Path(filepath).name
+    else:
+        return Path(filepath).stem
+
+
+def get_file_parent(filepath: str) -> str:
+    """Get full path of directory containing file"""
+    return Path(filepath).parent
 
 
 def makedir(dirpath: Union[str, List[str]]) -> None:
@@ -87,3 +96,27 @@ def clear_pkl(ds_name: Optional[Union[List[str], str]] = None, clear_all: bool =
         delete_file(path.format(ds_name))
     raise ValueError(f"ds_name should supply string or list of string name(s) of dataset(s) to remove")
 
+
+def convert_pkl_to_root(pkl_name: Optional[str] = None, conv_all: bool = False) -> None:
+    """
+    Converts histogram pickle file into a root file containing the same histograms.
+    At the moment only converts data and doesn't touch title and axis labels but may change that in the future
+     ^ (written 12 Nov 2020)
+    """
+    if pkl_name:
+        assert file_exists(pkl_name), FileNotFoundError(f"Could not find pickle file {pkl_name}")
+        if get_file_parent(pkl_name) in (config.pkl_hist_dir, '.') \
+                and conv_all:
+            warn("Given file is contained in pickle file directory. Will convert all.")
+        else:
+            # do just that file in pkl_hist_dir
+            for file in glob(pkl_name):
+                ROOT_utils.convert_pkl_to_root(file)
+    if conv_all:
+        # conv all
+        for file in glob(config.pkl_hist_dir + '*'):
+            if not file.endswith('.pkl'):
+                continue
+            ROOT_utils.convert_pkl_to_root(file)
+    else:
+        raise ValueError("Choose pkl histogram file(s) to convert or choose to convert all for this analysis")
