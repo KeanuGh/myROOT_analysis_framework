@@ -1,10 +1,11 @@
 import os
-from glob import glob
 from filecmp import cmp
-from typing import Optional, Union, List, Generator
+from glob import glob
 from pathlib import Path
-import analysis.config as config
+from typing import Optional, Union, List
 from warnings import warn
+
+import analysis.config as config
 from utils import ROOT_utils
 
 
@@ -88,11 +89,14 @@ def clear_pkl(ds_name: Optional[Union[List[str], str]] = None, clear_all: bool =
         return
     elif isinstance(ds_name, list):
         for name in ds_name:
-            assert isinstance(name, str), "Dataset name must be a string"
-            assert file_exists(path.format(name)), f"{path.format(name)} does not exist."
+            if not isinstance(name, str):
+                raise TypeError("Dataset name must be a string")
+            if not file_exists(path.format(name)):
+                raise FileNotFoundError(f"{path.format(name)} does not exist.")
             delete_file(path.format(name))
     elif isinstance(ds_name, str):
-        assert file_exists(path.format(ds_name)), f"{path.format(ds_name)} does not exist."
+        if not file_exists(path.format(ds_name)):
+            raise FileNotFoundError(f"{path.format(ds_name)} does not exist.")
         delete_file(path.format(ds_name))
     raise ValueError(f"ds_name should supply string or list of string name(s) of dataset(s) to remove")
 
@@ -104,7 +108,8 @@ def convert_pkl_to_root(pkl_name: Optional[str] = None, conv_all: bool = False) 
      ^ (written 12 Nov 2020)
     """
     if pkl_name:
-        assert file_exists(pkl_name), FileNotFoundError(f"Could not find pickle file {pkl_name}")
+        if not file_exists(pkl_name):
+            raise FileNotFoundError(f"Could not find pickle file {pkl_name}")
         if get_file_parent(pkl_name) in (config.pkl_hist_dir, '.') \
                 and conv_all:
             warn("Given file is contained in pickle file directory. Will convert all.")
