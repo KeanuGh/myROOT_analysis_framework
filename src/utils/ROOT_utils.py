@@ -1,10 +1,11 @@
-import ROOT
-import root_numpy as rnp
+import pickle as pkl
 from typing import Type, Dict
+from warnings import warn
+
+import ROOT
 import boost_histogram as bh
 import numpy as np
-import pickle as pkl
-from warnings import warn
+import root_numpy as rnp
 
 # this dictionary decides which ROOT constructor needs to be called based on hist type and dimension
 # call it with TH1_constructor[type][n_dims](name, title, *n_bins, *bin_edges) where 'type' is in {'F','D','I','C','S'}
@@ -99,6 +100,7 @@ def convert_pkl_to_root(file: str) -> None:
     with open(file, 'rb') as f:
         hists = pkl.load(f)
         if not isinstance(hists, Dict):
+            warn(f"Pickle file {file} does not contain a dictionary.")
             return
 
         rootfilename = file.replace('.pkl', '.root')
