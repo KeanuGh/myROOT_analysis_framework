@@ -1,16 +1,17 @@
-import boost_histogram as bh
-import matplotlib.pyplot as plt
-from matplotlib.colors import LogNorm
-import mplhep as hep
-import numpy as np
+import pickle as pkl
 from typing import Tuple, Optional, List, OrderedDict, Union, Iterable
 from warnings import warn
+
+import boost_histogram as bh
+import matplotlib.pyplot as plt
+import mplhep as hep
+import numpy as np
 import pandas as pd
-import pickle as pkl
+from matplotlib.colors import LogNorm
 
 import analysis.config as config
-from utils.dataframe_utils import get_luminosity, cut_on_cutgroup
 from utils.axis_labels import labels_xs
+from utils.dataframe_utils import get_luminosity, cut_on_cutgroup
 
 # set plot style
 plt.style.use([hep.style.ATLAS,
@@ -21,6 +22,9 @@ plt.style.use([hep.style.ATLAS,
                ])
 
 
+# ===============================
+# ========== SCALINGS ===========
+# ===============================
 def scale_to_crosssection(hist: bh.Histogram, luminosity) -> bh.Histogram:
     """
     Scales histogram to cross-section. Currently undefined for multidimensional histograms.
@@ -44,6 +48,27 @@ def scale_by_bin_widths(hist: bh.Histogram) -> bh.Histogram:
     return hist
 
 
+def scale_hist(scaling: str, hist: bh.Histogram,
+               lumi: Optional = None, df: Optional[pd.DataFrame] = None) -> bh.Histogram:
+    """Scales histogram by option either 'xs': cross-section, 'widths': by bin-width, or None"""
+    if scaling == 'xs':
+        if not lumi and not df:
+            raise Exception("Must supply either luminosity or dataframe")
+        elif not lumi:
+            lumi = get_luminosity(df)
+        hist = scale_to_crosssection(hist, luminosity=lumi)
+    elif scaling == 'widths':
+        hist = scale_by_bin_widths(hist)
+    elif not scaling:
+        pass
+    else:
+        raise ValueError("Scaling currently supports cross-section 'xs', by bin-width 'widths' or None")
+    return hist
+
+
+# ===============================
+# ===== HISTOGRAM VARIABLES =====
+# ===============================
 def get_sumw2(hist: bh.Histogram) -> np.array:
     """Returns numpy array of sum of weights squared in oost-histogram histogram"""
     # variances are sum of weights squared in each histogram bin
@@ -76,22 +101,21 @@ def get_axis_labels(var_name: str, lepton: str) -> Tuple[Optional[str], Optional
     return xlabel, ylabel
 
 
-def scale_hist(scaling: str, hist: bh.Histogram,
-               lumi: Optional = None, df: Optional[pd.DataFrame] = None) -> bh.Histogram:
-    """Scales histogram by option either 'xs': cross-section, 'widths': by bin-width, or None"""
-    if scaling == 'xs':
-        if not lumi and not df:
-            raise Exception("Must supply either luminosity or dataframe")
-        elif not lumi:
-            lumi = get_luminosity(df)
-        hist = scale_to_crosssection(hist, luminosity=lumi)
-    elif scaling == 'widths':
-        hist = scale_by_bin_widths(hist)
-    elif not scaling:
-        pass
+def getbins(var_to_plot) -> Tuple[bool, Optional[tuple]]:
+    """
+    Returns special bins if variable input requires it. Returns None if not a special variable
+    :param var_to_plot: variable to choose bins from
+    :return: tuple (n_bins, start, stop) of bins or None
+    """
+    is_logbins = not any(map(var_to_plot.__contains__, config.not_log))
+    if not is_logbins:
+        # set bins for special variables
+        sp_var = [sp_var for sp_var in config.not_log if sp_var in var_to_plot]
+        if len(sp_var) != 1:
+            raise Exception(f"Expected one matching variable for spcial binning. Got {sp_var}")
+        return is_logbins, config.special_binning[sp_var[0]]
     else:
-        raise ValueError("Scaling currently supports cross-section 'xs', by bin-width 'widths' or None")
-    return hist
+        return is_logbins, None
 
 
 def get_axis(bins: Union[tuple, list],
@@ -165,6 +189,9 @@ def set_fig_1d_axis_options(axis: plt.axes, var_name: str, bins: Union[tuple, li
     return axis
 
 
+# ===============================
+# ==== BUILDING HISTOGRAMS ======
+# ===============================
 def histplot_1d(var_x: pd.Series,
                 weights: pd.Series,
                 bins: Union[tuple, list],
@@ -228,6 +255,57 @@ def histplot_1d(var_x: pd.Series,
     return hist
 
 
+def histplot_2d(var_x: pd.Series, var_y: pd.Series,
+                xbins: Union[tuple, list], ybins: Union[tuple, list],
+                weights: pd.Series,
+                ax: plt.axes,
+                fig: plt.figure,
+                n_threads: int = config.n_threads,
+                is_z_log: bool = True,
+                # is_x_log: bool = True, is_y_log: bool = True,  # Perhaps add this in later
+                is_square: bool = True,
+                ) -> bh.Histogram:
+    """
+    Plots and prints out 2d histogram. Does not support axis transforms (yet!)
+
+    :param var_x: pandas series of var to plot on x axis
+    :param var_y: pandas series of var to plot on y axis
+    :param xbins: tuple of bins in x (n_bins, start, stop) or list of bin edges
+    :param ybins: tuple of bins in y (n_bins, start, stop) or list of bin edges
+    :param weights: series of weights to apply to axes
+    :param ax: axis to plot on
+    :param fig: figure to plot on (for colourbar)
+    :param n_threads: number of threads for filling
+    :param is_z_log: whether z-axis should be scaled logarithmically
+    :param is_square: whether to set square aspect ratio
+    :return: histogram
+    """
+    # setup and fill histogram
+    hist_2d = bh.Histogram(get_axis(xbins), get_axis(ybins))
+    hist_2d.fill(var_x, var_y, weight=weights, threads=n_threads)
+
+    if is_z_log:
+        norm = LogNorm()
+    else:
+        norm = None
+
+    # setup mesh differently depending on bh storage
+    if hasattr(hist_2d.view(), 'value'):
+        mesh = ax.pcolormesh(*hist_2d.axes.edges.T, hist_2d.view().value.T, norm=norm)
+    else:
+        mesh = ax.pcolormesh(*hist_2d.axes.edges.T, hist_2d.view().T, norm=norm)
+
+    fig.colorbar(mesh, ax=ax, fraction=0.046, pad=0.04)
+
+    if is_square:  # square aspect ratio
+        ax.set_aspect(1 / ax.get_data_ratio())
+
+    return hist_2d
+
+
+# ===============================
+# ===== PLOTTING FUNCTIONS ======
+# ===============================
 def plot_1d_overlay_and_acceptance_cutgroups(
         df: pd.DataFrame,
         lepton: str,
@@ -237,7 +315,6 @@ def plot_1d_overlay_and_acceptance_cutgroups(
         weight_col: str = 'weight',
         lumi: Optional[float] = None,
         scaling: Optional[str] = None,
-        is_logbins: bool = False,
         log_x: bool = False,
         to_pkl: bool = False,
         plot_width=10,
@@ -252,6 +329,11 @@ def plot_1d_overlay_and_acceptance_cutgroups(
 
     if to_pkl:
         hists = dict()
+
+    # check if variable needs to be specially binned
+    is_logbins, alt_bins = getbins(var_to_plot)
+    if alt_bins:
+        bins = alt_bins
 
     # INCLUSIVE PLOT
     # ================
@@ -312,54 +394,6 @@ def plot_1d_overlay_and_acceptance_cutgroups(
     fig.savefig(out_png_file, bbox_inches='tight')
     print(f"Figure saved to {out_png_file}")
     fig.clf()  # clear for next plot
-
-
-def histplot_2d(var_x: pd.Series, var_y: pd.Series,
-                xbins: Union[tuple, list], ybins: Union[tuple, list],
-                weights: pd.Series,
-                ax: plt.axes,
-                fig: plt.figure,
-                n_threads: int = config.n_threads,
-                is_z_log: bool = True,
-                # is_x_log: bool = True, is_y_log: bool = True,  # Perhaps add this in later
-                is_square: bool = True,
-                ) -> bh.Histogram:
-    """
-    Plots and prints out 2d histogram. Does not support axis transforms (yet!)
-
-    :param var_x: pandas series of var to plot on x axis
-    :param var_y: pandas series of var to plot on y axis
-    :param xbins: tuple of bins in x (n_bins, start, stop) or list of bin edges
-    :param ybins: tuple of bins in y (n_bins, start, stop) or list of bin edges
-    :param weights: series of weights to apply to axes
-    :param ax: axis to plot on
-    :param fig: figure to plot on (for colourbar)
-    :param n_threads: number of threads for filling
-    :param is_z_log: whether z-axis should be scaled logarithmically
-    :param is_square: whether to set square aspect ratio
-    :return: histogram
-    """
-    # setup and fill histogram
-    hist_2d = bh.Histogram(get_axis(xbins), get_axis(ybins))
-    hist_2d.fill(var_x, var_y, weight=weights, threads=n_threads)
-
-    if is_z_log:
-        norm = LogNorm()
-    else:
-        norm = None
-
-    # setup mesh differently depending on bh storage
-    if hasattr(hist_2d.view(), 'value'):
-        mesh = ax.pcolormesh(*hist_2d.axes.edges.T, hist_2d.view().value.T, norm=norm)
-    else:
-        mesh = ax.pcolormesh(*hist_2d.axes.edges.T, hist_2d.view().T, norm=norm)
-
-    fig.colorbar(mesh, ax=ax, fraction=0.046, pad=0.04)
-
-    if is_square:  # square aspect ratio
-        ax.set_aspect(1 / ax.get_data_ratio())
-
-    return hist_2d
 
 
 def plot_2d_cutgroups(df: pd.DataFrame,
