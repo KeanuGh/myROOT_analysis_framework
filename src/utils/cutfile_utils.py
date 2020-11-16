@@ -1,10 +1,11 @@
-import sys
+import collections
 import os
+import sys
 import time
+from distutils.util import strtobool
 from shutil import copyfile
 from typing import Tuple, List, OrderedDict, Dict
-import collections
-from distutils.util import strtobool
+
 from utils.file_utils import identical_to_backup, get_last_backup, is_dir_empty, get_filename
 
 
@@ -250,4 +251,4 @@ def backup_cutfile(path: str, cutfile: str) -> None:
     curr_filename = get_filename(cutfile)
     cutfile_backup_filepath = path + curr_filename + '_' + time.strftime("%Y-%m-%d_%H-%M-%S") + ".txt"
     copyfile(cutfile, cutfile_backup_filepath)
-    print(f"Backup _cutfile saved in {cutfile_backup_filepath}")
+    print(f"Backup cutfile saved in {cutfile_backup_filepath}")

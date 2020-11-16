@@ -107,7 +107,7 @@ def convert_pkl_to_root(file: str) -> None:
         rootfile = ROOT.TFile(rootfilename, 'RECREATE')
         for name, hist in hists.items():
             if not isinstance(hist, bh.Histogram):
-                warn(f"Found non-histogram object in {file} with key {name}.")
+                warn(f"Found {type(hist)} object in {file} with key {name}.")
                 continue
             else:
                 # add to root file
