@@ -8,7 +8,7 @@ from utils import file_utils, decorators
 
 class Analysis:
     def __init__(self, data_dict: Dict[str, Dict],
-                 analysis_label: str = '',
+                 analysis_label: str,
                  force_rebuild: bool = False,
                  global_lumi: Optional[float] = None,
                  phibins: Optional[Union[tuple, list]] = None,
@@ -31,15 +31,16 @@ class Analysis:
 
         # SET OUTPUT DIRECTORIES
         # ===========================
-        # use analysis label if given as directory to store outputs
-        analysis_output_dir_name = analysis_label
-
-        config.plot_dir = config.plot_dir.format(analysis_output_dir_name)
-        config.latex_table_dir = config.latex_table_dir.format(analysis_output_dir_name)
-        config.pkl_hist_dir = config.pkl_hist_dir.format(analysis_output_dir_name)
-
-        # create directories if they don't exist
-        file_utils.makedir([config.plot_dir, config.latex_table_dir, config.pkl_hist_dir])
+        # set and create output directories in outputs/<analysis_label>/
+        for path_var in (
+            'pkl_df_filepath',
+            'plot_dir',
+            'latex_table_dir',
+            'pkl_hist_dir',
+            'backup_cutfiles_dir'
+        ):
+            config.__dict__[path_var] = config.__dict__[path_var].format(analysis_label)
+            file_utils.makedir(config.__dict__[path_var])
 
         # SET OTHER GLOBAL OPTIONS
         # ============================
@@ -70,7 +71,7 @@ class Analysis:
 
     def __setitem__(self, ds_name, dataset: Dataset):
         if not isinstance(dataset, Dataset):
-            raise ValueError("Analysis dataset must be of type analysis.dataclass.Dataset")
+            raise ValueError(f"Analysis dataset must be of type {Dataset}")
         self.datasets[ds_name] = dataset
 
     def __getattr__(self, name):
@@ -192,11 +193,11 @@ if __name__ == '__main__':
                            force_rebuild=False)
 
     # pipeline
-    my_analysis.plot_mass_slices(ds_name='truth_slices', xvar='MC_WZ_dilep_m_born', logx=True, to_pkl=True)
-    my_analysis.plot_with_cuts(scaling='xs', ds_name='truth_inclusive', to_pkl=True)
-    my_analysis.make_all_cutgroup_2dplots(ds_name='truth_inclusive', to_pkl=True)
-    my_analysis.gen_cutflow_hist(ds_name='truth_inclusive', all_plots=True)
-    my_analysis.cutflow_printout(ds_name='truth_inclusive')
-    my_analysis.kinematics_printouts()
-    my_analysis.print_cutflow_latex_table(ds_name='truth_inclusive')
-    file_utils.convert_pkl_to_root(conv_all=True)
+    # my_analysis.plot_mass_slices(ds_name='truth_slices', xvar='MC_WZ_dilep_m_born', logx=True, to_pkl=True)
+    # my_analysis.plot_with_cuts(scaling='xs', ds_name='truth_inclusive', to_pkl=True)
+    # my_analysis.make_all_cutgroup_2dplots(ds_name='truth_inclusive', to_pkl=True)
+    # my_analysis.gen_cutflow_hist(ds_name='truth_inclusive', all_plots=True)
+    # my_analysis.cutflow_printout(ds_name='truth_inclusive')
+    # my_analysis.kinematics_printouts()
+    # my_analysis.print_cutflow_latex_table(ds_name='truth_inclusive')
+    # file_utils.convert_pkl_to_root(conv_all=True)

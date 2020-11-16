@@ -83,7 +83,7 @@ def clear_pkl(ds_name: Optional[Union[List[str], str]] = None, clear_all: bool =
     path = config.pkl_df_filepath
     assert ds_name or clear_all, "Must give a dataset name or clear_all"
 
-    assert not is_dir_empty(path.rstrip('{}_df.pkl')), "Pickle directory empty"
+    assert not is_dir_empty(path), "Pickle directory empty"
     if clear_all:
         delete_file(path.format('*'))
         return

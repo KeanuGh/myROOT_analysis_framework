@@ -42,7 +42,7 @@ class Dataset:
         print(f"=====================================================")
         if not self.pkl_path:
             # initialise pickle filepath with given name
-            self.pkl_path = config.pkl_df_filepath.format(self.name)
+            self.pkl_path = config.pkl_df_filepath + self.name + '_df.pkl'
 
         # READ AND GET OPTIONS FROM CUTFILE
         # ========================
@@ -113,7 +113,7 @@ class Dataset:
 
         # if new cutfile, save backup
         if self._make_backup:
-            backup_cutfile(config.backup_cutfiles_dir, self.cutfile)
+            backup_cutfile(config.backup_cutfiles_dir+self.name+'_', self.cutfile)
 
         self._rebuild = if_build_dataframe(self.cutfile,
                                            self._make_backup,
