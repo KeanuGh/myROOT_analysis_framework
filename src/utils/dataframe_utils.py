@@ -1,12 +1,14 @@
-import pandas as pd
-from typing import Optional
-import uproot4 as uproot
-import analysis.config as config
-from utils.cutfile_utils import extract_cut_variables
-from utils.axis_labels import labels_xs
-from typing import List, OrderedDict
-from warnings import warn
 import time
+from typing import List, OrderedDict
+from typing import Optional
+from warnings import warn
+
+import pandas as pd
+import uproot4 as uproot
+
+import analysis.config as config
+from utils.axis_labels import labels_xs
+from utils.cutfile_utils import extract_cut_variables
 
 
 def build_analysis_dataframe(data,  # This type hint is left blank to avoid a circular import
@@ -50,7 +52,7 @@ def build_analysis_dataframe(data,  # This type hint is left blank to avoid a ci
         tree_df.rename(columns={'mcChannelNumber': 'DSID'}, inplace=True)
         vars_to_extract = vars_to_extract[:-1] + ['DSID']
     t2 = time.time()
-    print(f"time to build dataframe: {t2 - t1:.2f}s")
+    print(f"time to build dataframe: {t2 - t1:.2g}s")
 
     # check vars exist in file
     if unexpected_vars := [unexpected_var for unexpected_var in vars_to_extract

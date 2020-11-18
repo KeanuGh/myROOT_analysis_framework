@@ -10,8 +10,71 @@ labels_xs = {
         'xlabel': r'Dataset ID',
         'ylabel': r'Entries',
     },
+    'eventNumber': {
+        'xlabel': r'Event number',
+        'ylabel': r'Entries'
+    },
+    'runNumber': {
+        'xlabel': 'Run number',
+        'ylabel': 'Entries'
+    },
 
-    # KINEMATIC VARIABLES
+    # RECO-LEVEL KINEMATIC VARIABLES
+    # =======================================================
+    'el_pt': {
+      'xlabel': r'Electron $p_{T}$',
+      'ylabel': r'$\frac{d\sigma}{dp_{T}}$ [fb GeV$^{-1}$]'
+    },
+    'el_eta': {
+      'xlabel': r'Electron $\eta$',
+      'ylabel': r'$\frac{d\sigma}{d\eta}$ [fb$]'
+    },
+    'el_phi': {
+        'xlabel': r'Electron $\phi$',
+        'ylabel': r'$\frac{d\sigma}{d\phi}$ [fb$]'
+    },
+    'el_e': {
+        'xlabel': r'Electron $E$',
+        'ylabel': r'$\frac{d\sigma}{dE}$ [fb GeV$^{-1}$]'
+    },
+    'mu_pt': {
+        'xlabel': r'Muon $p_{T}$',
+        'ylabel': r'$\frac{d\sigma}{dp_{T}}$ [fb$]'
+    },
+    'mu_eta': {
+        'xlabel': r'Muon $\eta$',
+        'ylabel': r'$\frac{d\sigma}{d\eta}$ [fb$]'
+    },
+    'mu_phi': {
+        'xlabel': r'Muon $\phi$',
+        'ylabel': r'$\frac{d\sigma}{d\phi}$ [fb$]'
+    },
+    'mu_e': {
+        'xlabel': r'Muon $E$',
+        'ylabel': r'$\frac{d\sigma}{dE}$ [fb GeV$^{-1}$]'
+    },
+    'jet_pt': {
+        'xlabel': r'Jet $p_{T}$',
+        'ylabel': r'$\frac{d\sigma}{dp_{T}}$ [fb GeV$^{-1}$]'
+    },
+    'jet_eta': {
+        'xlabel': r'Jet $\eta$',
+        'ylabel': r'$\frac{d\sigma}{d\eta}$ [fb$]'
+    },
+    'jet_phi': {
+        'xlabel': r'Jet $\phi$',
+        'ylabel': r'$\frac{d\sigma}{d\phi}$ [fb$]'
+    },
+    'jet_e': {
+        'xlabel': r'Jet $E$',
+        'ylabel': r'$\frac{d\sigma}{dE}$ [fb GeV$^{-1}$]'
+    },
+    'jet_met': {
+        'xlabel': r'$E_{T}^{\text{miss}}',
+        'ylabel': r'$\frac{d\sigma}{dE_{T}^{\text{miss}}$ [fb GeV$^{-1}$]'
+    },
+
+    # TRUTH-LEVEL KINEMATIC VARIABLES
     # =======================================================
     'PDFinfo_X1': {
         'xlabel': r'x',

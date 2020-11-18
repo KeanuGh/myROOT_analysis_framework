@@ -168,36 +168,3 @@ class Analysis:
                 file_utils.delete_file(latex_file)
         else:
             self.datasets[ds_name].cutflow.print_latex_table(config.latex_table_dir, ds_name)
-
-
-if __name__ == '__main__':
-    data = {
-        'truth_inclusive': {
-            'datapath': '../../data/mc16d_wmintaunu/*',
-            'cutfile': '../../options/cutfile.txt',
-            'TTree_name': 'truth',
-            'is_slices': False,
-            'lepton': 'tau'
-        },
-        'truth_slices': {
-            'datapath': '../../data/mc16a_wmintaunu_SLICES/*.root',
-            'cutfile': '../../options/cutfile.txt',
-            'TTree_name': 'truth',
-            'is_slices': True,
-            'lepton': 'tau'
-        }
-    }
-
-    my_analysis = Analysis(data,
-                           analysis_label='truth_inclusive_and_slices',
-                           force_rebuild=False)
-
-    # pipeline
-    # my_analysis.plot_mass_slices(ds_name='truth_slices', xvar='MC_WZ_dilep_m_born', logx=True, to_pkl=True)
-    # my_analysis.plot_with_cuts(scaling='xs', ds_name='truth_inclusive', to_pkl=True)
-    # my_analysis.make_all_cutgroup_2dplots(ds_name='truth_inclusive', to_pkl=True)
-    # my_analysis.gen_cutflow_hist(ds_name='truth_inclusive', all_plots=True)
-    # my_analysis.cutflow_printout(ds_name='truth_inclusive')
-    # my_analysis.kinematics_printouts()
-    # my_analysis.print_cutflow_latex_table(ds_name='truth_inclusive')
-    # file_utils.convert_pkl_to_root(conv_all=True)
