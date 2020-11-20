@@ -119,8 +119,8 @@ def rescale_to_gev(df: pd.DataFrame) -> pd.DataFrame:
     """rescales to GeV because athena's default output is in MeV for some reason"""
     GeV_columns = [column for column in df.columns
                    if (column in labels_xs) and ('[GeV]' in labels_xs[column]['xlabel'])]
-    print(f"Rescaling {len(GeV_columns)} columns to GeV...")
     df[GeV_columns] /= 1000
+    print(f"Rescaled columns {GeV_columns} to GeV...")
     return df
 
 
