@@ -38,8 +38,7 @@ class Dataset:
 
     def __post_init__(self):
         """Dataset generation pipeline"""
-        print(f"\nInitialising dataset {self.name}...")
-        print(f"=====================================================")
+        print(f"\n======== INITIALISING DATASET '{self.name}' =========")
         if not self.pkl_path:
             # initialise pickle filepath with given name
             self.pkl_path = config.pkl_df_filepath + self.name + '_df.pkl'
@@ -54,7 +53,9 @@ class Dataset:
 
         # GENERATE CUTFLOW
         # ========================
-        self.cutflow = self.__gen_cutflow()
+        self.__gen_cutflow()
+        self.cutflow_printout()
+        print(f"========= DATASET '{self.name}' INITIALISED =========\n")
 
     # Builtins
     # ===================
@@ -74,20 +75,20 @@ class Dataset:
         """Calculate dataset luminosity"""
         return df_utils.get_luminosity(self.df, xs=self.cross_section)
 
-    def __gen_cutflow(self) -> Cutflow:
+    def __gen_cutflow(self) -> None:
         """Create the cutflow class for this analysis"""
-        return Cutflow(self.df, self._cut_dicts,
-                       self._cutgroups if self.grouped_cutflow else None,
-                       self._cutflow_options['sequential'])
+        self.cutflow = Cutflow(self.df, self._cut_dicts,
+                               self._cutgroups if self.grouped_cutflow else None,
+                               self._cutflow_options['sequential'])
 
     # ===============================
-    # ========= PIPELINES ============
+    # ========= PIPELINES ===========
     # ===============================
     def __dataframe_pipeline(self) -> None:
         """Define pipeline for building dataset dataframe"""
         # extract and clean data
         if self._rebuild or config.force_rebuild:
-            print(f"\nBuilding {self.name} dataframe...")
+            print(f"Building {self.name} dataframe from {self.datapath}...")
             self.__build_df()
         else:
             print(f"Reading data for {self.name} dataframe from {self.pkl_path}...")
@@ -113,7 +114,7 @@ class Dataset:
 
         # if new cutfile, save backup
         if self._make_backup:
-            backup_cutfile(config.backup_cutfiles_dir+self.name+'_', self.cutfile)
+            backup_cutfile(config.backup_cutfiles_dir + self.name + '_', self.cutfile)
 
         self._rebuild = if_build_dataframe(self.cutfile,
                                            self._make_backup,

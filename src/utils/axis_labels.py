@@ -19,59 +19,86 @@ labels_xs = {
         'ylabel': 'Entries'
     },
 
+    # DERIVED KINEMATIC VARIABLES
+    # =======================================================
+    'mu_mt': {  # boson pt from muon decay
+        'xlabel': r'Vector boson transverse momentum $m_{T}$ [GeV]',
+        'ylabel': r'$\frac{d\sigma}{dm_{T}}$ [fb GeV$^{-1}$]',
+    },
+    'e_mt': {  # boson pt from electron decay
+        'xlabel': r'Vector boson transverse momentum $m_{T}$ [GeV]',
+        'ylabel': r'$\frac{d\sigma}{dm_{T}}$ [fb GeV$^{-1}$]',
+    },
+    'w_y': {  # boson rapidity
+        'xlabel': r'W rapidity $y$',
+        'ylabel': r'$\frac{d\sigma}{dy}$ [fb]',
+    },
+    'z_y': {  # boson rapidity
+        'xlabel': r'Z rapidity $y$',
+        'ylabel': r'$\frac{d\sigma}{dy}$ [fb]',
+    },
+    'v_y': {  # boson rapidity
+        'xlabel': r'Vector boson rapidity $y$',
+        'ylabel': r'$\frac{d\sigma}{dy}$ [fb]',
+    },
+
     # RECO-LEVEL KINEMATIC VARIABLES
     # =======================================================
     'el_pt': {
-      'xlabel': r'Electron $p_{T}$',
+      'xlabel': r'Electron $p_{T}$ [GeV]',
       'ylabel': r'$\frac{d\sigma}{dp_{T}}$ [fb GeV$^{-1}$]'
     },
     'el_eta': {
       'xlabel': r'Electron $\eta$',
-      'ylabel': r'$\frac{d\sigma}{d\eta}$ [fb$]'
+      'ylabel': r'$\frac{d\sigma}{d\eta}$ [fb]'
     },
     'el_phi': {
         'xlabel': r'Electron $\phi$',
-        'ylabel': r'$\frac{d\sigma}{d\phi}$ [fb$]'
+        'ylabel': r'$\frac{d\sigma}{d\phi}$ [fb]'
     },
     'el_e': {
-        'xlabel': r'Electron $E$',
+        'xlabel': r'Electron $E$ [GeV]',
         'ylabel': r'$\frac{d\sigma}{dE}$ [fb GeV$^{-1}$]'
     },
     'mu_pt': {
-        'xlabel': r'Muon $p_{T}$',
-        'ylabel': r'$\frac{d\sigma}{dp_{T}}$ [fb$]'
+        'xlabel': r'Muon $p_{T}$ [GeV]',
+        'ylabel': r'$\frac{d\sigma}{dp_{T}}$ [fb]'
     },
     'mu_eta': {
         'xlabel': r'Muon $\eta$',
-        'ylabel': r'$\frac{d\sigma}{d\eta}$ [fb$]'
+        'ylabel': r'$\frac{d\sigma}{d\eta}$ [fb]'
     },
     'mu_phi': {
         'xlabel': r'Muon $\phi$',
-        'ylabel': r'$\frac{d\sigma}{d\phi}$ [fb$]'
+        'ylabel': r'$\frac{d\sigma}{d\phi}$ [fb]'
     },
     'mu_e': {
         'xlabel': r'Muon $E$',
         'ylabel': r'$\frac{d\sigma}{dE}$ [fb GeV$^{-1}$]'
     },
     'jet_pt': {
-        'xlabel': r'Jet $p_{T}$',
+        'xlabel': r'Jet $p_{T}$ [GeV]',
         'ylabel': r'$\frac{d\sigma}{dp_{T}}$ [fb GeV$^{-1}$]'
     },
     'jet_eta': {
         'xlabel': r'Jet $\eta$',
-        'ylabel': r'$\frac{d\sigma}{d\eta}$ [fb$]'
+        'ylabel': r'$\frac{d\sigma}{d\eta}$ [fb]'
     },
     'jet_phi': {
-        'xlabel': r'Jet $\phi$',
-        'ylabel': r'$\frac{d\sigma}{d\phi}$ [fb$]'
+        'xlabel': r'Jet $\phi$ [GeV]',
+        'ylabel': r'$\frac{d\sigma}{d\phi}$ [fb]'
     },
     'jet_e': {
-        'xlabel': r'Jet $E$',
+        'xlabel': r'Jet $E$ [GeV]',
         'ylabel': r'$\frac{d\sigma}{dE}$ [fb GeV$^{-1}$]'
     },
-    'jet_met': {
-        'xlabel': r'$E_{T}^{\text{miss}}',
+    'met_met': {
+        'xlabel': r'$E_{T}^{\text{miss}}$',
         'ylabel': r'$\frac{d\sigma}{dE_{T}^{\text{miss}}$ [fb GeV$^{-1}$]'
+    },
+    'met_phi': {
+        'xlabel': r'$\phi^{\text{miss}$',
+        'ylabel': r'$\frac{d\sigma}{d\phi}$ [fb]'
     },
 
     # TRUTH-LEVEL KINEMATIC VARIABLES
