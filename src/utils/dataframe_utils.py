@@ -120,7 +120,7 @@ def rescale_to_gev(df: pd.DataFrame) -> pd.DataFrame:
     GeV_columns = [column for column in df.columns
                    if (column in labels_xs) and ('[GeV]' in labels_xs[column]['xlabel'])]
     df[GeV_columns] /= 1000
-    print(f"Rescaled columns {GeV_columns} to GeV...")
+    print(f"Rescaled columns {GeV_columns} to GeV")
     return df
 
 
