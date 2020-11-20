@@ -96,5 +96,5 @@ For [CUTS] The columns are:
 In `utils.var_helpers` I've definied a few variables aren't in AnalysisTop outputs, eg transverse mass or boson rapidity. These can be used as variables in the cutfile and the framework will calculate them for you: extracting the variables it needs to calculate then deleting the unnecessary columns afterwards. 
 
 So far the variables I've defined are:
-- mu_mt & e_mt (actually boson transverse mass for different W/Z decays)
-- w_y, z_y, v_y (W/Z rapidity. They all do the same thing)
+- `mu_mt` & `e_mt` (actually boson transverse mass for different W/Z decays)
+- `w_y`, `z_y`, `v_y` (W/Z rapidity. They all do the same thing)
