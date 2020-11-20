@@ -1,8 +1,10 @@
-import pandas as pd
+from time import strftime
 from typing import Dict, List, OrderedDict, Optional
+
 import matplotlib.pyplot as plt
 import mplhep as hep
-from time import strftime
+import pandas as pd
+
 import analysis.config as config
 
 
@@ -169,7 +171,7 @@ class Cutflow:
                       f"{cum_ratio:.3f}")
         else:
             # cutflow printout
-            print(f"\n=========== CUTFLOW =============")
+            print(f"=========== CUTFLOW =============")
             print("Option: Non-sequential")
             print("---------------------------------")
             print("Cut " + " " * (max_name_len - 3) +
@@ -185,6 +187,7 @@ class Cutflow:
                 print(f"{cutname:<{max_name_len}} "
                       f"{n_events:<{max_n_len}} "
                       f"{ratio:.3f}    ")
+        print('')
 
     def print_histogram(self, kind: str, plot_label: str = '', **kwargs) -> None:
         """

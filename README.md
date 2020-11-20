@@ -16,9 +16,12 @@ So far it is able to:
 - Unit tests: pytest stopped working for me and I haven't gotten round to fixing it yet. Bugs galore!
 
 ## Quickstart
-Initialise analysis with something like.
+Initialise analysis with a very silly import statement like:
 
-```my_analysis = Analysis(data, analysis_label='truth_inclusive_and_slices')```
+```
+from analysis.analysis import Analysis
+my_analysis = Analysis(data, analysis_label='truth_inclusive_and_slices')
+```
 
 where `data` is a dictionary containing information on your datasets. For example:
 ```
@@ -53,3 +56,45 @@ Can then convert pickle files to ROOT files containing histograms by doing:
 from utils.file_utils import convert_pkl_to_root
 convert_pkl_to_root(conv_all=True)
 ```
+
+## Cutfile
+Example cutfile:
+```
+[CUTS]
+# Name	Variable	</>	Cut (in GeV if applicable)	Group Symmetric
+# !!REMEMBER DEFAULT ANALYSISTOP OUTPUT IS IN MeV NOT GeV!!
+Muon $|#eta|$	MC_WZmu_el_eta_born	<	2.4	eta cut	true
+Muon $p_{T}$	MC_WZmu_el_pt_born	>	25	pT cut	false
+Neutrino $p_{T}$	MC_WZneutrino_pt_born	>	25	pT cut	false
+
+[OUTPUTS]
+# variables to process
+MC_WZ_dilep_m_born
+MC_WZ_dilep_m_bare
+MC_WZ_dilep_m_dres
+MC_WZ_pt
+
+[OPTIONS]
+# case-insensitive
+sequential	true
+```
+Cutfile contains lists of tab-separated values. 
+
+For [CUTS] The columns are:
+- Name: name of cut. This will be the label added to plots and cutflow for that cut
+- Variable: variable in root file to cut on
+- Moreless: hopefully self-explanatory. < or > depending on what you want (doesn't handle >= and stuff .. yet)
+- Cut: value to cut variable at (in GeV)
+- Group: Cuts with the same 'group' value will be applied simultaneously
+- Symmetric: whether or not the cut is symmetric. Eg in the example the cut on `MC_WZmu_el_eta_born` will actually be `|MC_WZmu_el_eta_born| < 2.4`
+
+[OUTPUTS] are a list of the variables that you plan to plot. The variables that are cut on will still be accessible in the dataframe though so you can plot them if you want 
+
+[OPTIONS] so far just contains 'sequential'. This set whether the cuts should be applied one after the other or separately. Remember if sequential is true that the order in which you write in [CUTS] matters
+
+## Extra variables
+In `utils.var_helpers` I've definied a few variables aren't in AnalysisTop outputs, eg transverse mass or boson rapidity. These can be used as variables in the cutfile and the framework will calculate them for you: extracting the variables it needs to calculate then deleting the unnecessary columns afterwards. 
+
+So far the variables I've defined are:
+- mu_mt & e_mt (actually boson transverse mass for different W/Z decays)
+- w_y, z_y, v_y (W/Z rapidity. They all do the same thing)

@@ -1,6 +1,5 @@
 import time
 from typing import List, OrderedDict
-from typing import Optional
 from warnings import warn
 
 import pandas as pd
@@ -8,43 +7,39 @@ import uproot4 as uproot
 
 import analysis.config as config
 from utils.axis_labels import labels_xs
-from utils.cutfile_utils import extract_cut_variables
+from utils.cutfile_utils import extract_cut_variables, all_vars
+from utils.var_helpers import other_vars
 
 
 def build_analysis_dataframe(data,  # This type hint is left blank to avoid a circular import
                              cut_list_dicts: List[dict],
                              vars_to_cut: List[str],
-                             extra_vars: Optional[List[str]] = None
                              ) -> pd.DataFrame:
     """
     Builds a dataframe from cutfile inputs
     :param data: Dataset class containing is_slices, TTree_name, datapath and pkl_path
     :param cut_list_dicts: list of cut dictionaries
     :param vars_to_cut: list of strings of variables in file to cut on
-    :param extra_vars: list of any extra variables wanting to extract
     :return: output dataframe containing columns corresponding to necessary variables
     """
-    print("Extracting variables:\n{}".format('\n'.join(vars_to_cut)))
+
     # create list of all necessary values extract
     vars_to_extract = extract_cut_variables(cut_list_dicts, vars_to_cut)
+    print("Extracting variables:{}".format('\n  -'.join(['', *vars_to_extract])))
+
     # strictly necessary variable(s)
     vars_to_extract.append('weight_mc')
-    # extras
-    if extra_vars:
-        vars_to_extract += extra_vars
 
     t1 = time.time()
     # If importing inclusive sample
     if not data.is_slices:
         # extract pandas dataframe from root file with necessary variables
-        tree_df = uproot.concatenate(data.datapath + ':' + data.TTree_name,
-                                     filter_name=vars_to_extract,
-                                     library='pd')
+        tree_df = uproot.concatenate(data.datapath + ':' + data.TTree_name, vars_to_extract, library='pd', num_workers=config.n_threads)
     # if importing mass slices
     else:
         vars_to_extract += ['mcChannelNumber']  # to keep track of dataset IDs (DSIDs)
-        tree_df = uproot.concatenate(data.datapath + ':' + data.TTree_name, filter_name=vars_to_extract, library='pd')
-        sumw = uproot.concatenate(data.datapath + ':sumWeights', filter_name=['totalEventsWeighted', 'dsid'], library='pd')
+        tree_df = uproot.concatenate(data.datapath + ':' + data.TTree_name, vars_to_extract, library='pd', num_workers=config.n_threads)
+        sumw = uproot.concatenate(data.datapath + ':sumWeights', ['totalEventsWeighted', 'dsid'], library='pd', num_workers=config.n_threads)
         sumw = sumw.groupby('dsid').sum()
         tree_df = pd.merge(tree_df, sumw, left_on='mcChannelNumber', right_on='dsid', sort=False)
 
@@ -57,15 +52,31 @@ def build_analysis_dataframe(data,  # This type hint is left blank to avoid a ci
     # check vars exist in file
     if unexpected_vars := [unexpected_var for unexpected_var in vars_to_extract
                            if unexpected_var not in tree_df.columns]:
-        raise ValueError(f"Variable(s) not found in root file '{data.datapath}' {data.TTree_name} tree: {unexpected_vars}")
+        warn(f"Variable(s) not found in root file(s) '{data.datapath}' {data.TTree_name} tree: {unexpected_vars}")
 
     # check if vars are contained in label dictionary
     if unexpected_vars := [unexpected_var for unexpected_var in vars_to_extract
                            if unexpected_var not in labels_xs]:
-        warn(f"Warning: variable(s) {unexpected_vars} not contained in labels dictionary. "
+        warn(f"Warning: variable(s) {unexpected_vars} not contained in labels dictionary."
              f"Some unexpected behaviour may occur.")
 
-    tree_df = rescale_to_gev(tree_df)  # cleanup
+    # calculate and combine special derived variables
+    if to_calc := [calc_var for calc_var in vars_to_cut if calc_var in other_vars]:
+        # save which variables are actually necessary in order to drop extras
+        og_vars = all_vars(cut_list_dicts, vars_to_cut)
+        for var in to_calc:
+            # compute new column
+            temp_cols = other_vars[var]['var_args']
+            print(f"Computing '{var}' column from {temp_cols}...")
+            tree_df[var] = tree_df.apply(lambda row: row_calc(var, row), axis=1)
+
+            # drop unnecessary columns extracted just for calculations
+            to_drop = [var for var in temp_cols if var not in og_vars]
+            print(f"dropping {to_drop}")
+            tree_df.drop(columns=to_drop, inplace=True)
+
+    # properly scale GeV columns
+    tree_df = rescale_to_gev(tree_df)
 
     # print into pickle file for easier read/write
     if data.pkl_path:
@@ -73,6 +84,12 @@ def build_analysis_dataframe(data,  # This type hint is left blank to avoid a ci
         print(f"Dataframe built and saved in {data.pkl_path}")
 
     return tree_df
+
+
+def row_calc(var: str, row: pd.Series):
+    """Helper for applying derived variable calculation function to a dataframe row"""
+    row_args = [row[v] for v in other_vars[var]['var_args']]
+    return other_vars[var]['func'](*row_args)
 
 
 def gen_weight_column(df: pd.DataFrame,
@@ -176,7 +193,7 @@ def create_cut_columns(df: pd.DataFrame,
             else:
                 print(f"{cut['name']:<{name_len}}: "
                       f"{cut['cut_var']:>{var_len}} {cut['moreless']} |{cut['cut_val']}|")
-        print('\n')
+        print('')
 
 
 def cut_on_cutgroup(df: pd.DataFrame,

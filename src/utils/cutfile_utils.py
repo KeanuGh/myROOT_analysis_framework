@@ -7,6 +7,7 @@ from shutil import copyfile
 from typing import Tuple, List, OrderedDict, Dict
 
 from utils.file_utils import identical_to_backup, get_last_backup, is_dir_empty, get_filename
+from utils.var_helpers import other_vars
 
 
 def parse_cutline(cutline: str, sep='\t') -> dict:
@@ -18,7 +19,6 @@ def parse_cutline(cutline: str, sep='\t') -> dict:
     | cut_var: variable in root file to cut on
     | moreless: < or >
     | cut_val: value of cut on variable
-    | suffix: suffix to be added onto plot names
     | group: each cut with same group label will be applied all at once.
     |        group labels will be printed in plot legends if sequential, as title if not.
     |        !!!SUFFIXES FOR CUTS IN GROUP MUST BE THE SAME!!!
@@ -27,16 +27,15 @@ def parse_cutline(cutline: str, sep='\t') -> dict:
     cutline_split = cutline.split(sep)
 
     # if badly formatted
-    if len(cutline_split) != 7:
+    if len(cutline_split) != 6:
         raise SyntaxError(f"Check cutfile. Line {cutline} is badly formatted.")
 
     name = cutline_split[0]
     cut_var = cutline_split[1]
     moreless = cutline_split[2]
     cut_val = float(cutline_split[3])
-    suffix = cutline_split[4]
-    group = cutline_split[5]
-    is_symmetric = bool(strtobool(cutline_split[6].lower()))  # converts string to boolean
+    group = cutline_split[4]
+    is_symmetric = bool(strtobool(cutline_split[5].lower()))  # converts string to boolean
 
     # check values
     if moreless not in ('>', '<'):
@@ -48,7 +47,6 @@ def parse_cutline(cutline: str, sep='\t') -> dict:
         'cut_var': cut_var,
         'moreless': moreless,
         'cut_val': cut_val,
-        'suffix': suffix,
         'group': group,
         'is_symmetric': is_symmetric,
     }
@@ -57,14 +55,13 @@ def parse_cutline(cutline: str, sep='\t') -> dict:
 
 def parse_cutfile(file: str, sep='\t') -> Tuple[List[dict], List[str], Dict[str, bool]]:
     """
-    | generates pythonic outputs from input cutfile
+    | Generates pythonic outputs from input cutfile
     | Cutfile should be formatted with headers [CUTS], [OUTPUTS] and [OPTIONS]
     | Each line under [CUTS] header contains the 'sep'-separated values (detault: tab):
     | - name: name of cut to be printed and used in plot labels
     | - cut_var: variable in root file to cut on
     | - moreless: '<' or '>'
     | - cut_val: value of cut on variable
-    | - suffix: suffix to be added onto plot names
     | - group: each cut with same group number will be applied all at once.
     |          !!!SUFFIXES FOR CUTS IN GROUP MUST BE THE SAME!!!
     |
@@ -125,9 +122,19 @@ def parse_cutfile(file: str, sep='\t') -> Tuple[List[dict], List[str], Dict[str,
 
 def extract_cut_variables(cut_dicts: List[dict], vars_list: List[str]) -> List[str]:
     """
-    gets which variables are needed to extract from root file based on cutfile parser output
+    Get which variables are needed to extract from root file based on cutfile parser output
     uses outputs from parse_cutfile()
     """
+    # extract variables to cut on
+    extract_vars = [cut_dict['cut_var'] for cut_dict in cut_dicts]
+    # extract variables needed to calculate derived variables in var_helpers (sorry for these illegible lines)
+    if temp_vars := [other_vars[temp_var]['var_args'] for temp_var in other_vars if temp_var in vars_list]:
+        vars_list = [var for sl in temp_vars for var in sl] + [var for var in vars_list if var not in other_vars]
+    return extract_vars + [variable for variable in vars_list if variable not in extract_vars]
+
+
+def all_vars(cut_dicts: List[dict], vars_list: List[str]) -> List[str]:
+    """Return all variables mentioned in cutfile"""
     extract_vars = [cut_dict['cut_var'] for cut_dict in cut_dicts]
     return extract_vars + [variable for variable in vars_list if variable not in extract_vars]
 
