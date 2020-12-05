@@ -112,7 +112,7 @@ def getbins(var_to_plot) -> Tuple[bool, Optional[tuple]]:
         # set bins for special variables
         sp_var = [sp_var for sp_var in config.not_log if sp_var in var_to_plot]
         if len(sp_var) != 1:
-            raise Exception(f"Expected one matching variable for spcial binning. Got {sp_var}")
+            raise Exception(f"Expected one matching variable for special binning. Got {sp_var}")
         return is_logbins, config.special_binning[sp_var[0]]
     else:
         return is_logbins, None
@@ -231,15 +231,10 @@ def histplot_1d(var_x: pd.Series,
     else:
         ax_transform = None
 
-    # Construct histogram. Gets proper axis type based on bins given
     hist = bh.Histogram(get_axis(bins, ax_transform), storage=bh.storage.Weight())
-
-    # fill
     hist.fill(var_x, weight=weights, threads=n_threads)
-
-    # rescale global_scale
     if scaling:
-        hist = scale_hist(scaling=scaling, hist=hist, lumi=lumi)
+        hist = scale_hist(scaling, hist, lumi)
 
     # global_scale
     if isinstance(yerr, str):
@@ -505,6 +500,6 @@ def plot_mass_slices(df: pd.DataFrame,
         with open(config.pkl_hist_dir + plot_label + '_' + name + '.pkl', 'wb') as f:
             pkl.dump(hists, f)
             print(f"Saved pickle file to {f.name}")
-    path = config.plot_dir + name + 'png'
+    path = config.plot_dir + name + '.png'
     fig.savefig(path, bbox_inches='tight')
     print(f"Figure saved to {path}")

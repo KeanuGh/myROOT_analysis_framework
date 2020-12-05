@@ -84,22 +84,6 @@ class Dataset:
     # ===============================
     # ========= PIPELINES ===========
     # ===============================
-    def __dataframe_pipeline(self) -> None:
-        """Define pipeline for building dataset dataframe"""
-        # extract and clean data
-        if self._rebuild or config.force_rebuild:
-            print(f"Building {self.name} dataframe from {self.datapath}...")
-            self.__build_df()
-        else:
-            print(f"Reading data for {self.name} dataframe from {self.pkl_path}...")
-            self.df = pd.read_pickle(self.pkl_path)
-
-        # map appropriate weights
-        self.__map_weights()
-
-        # apply cuts to generate cut columns
-        self.__create_cut_columns()
-
     def __cutfile_pipeline(self) -> None:
         """Define the pipeline for parsing cutfile"""
         print(f"Parsting cutfile for {self.name}...")
@@ -120,6 +104,22 @@ class Dataset:
                                            self._make_backup,
                                            config.backup_cutfiles_dir,
                                            self.pkl_path)
+
+    def __dataframe_pipeline(self) -> None:
+        """Define pipeline for building dataset dataframe"""
+        # extract and clean data
+        if self._rebuild or config.force_rebuild:
+            print(f"Building {self.name} dataframe from {self.datapath}...")
+            self.__build_df()
+        else:
+            print(f"Reading data for {self.name} dataframe from {self.pkl_path}...")
+            self.df = pd.read_pickle(self.pkl_path)
+
+        # map appropriate weights
+        self.__map_weights()
+
+        # apply cuts to generate cut columns
+        self.__create_cut_columns()
 
     # ===============================
     # ========= DATAFRAME ===========
