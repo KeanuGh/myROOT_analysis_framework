@@ -7,7 +7,7 @@ from shutil import copyfile
 from typing import Tuple, List, OrderedDict, Dict
 
 from utils.file_utils import identical_to_backup, get_last_backup, is_dir_empty, get_filename
-from utils.var_helpers import other_vars
+from utils.var_helpers import derived_vars
 
 
 def parse_cutline(cutline: str, sep='\t') -> dict:
@@ -77,27 +77,22 @@ def parse_cutfile(file: str, sep='\t') -> Tuple[List[dict], List[str], Dict[str,
         # get cut lines
         cuts_list_of_dicts = []
         for cutline in lines[lines.index('[CUTS]') + 1: lines.index('[OUTPUTS]')]:
-            # ignore comments and blank lines
             if cutline.startswith('#') or len(cutline) < 2:
                 continue
 
-            # append cut dictionary
             cuts_list_of_dicts.append(parse_cutline(cutline, sep=sep))
 
         # get output variables
         output_vars_list = []
         for output_var in lines[lines.index('[OUTPUTS]') + 1: lines.index('[OPTIONS]')]:
-            # ignore comments and blank lines
             if output_var.startswith('#') or len(output_var) < 2:
                 continue
 
-            # append cut dictionary
             output_vars_list.append(output_var)
 
         # global cut options
         options_dict = {}
         for option in lines[lines.index('[OPTIONS]') + 1:]:
-            # ignore comments and blank lines
             if option.startswith('#') or len(option) < 2:
                 continue
 
@@ -107,7 +102,6 @@ def parse_cutfile(file: str, sep='\t') -> Tuple[List[dict], List[str], Dict[str,
             if len(option) != 2:
                 raise Exception(f'Badly Formatted option {sep.join(option)}')
 
-            # fill dict
             options_dict[option[0]] = bool(strtobool(option[1].lower()))  # converts string to boolean
 
             # Options necessary for the analysis to run (remember to add to this when adding new options)
@@ -127,9 +121,11 @@ def extract_cut_variables(cut_dicts: List[dict], vars_list: List[str]) -> List[s
     """
     # extract variables to cut on
     extract_vars = [cut_dict['cut_var'] for cut_dict in cut_dicts]
+
     # extract variables needed to calculate derived variables in var_helpers (sorry for these illegible lines)
-    if temp_vars := [other_vars[temp_var]['var_args'] for temp_var in other_vars if temp_var in vars_list]:
-        vars_list = [var for sl in temp_vars for var in sl] + [var for var in vars_list if var not in other_vars]
+    if temp_vars := [derived_vars[temp_var]['var_args'] for temp_var in derived_vars if temp_var in vars_list]:
+        vars_list = [var for sl in temp_vars for var in sl] + [var for var in vars_list if var not in derived_vars]
+
     return extract_vars + [variable for variable in vars_list if variable not in extract_vars]
 
 

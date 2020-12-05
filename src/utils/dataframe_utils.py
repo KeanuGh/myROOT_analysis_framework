@@ -8,7 +8,7 @@ import uproot4 as uproot
 import analysis.config as config
 from utils.axis_labels import labels_xs
 from utils.cutfile_utils import extract_cut_variables, all_vars
-from utils.var_helpers import other_vars
+from utils.var_helpers import derived_vars
 
 
 def build_analysis_dataframe(data,  # This type hint is left blank to avoid a circular import
@@ -61,12 +61,18 @@ def build_analysis_dataframe(data,  # This type hint is left blank to avoid a ci
              f"Some unexpected behaviour may occur.")
 
     # calculate and combine special derived variables
-    if to_calc := [calc_var for calc_var in vars_to_cut if calc_var in other_vars]:
+    if to_calc := [calc_var for calc_var in vars_to_cut if calc_var in derived_vars]:
+
+        def row_calc(var_str: str, row: pd.Series) -> pd.Series:
+            """Helper for applying derived variable calculation function to a dataframe row"""
+            row_args = [row[v] for v in derived_vars[var_str]['var_args']]
+            return derived_vars[var]['func'](*row_args)
+
         # save which variables are actually necessary in order to drop extras
         og_vars = all_vars(cut_list_dicts, vars_to_cut)
         for var in to_calc:
             # compute new column
-            temp_cols = other_vars[var]['var_args']
+            temp_cols = derived_vars[var]['var_args']
             print(f"Computing '{var}' column from {temp_cols}...")
             tree_df[var] = tree_df.apply(lambda row: row_calc(var, row), axis=1)
 
@@ -84,12 +90,6 @@ def build_analysis_dataframe(data,  # This type hint is left blank to avoid a ci
         print(f"Dataframe built and saved in {data.pkl_path}")
 
     return tree_df
-
-
-def row_calc(var: str, row: pd.Series):
-    """Helper for applying derived variable calculation function to a dataframe row"""
-    row_args = [row[v] for v in other_vars[var]['var_args']]
-    return other_vars[var]['func'](*row_args)
 
 
 def gen_weight_column(df: pd.DataFrame,
