@@ -53,7 +53,7 @@ class Analysis:
             config.etabins = etabins
         if phibins:
             config.phibins = phibins
-        config._special_binning = {
+        config.special_binning = {
             '_eta_': config.etabins,
             '_phi_': config.phibins,
         }
@@ -114,7 +114,7 @@ class Analysis:
         self.datasets[ds_name].gen_cutflow_hist(**kwargs)
 
     @decorators.check_single_datafile
-    def make_all_cutgroup_2dplots(self, ds_name: Optional[str], **kwargs):
+    def make_all_cutgroup_2dplots(self, ds_name: Optional[str], **kwargs) -> None:
         """Plots all cutgroups as 2d plots
 
         :param ds_name: name of dataset to plot
@@ -131,8 +131,6 @@ class Analysis:
         :param xvar: variable in dataframe to plot
         :param kwargs: keyword args to pass to dataclass.plot_mass_slices()
         """
-        if not xvar:
-            raise ValueError("xvar must be supplied")
         self.datasets[ds_name].plot_mass_slices(xvar=xvar, **kwargs)
 
     # ===============================
