@@ -1,6 +1,6 @@
 import pickle as pkl
-from typing import Type, Dict
-from warnings import warn
+from contextlib import contextmanager
+from typing import Type, Optional
 
 import ROOT
 import boost_histogram as bh
@@ -92,25 +92,47 @@ def TH1_to_bh(h_root: Type[ROOT.TH1]) -> bh.Histogram:
     return h_bh
 
 
-def convert_pkl_to_root(file: str) -> None:
+def convert_pkl_to_root(filename: str, histname: Optional[str] = None) -> None:
     """
     Converts pickled histogram file to root file.
-    If file does not contain a dictionary, exits. Warns if file contains a value that is not a Histogram
+    Reads pickle files containing either a boost-histogram Histogram object
     """
-    with open(file, 'rb') as f:
-        hists = pkl.load(f)
-        if not isinstance(hists, Dict):
-            warn(f"Pickle file {file} does not contain a dictionary.")
+    with open(filename, 'rb') as f:
+        obj = pkl.load(f)
+
+    rootfilename = filename.replace('.pkl', '.root')
+
+    if isinstance(obj, bh.Histogram):
+        print("Boost Histogram object found.")
+        with ROOT_file(rootfilename):
+            bh_to_TH1(obj, name=histname, title=histname).Write()
+        return
+
+    elif isinstance(obj, dict):
+        print("Dictionary found.")
+        TH1s = [bh_to_TH1(hist, name, name) for name, hist in obj.items() if isinstance(hist, bh.Histogram)]
+        if len(TH1s) >= 1:
+            with ROOT_file(rootfilename):
+                [h.Write() for h in TH1s]
             return
 
-        rootfilename = file.replace('.pkl', '.root')
-        rootfile = ROOT.TFile(rootfilename, 'RECREATE')
-        for name, hist in hists.items():
-            if not isinstance(hist, bh.Histogram):
-                warn(f"Found {type(hist)} object in {file} with key {name}.")
-                continue
-            else:
-                # add to root file
-                bh_to_TH1(hist, name=name, title=name).Write()
-        print(f"Converted {file} to root in {rootfilename}")
-        rootfile.Close()
+    elif hasattr(obj, '__iter__'):
+        print(f"{type(obj)} found.")
+        TH1s = [bh_to_TH1(hist, 'hist'+i, 'hist'+i) for i, hist in obj if isinstance(hist, bh.Histogram)]
+        if len(TH1s) >= 1:
+            with ROOT_file(rootfilename):
+                [h.Write() for h in TH1s]
+            return
+
+    raise ValueError(f"No Histogram found in file {filename}")
+
+
+@contextmanager
+def ROOT_file(filename: str, TFile_arg='RECREATE'):
+    """Context manager for opening root files"""
+    file = ROOT.TFile(filename, TFile_arg)
+    try:
+        yield file
+    finally:
+        file.Close()
+
