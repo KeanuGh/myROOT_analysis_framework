@@ -19,12 +19,13 @@ from utils.cutfile_utils import (
 )
 
 
+# TODO: change this to a regular class. No need to be dataclass anymore (and write a __repr__)
 @dataclass
 class Dataset:
     """
     Dataset class. Contains/will contain all the variables needed for a singular analysis dataset.
     Perhaps put all methods that act only on one dataset into here
-    TODO: Save histograms as dataset attributes? Ability to perform operations across hisograms? histogram class?
+    TODO: Save histograms as dataset attributes? Ability to perform operations across hisograms? Custom histogram class?
     """
     name: str
     datapath: str  # path to root file(s)
@@ -34,7 +35,7 @@ class Dataset:
     pkl_path: str = None  # where the dataframe pickle file will be stored
     is_slices: bool = False  # whether input data is in mass slices
     lepton: str = 'lepton'  # name of charged DY lepton channel in dataset (if applicable)
-    grouped_cutflow: bool = True  # whether cutflow should apply cuts in cutgroups or separately
+    grouped_cutflow: bool = True  # whether cutflow should apply cuts in cutgroups or separately TODO: in cutfile
 
     def __post_init__(self):
         """Dataset generation pipeline"""

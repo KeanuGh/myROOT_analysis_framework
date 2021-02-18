@@ -81,9 +81,13 @@ def clear_pkl(ds_name: Optional[Union[List[str], str]] = None, clear_all: bool =
     :param ds_name: OPTIONAL. String or list of string name(s) of dataset(s) to remove
     """
     path = config.pkl_df_filepath
-    assert ds_name or clear_all, "Must give a dataset name or clear_all"
 
-    assert not is_dir_empty(path), "Pickle directory empty"
+    if not ds_name and not clear_all:
+        raise SyntaxError("Must pass dataset name or clear_all")
+
+    if is_dir_empty(path):
+        raise FileNotFoundError("Picle directory empty")
+
     if clear_all:
         delete_file(path.format('*'))
         return
@@ -98,6 +102,7 @@ def clear_pkl(ds_name: Optional[Union[List[str], str]] = None, clear_all: bool =
         if not file_exists(path.format(ds_name)):
             raise FileNotFoundError(f"{path.format(ds_name)} does not exist.")
         delete_file(path.format(ds_name))
+
     raise ValueError(f"ds_name should supply string or list of string name(s) of dataset(s) to remove")
 
 

@@ -63,10 +63,10 @@ def build_analysis_dataframe(data,  # This type hint is left blank to avoid a ci
     # calculate and combine special derived variables
     if to_calc := [calc_var for calc_var in vars_to_cut if calc_var in derived_vars]:
 
-        def row_calc(var_str: str, row: pd.Series) -> pd.Series:
+        def row_calc(deriv_var: str, row: pd.Series) -> pd.Series:
             """Helper for applying derived variable calculation function to a dataframe row"""
-            row_args = [row[v] for v in derived_vars[var_str]['var_args']]
-            return derived_vars[var]['func'](*row_args)
+            row_args = [row[v] for v in derived_vars[deriv_var]['var_args']]
+            return derived_vars[deriv_var]['func'](*row_args)
 
         # save which variables are actually necessary in order to drop extras
         og_vars = all_vars(cut_list_dicts, vars_to_cut)
@@ -94,7 +94,7 @@ def build_analysis_dataframe(data,  # This type hint is left blank to avoid a ci
 
 def gen_weight_column(df: pd.DataFrame,
                       weight_mc_col: str = 'weight_mc',
-                      global_scale: float = 1.
+                      global_scale: float = config.lumi
                       ) -> pd.Series:
     """Returns series of weights based off weight_mc column"""
     if weight_mc_col not in df.columns:
@@ -103,16 +103,16 @@ def gen_weight_column(df: pd.DataFrame,
 
 
 def gen_weight_column_slices(df: pd.DataFrame,
-                             weight_mc_col: str = 'weight_mc',
+                             mc_weight_col: str = 'weight_mc',
                              tot_weighted_events_col: str = 'totalEventsWeighted',
                              global_scale: float = 1.,
                              ) -> pd.Series:
     """Returns series of weights for mass slices based off weight_mc column and total events weighed"""
-    if weight_mc_col not in df.columns:
-        raise KeyError(f"'{weight_mc_col}' column not in dataframe.")
+    if mc_weight_col not in df.columns:
+        raise KeyError(f"'{mc_weight_col}' column not in dataframe.")
     if tot_weighted_events_col not in df.columns:
         raise KeyError(f"'{tot_weighted_events_col}' column not in dataframe.")
-    return global_scale * (df['weight_mc'] * df['weight_mc'].abs()) / df[tot_weighted_events_col]
+    return global_scale * (df[mc_weight_col] * df[mc_weight_col].abs()) / df[tot_weighted_events_col]
 
 
 def rescale_to_gev(df: pd.DataFrame) -> pd.DataFrame:
@@ -188,11 +188,9 @@ def create_cut_columns(df: pd.DataFrame,
         print("\n========== CUTS USED ============")
         for cut in cut_dicts:
             if not cut['is_symmetric']:
-                print(f"{cut['name']:<{name_len}}: "
-                      f"{cut['cut_var']:>{var_len}} {cut['moreless']} {cut['cut_val']}")
+                print(f"{cut['name']:<{name_len}}: {cut['cut_var']:>{var_len}} {cut['moreless']} {cut['cut_val']}")
             else:
-                print(f"{cut['name']:<{name_len}}: "
-                      f"{cut['cut_var']:>{var_len}} {cut['moreless']} |{cut['cut_val']}|")
+                print(f"{cut['name']:<{name_len}}: {cut['cut_var']:>{var_len}} {cut['moreless']} |{cut['cut_val']}|")
         print('')
 
 

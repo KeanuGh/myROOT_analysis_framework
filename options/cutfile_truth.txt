@@ -1,3 +1,5 @@
+# SEPARATOR: TAB
+
 [CUTS]
 # Name	Variable	</>	Cut (in GeV if applicable)	Group Symmetric
 # !!REMEMBER DEFAULT ANALYSISTOP OUTPUT IS IN MeV NOT GeV!!
@@ -15,3 +17,4 @@ MC_WZmu_el_pt_born
 [OPTIONS]
 # case-insensitive
 sequential	true
+grouped cutflow: false

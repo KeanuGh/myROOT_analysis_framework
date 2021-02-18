@@ -104,12 +104,13 @@ def parse_cutfile(file: str, sep='\t') -> Tuple[List[dict], List[str], Dict[str,
 
             options_dict[option[0]] = bool(strtobool(option[1].lower()))  # converts string to boolean
 
-            # Options necessary for the analysis to run (remember to add to this when adding new options)
-            necessary_options = [
-                'sequential',
-            ]
-            if missing_options := [opt for opt in necessary_options if opt not in options_dict.keys()]:
-                raise Exception(f"Missing option(s) in cutfile: {', '.join(missing_options)}")
+        # Options necessary for the analysis to run (remember to add to this when adding new options)
+        necessary_options = [
+            'sequential',
+            'grouped cutflow',
+        ]
+        if missing_options := [opt for opt in necessary_options if opt not in options_dict.keys()]:
+            raise Exception(f"Missing option(s) in cutfile: {', '.join(missing_options)}")
 
     return cuts_list_of_dicts, output_vars_list, options_dict
 
@@ -201,7 +202,7 @@ def if_build_dataframe(current_cutfile: str,
             current_variables = extract_cut_variables(cut_list_dicts, vars_to_cut)
             backup_variables = extract_cut_variables(BACKUP_cutfile_dicts, BACKUP_cutfile_outputs)
 
-            # if _cutfile contains different variables, extract necessary variables from root file and put into pickle
+            # if cutfile contains different variables, extract necessary variables from root file and put into pickle
             # file for quicker read/write in pandas
             if not set(current_variables) == set(backup_variables):
                 print(f"New variables found; dataframe will be rebuilt.\n"

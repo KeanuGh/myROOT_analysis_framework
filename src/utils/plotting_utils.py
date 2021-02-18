@@ -347,7 +347,7 @@ def plot_1d_overlay_and_acceptance_cutgroups(
     for cutgroup in cutgroups.keys():
         print(f"    - generating cutgroup '{cutgroup}'")
         cut_df = cut_on_cutgroup(df, cutgroups, cutgroup)
-        weight_cut = cut_df['weight']
+        weight_cut = cut_df[weight_col]
         var_cut = cut_df[var_to_plot]
 
         h_cut = histplot_1d(var_x=var_cut, weights=weight_cut,
@@ -479,7 +479,7 @@ def plot_mass_slices(df: pd.DataFrame,
         if to_pkl:
             hists[dsid] = hist
 
-    hist_inc = histplot_1d(df[xvar], df['weight'], xbins, ax, yerr=None, is_logbins=logbins, scaling='widths',
+    hist_inc = histplot_1d(df[xvar], df[weight_col], xbins, ax, yerr=None, is_logbins=logbins, scaling='widths',
                            c='k', linewidth=2, label='Inclusive')
     if to_pkl:
         hists['inclusive'] = hist_inc
