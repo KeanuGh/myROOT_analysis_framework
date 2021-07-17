@@ -104,7 +104,6 @@ def convert_pkl_to_root(filename: str, histname: Optional[str] = None) -> None:
         obj = pkl.load(f)
 
     rootfilename = filename.replace('.pkl', '.root')
-    TH1s = []
 
     if isinstance(obj, bh.Histogram):
         print(f"Printing {histname} to {rootfilename}")
@@ -116,15 +115,13 @@ def convert_pkl_to_root(filename: str, histname: Optional[str] = None) -> None:
     elif hasattr(obj, '__iter__'):
         TH1s = [bh_to_TH1(hist, 'hist'+i, 'hist'+i) for i, hist in obj if isinstance(hist, bh.Histogram)]
     else:
-        print(f"No boost histogram objects found in {obj}")
+        raise ValueError(f"No boost-histogram objects found in object {obj}.")
 
     if len(TH1s) > 0:
         with ROOT_file(rootfilename):
             [h.Write() for h in TH1s]
             print(f"Histograms saved to {rootfilename}")
         return
-
-    raise ValueError(f"No Histogram found in file {filename}")
 
 
 @contextmanager
