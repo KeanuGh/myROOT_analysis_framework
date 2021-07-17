@@ -3,7 +3,7 @@ from typing import List, OrderedDict
 from warnings import warn
 
 import pandas as pd
-import uproot4 as uproot
+import uproot
 
 import analysis.config as config
 from utils.axis_labels import labels_xs
@@ -199,6 +199,6 @@ def cut_on_cutgroup(df: pd.DataFrame,
                     group: str,
                     ) -> pd.DataFrame:
     """Cuts on cutgroup on input dataframe or series"""
-    cut_rows = [cut_name + config.cut_label for cut_name in cutgroups[group]]
-    cut_data = df[df[cut_rows].all(1)]
+    cut_cols = [cut_name + config.cut_label for cut_name in cutgroups[group]]
+    cut_data = df[df[cut_cols].all(1)]
     return cut_data

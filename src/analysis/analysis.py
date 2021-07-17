@@ -56,6 +56,7 @@ class Analysis:
         config.special_binning = {
             '_eta_': config.etabins,
             '_phi_': config.phibins,
+            'w_y': config.phibins
         }
 
         # BUILD DATASETS

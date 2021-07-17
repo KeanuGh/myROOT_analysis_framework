@@ -100,7 +100,7 @@ def parse_cutfile(file: str, sep='\t') -> Tuple[List[dict], List[str], Dict[str,
 
             # options should be formatted as '[option]>sep>[value]'
             if len(option) != 2:
-                raise Exception(f'Badly Formatted option {sep.join(option)}')
+                raise Exception(f'Badly Formatted option: {sep.join(option)}')
 
             options_dict[option[0]] = bool(strtobool(option[1].lower()))  # converts string to boolean
 

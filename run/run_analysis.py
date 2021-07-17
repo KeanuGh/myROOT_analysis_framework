@@ -1,14 +1,15 @@
 from analysis.analysis import Analysis
+from utils import file_utils
 
 
 if __name__ == '__main__':
 
     # dataset inputs
     datasets = {
-        'reco': {
-            'datapath': '../data/mc16a_wminmunu/*.root',
-            'cutfile': '../options/cutfile_reco.txt',
-            'TTree_name': 'nominal',
+        'truth': {
+            'datapath': '../data/*.root',
+            'cutfile': '../options/cutfile_EXAMPLE.txt',
+            'TTree_name': 'truth',
             'is_slices': False,
             'lepton': 'muon'
         },
@@ -21,14 +22,14 @@ if __name__ == '__main__':
         # }
     }
 
-    my_analysis = Analysis(datasets, analysis_label='wminmunu_reco_truth', force_rebuild=True)
+    my_analysis = Analysis(datasets, analysis_label='wminmunu_test_eg', force_rebuild=True)
 
     # pipeline
     # my_analysis.plot_mass_slices(ds_name='truth_slices', xvar='MC_WZ_dilep_m_born', logx=True, to_pkl=True)
     my_analysis.plot_with_cuts(scaling='xs', to_pkl=True)
-    # my_analysis.make_all_cutgroup_2dplots(ds_name='truth_inclusive', to_pkl=True)
-    # my_analysis.gen_cutflow_hist(ds_name='truth_inclusive', all_plots=True)
-    # my_analysis.cutflow_printout(ds_name='truth_inclusive')
-    # my_analysis.kinematics_printouts()
-    # my_analysis.print_cutflow_latex_table(ds_name='truth_inclusive')
-    # file_utils.convert_pkl_to_root(conv_all=True)
+    my_analysis.make_all_cutgroup_2dplots(to_pkl=True)
+    my_analysis.gen_cutflow_hist(all_plots=True)
+    my_analysis.cutflow_printout()
+    my_analysis.kinematics_printouts()
+    my_analysis.print_cutflow_latex_table()
+    file_utils.convert_pkl_to_root(conv_all=True)

@@ -12,8 +12,9 @@ So far it is able to:
 - Converts boost-histograms to ROOT TH1 histograms and back
 
 ### In the works:
-- Logging: as soon as I get around to learning how to use the python logging library
-- Unit tests: pytest stopped working for me and I haven't gotten round to fixing it yet. Bugs galore!
+- Logging: as soon as I get around to learning how to use the python logging library.
+- Unit tests: Need to write many more tests. 
+- Batch jobs: Need to look into using Dask for parallel processing to work with large ROOT files.
 
 ## Quickstart
 Initialise analysis with a very silly import statement like:
