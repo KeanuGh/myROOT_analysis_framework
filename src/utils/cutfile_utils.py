@@ -127,7 +127,7 @@ def extract_cut_variables(cut_dicts: List[dict], vars_list: List[str]) -> List[s
     if temp_vars := [derived_vars[temp_var]['var_args'] for temp_var in derived_vars if temp_var in vars_list]:
         vars_list = [var for sl in temp_vars for var in sl] + [var for var in vars_list if var not in derived_vars]
 
-    return extract_vars + [variable for variable in vars_list if variable not in extract_vars]
+    return list(set(extract_vars + [variable for variable in vars_list if variable not in extract_vars]))
 
 
 def all_vars(cut_dicts: List[dict], vars_list: List[str]) -> List[str]:
