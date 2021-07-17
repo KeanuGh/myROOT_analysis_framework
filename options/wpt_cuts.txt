@@ -19,3 +19,4 @@ MC_WZ_dilep_m_born
 [OPTIONS]
 # case-insensitive
 sequential	false
+grouped cutflow	false
