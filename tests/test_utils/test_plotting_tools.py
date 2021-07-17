@@ -1,6 +1,7 @@
 import boost_histogram as bh
 import pytest
-from utils.plotting_utils import get_sumw2, get_axis_labels
+
+from utils import plotting_utils as pu
 
 
 class TestGetSumW21D(object):
@@ -21,7 +22,7 @@ class TestGetSumW21D(object):
         h.fill(x, weight=2)
 
         expected_output = [4.0, 4.0, 4.0, 4.0, 4.0]
-        actual_output = get_sumw2(h)
+        actual_output = pu.get_sumw2(h)
 
         assert expected_output == actual_output, f"Expected: {expected_output}. Actual: {actual_output}"
 
@@ -37,7 +38,7 @@ class TestGetAxisLabels(object):
 
     def test_label_read(self):
         expected_output = ('testxlabel', 'testylabel')
-        actual_output = get_axis_labels('testvar')
+        actual_output = pu.get_axis_labels('testvar')
 
         assert expected_output == actual_output, f"Expected: {expected_output}. Actual: {actual_output}"
 
@@ -45,7 +46,7 @@ class TestGetAxisLabels(object):
         with pytest.warns(UserWarning) as warning:
             expected_output = (None, None)
             var_missing = 'test_var_missing'
-            actual_output = get_axis_labels(var_missing)
+            actual_output = pu.get_axis_labels(var_missing)
 
             assert warning[0].message.args[0] == f"Axis labels for {var_missing} not found in in label lookup " \
                                                  f"dictionary. Axis labels blank."

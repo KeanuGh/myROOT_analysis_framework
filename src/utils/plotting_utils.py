@@ -81,8 +81,8 @@ def get_root_sumw2(hist: bh.Histogram) -> np.array:
     return np.sqrt(hist.view().variance)
 
 
-def get_axis_labels(var_name: str, lepton: str) -> Tuple[Optional[str], Optional[str]]:
-    """Gets label for corresponting variable in axis labels dictionary"""
+def get_axis_labels(var_name: str, lepton: str = 'lepton') -> Tuple[Optional[str], Optional[str]]:
+    """Gets label for corresponding variable in axis labels dictionary"""
     if var_name in labels_xs:
         xlabel = labels_xs[var_name]['xlabel']
         ylabel = labels_xs[var_name]['ylabel']
@@ -125,7 +125,7 @@ def get_axis(bins: Union[tuple, list],
     Returns the correct type of boost-histogram axis based on the input bins.
 
     :param bins: tuple of bins in x (n_bins, start, stop) or list of bin edges.
-                 In the first case returns an axis of type Regular(), othewise of type Variable().
+                 In the first case returns an axis of type Regular(), otherwise of type Variable().
                  Raises error if not formatted in one of these ways.
     :param transform: transform to pass to axis constructor
     """
@@ -384,7 +384,7 @@ def plot_1d_overlay_and_acceptance_cutgroups(
         with open(config.pkl_hist_dir + plot_label + '_' + var_to_plot + '_1d_cutgroups_ratios.pkl', 'wb') as f:
             pkl.dump(hists, f)
             print(f"Saved pickle file to {f.name}")
-    hep.label._exp_label(exp='ATLAS', data=True, paper=True, llabel="Internal", loc=0, ax=fig_ax, rlabel=plot_label)
+    hep.atlas.label(llabel="Internal", loc=0, ax=fig_ax, rlabel=plot_label)
     out_png_file = config.plot_dir + f"{var_to_plot}_{str(scaling)}.png"
     fig.savefig(out_png_file, bbox_inches='tight')
     print(f"Figure saved to {out_png_file}")
@@ -419,7 +419,7 @@ def plot_2d_cutgroups(df: pd.DataFrame,
 
     for cutgroup in cutgroups:
         print(f"    - generating cutgroup '{cutgroup}'")
-        fig, ax = plt.subplots()
+        fig, ax = plt.subplots(figsize=(10, 10))
 
         cut_df = cut_on_cutgroup(df, cutgroups, cutgroup)
         weight_cut = cut_df['weight']
@@ -441,8 +441,7 @@ def plot_2d_cutgroups(df: pd.DataFrame,
         xlabel, _ = get_axis_labels(str(x_var), lepton)
         ylabel, _ = get_axis_labels(str(y_var), lepton)
 
-        hep.label._exp_label(exp='ATLAS', data=True, paper=True, italic=(True, True), ax=ax,
-                             llabel='Internal', rlabel=plot_label + ' - ' + cutgroup)
+        hep.atlas.label(italic=(True, True), ax=ax, llabel='Internal', rlabel=plot_label + ' - ' + cutgroup, loc=0)
         ax.set_xlabel(xlabel)
         ax.set_ylabel(ylabel)
 
@@ -488,8 +487,7 @@ def plot_mass_slices(df: pd.DataFrame,
     ax.semilogy()
     if logx:
         plt.semilogx()
-    hep.label._exp_label(exp='ATLAS', data=True, paper=True, italic=(True, True), ax=ax,
-                         llabel='Internal', rlabel=plot_label)
+    hep.atlas.label(italic=(True, True), ax=ax, llabel='Internal', rlabel=plot_label)
 
     xlabel, ylabel = get_axis_labels(xvar, lepton)
     ax.set_xlabel(xlabel)

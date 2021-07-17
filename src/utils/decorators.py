@@ -3,7 +3,7 @@ import functools
 
 def check_single_datafile(func):
     """
-    Dectorator to apply to analysis methods that require only a in single dataset.
+    Decorator to apply to analysis methods that require only a in single dataset.
     If no dataset name is given, and analysis contains only one dataset, it passes that dataset name to the method.
     """
     @functools.wraps(func)

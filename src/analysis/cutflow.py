@@ -215,7 +215,7 @@ class Cutflow:
         ax.set_xticks(ax.get_xticks())  # REMOVE IN THE FUTURE - PLACED TO AVOID WARNING - BUG IN MATPLOTLIB 3.3.2
         ax.set_xticklabels(labels=self.cutflow_labels, rotation='-40')
         ax.set_ylabel(self._cuthist_options[kind]['ylabel'])
-        hep.label._exp_label(exp='ATLAS', data=True, paper=True, llabel="Internal", loc=0, ax=ax, rlabel=plot_label)
+        hep.atlas.label(llabel="Internal", loc=0, ax=ax, rlabel=plot_label)
         ax.grid(b=True, which='both', axis='y', alpha=0.3)
 
         filepath = self._cuthist_options[kind]['filepath'].format(config.plot_dir)
@@ -229,32 +229,26 @@ class Cutflow:
         """
         latex_filepath = filepath + filename_prefix + "_cutflow_" + strftime("%Y-%m-%d_%H-%M-%S") + ".tex"
 
-        if self._is_sequential:
-            with open(latex_filepath, "w") as f:
-                f.write("\\begin{tabular}{|c||c|c|c|}\n"
-                        "\\hline\n"
-                        "Cut & Events & Ratio & Cumulative \\\\\\hline\n"
+        with open(latex_filepath, "w") as f:
+            f.write("\\begin{tabular}{|c||c|c|c|}\n"
+                    "\\hline\n")
+            if self._is_sequential:
+                f.write(f"Cut & Events & Ratio & Cumulative \\\\\\hline\n"
                         f"Inclusive & {self._n_events_tot} & - & - \\\\\n")
-                # print line
                 for i, cutname in enumerate(self.cutflow_labels[1:]):
                     n_events = self.cutflow_n_events[i]
                     ratio = self.cutflow_ratio[i]
                     cum_ratio = self.cutflow_cum[i]
                     f.write(f"{cutname} & {n_events} & {ratio:.3f} & {cum_ratio:.3f} \\\\\n")
-                f.write("\\end{tabular}")
-
-        else:
-            with open(latex_filepath, "w") as f:
-                f.write("\\begin{tabular}{|c||c|c|c|}\n"
-                        "\\hline\n"
-                        "Cut & Events & Ratio\\\\\\hline\n"
+            else:
+                f.write(f"Cut & Events & Ratio\\\\\\hline\n"
                         f"Inclusive & {self._n_events_tot} & - \\\\\n")
-                # print line
                 for i, cutname in enumerate(self.cutflow_labels[1:]):
                     n_events = self.cutflow_n_events[i]
                     ratio = self.cutflow_ratio[i]
                     f.write(f"{cutname} & {n_events} & {ratio:.3f} \\\\\n")
-                f.write("\\end{tabular}")
+            f.write("\\hline\n"
+                    "\\end{tabular}\n")
 
         print(f"Saved LaTeX cutflow table in {latex_filepath}")
         return latex_filepath

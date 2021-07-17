@@ -1,9 +1,6 @@
-"""
-PYTEST CURRENTLY NOT WORKING. WILL RESTART WRITING TESTS ONCE I GET IT WORKING AGAIN
-"""
+from collections import OrderedDict
 
 from utils.cutfile_utils import *
-from collections import OrderedDict
 
 # test list of dicts
 test_cut_list_of_dicts = [
@@ -75,7 +72,7 @@ class TestExtractCutVariables(object):
 
 class TestGenCutroups(object):
     def test_cutgroups(self):
-        # must be ordered dict because cuts need to be applied in the same order as in _cutfile
+        # must be ordered dict because cuts need to be applied in the same order as in cutfile
         expected_output = OrderedDict([
             ('group1', ['cut_1']),
             ('group2', ['cut_2', 'cut_3']),
@@ -83,9 +80,7 @@ class TestGenCutroups(object):
         ])
         actual_output = gen_cutgroups(test_cut_list_of_dicts)
 
-        # check output
         assert expected_output == actual_output, \
             f"Expected: {expected_output}. Actual: {actual_output}"
-        # check type
-        assert type(expected_output) == actual_output, \
+        assert type(expected_output) == type(actual_output), \
             f"Cutgroup output is of unexpected type. Expected: {type(expected_output)}. Actual: {type(actual_output)}"

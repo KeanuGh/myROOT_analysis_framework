@@ -50,7 +50,7 @@ def get_filename(filepath: str, suffix: bool = False) -> str:
         return Path(filepath).stem
 
 
-def get_file_parent(filepath: str) -> str:
+def get_file_parent(filepath: str) -> Path:
     """Get full path of directory containing file"""
     return Path(filepath).parent
 
@@ -86,7 +86,7 @@ def clear_pkl(ds_name: Optional[Union[List[str], str]] = None, clear_all: bool =
         raise SyntaxError("Must pass dataset name or clear_all")
 
     if is_dir_empty(path):
-        raise FileNotFoundError("Picle directory empty")
+        raise FileNotFoundError("Pickle directory empty")
 
     if clear_all:
         delete_file(path.format('*'))

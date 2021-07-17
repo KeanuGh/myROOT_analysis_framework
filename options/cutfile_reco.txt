@@ -13,4 +13,4 @@ w_y
 [OPTIONS]
 # case-insensitive
 sequential	true
-grouped cutflow false
+grouped cutflow	false

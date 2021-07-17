@@ -5,7 +5,8 @@ from typing import Type, Optional
 import ROOT
 import boost_histogram as bh
 import numpy as np
-import root_numpy as rnp
+
+# import uproot
 
 # this dictionary decides which ROOT constructor needs to be called based on hist type and dimension
 # call it with TH1_constructor[type][n_dims](name, title, *n_bins, *bin_edges) where 'type' is in {'F','D','I','C','S'}
@@ -75,21 +76,21 @@ def bh_to_TH1(h_bh: bh.Histogram, name: str, title: str, hist_type: str = 'F') -
     return h_root
 
 
-def TH1_to_bh(h_root: Type[ROOT.TH1]) -> bh.Histogram:
-    """Converts a ROOT TH1 into a boost-histogram"""
-
-    # construct axes
-    edges = rnp.hist2array(h_root, include_overflow=True, return_edges=True)[1]
-    axes = [bh.axis.Variable(ax_bins) for ax_bins in edges]
-
-    # filling bins contents n-dimensionally for different storage types
-    # not very pythonic but shouldn't take too long as long as the histogram isn't too big
-    h_bh = bh.Histogram(*axes, storage=bh.storage.Weight())
-    for idx, _ in np.ndenumerate(h_bh.view(flow=True)):
-        h_bh.view(flow=True).value[idx] = h_root.GetBinContent(*idx)  # bin value
-        h_bh.view(flow=True).variance[idx] = h_root.GetBinError(*idx) ** 2
-
-    return h_bh
+# def TH1_to_bh(h_root: Type[ROOT.TH1]) -> bh.Histogram:
+#     """Converts a ROOT TH1 into a boost-histogram"""
+#
+#     # construct axes
+#     edges = rnp.hist2array(h_root, include_overflow=True, return_edges=True)[1]
+#     axes = [bh.axis.Variable(ax_bins) for ax_bins in edges]
+#
+#     # filling bins contents n-dimensionally for different storage types
+#     # not very pythonic but shouldn't take too long as long as the histogram isn't too big
+#     h_bh = bh.Histogram(*axes, storage=bh.storage.Weight())
+#     for idx, _ in np.ndenumerate(h_bh.view(flow=True)):
+#         h_bh.view(flow=True).value[idx] = h_root.GetBinContent(*idx)  # bin value
+#         h_bh.view(flow=True).variance[idx] = h_root.GetBinError(*idx) ** 2
+#
+#     return h_bh
 
 
 def convert_pkl_to_root(filename: str, histname: Optional[str] = None) -> None:

@@ -15,3 +15,4 @@ MC_WZ_pt
 [OPTIONS]
 # case-insensitive
 sequential	true
+grouped cutflow	true
