@@ -64,6 +64,12 @@ class Dataset:
         """Return number of rows in dataframe"""
         return len(self.df.index)
 
+    def __getitem__(self, col):
+        return self.df[col]
+
+    def __setitem__(self, col, item):
+        self.df[col] = item
+
     # Variable setting
     # ===================
     @property
