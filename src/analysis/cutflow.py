@@ -234,18 +234,18 @@ class Cutflow:
                     "\\hline\n")
             if self._is_sequential:
                 f.write(f"Cut & Events & Ratio & Cumulative \\\\\\hline\n"
-                        f"Inclusive & {self._n_events_tot} & - & - \\\\\n")
+                        f"Inclusive & {self._n_events_tot} & — & — \\\\\n")
                 for i, cutname in enumerate(self.cutflow_labels[1:]):
-                    n_events = self.cutflow_n_events[i]
-                    ratio = self.cutflow_ratio[i]
-                    cum_ratio = self.cutflow_cum[i]
+                    n_events = self.cutflow_n_events[i+1]
+                    ratio = self.cutflow_ratio[i+1]
+                    cum_ratio = self.cutflow_cum[i+1]
                     f.write(f"{cutname} & {n_events} & {ratio:.3f} & {cum_ratio:.3f} \\\\\n")
             else:
                 f.write(f"Cut & Events & Ratio\\\\\\hline\n"
-                        f"Inclusive & {self._n_events_tot} & - \\\\\n")
+                        f"Inclusive & {self._n_events_tot} & — \\\\\n")
                 for i, cutname in enumerate(self.cutflow_labels[1:]):
-                    n_events = self.cutflow_n_events[i]
-                    ratio = self.cutflow_ratio[i]
+                    n_events = self.cutflow_n_events[i+1]
+                    ratio = self.cutflow_ratio[i+1]
                     f.write(f"{cutname} & {n_events} & {ratio:.3f} \\\\\n")
             f.write("\\hline\n"
                     "\\end{tabular}\n")

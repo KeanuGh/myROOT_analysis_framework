@@ -12,17 +12,7 @@ from utils.var_helpers import derived_vars
 
 def parse_cutline(cutline: str, sep='\t') -> dict:
     """
-    | processes each line of cuts into dictionary of cut options. with separator sep
-    | For a cut range add each less/more than as separate cuts and add into same group
-    |
-    | name: name of cut to be printed and used in plot labels
-    | cut_var: variable in root file to cut on
-    | moreless: < or >
-    | cut_val: value of cut on variable
-    | group: each cut with same group label will be applied all at once.
-    |        group labels will be printed in plot legends if sequential, as title if not.
-    |        !!!SUFFIXES FOR CUTS IN GROUP MUST BE THE SAME!!!
-    | is_symmetric: either 'true' or false, take abs value of cut (eg for eta or phi)
+    Processes each line of cuts into dictionary of cut options. with separator sep
     """
     cutline_split = cutline.split(sep)
 
@@ -98,7 +88,7 @@ def parse_cutfile(file: str, sep='\t') -> Tuple[List[dict], List[str], Dict[str,
 
             option = option.split(sep)
 
-            # options should be formatted as '[option]>sep>[value]'
+            # options should be formatted as '[option]<sep>[value]'
             if len(option) != 2:
                 raise Exception(f'Badly Formatted option: {sep.join(option)}')
 
