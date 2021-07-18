@@ -141,9 +141,15 @@ def get_axis(bins: Union[tuple, list],
         raise TypeError("Bins must be formatted as either tuple (n_bins, start, stop) or a list of bin edges.")
 
 
-def set_fig_1d_axis_options(axis: plt.axes, var_name: str, bins: Union[tuple, list], lepton: str,
-                            scaling: Optional[str] = None, is_logbins: bool = True,
-                            logy: bool = False, logx: bool = False) -> plt.axes:
+def set_fig_1d_axis_options(axis: plt.axes,
+                            var_name: str,
+                            bins: Union[tuple, list],
+                            lepton: str = None,
+                            scaling: Optional[str] = None,
+                            is_logbins: bool = True,
+                            logy: bool = False,
+                            logx: bool = False
+                            ) -> plt.axes:
     """
     Sets my default axis options
 
@@ -193,10 +199,10 @@ def set_fig_1d_axis_options(axis: plt.axes, var_name: str, bins: Union[tuple, li
 # ==== BUILDING HISTOGRAMS ======
 # ===============================
 def histplot_1d(var_x: pd.Series,
-                weights: pd.Series,
                 bins: Union[tuple, list],
                 fig_axis: plt.axes,
                 yerr: Optional[Union[str, Iterable]] = 'sumw2',
+                weights: pd.Series = None,
                 lumi: Optional[float] = None,
                 scaling: Optional[str] = None,
                 label: Optional[str] = None,
@@ -208,7 +214,7 @@ def histplot_1d(var_x: pd.Series,
     Plots variable as histogram onto given figure axis
 
     :param var_x: 1D series (or iterable) of variable to plot
-    :param weights: 1D series (or iterable) w/ same dimensions as var_x
+    :param weights: 1D series (or iterable) w/ same dimensions as var_x. '1' if not provided.
     :param bins: tuple of bins in y (n_bins, start, stop) or list of bin edges
     :param fig_axis: figure axis to plot onto
     :param yerr:| 1D series (or iterable) of y-errors.
@@ -301,6 +307,88 @@ def histplot_2d(var_x: pd.Series, var_y: pd.Series,
 # ===============================
 # ===== PLOTTING FUNCTIONS ======
 # ===============================
+def plot_1d_hist(
+        x: pd.Series,
+        x_label: str,
+        y_label: str,
+        title: str,
+        bins: Union[tuple, list],
+        yerr: Union[str, Iterable] = None,
+        weights: pd.Series = None,
+        is_logbins: bool = False,
+        log_x: bool = False,
+        log_y: bool = False,
+        to_file: bool = False
+        # to_pkl: bool = False,
+        ) -> plt.figure:
+    """Simple plotting function"""
+    fig, ax = plt.subplots()
+
+    histplot_1d(var_x=x, weights=weights,
+                bins=bins, fig_axis=ax,
+                yerr=yerr,
+                scaling=None,
+                label=title,
+                is_logbins=is_logbins,
+                color='k', linewidth=2)
+
+    fig.tight_layout()
+    ax = set_fig_1d_axis_options(axis=ax, var_name=title, bins=bins,
+                                 scaling=None, is_logbins=is_logbins,
+                                 logy=log_y, logx=log_x)
+    ax.set_ylabel(y_label)
+
+    # save figure
+    if to_file:
+        hep.atlas.label(llabel="Internal", loc=0, ax=ax, rlabel=title)
+        out_png_file = config.plot_dir + f"{title}.png"
+        fig.savefig(out_png_file, bbox_inches='tight')
+        print(f"Figure saved to {out_png_file}")
+    return fig
+
+
+def ratio_plot_1d(
+        p: pd.Series,
+        q: pd.Series,
+        x_label: str,
+        y_label: str,
+        title: str,
+        bins: Union[tuple, list],
+        is_logbins: bool = False,
+        weight: pd.Series = None,
+        log_x: bool = False,
+        log_y: bool = False,
+        to_file: bool = True,
+        **kwargs
+) -> plt.figure:
+    """Plot of bin-wise ratio between two variables"""
+
+    ax_transform = bh.axis.transform.log if is_logbins else None
+
+    hp = bh.Histogram(get_axis(bins, ax_transform))
+    hp.fill(p, threads=config.n_threads, weight=weight)
+    hq = bh.Histogram(get_axis(bins, ax_transform))
+    hq.fill(q, threads=config.n_threads, weight=weight)
+
+    hp /= hq
+
+    fig, ax = plt.subplots()
+    hep.histplot(hp.view(), bins=hp.axes[0].edges, ax=ax, label=title, **kwargs)
+    ax = set_fig_1d_axis_options(axis=ax, var_name='', bins=bins,
+                                 scaling=None, is_logbins=is_logbins,
+                                 logy=log_y, logx=log_x)
+    ax.set_ylabel(y_label)
+    ax.set_xlabel(x_label)
+
+    if to_file:
+        hep.atlas.label(llabel="Internal", loc=0, ax=ax, rlabel=title)
+        out_png_file = config.plot_dir + f"{title}.png"
+        fig.savefig(out_png_file, bbox_inches='tight')
+        print(f"Figure saved to {out_png_file}")
+
+    return fig
+
+
 def plot_1d_overlay_and_acceptance_cutgroups(
         df: pd.DataFrame,
         lepton: str,
