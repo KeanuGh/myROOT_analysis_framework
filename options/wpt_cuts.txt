@@ -12,8 +12,6 @@ W $p_{T}$ < 100	MC_WZ_pt	<	100	60 < W $p_{T}$ < 100	False
 # variables to process
 MC_WZmu_el_pt_born
 MC_WZneutrino_pt_born
-MC_WZmu_el_eta_born
-MC_WZneutrino_eta_born
 MC_WZ_dilep_m_born
 
 [OPTIONS]
