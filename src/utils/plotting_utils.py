@@ -359,6 +359,7 @@ def ratio_plot_1d(
         log_x: bool = False,
         log_y: bool = False,
         to_file: bool = True,
+        y_lim: tuple = None,
         **kwargs
 ) -> plt.figure:
     """Plot of bin-wise ratio between two variables"""
@@ -379,6 +380,8 @@ def ratio_plot_1d(
                                  logy=log_y, logx=log_x)
     ax.set_ylabel(y_label)
     ax.set_xlabel(x_label)
+    if y_lim:
+        ax.set_ylim(y_lim)
 
     if to_file:
         hep.atlas.label(llabel="Internal", loc=0, ax=ax, rlabel=title)
@@ -400,8 +403,8 @@ def plot_1d_overlay_and_acceptance_cutgroups(
         scaling: Optional[str] = None,
         log_x: bool = False,
         to_pkl: bool = False,
-        plot_width=10,
-        plot_height=10,
+        plot_width=7,
+        plot_height=7,
         plot_label: Optional[str] = None,
 ) -> None:
     """Plots overlay of cutgroups and acceptance (ratio) plots"""
@@ -505,9 +508,38 @@ def plot_2d_cutgroups(df: pd.DataFrame,
     if to_pkl:
         hists = dict()
 
+    # INCLUSIVE
+    fig, ax = plt.subplots(figsize=(7, 7))
+    weight_cut = df['weight']
+    x_vars = df[x_var]
+    y_vars = df[y_var]
+
+    out_path = config.plot_dir + f"2d_{x_var}-{y_var}_inclusive.png"
+    hist = histplot_2d(
+        var_x=x_vars, var_y=y_vars,
+        xbins=xbins, ybins=ybins,
+        ax=ax, fig=fig,
+        weights=weight_cut,
+        is_z_log=is_logz,
+    )
+    if to_pkl:
+        hists['inclusive'] = hist
+
+    # get axis labels
+    xlabel, _ = get_axis_labels(str(x_var), lepton)
+    ylabel, _ = get_axis_labels(str(y_var), lepton)
+
+    hep.atlas.label(italic=(True, True), ax=ax, llabel='Internal', rlabel=plot_label + ' - inclusive', loc=0)
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+
+    fig.savefig(out_path, bbox_inches='tight')
+    print(f"printed 2d histogram to {out_path}")
+    plt.close(fig)
+
     for cutgroup in cutgroups:
         print(f"    - generating cutgroup '{cutgroup}'")
-        fig, ax = plt.subplots(figsize=(10, 10))
+        fig, ax = plt.subplots(figsize=(7, 7))
 
         cut_df = cut_on_cutgroup(df, cutgroups, cutgroup)
         weight_cut = cut_df['weight']

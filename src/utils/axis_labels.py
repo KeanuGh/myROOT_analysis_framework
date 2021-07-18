@@ -200,15 +200,15 @@ labels_xs = {
         'ylabel': r'$\frac{d\sigma}{dm}$ [fb GeV$^{-1}$]',
     },
     'MC_WZneutrino_pt_born': {
-        'xlabel': r'Born neutrino mass [GeV]',
+        'xlabel': r'Born neutrino $p_{T}$ [GeV]',
         'ylabel': r'$\frac{d\sigma}{dp_{T}}$ [fb GeV$^{-1}$]',
     },
     'MC_WZneutrino_pt_bare': {
-        'xlabel': r'bare neutrino mass [GeV]',
+        'xlabel': r'bare neutrino $p_{T}$ [GeV]',
         'ylabel': r'$\frac{d\sigma}{dp_{T}}$ [fb GeV$^{-1}$]',
     },
     'MC_WZneutrino_pt_dres': {
-        'xlabel': r'dressed neutrino mass [GeV]',
+        'xlabel': r'dressed neutrino $p_{T}$ [GeV]',
         'ylabel': r'$\frac{d\sigma}{dp_{T}}$ [fb GeV$^{-1}$]',
     },
     'MC_WZmu_el_phi_born': {
