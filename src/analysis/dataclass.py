@@ -180,6 +180,8 @@ class Dataset:
     # ===============================
     # =========== PLOTS =============
     # ===============================
+    # TODO: single plot function
+
     def plot_with_cuts(self,
                        scaling: Optional[str] = None,
                        bins: Union[tuple, list] = (30, 1, 500),
