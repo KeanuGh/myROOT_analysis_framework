@@ -308,40 +308,69 @@ def histplot_2d(var_x: pd.Series, var_y: pd.Series,
 # ===== PLOTTING FUNCTIONS ======
 # ===============================
 def plot_1d_hist(
-        x: pd.Series,
-        x_label: str,
-        y_label: str,
-        title: str,
+        x: Union[pd.Series, List[pd.Series]],
         bins: Union[tuple, list],
+        title: str = None,
+        filename: str = None,
+        x_label: str = None,
+        y_label: str = None,
         yerr: Union[str, Iterable] = None,
         weights: pd.Series = None,
         is_logbins: bool = False,
         log_x: bool = False,
         log_y: bool = False,
-        to_file: bool = False
+        to_file: bool = False,
+        legend_label: Union[str, List[str]] = None,
+        legend: bool = False,
         # to_pkl: bool = False,
-        ) -> plt.figure:
+) -> plt.figure:
     """Simple plotting function"""
     fig, ax = plt.subplots()
 
-    histplot_1d(var_x=x, weights=weights,
-                bins=bins, fig_axis=ax,
-                yerr=yerr,
-                scaling=None,
-                label=title,
-                is_logbins=is_logbins,
-                color='k', linewidth=2)
+    if isinstance(x, list):
+        if legend and not legend_label:
+            raise ValueError("Legend labels required for making legend with multiple variables.")
 
-    fig.tight_layout()
-    ax = set_fig_1d_axis_options(axis=ax, var_name=title, bins=bins,
+        for i, s in enumerate(x):
+            label = legend_label[i] if legend else None
+
+            histplot_1d(var_x=s, weights=weights,
+                        bins=bins, fig_axis=ax,
+                        yerr=yerr,
+                        scaling=None,
+                        label=label,
+                        is_logbins=is_logbins,
+                        linewidth=2)
+    elif isinstance(x, pd.Series):
+        histplot_1d(var_x=x, weights=weights,
+                    bins=bins, fig_axis=ax,
+                    yerr=yerr,
+                    scaling=None,
+                    label=legend_label,
+                    is_logbins=is_logbins,
+                    color='k', linewidth=2)
+    else:
+        raise ValueError("Plotting value should be a Series or a list of Series")
+
+    if isinstance(legend_label, list):
+        var_name = x[0].name
+    else:
+        var_name = x.name
+    ax = set_fig_1d_axis_options(axis=ax, var_name=var_name, bins=bins,
                                  scaling=None, is_logbins=is_logbins,
                                  logy=log_y, logx=log_x)
-    ax.set_ylabel(y_label)
+    if y_label: ax.set_ylabel(y_label)
+    if x_label: ax.set_xlabel(x_label)
+    fig.tight_layout()
+    if legend:
+        plt.legend()
 
     # save figure
     if to_file:
+        if not title and not filename:
+            raise ValueError("Must provide either a title or a filename")
         hep.atlas.label(llabel="Internal", loc=0, ax=ax, rlabel=title)
-        out_png_file = config.plot_dir + f"{title}.png"
+        out_png_file = config.plot_dir + f"{filename if filename else title}.png"
         fig.savefig(out_png_file, bbox_inches='tight')
         print(f"Figure saved to {out_png_file}")
     return fig
