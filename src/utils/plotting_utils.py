@@ -487,6 +487,7 @@ def plot_1d_overlay_and_acceptance_cutgroups(
     # AXIS FORMATTING
     # ==================
     fig.tight_layout()
+    fig.subplots_adjust(hspace=0, wspace=0)
 
     # figure plot
     fig_ax = set_fig_1d_axis_options(axis=fig_ax, var_name=var_to_plot, bins=bins,
