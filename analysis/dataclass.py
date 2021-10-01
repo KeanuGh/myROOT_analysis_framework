@@ -40,6 +40,9 @@ class Dataset:
     def __post_init__(self):
         """Dataset generation pipeline"""
         print(f"\n======== INITIALISING DATASET '{self.name}' =========")
+        if not file_utils.file_exists(self.datapath):
+            raise FileExistsError(f"File {self.datapath} not found.")
+
         if not self.pkl_path:
             # initialise pickle filepath with given name
             self.pkl_path = config.pkl_df_filepath + self.name + '_df.pkl'

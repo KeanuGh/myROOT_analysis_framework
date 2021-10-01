@@ -31,7 +31,7 @@ special_binning = {
 
 # FILEPATHS
 # ====================
-out_dir = '../outputs/'  # where outputs go
+out_dir = 'outputs/'  # where outputs go
 plot_dir = out_dir + '{}/plots/'  # where plots go
 pkl_df_filepath = out_dir + '{}/data/'  # pickle file containing extracted data, format to used dataset
 pkl_hist_dir = out_dir + "{}/histograms/"  # pickle file to place histograms into

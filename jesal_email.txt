@@ -1,0 +1,27 @@
+
+This is the flag for selecting tight muons. There should only be tight muons in the samples you are using but it's worth setting up right now. 
+mu_isTight == 1 (for tight muons)
+mu_isTight == 0 (for loose muons)
+From: Jesal Paresh Mandalia <j.p.mandalia@qmul.ac.uk>
+Sent: 11 August 2021 15:08
+To: Keanu Ghorbanian <k.ghorbanian@qmul.ac.uk>
+Subject: Re: Cutflows
+ 
+/data/atlas/HighMassDrellYan/data
+From: Jesal Paresh Mandalia
+Sent: 11 August 2021 15:03
+To: Keanu Ghorbanian <k.ghorbanian@qmul.ac.uk>
+Subject: Cutflows
+ 
+Hi Keanu,
+
+Zoom link for meeting: 
+https://cern.zoom.us/j/7753138148?pwd=NDRiVFA3NUxKU290N09odGpRSDN5dz09
+
+
+I've attached the last set of slides I presented at the group meeting. If you look in the backup you will see the cutflows for mc16a.
+I was using the samples in /data/atlas/HighMassDrellYan/test_mc16a to make these plots. 
+You might see some difference in the diboson samples (I think this is up to date but there was an issue with some tags which I corrected) - if you spot any differences I will remake the cutflows and we can compare. 
+
+Thanks,
+Jesal
