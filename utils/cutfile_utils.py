@@ -22,20 +22,20 @@ def parse_cutline(cutline: str, sep='\t') -> dict:
 
     name = cutline_split[0]
     cut_var = cutline_split[1]
-    moreless = cutline_split[2]
+    relation = cutline_split[2]
     cut_val = float(cutline_split[3])
     group = cutline_split[4]
     is_symmetric = bool(strtobool(cutline_split[5].lower()))  # converts string to boolean
 
     # check values
-    if moreless not in ('>', '<'):
+    if relation not in ('>', '<'):
         raise SyntaxError(f"Unexpected comparison operator: {cutline_split[2]}. Currently accepts '>' or '<'.")
 
     # fill dictionary
     cut_dict = {
         'name': name,
         'cut_var': cut_var,
-        'moreless': moreless,
+        'relation': relation,
         'cut_val': cut_val,
         'group': group,
         'is_symmetric': is_symmetric,
@@ -50,7 +50,7 @@ def parse_cutfile(file: str, sep='\t') -> Tuple[List[dict], List[str], Dict[str,
     | Each line under [CUTS] header contains the 'sep'-separated values (detault: tab):
     | - name: name of cut to be printed and used in plot labels
     | - cut_var: variable in root file to cut on
-    | - moreless: '<' or '>'
+    | - relation: '<' or '>'
     | - cut_val: value of cut on variable
     | - group: each cut with same group number will be applied all at once.
     |          !!!SUFFIXES FOR CUTS IN GROUP MUST BE THE SAME!!!

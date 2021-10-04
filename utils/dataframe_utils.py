@@ -1,3 +1,4 @@
+import operator as op
 import time
 from typing import List, OrderedDict
 from warnings import warn
@@ -163,23 +164,27 @@ def create_cut_columns(df: pd.DataFrame,
     """
     cut_label = config.cut_label  # get cut label from config
 
+    # use functions of compariton operators in dictionary to make life easier
+    # (but maybe a bit harder to read)
+    op_dict = {
+        '<': op.lt,
+        '<=': op.le,
+        '=': op.eq,
+        '!=': op.ne,
+        '>': op.gt,
+        '>=': op.ge,
+    }
+
     for cut in cut_dicts:
+        if cut['relation'] not in op_dict:
+            raise ValueError(f"Unexpected comparison operator: {cut['relation']}.")
+
         if not cut['is_symmetric']:
-            if cut['moreless'] == '>':
-                df[cut['name'] + cut_label] = df[cut['cut_var']] > cut['cut_val']
-            elif cut['moreless'] == '<':
-                df[cut['name'] + cut_label] = df[cut['cut_var']] < cut['cut_val']
-            else:
-                raise ValueError(f"Unexpected comparison operator: {cut['moreless']}. Currently accepts '>' or '<'.")
+            df[cut['name'] + cut_label] = op_dict[cut['relation']](df[cut['cut_var']], cut['cut_val'])
 
         else:
             # take absolute value instead
-            if cut['moreless'] == '>':
-                df[cut['name'] + cut_label] = df[cut['cut_var']].abs() > cut['cut_val']
-            elif cut['moreless'] == '<':
-                df[cut['name'] + cut_label] = df[cut['cut_var']].abs() < cut['cut_val']
-            else:
-                raise ValueError(f"Unexpected comparison operator: {cut['moreless']}. Currently accepts '>' or '<'.")
+            df[cut['name'] + cut_label] = op_dict[cut['relation']](df[cut['cut_var']].abs(), cut['cut_val'])
 
     if printout:
         # print cutflow output
@@ -188,9 +193,9 @@ def create_cut_columns(df: pd.DataFrame,
         print("\n========== CUTS USED ============")
         for cut in cut_dicts:
             if not cut['is_symmetric']:
-                print(f"{cut['name']:<{name_len}}: {cut['cut_var']:>{var_len}} {cut['moreless']} {cut['cut_val']}")
+                print(f"{cut['name']:<{name_len}}: {cut['cut_var']:>{var_len}} {cut['relation']} {cut['cut_val']}")
             else:
-                print(f"{cut['name']:<{name_len}}: {cut['cut_var']:>{var_len}} {cut['moreless']} |{cut['cut_val']}|")
+                print(f"{cut['name']:<{name_len}}: {cut['cut_var']:>{var_len}} {cut['relation']} |{cut['cut_val']}|")
         print('')
 
 

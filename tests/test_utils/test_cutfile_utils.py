@@ -7,7 +7,7 @@ test_cut_list_of_dicts = [
     {
         'name': 'cut_1',
         'cut_var': 'var1',
-        'moreless': '>',
+        'relation': '>',
         'cut_val': 1,
         'suffix': '_var1',
         'group': 'group1',
@@ -16,7 +16,7 @@ test_cut_list_of_dicts = [
     {
         'name': 'cut_2',
         'cut_var': 'var2',
-        'moreless': '>',
+        'relation': '>',
         'cut_val': 1,
         'suffix': '_var2',
         'group': 'group2',
@@ -25,7 +25,7 @@ test_cut_list_of_dicts = [
     {
         'name': 'cut_3',
         'cut_var': 'var3',
-        'moreless': '>',
+        'relation': '>',
         'cut_val': 1,
         'suffix': '_var3',
         'group': 'group2',
@@ -34,7 +34,7 @@ test_cut_list_of_dicts = [
     {
         'name': 'cut_4',
         'cut_var': 'var4',
-        'moreless': '>',
+        'relation': '>',
         'cut_val': 1,
         'suffix': '_var4',
         'group': 'group3',
@@ -43,7 +43,7 @@ test_cut_list_of_dicts = [
     {
         'name': 'cut_5',
         'cut_var': 'var5',
-        'moreless': '>',
+        'relation': '>',
         'cut_val': 1,
         'suffix': '_var5',
         'group': 'group3',

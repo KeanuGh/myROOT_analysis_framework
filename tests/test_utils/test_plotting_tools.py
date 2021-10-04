@@ -29,14 +29,6 @@ class TestGetSumW21D(object):
 
 
 class TestGetAxisLabels(object):
-    # test dictionary
-    test_label_xs = {
-        'testvar': {
-            'xlabel': 'testxlabel',
-            'ylabel': 'testylabel',
-        }
-    }
-
     def test_label_read(self):
         expected_output = ('testxlabel', 'testylabel')
         actual_output = pu.get_axis_labels('testvar')
