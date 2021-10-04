@@ -1,8 +1,9 @@
-import uproot as upr
-import pandas as pd
-import dask.dataframe as dd
 from time import time
-import psutil, os
+
+import os
+import pandas as pd
+import psutil
+import uproot as upr
 
 
 def mem_footprint_MB():

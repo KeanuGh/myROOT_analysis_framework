@@ -1,4 +1,5 @@
 import boost_histogram as bh
+import numpy as np
 import pytest
 
 from utils import plotting_utils as pu
@@ -21,10 +22,10 @@ class TestGetSumW21D(object):
         h.fill(x, weight=2)
         h.fill(x, weight=2)
 
-        expected_output = [4.0, 4.0, 4.0, 4.0, 4.0]
-        actual_output = pu.get_sumw2(h)
+        expected_output = np.array([4.0, 4.0, 4.0, 4.0, 4.0])
+        actual_output = pu.get_root_sumw2(h)
 
-        assert expected_output == actual_output, f"Expected: {expected_output}. Actual: {actual_output}"
+        assert np.array_equal(actual_output, expected_output), f"Expected: {expected_output}. Actual: {actual_output}"
 
 
 class TestGetAxisLabels(object):
@@ -48,6 +49,6 @@ class TestGetAxisLabels(object):
             var_missing = 'test_var_missing'
             actual_output = pu.get_axis_labels(var_missing)
 
-            assert warning[0].message.args[0] == f"Axis labels for {var_missing} not found in in label lookup " \
-                                                 f"dictionary. Axis labels blank."
+            assert warning[0].message.args[0] == f"Axis labels for {var_missing} not found in label lookup " \
+                                                 f"dictionary. They will be left blank."
             assert expected_output == actual_output, f"Expected: {expected_output}. Actual: {actual_output}"

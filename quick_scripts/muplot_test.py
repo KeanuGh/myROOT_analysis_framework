@@ -1,10 +1,11 @@
-import uproot4 as uproot
-import matplotlib.pyplot as plt
-import boost_histogram as bh
-import mplhep as hep
 import time
-import numpy as np
+
+import boost_histogram as bh
+import matplotlib.pyplot as plt
+import mplhep as hep
 import numba
+import numpy as np
+import uproot4 as uproot
 
 
 @numba.jit()

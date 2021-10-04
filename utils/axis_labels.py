@@ -275,4 +275,11 @@ labels_xs = {
         'xlabel': r'dressed W mass [GeV]',
         'ylabel': r'$\frac{d\sigma}{d\m}$ [fb GeV$^{-1}$]',
     },
+
+    # DEFAULT & TESTING
+    # =======================================================
+    'testvar': {
+        'xlabel': 'testxlabel',
+        'ylabel': 'testylabel',
+    },
 }

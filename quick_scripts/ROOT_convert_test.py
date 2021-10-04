@@ -2,12 +2,13 @@
 tests. Put this into actual tests once you get pytest working again lmao
 please test with empty histograms, multidimensional histograms and histograms with log binning
 """
-import mplhep as hep
-import matplotlib.pyplot as plt
-import numpy as np
-import boost_histogram as bh
 import ROOT
+import boost_histogram as bh
+import matplotlib.pyplot as plt
+import mplhep as hep
+import numpy as np
 import root_numpy as rnp
+
 from utils.ROOT_utils import bh_to_TH1, TH1_to_bh
 
 out_dir = '../outputs/test_outputs/'

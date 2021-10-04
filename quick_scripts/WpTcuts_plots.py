@@ -1,8 +1,8 @@
-import uproot4 as uproot
-import matplotlib.pyplot as plt
-from matplotlib.colors import LogNorm
 import boost_histogram as bh
+import matplotlib.pyplot as plt
 import mplhep as hep
+import uproot4 as uproot
+from matplotlib.colors import LogNorm
 
 # styles
 plt.style.use([hep.style.ATLAS])

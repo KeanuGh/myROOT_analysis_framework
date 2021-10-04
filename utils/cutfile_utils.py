@@ -4,7 +4,7 @@ import sys
 import time
 from distutils.util import strtobool
 from shutil import copyfile
-from typing import Tuple, List, OrderedDict, Dict
+from typing import Tuple, List, OrderedDict, Dict, Set
 
 from utils.file_utils import identical_to_backup, get_last_backup, is_dir_empty, get_filename
 from utils.var_helpers import derived_vars
@@ -105,7 +105,7 @@ def parse_cutfile(file: str, sep='\t') -> Tuple[List[dict], List[str], Dict[str,
     return cuts_list_of_dicts, output_vars_list, options_dict
 
 
-def extract_cut_variables(cut_dicts: List[dict], vars_list: List[str]) -> List[str]:
+def extract_cut_variables(cut_dicts: List[dict], vars_list: List[str]) -> Set[str]:
     """
     Get which variables are needed to extract from root file based on cutfile parser output
     uses outputs from parse_cutfile()
@@ -117,7 +117,7 @@ def extract_cut_variables(cut_dicts: List[dict], vars_list: List[str]) -> List[s
     if temp_vars := [derived_vars[temp_var]['var_args'] for temp_var in derived_vars if temp_var in vars_list]:
         vars_list = [var for sl in temp_vars for var in sl] + [var for var in vars_list if var not in derived_vars]
 
-    return list(set(extract_vars + [variable for variable in vars_list if variable not in extract_vars]))
+    return set(extract_vars + [variable for variable in vars_list if variable not in extract_vars])
 
 
 def all_vars(cut_dicts: List[dict], vars_list: List[str]) -> List[str]:
@@ -149,10 +149,9 @@ def gen_cutgroups(cut_list_of_dicts: List[dict]) -> OrderedDict[str, List[str]]:
 def if_make_cutfile_backup(current_cutfile: str, backup_dirpath: str) -> bool:
     """Decides if a backup cutfile should be made"""
     if not is_dir_empty(backup_dirpath):
-        make_backup = not identical_to_backup(current_cutfile, backup_dir=backup_dirpath)
+        return not identical_to_backup(current_cutfile, backup_dir=backup_dirpath)
     else:
-        make_backup = True
-    return make_backup
+        return True
 
 
 def if_build_dataframe(current_cutfile: str,

@@ -9,6 +9,7 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+.vscode/
 
 
 # don't push pycharm stuff

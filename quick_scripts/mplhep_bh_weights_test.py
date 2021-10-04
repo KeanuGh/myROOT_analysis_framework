@@ -1,6 +1,5 @@
-import mplhep as hep
 import boost_histogram as bh
-import matplotlib.pyplot as plt
+import mplhep as hep
 
 # Make 1-d histogram with 5 logarithmic bins from 1e0 to 1e5
 h = bh.Histogram(

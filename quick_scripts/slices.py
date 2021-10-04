@@ -1,10 +1,11 @@
-import uproot4 as uproot
 import time
-import pandas as pd
+
 import boost_histogram as bh
-import mplhep as hep
-from mplhep import label as label_base
 import matplotlib.pyplot as plt
+import mplhep as hep
+import pandas as pd
+import uproot4 as uproot
+from mplhep import label as label_base
 
 plt.style.use([hep.style.ATLAS,
                {'font.sans-serif': ['Tex Gyre Heros']},  # use when helvetica isn't installed

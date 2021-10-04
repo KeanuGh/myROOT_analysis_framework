@@ -19,7 +19,6 @@ from utils.cutfile_utils import (
 )
 
 
-# TODO: change this to a regular class. No need to be dataclass anymore (and write a __repr__)
 @dataclass
 class Dataset:
     """

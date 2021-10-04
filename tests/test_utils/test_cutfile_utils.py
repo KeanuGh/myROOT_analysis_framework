@@ -59,10 +59,7 @@ test_output_list = [
 
 class TestExtractCutVariables(object):
     def test_cutvars_input(self):
-        expected_output = [
-            'var1', 'var2', 'var3', 'var4', 'var5',
-            'out_var1', 'out_var2', 'out_var3',
-        ]
+        expected_output = {'var1', 'var2', 'var3', 'var4', 'var5', 'out_var1', 'out_var2', 'out_var3'}
         actual_output = extract_cut_variables(test_cut_list_of_dicts, test_output_list)
         assert expected_output == actual_output, \
             f"Expected: {expected_output}. Actual: {actual_output}"

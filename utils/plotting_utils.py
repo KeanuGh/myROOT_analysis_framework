@@ -94,7 +94,7 @@ def get_axis_labels(var_name: str, lepton: str = 'lepton') -> Tuple[Optional[str
             pass
 
     else:
-        warn(f"Axis labels for {var_name} not found in in label lookup dictionary."
+        warn(f"Axis labels for {var_name} not found in label lookup dictionary. "
              f"They will be left blank.", UserWarning)
         xlabel = None
         ylabel = None

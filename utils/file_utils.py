@@ -70,7 +70,7 @@ def makedir(dirpath: Union[str, List[str]]) -> None:
 
 def file_exists(filepath: str) -> bool:
     """Does the file exist?"""
-    return os.path.isfile(filepath)
+    return bool(glob(filepath))
 
 
 def clear_pkl(ds_name: Optional[Union[List[str], str]] = None, clear_all: bool = False) -> None:
