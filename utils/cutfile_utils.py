@@ -28,8 +28,8 @@ def parse_cutline(cutline: str, sep='\t') -> dict:
     is_symmetric = bool(strtobool(cutline_split[5].lower()))  # converts string to boolean
 
     # check values
-    if relation not in ('>', '<'):
-        raise SyntaxError(f"Unexpected comparison operator: {cutline_split[2]}. Currently accepts '>' or '<'.")
+    if relation not in ('>', '<', '<=', '>=', '=', '!='):
+        raise SyntaxError(f"Unexpected comparison operator: {cutline_split[2]}")
 
     # fill dictionary
     cut_dict = {
