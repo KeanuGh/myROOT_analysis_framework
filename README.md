@@ -62,7 +62,7 @@ convert_pkl_to_root(conv_all=True)
 Example cutfile:
 ```
 [CUTS]
-# Name	Variable	</>	Cut (in GeV if applicable)	Group Symmetric
+# Name	Variable	comparison	Cut (in GeV if applicable)	Group Symmetric
 # !!REMEMBER DEFAULT ANALYSISTOP OUTPUT IS IN MeV NOT GeV!!
 Muon $|#eta|$	MC_WZmu_el_eta_born	<	2.4	eta cut	true
 Muon $p_{T}$	MC_WZmu_el_pt_born	>	25	pT cut	false
@@ -84,10 +84,10 @@ Cutfile contains lists of tab-separated values.
 For [CUTS] The columns are:
 - Name: name of cut. This will be the label added to plots and cutflow for that cut
 - Variable: variable in root file to cut on
-- Moreless: hopefully self-explanatory. < or > depending on what you want (doesn't handle >= and stuff .. yet)
+- comparison: relational operator =/!=/</<=/>/>=
 - Cut: value to cut variable at (in GeV)
 - Group: Cuts with the same 'group' value will be applied simultaneously
-- Symmetric: whether or not the cut is symmetric. Eg in the example the cut on `MC_WZmu_el_eta_born` will actually be `|MC_WZmu_el_eta_born| < 2.4`
+- Symmetric: whether the cut is symmetric. Eg in the example the cut on `MC_WZmu_el_eta_born` will actually be `|MC_WZmu_el_eta_born| < 2.4`
 
 [OUTPUTS] are a list of the variables that you plan to plot. The variables that are cut on will still be accessible in the dataframe though so you can plot them if you want 
 
