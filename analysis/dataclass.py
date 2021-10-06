@@ -119,36 +119,27 @@ class Dataset:
         # extract and clean data
         if self._rebuild or config.force_rebuild:
             print(f"Building {self.name} dataframe from {self.datapath}...")
-            self.__build_df()
+            self.df = df_utils.build_analysis_dataframe(datapath=self.datapath,
+                                                        TTree_name=self.TTree_name,
+                                                        cut_list_dicts=self._cut_dicts,
+                                                        vars_to_cut=self._vars_to_cut,
+                                                        is_slices=self.is_slices,
+                                                        pkl_path=self.pkl_path)
+
         else:
             print(f"Reading data for {self.name} dataframe from {self.pkl_path}...")
             self.df = pd.read_pickle(self.pkl_path)
 
         # map appropriate weights
-        self.__map_weights()
-
-        # apply cuts to generate cut columns
-        self.__create_cut_columns()
-
-    # ===============================
-    # ========= DATAFRAME ===========
-    # ===============================
-    def __build_df(self) -> None:
-        """Build dataframe based on 'datapath', 'TTree_name' and 'is_slices'. Print pickle file to 'pkl_path'"""
-        self.df = df_utils.build_analysis_dataframe(self, self._cut_dicts, self._vars_to_cut)
-
-    def __create_cut_columns(self) -> None:
-        """Create columns in dataframe that contain boolean values corresponding to cuts."""
-        print(f"Creating cuts for {self.name}...")
-        df_utils.create_cut_columns(self.df, cut_dicts=self._cut_dicts, printout=True)
-
-    def __map_weights(self) -> None:
-        """Create weights column in dataset based on dataset type"""
         print(f"Creating weights for {self.name}...")
         if self.is_slices:
             self.df['weight'] = df_utils.gen_weight_column_slices(self.df)
         else:
             self.df['weight'] = df_utils.gen_weight_column(self.df)
+
+        # apply cuts to generate cut columns
+        print(f"Creating cuts for {self.name}...")
+        df_utils.create_cut_columns(self.df, cut_dicts=self._cut_dicts, printout=True)
 
     # ===============================
     # ========= PRINTOUTS ===========
