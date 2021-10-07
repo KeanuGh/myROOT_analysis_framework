@@ -15,9 +15,26 @@ def tmp_root_datafile(tmpdir):
                               'weight_mc': np.append(np.ones(990), -1*np.ones(10)),
                               'mcChannelNumber': np.append(np.ones(500), np.full(500, 2)),
                               }
-        test_file['sumWeights'] = {'totalEventsWeighted': np.arange(4),
-                                   'dsid': np.array([1, 1, 2, 2])}
+        test_file['sumWeights'] = {'totalEventsWeighted': np.array([980]),
+                                   'dsid': np.array([1])}
     yield str(datapath)
+
+
+@pytest.fixture
+def tmp_root_datafiles(tmpdir):
+    """Generate 3 test root file to read in"""
+    for i in [1, 2, 3]:
+        datapath = tmpdir.join(f'test_data{i}.root')
+        with uproot.recreate(datapath) as test_file:
+            test_file['tree1'] = {'testvar1': np.arange(1000 * i),
+                                  'testvar2': np.arange(1000 * i) * 1.1 * i,
+                                  'testvar3': np.arange(1000 * i) * i,
+                                  'weight_mc': np.append(np.ones(990 * i), -1 * np.ones(10 * i)),
+                                  'mcChannelNumber': np.full(1000 * i, i),
+                                  }
+            test_file['sumWeights'] = {'totalEventsWeighted': np.array([980 * i]),
+                                       'dsid': [i]}
+    yield str(tmpdir.join(f'test_data*.root'))
 
 
 class TestBuildAnalysisDataframe(object):
@@ -64,19 +81,55 @@ class TestBuildAnalysisDataframe(object):
                                          )
             assert e.match(f"Missing TBranch(es) {missing_branches} in TTree 'tree1' of file '{tmp_root_datafile}'.'")
 
-    # TODO: Run this on MULTIPLE root files instead of just one
     @pytest.mark.filterwarnings("ignore::UserWarning")
-    def test_mass_slices(self, tmp_root_datafile):
-        """Test input as 'mass slices'"""
-        expected_output = pd.DataFrame({'testvar1': np.arange(1000),
-                                        'testvar3': np.arange(1000) * 3,
-                                        'weight_mc': np.append(np.ones(990), -1*np.ones(10)),
-                                        # dataset IDs (half 1, half 2)
-                                        'DSID': np.append(np.ones(500), np.full(500, 2)),
-                                        # sum of weights for events with same dataset IDs
-                                        'totalEventsWeighted': np.append(np.full(500, 500), np.full(500, 1800)),
+    def test_multifile(self, tmp_root_datafiles):
+        expected_output = pd.DataFrame({'testvar1': np.concatenate((np.arange(3000),
+                                                                   np.arange(2000),
+                                                                   np.arange(1000))),
+                                        'testvar3': np.concatenate((np.arange(3000) * 3,
+                                                                   np.arange(2000) * 2,
+                                                                   np.arange(1000))),
+                                        'weight_mc': np.concatenate((np.append(np.ones(2970), -1 * np.ones(30)),
+                                                                    np.append(np.ones(1980), -1 * np.ones(20)),
+                                                                    np.append(np.ones(990), -1 * np.ones(10)),)),
                                         })
-        output = build_analysis_dataframe(tmp_root_datafile,
+        output = build_analysis_dataframe(tmp_root_datafiles,
+                                          TTree_name='tree1',
+                                          cut_list_dicts=self.test_cut_dicts,
+                                          vars_to_cut=self.test_vars_to_cut
+                                          )
+        # test column names are the same
+        assert set(output.columns) == set(expected_output.columns)
+        # test contents are the same
+        for col in output.columns:
+            assert np.array_equal(output[col], expected_output[col]), \
+                        f"Dataframe builder failed in column {col};\n" \
+                        f"Expected: \n{expected_output[col]},\n" \
+                        f"Got: \n{output[col]}"
+
+    @pytest.mark.filterwarnings("ignore::UserWarning")
+    def test_mass_slices(self, tmp_root_datafiles):
+        """Test input as 'mass slices'"""
+        expected_output = pd.DataFrame({'testvar1': np.concatenate((np.arange(3000),
+                                                                   np.arange(2000),
+                                                                   np.arange(1000))),
+                                        'testvar3': np.concatenate((np.arange(3000) * 3,
+                                                                   np.arange(2000) * 2,
+                                                                   np.arange(1000))),
+                                        'weight_mc': np.concatenate((np.append(np.ones(2970), -1 * np.ones(30)),
+                                                                    np.append(np.ones(1980), -1 * np.ones(20)),
+                                                                    np.append(np.ones(990), -1 * np.ones(10)),)),
+                                        # dataset IDs
+                                        'DSID': np.concatenate((np.full(3000, 3),
+                                                                np.full(2000, 2),
+                                                                np.full(1000, 1)
+                                                                )),
+                                        # sum of weights for events with same dataset IDs
+                                        'totalEventsWeighted': np.concatenate((np.full(3000, 2940),
+                                                                              np.full(2000, 1960),
+                                                                              np.full(1000, 980)))
+                                        })
+        output = build_analysis_dataframe(tmp_root_datafiles,
                                           TTree_name='tree1',
                                           cut_list_dicts=self.test_cut_dicts,
                                           vars_to_cut=self.test_vars_to_cut,
@@ -92,7 +145,6 @@ class TestBuildAnalysisDataframe(object):
                 f"Got: \n{output[col]}"
 
     # TODO: test on derived variables
-    # TODO: test on multiple files
     # TODO: test on large files(?)
 
 

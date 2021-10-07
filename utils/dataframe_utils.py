@@ -64,18 +64,13 @@ def build_analysis_dataframe(datapath: str,
     else:
         vars_to_extract.add('mcChannelNumber')  # to keep track of dataset IDs (DSIDs)
         df = uproot.concatenate(datapath + ':' + TTree_name, vars_to_extract, library='pd', num_workers=config.n_threads)
-        print(df)
         sumw = uproot.concatenate(datapath + ':sumWeights', ['totalEventsWeighted', 'dsid'], library='pd', num_workers=config.n_threads)
-        print(sumw)
         sumw = sumw.groupby('dsid').sum()
-        print(sumw)
         df = pd.merge(df, sumw, left_on='mcChannelNumber', right_on='dsid', sort=False)
         # rename mcChannelNumber to DSID
         df.rename(columns={'mcChannelNumber': 'DSID'}, inplace=True)
         vars_to_extract.remove('mcChannelNumber')
         vars_to_extract.add('DSID')
-        print(df)
-        print(df['DSID'].unique())
     t2 = time.time()
     print(f"time to build dataframe: {t2 - t1:.2g}s")
 
@@ -127,6 +122,7 @@ def gen_weight_column_slices(df: pd.DataFrame,
                              global_scale: float = 1.,
                              ) -> pd.Series:
     """Returns series of weights for mass slices based off weight_mc column and total events weighed"""
+    # TODO: For efficiency, perform batchwise across DSID
     if mc_weight_col not in df.columns:
         raise KeyError(f"'{mc_weight_col}' column not in dataframe.")
     if tot_weighted_events_col not in df.columns:

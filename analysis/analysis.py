@@ -1,8 +1,8 @@
 from typing import Optional, Union, Dict
 
 # project imports
-import analysis.config as config
-from analysis.dataclass import Dataset
+import config
+from dataclass import Dataset
 from utils import file_utils, decorators
 
 
