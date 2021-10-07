@@ -56,19 +56,27 @@ def build_analysis_dataframe(datapath: str,
              f"Some unexpected behaviour may occur.")
 
     t1 = time.time()
-    # If importing inclusive sample
-    if not is_slices:
-        # extract pandas dataframe from root file with necessary variables
+    # extract pandas dataframe from root file with necessary variables
+    if not is_slices:  # If importing inclusive sample
         df = uproot.concatenate(datapath + ':' + TTree_name, vars_to_extract, library='pd', num_workers=config.n_threads)
-    # if importing mass slices
-    else:
+
+    else:  # if importing mass slices
         vars_to_extract.add('mcChannelNumber')  # to keep track of dataset IDs (DSIDs)
         df = uproot.concatenate(datapath + ':' + TTree_name, vars_to_extract, library='pd', num_workers=config.n_threads)
         sumw = uproot.concatenate(datapath + ':sumWeights', ['totalEventsWeighted', 'dsid'], library='pd', num_workers=config.n_threads)
         sumw = sumw.groupby('dsid').sum()
         df = pd.merge(df, sumw, left_on='mcChannelNumber', right_on='dsid', sort=False)
-        # rename mcChannelNumber to DSID
-        df.rename(columns={'mcChannelNumber': 'DSID'}, inplace=True)
+        df.rename(columns={'mcChannelNumber': 'DSID'}, inplace=True)  # rename mcChannelNumber to DSID (why are they different)
+
+        # sanity check to make sure totalEventsWeighted really is what it says it is
+        dsids = df['DSID'].unique()
+        df_id_sub = df[['weight_mc', 'DSID']].groupby('DSID', as_index=False).sum()
+        for dsid in dsids:
+            assert len(df[df['DSID'] == dsid]['totalEventsWeighted'].unique()) == 1, \
+                "totalEventsWeighted should only have one value per DSID."
+            assert df_id_sub[df_id_sub['DSID'] == dsid]['weight_mc'].values == df[df['DSID'] == dsid]['totalEventsWeighted'].values[0], \
+                "Value of 'totalEventsWeighted' is not the same as the total summed values of 'weight_mc' per DSID."
+
         vars_to_extract.remove('mcChannelNumber')
         vars_to_extract.add('DSID')
     t2 = time.time()
