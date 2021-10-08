@@ -132,4 +132,3 @@ def ROOT_file(filename: str, TFile_arg='RECREATE'):
         yield file
     finally:
         file.Close()
-

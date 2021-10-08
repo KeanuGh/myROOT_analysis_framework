@@ -40,20 +40,20 @@ def build_analysis_dataframe(datapath: str,
     print(f"Checking TTree and TBranch values in file(s) '{datapath}'...")
     for filepath in glob(datapath):
         with uproot.open(filepath) as file:
-            tree_list = [tree.split(';')[0] for tree in file.keys()]  # TTrees are labelled <name>;<cycle number>
+            tree_list = [tree.split(';')[0] for tree in file.keys()]  # TTrees are labelled '<name>;<cycle number>'
             if TTree_name not in tree_list:
                 raise ValueError(f"TTree '{TTree_name}' not found in file {filepath}.")
             else:
                 if missing_branches := [branch for branch in vars_to_extract
                                         if branch not in file[TTree_name].keys()]:
                     raise ValueError(f"Missing TBranch(es) {missing_branches} in TTree '{TTree_name}' of file '{datapath}'.")
-    print(f"All required variables found.")
+    print("All required variables found.")
 
     # check if vars are contained in label dictionary
     if unexpected_vars := [unexpected_var for unexpected_var in vars_to_extract
                            if unexpected_var not in labels_xs]:
         warn(f"Warning: variable(s) {unexpected_vars} not contained in labels dictionary."
-             f"Some unexpected behaviour may occur.")
+             "Some unexpected behaviour may occur.")
 
     t1 = time.time()
     # extract pandas dataframe from root file with necessary variables
@@ -63,7 +63,7 @@ def build_analysis_dataframe(datapath: str,
     else:  # if importing mass slices
         vars_to_extract.add('mcChannelNumber')  # to keep track of dataset IDs (DSIDs)
         df = uproot.concatenate(datapath + ':' + TTree_name, vars_to_extract, library='pd', num_workers=config.n_threads)
-        sumw = uproot.concatenate(datapath + ':sumWeights', ['totalEventsWeighted', 'dsid'], library='pd', num_workers=config.n_threads)
+        sumw = uproot.concatenate(datapath + ':s2umWeights', ['totalEventsWeighted', 'dsid'], library='pd', num_workers=config.n_threads)
         sumw = sumw.groupby('dsid').sum()
         df = pd.merge(df, sumw, left_on='mcChannelNumber', right_on='dsid', sort=False)
         df.rename(columns={'mcChannelNumber': 'DSID'}, inplace=True)  # rename mcChannelNumber to DSID (why are they different)
