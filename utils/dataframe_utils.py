@@ -63,7 +63,7 @@ def build_analysis_dataframe(datapath: str,
     else:  # if importing mass slices
         vars_to_extract.add('mcChannelNumber')  # to keep track of dataset IDs (DSIDs)
         df = uproot.concatenate(datapath + ':' + TTree_name, vars_to_extract, library='pd', num_workers=config.n_threads)
-        sumw = uproot.concatenate(datapath + ':s2umWeights', ['totalEventsWeighted', 'dsid'], library='pd', num_workers=config.n_threads)
+        sumw = uproot.concatenate(datapath + ':sumWeights', ['totalEventsWeighted', 'dsid'], library='pd', num_workers=config.n_threads)
         sumw = sumw.groupby('dsid').sum()
         df = pd.merge(df, sumw, left_on='mcChannelNumber', right_on='dsid', sort=False)
         df.rename(columns={'mcChannelNumber': 'DSID'}, inplace=True)  # rename mcChannelNumber to DSID (why are they different)
