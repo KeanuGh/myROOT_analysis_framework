@@ -1,27 +1,27 @@
-from analysis.analysis import Analysis
+from src.analysis import Analysis
 from utils import file_utils
 
 if __name__ == '__main__':
 
     # dataset inputs
     datasets = {
-        'truth': {
-            'datapath': 'data/*.root',
-            'cutfile': 'options/cutfile_EXAMPLE.txt',
-            'TTree_name': 'truth',
-            'is_slices': False,
-            'lepton': 'muon'
-        },
         # 'truth': {
-        #     'datapath': '../data/*.root',
-        #     'cutfile': '../options/wpt_cuts.txt',
+        #     'datapath': 'data/*.root',
+        #     'cutfile': 'options/cutfile_EXAMPLE.txt',
         #     'TTree_name': 'truth',
         #     'is_slices': False,
         #     'lepton': 'muon'
-        # }
+        # },
+        'truth': {
+            'datapath': 'data/mc16a_wmintaunu_SLICES/*.root',
+            'cutfile': 'options/cutfile_truth.txt',
+            'TTree_name': 'truth',
+            'is_slices': True,
+            'lepton': 'tau'
+        }
     }
 
-    my_analysis = Analysis(datasets, analysis_label='wminmunu_test_eg', force_rebuild=False)
+    my_analysis = Analysis(datasets, analysis_label='test_slices', force_rebuild=False)
 
     # pipeline
     # my_analysis.plot_mass_slices(ds_name='truth_slices', xvar='MC_WZ_dilep_m_born', logx=True, to_pkl=True)

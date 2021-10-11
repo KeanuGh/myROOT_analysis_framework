@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 from matplotlib.colors import LogNorm
 
-import analysis.config as config
+import src.config as config
 from utils.axis_labels import labels_xs
 from utils.dataframe_utils import get_luminosity, cut_on_cutgroup
 

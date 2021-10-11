@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Optional, Union, List
 from warnings import warn
 
-import analysis.config as config
+import src.config as config
 from utils import ROOT_utils
 
 
@@ -129,4 +129,4 @@ def convert_pkl_to_root(pkl_name: Optional[str] = None, conv_all: bool = False) 
                 continue
             ROOT_utils.convert_pkl_to_root(file)
     else:
-        raise ValueError("Choose pkl histogram file(s) to convert or choose to convert all for this analysis")
+        raise ValueError("Choose pkl histogram file(s) to convert or choose to convert all for this src")

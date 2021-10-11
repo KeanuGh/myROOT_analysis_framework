@@ -5,11 +5,11 @@ from warnings import warn
 
 import pandas as pd
 
-import analysis.config as config
+import src.config as config
 import utils.dataframe_utils as df_utils
 import utils.file_utils as file_utils
 import utils.plotting_utils as plt_utils
-from analysis.cutflow import Cutflow
+from src.cutflow import Cutflow
 from utils.cutfile_utils import (
     parse_cutfile,
     gen_cutgroups,
@@ -22,7 +22,7 @@ from utils.cutfile_utils import (
 @dataclass
 class Dataset:
     """
-    Dataset class. Contains/will contain all the variables needed for a singular analysis dataset.
+    Dataset class. Contains/will contain all the variables needed for a singular src dataset.
     Perhaps put all methods that act only on one dataset into here
     TODO: Save histograms as dataset attributes? Ability to perform operations across hisograms? Custom histogram class?
     """
@@ -85,7 +85,7 @@ class Dataset:
         return df_utils.get_luminosity(self.df, xs=self.cross_section)
 
     def __gen_cutflow(self) -> None:
-        """Create the cutflow class for this analysis"""
+        """Create the cutflow class for this src"""
         self.cutflow = Cutflow(self.df, self._cut_dicts,
                                self._cutgroups if self.grouped_cutflow else None,
                                self._cutflow_options['sequential'])

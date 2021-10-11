@@ -17,4 +17,4 @@ MC_WZmu_el_pt_born
 [OPTIONS]
 # case-insensitive
 sequential	true
-grouped cutflow: false
+grouped cutflow	false

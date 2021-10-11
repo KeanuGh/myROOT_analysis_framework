@@ -143,6 +143,7 @@ class TestBuildAnalysisDataframe(object):
                 f"Dataframe builder failed in column {col};\n" \
                 f"Expected: \n{expected_output[col]},\n" \
                 f"Got: \n{output[col]}"
+        # TODO: check lumi
 
     # TODO: test on derived variables
     # TODO: test on large files(?)

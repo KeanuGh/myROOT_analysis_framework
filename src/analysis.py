@@ -1,8 +1,8 @@
 from typing import Optional, Union, Dict
 
 # project imports
-import config
-from dataclass import Dataset
+import src.config as config
+from src.dataset import Dataset
 from utils import file_utils, decorators
 
 
@@ -15,9 +15,9 @@ class Analysis:
                  etabins: Optional[Union[tuple, list]] = None,
                  ):
         """
-        Analysis class acts as a container for the analysis.dataclass.Dataset class. Contains methods to apply either to
+        Analysis class acts as a container for the src.dataclass.Dataset class. Contains methods to apply either to
         single datasets or across multiple datasets.
-        Access datasets in class with analysis.dataset_name or analysis['dataset_name']. Can set by key but not by attribute
+        Access datasets in class with src.dataset_name or src['dataset_name']. Can set by key but not by attribute
         When calling a method that applies to only one dataset, naming the dataset in argument ds_name is optional.
         TODO: logging, apply method to ALL datasets if ds_name not provided?
 

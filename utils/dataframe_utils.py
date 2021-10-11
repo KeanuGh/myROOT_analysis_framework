@@ -7,7 +7,7 @@ from warnings import warn
 import pandas as pd
 import uproot
 
-import analysis.config as config
+import src.config as config
 from utils.axis_labels import labels_xs
 from utils.cutfile_utils import extract_cut_variables, all_vars
 from utils.var_helpers import derived_vars
@@ -46,7 +46,8 @@ def build_analysis_dataframe(datapath: str,
             else:
                 if missing_branches := [branch for branch in vars_to_extract
                                         if branch not in file[TTree_name].keys()]:
-                    raise ValueError(f"Missing TBranch(es) {missing_branches} in TTree '{TTree_name}' of file '{datapath}'.")
+                    raise ValueError(
+                        f"Missing TBranch(es) {missing_branches} in TTree '{TTree_name}' of file '{datapath}'.")
     print("All required variables found.")
 
     # check if vars are contained in label dictionary
@@ -57,25 +58,39 @@ def build_analysis_dataframe(datapath: str,
 
     t1 = time.time()
     # extract pandas dataframe from root file with necessary variables
+    print(f"Extracting data from {datapath}...")
     if not is_slices:  # If importing inclusive sample
-        df = uproot.concatenate(datapath + ':' + TTree_name, vars_to_extract, library='pd', num_workers=config.n_threads)
+        df = uproot.concatenate(datapath + ':' + TTree_name, vars_to_extract, library='pd',
+                                num_workers=config.n_threads)
 
     else:  # if importing mass slices
+        print("Extracting in slices...")
         vars_to_extract.add('mcChannelNumber')  # to keep track of dataset IDs (DSIDs)
-        df = uproot.concatenate(datapath + ':' + TTree_name, vars_to_extract, library='pd', num_workers=config.n_threads)
-        sumw = uproot.concatenate(datapath + ':sumWeights', ['totalEventsWeighted', 'dsid'], library='pd', num_workers=config.n_threads)
+        df = uproot.concatenate(datapath + ':' + TTree_name, vars_to_extract, library='pd',
+                                num_workers=config.n_threads)
+        sumw = uproot.concatenate(datapath + ':sumWeights', ['totalEventsWeighted', 'dsid'], library='pd',
+                                  num_workers=config.n_threads)
         sumw = sumw.groupby('dsid').sum()
         df = pd.merge(df, sumw, left_on='mcChannelNumber', right_on='dsid', sort=False)
-        df.rename(columns={'mcChannelNumber': 'DSID'}, inplace=True)  # rename mcChannelNumber to DSID (why are they different)
+        df.rename(columns={'mcChannelNumber': 'DSID'},
+                  inplace=True)  # rename mcChannelNumber to DSID (why are they different)
 
         # sanity check to make sure totalEventsWeighted really is what it says it is
+        # TODO: wrap this in a debug mode
         dsids = df['DSID'].unique()
+        print(f"Found {len(dsids)} unique dsid(s).")
         df_id_sub = df[['weight_mc', 'DSID']].groupby('DSID', as_index=False).sum()
         for dsid in dsids:
-            assert len(df[df['DSID'] == dsid]['totalEventsWeighted'].unique()) == 1, \
-                "totalEventsWeighted should only have one value per DSID."
-            assert df_id_sub[df_id_sub['DSID'] == dsid]['weight_mc'].values == df[df['DSID'] == dsid]['totalEventsWeighted'].values[0], \
-                "Value of 'totalEventsWeighted' is not the same as the total summed values of 'weight_mc' per DSID."
+            unique_totalEventsWeighted = df[df['DSID'] == dsid]['totalEventsWeighted'].unique()
+            if len(unique_totalEventsWeighted) != 1:
+                warn("totalEventsWeighted should only have one value per DSID. "
+                     f"Got {len(unique_totalEventsWeighted)}, of values {unique_totalEventsWeighted} for DSID {dsid}")
+
+            dsid_weight = df_id_sub[df_id_sub['DSID'] == dsid]['weight_mc'].values[0]
+            totalEventsWeighted = df[df['DSID'] == dsid]['totalEventsWeighted'].values[0]
+            if dsid_weight != totalEventsWeighted:
+                warn(f"Value of 'totalEventsWeighted' ({totalEventsWeighted}) is not the same as the total summed values of "
+                     f"'weight_mc' ({dsid_weight}) for DISD {dsid}.")
 
         vars_to_extract.remove('mcChannelNumber')
         vars_to_extract.add('DSID')
