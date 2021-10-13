@@ -1,7 +1,7 @@
 # Welcome to my framework!
 So far it is able to:
 - Read in many root files and concatenate.
-- Read in a cutfile and apply cuts in groups or independently (todo: writeup how to use cutfile). In the file youcan specify which cuts to apply and how, and specify which variables are going to be plotted.
+- Read in a cutfile and apply cuts in groups or independently (todo: writeup how to use cutfile). The file allows you to specify which cuts to apply and how, and specify which variables are going to be plotted.
 - Supports holding multiple datasets.
 - Generate a cutflow for the cuts applied, and print out cutflow histograms, a LaTeX table with cut summaries and a terminal printout of table.
 - Plot root data in 1D Histograms with and without cuts applied, and plot overlaid cuts with corresponding acceptance ratios.
@@ -13,14 +13,13 @@ So far it is able to:
 
 ### In the works:
 - Logging: as soon as I get around to learning how to use the python logging library.
-- Unit tests: Need to write many more tests. 
 - Batch jobs: Need to look into using Dask for parallel processing to work with large ROOT files.
 
 ## Quickstart
-Initialise analysis with a very silly import statement like:
+Initialise analysis with :
 
 ```
-from analysis.analysis import Analysis
+from src.analysis import Analysis
 my_analysis = Analysis(data, analysis_label='truth_inclusive_and_slices')
 ```
 
@@ -78,6 +77,7 @@ MC_WZ_pt
 [OPTIONS]
 # case-insensitive
 sequential	true
+grouped cutdlow false
 ```
 Cutfile contains lists of tab-separated values. 
 
@@ -89,13 +89,16 @@ For [CUTS] The columns are:
 - Group: Cuts with the same 'group' value will be applied simultaneously
 - Symmetric: whether the cut is symmetric. Eg in the example the cut on `MC_WZmu_el_eta_born` will actually be `|MC_WZmu_el_eta_born| < 2.4`
 
-[OUTPUTS] are a list of the variables that you plan to plot. The variables that are cut on will still be accessible in the dataframe though so you can plot them if you want 
+[OUTPUTS] 
+List of the variables that you plan to plot. The variables that are cut on will still be accessible in the dataframe though so you can plot them if you want 
 
-[OPTIONS] so far just contains 'sequential'. This set whether the cuts should be applied one after the other or separately. Remember if sequential is true that the order in which you write in [CUTS] matters
+[OPTIONS] 
+'sequential': This set whether the cuts should be applied one after the other or separately. Remember if sequential is true that the order in which you write in [CUTS] matters
+'grouped cutflow': this sets whether the different cut groupings should be set applied as a single cut in the cutflow
 
 ## Extra variables
 In `utils.var_helpers` I've definied a few variables aren't in AnalysisTop outputs, eg transverse mass or boson rapidity. These can be used as variables in the cutfile and the framework will calculate them for you: extracting the variables it needs to calculate then deleting the unnecessary columns afterwards. 
 
-So far the variables I've defined are:
+So far the defined variables are:
 - `mu_mt` & `e_mt` (actually boson transverse mass for different W/Z decays)
 - `w_y`, `z_y`, `v_y` (W/Z rapidity. They all do the same thing)
