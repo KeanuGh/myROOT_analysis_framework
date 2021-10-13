@@ -80,7 +80,7 @@ def clear_pkl(ds_name: Optional[Union[List[str], str]] = None, clear_all: bool =
     :param clear_all: whether to clear all files in dataset pickle dir
     :param ds_name: OPTIONAL. String or list of string name(s) of dataset(s) to remove
     """
-    path = config.pkl_df_filepath
+    path = config.paths['pkl_df_filepath']
 
     if not ds_name and not clear_all:
         raise SyntaxError("Must pass dataset name or clear_all")
@@ -115,7 +115,7 @@ def convert_pkl_to_root(pkl_name: Optional[str] = None, conv_all: bool = False) 
     if pkl_name:
         if not file_exists(pkl_name):
             raise FileNotFoundError(f"Could not find pickle file {pkl_name}")
-        if get_file_parent(pkl_name) in (config.pkl_hist_dir, '.') \
+        if get_file_parent(pkl_name) in (config.paths['pkl_hist_dir'], '.') \
                 and conv_all:
             warn("Given file is contained in pickle file directory. Will convert all.")
         else:
@@ -124,7 +124,7 @@ def convert_pkl_to_root(pkl_name: Optional[str] = None, conv_all: bool = False) 
                 ROOT_utils.convert_pkl_to_root(file)
     if conv_all:
         # conv all
-        for file in glob(config.pkl_hist_dir + '*'):
+        for file in glob(config.paths['pkl_hist_dir'] + '*'):
             if not file.endswith('.pkl'):
                 continue
             ROOT_utils.convert_pkl_to_root(file)

@@ -32,15 +32,9 @@ class Analysis:
         # SET OUTPUT DIRECTORIES
         # ===========================
         # set and create output directories in outputs/<analysis_label>/
-        for path_var in (
-            'pkl_df_filepath',
-            'plot_dir',
-            'latex_table_dir',
-            'pkl_hist_dir',
-            'backup_cutfiles_dir'
-        ):
-            config.__dict__[path_var] = config.__dict__[path_var].format(analysis_label)
-            file_utils.makedir(config.__dict__[path_var])
+        for path_var in config.paths:
+            config.paths[path_var] = config.paths[path_var].format(analysis_label)
+            file_utils.makedir(config.paths[path_var])
 
         # SET OTHER GLOBAL OPTIONS
         # ============================

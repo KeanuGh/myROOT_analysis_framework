@@ -370,7 +370,7 @@ def plot_1d_hist(
         if not title and not filename:
             raise ValueError("Must provide either a title or a filename")
         hep.atlas.label(llabel="Internal", loc=0, ax=ax, rlabel=title)
-        out_png_file = config.plot_dir + f"{filename if filename else title}.png"
+        out_png_file = config.paths['plot_dir'] + f"{filename if filename else title}.png"
         fig.savefig(out_png_file, bbox_inches='tight')
         print(f"Figure saved to {out_png_file}")
     return fig
@@ -414,7 +414,7 @@ def ratio_plot_1d(
 
     if to_file:
         hep.atlas.label(llabel="Internal", loc=0, ax=ax, rlabel=title)
-        out_png_file = config.plot_dir + f"{title}.png"
+        out_png_file = config.paths['plot_dir'] + f"{title}.png"
         fig.savefig(out_png_file, bbox_inches='tight')
         print(f"Figure saved to {out_png_file}")
 
@@ -502,11 +502,11 @@ def plot_1d_overlay_and_acceptance_cutgroups(
 
     # save figure
     if to_pkl:
-        with open(config.pkl_hist_dir + plot_label + '_' + var_to_plot + '_1d_cutgroups_ratios.pkl', 'wb') as f:
+        with open(config.paths['pkl_hist_dir'] + plot_label + '_' + var_to_plot + '_1d_cutgroups_ratios.pkl', 'wb') as f:
             pkl.dump(hists, f)
             print(f"Saved pickle file to {f.name}")
     hep.atlas.label(llabel="Internal", loc=0, ax=fig_ax, rlabel=plot_label)
-    out_png_file = config.plot_dir + f"{var_to_plot}_{str(scaling)}.png"
+    out_png_file = config.paths['plot_dir'] + f"{var_to_plot}_{str(scaling)}.png"
     fig.savefig(out_png_file, bbox_inches='tight')
     print(f"Figure saved to {out_png_file}")
     fig.clf()  # clear for next plot
@@ -544,7 +544,7 @@ def plot_2d_cutgroups(df: pd.DataFrame,
     x_vars = df[x_var]
     y_vars = df[y_var]
 
-    out_path = config.plot_dir + f"2d_{x_var}-{y_var}_inclusive.png"
+    out_path = config.paths['plot_dir'] + f"2d_{x_var}-{y_var}_inclusive.png"
     hist = histplot_2d(
         var_x=x_vars, var_y=y_vars,
         xbins=xbins, ybins=ybins,
@@ -576,7 +576,7 @@ def plot_2d_cutgroups(df: pd.DataFrame,
         x_vars = cut_df[x_var]
         y_vars = cut_df[y_var]
 
-        out_path = config.plot_dir + f"2d_{x_var}-{y_var}_{cutgroup}.png"
+        out_path = config.paths['plot_dir'] + f"2d_{x_var}-{y_var}_{cutgroup}.png"
         hist = histplot_2d(
             var_x=x_vars, var_y=y_vars,
             xbins=xbins, ybins=ybins,
@@ -600,7 +600,7 @@ def plot_2d_cutgroups(df: pd.DataFrame,
         plt.close(fig)
 
     if to_pkl:
-        with open(config.pkl_hist_dir + plot_label + f"_{x_var}-{y_var}_2d.pkl", 'wb') as f:
+        with open(config.paths['pkl_hist_dir'] + plot_label + f"_{x_var}-{y_var}_2d.pkl", 'wb') as f:
             pkl.dump(hists, f)
             print(f"Saved pickle file to {f.name}")
 
@@ -623,7 +623,7 @@ def plot_mass_slices(df: pd.DataFrame,
         hists = dict()  # dictionary to hold mass slice histograms
 
     for dsid, mass_slice in df.groupby(id_col):
-        hist = histplot_1d(mass_slice[xvar], mass_slice[weight_col], xbins, ax, yerr=None, label=dsid,
+        hist = histplot_1d(mass_slice[xvar], mass_slice[weight_col], xbins, ax, yerr=None, label=str(dsid),
                            is_logbins=logbins, scaling='widths')
         if to_pkl:
             hists[dsid] = hist
@@ -645,9 +645,9 @@ def plot_mass_slices(df: pd.DataFrame,
 
     name = f"{xvar}_mass_slices_full"
     if to_pkl:
-        with open(config.pkl_hist_dir + plot_label + '_' + name + '.pkl', 'wb') as f:
+        with open(config.paths['pkl_hist_dir'] + plot_label + '_' + name + '.pkl', 'wb') as f:
             pkl.dump(hists, f)
             print(f"Saved pickle file to {f.name}")
-    path = config.plot_dir + name + '.png'
+    path = config.paths['plot_dir'] + name + '.png'
     fig.savefig(path, bbox_inches='tight')
     print(f"Figure saved to {path}")
