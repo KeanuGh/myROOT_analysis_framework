@@ -94,7 +94,7 @@ def parse_cutfile(file: str, sep='\t') -> Tuple[List[dict], List[str], Dict[str,
 
             options_dict[option[0]] = bool(strtobool(option[1].lower()))  # converts string to boolean
 
-        # Options necessary for the src to run (remember to add to this when adding new options)
+        # Options necessary for the analysis to run (remember to add to this when adding new options)
         necessary_options = [
             'sequential',
             'grouped cutflow',

@@ -1,5 +1,5 @@
 """
-Contains default global variables for src and variables to be set at runtime
+Contains default global variables for analysis and variables to be set at runtime
 """
 import os
 from math import pi

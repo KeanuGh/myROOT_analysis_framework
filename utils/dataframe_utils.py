@@ -46,8 +46,7 @@ def build_analysis_dataframe(datapath: str,
             else:
                 if missing_branches := [branch for branch in vars_to_extract
                                         if branch not in file[TTree_name].keys()]:
-                    raise ValueError(
-                        f"Missing TBranch(es) {missing_branches} in TTree '{TTree_name}' of file '{datapath}'.")
+                    raise ValueError(f"Missing TBranch(es) {missing_branches} in TTree '{TTree_name}' of file '{datapath}'.")
     print("All required variables found.")
 
     # check if vars are contained in label dictionary
@@ -60,16 +59,16 @@ def build_analysis_dataframe(datapath: str,
     # extract pandas dataframe from root file with necessary variables
     print(f"Extracting data from {datapath}...")
     if not is_slices:  # If importing inclusive sample
-        df = uproot.concatenate(datapath + ':' + TTree_name, vars_to_extract, library='pd',
-                                num_workers=config.n_threads)
+        df = uproot.concatenate(datapath + ':' + TTree_name, vars_to_extract,
+                                library='pd', num_workers=config.n_threads)
 
     else:  # if importing mass slices
         print("Extracting in slices...")
         vars_to_extract.add('mcChannelNumber')  # to keep track of dataset IDs (DSIDs)
         df = uproot.concatenate(datapath + ':' + TTree_name, vars_to_extract, library='pd',
                                 num_workers=config.n_threads)
-        sumw = uproot.concatenate(datapath + ':sumWeights', ['totalEventsWeighted', 'dsid'], library='pd',
-                                  num_workers=config.n_threads)
+        sumw = uproot.concatenate(datapath + ':sumWeights', ['totalEventsWeighted', 'dsid'],
+                                  library='pd', num_workers=config.n_threads)
         sumw = sumw.groupby('dsid').sum()
         df = pd.merge(df, sumw, left_on='mcChannelNumber', right_on='dsid', sort=False)
         df.rename(columns={'mcChannelNumber': 'DSID'},

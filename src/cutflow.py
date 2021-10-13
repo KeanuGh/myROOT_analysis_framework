@@ -16,7 +16,7 @@ class Cutflow:
         """
         Generates cutflow object that keeps track of various properties and ratios of selections made on given dataset
 
-        :param df: Input src dataframe with boolean cut rows.
+        :param df: Input analysis dataframe with boolean cut rows.
         :param cut_dicts: Dictionary of cufts made.
         :param cutgroups: Optional ordered dictionary of cut groups. If suppled, will organise cutflow in terms of
                           cutgroups rather than individual cuts.
