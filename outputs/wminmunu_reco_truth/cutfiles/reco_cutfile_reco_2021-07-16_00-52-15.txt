@@ -1,0 +1,16 @@
+[CUTS]
+# Name	Variable	</>	Cut (in GeV if applicable)	Group Symmetric
+# !!REMEMBER DEFAULT ANALYSISTOP OUTPUT IS IN MeV NOT GeV!!
+Muon $|\eta|$	mu_eta	<	2.4	muon $\eta$ cut	true
+Muon $p_{T}$	mu_pt	>	25	lepton $p_{T}$ cut	false
+Missing $E_{T}$	met_met	>	25	lepton $p_{T}$ cut	false
+
+[OUTPUTS]
+# variables to process
+mu_mt
+w_y
+
+[OPTIONS]
+# case-insensitive
+sequential	true
+grouped cutflow	false
