@@ -1,3 +1,4 @@
+import logging
 import os
 from filecmp import cmp
 from glob import glob
@@ -7,6 +8,8 @@ from warnings import warn
 
 import src.config as config
 from utils import ROOT_utils
+
+logger = logging.getLogger('analysis')
 
 
 def get_last_backup(backup_dir: str) -> Optional[str]:
@@ -117,7 +120,7 @@ def convert_pkl_to_root(pkl_name: Optional[str] = None, conv_all: bool = False) 
             raise FileNotFoundError(f"Could not find pickle file {pkl_name}")
         if get_file_parent(pkl_name) in (config.paths['pkl_hist_dir'], '.') \
                 and conv_all:
-            warn("Given file is contained in pickle file directory. Will convert all.")
+            logger.warning("Given file is contained in pickle file directory. Will convert all.")
         else:
             # do just that file in pkl_hist_dir
             for file in glob(pkl_name):

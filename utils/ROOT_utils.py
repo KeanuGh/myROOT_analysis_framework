@@ -1,3 +1,4 @@
+import logging
 import pickle as pkl
 from contextlib import contextmanager
 from typing import Type, Optional
@@ -5,6 +6,8 @@ from typing import Type, Optional
 import ROOT
 import boost_histogram as bh
 import numpy as np
+
+logger = logging.getLogger('analysis')
 
 # import uproot
 
@@ -58,7 +61,7 @@ def bh_to_TH1(h_bh: bh.Histogram, name: str, title: str, hist_type: str = 'F') -
     try:
         h_root = TH1_constructor[hist_type.upper()][n_dims](str(name), str(title), *binargs)
     except TypeError as e:
-        print("Input Arguments: ", name, title, *binargs)
+        logger.debug("Input Arguments: ", name, title, *binargs)
         raise e
 
     # filling bins contents n-dimensionally for different storage types
@@ -106,7 +109,7 @@ def convert_pkl_to_root(filename: str, histname: Optional[str] = None) -> None:
     rootfilename = filename.replace('.pkl', '.root')
 
     if isinstance(obj, bh.Histogram):
-        print(f"Printing {histname} to {rootfilename}")
+        logging.info(f"Printing {histname} to {rootfilename}")
         with ROOT_file(rootfilename):
             bh_to_TH1(obj, name=histname, title=histname).Write()
         return
@@ -120,7 +123,7 @@ def convert_pkl_to_root(filename: str, histname: Optional[str] = None) -> None:
     if len(TH1s) > 0:
         with ROOT_file(rootfilename):
             [h.Write() for h in TH1s]
-            print(f"Histograms saved to {rootfilename}")
+            logging.info(f"Histograms saved to {rootfilename}")
         return
 
 

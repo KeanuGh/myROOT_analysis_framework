@@ -1,4 +1,5 @@
 import collections
+import logging
 import os
 import sys
 import time
@@ -8,6 +9,8 @@ from typing import Tuple, List, OrderedDict, Dict, Set
 
 from utils.file_utils import identical_to_backup, get_last_backup, is_dir_empty, get_filename
 from utils.var_helpers import derived_vars
+
+logger = logging.getLogger('analysis')
 
 
 def parse_cutline(cutline: str, sep='\t') -> dict:
@@ -172,7 +175,7 @@ def if_build_dataframe(current_cutfile: str,
 
     is_pkl_file = os.path.isfile(pkl_filepath)
     if is_pkl_file:
-        print("Datafile found")
+        logger.debug("Datafile found")
 
     # default behaviour: don't build if you don't need to (it's slow and painful)
     build_dataframe = False
@@ -181,7 +184,7 @@ def if_build_dataframe(current_cutfile: str,
     if not is_dir_empty(backup_dirpath):
         # if cutfiles are different, check if dataframe variables need an update
         if will_backup_cutfile:
-            print("New cutfile, will save backup.")
+            logger.debug("New cutfile, will save backup.")
             latest_backup = get_last_backup(backup_dirpath)
 
             # check if variables to extract from root file are the same as before. If yes, use previous pkl file.
@@ -194,8 +197,8 @@ def if_build_dataframe(current_cutfile: str,
             # if cutfile contains different variables, extract necessary variables from root file and put into pickle
             # file for quicker read/write in pandas
             if not set(current_variables) == set(backup_variables):
-                print(f"New variables found; dataframe will be rebuilt.\n"
-                      f" Current cutfile variables: {current_variables}. Previous: {backup_variables}")
+                logger.debug(f"New variables found; dataframe will be rebuilt.")
+                logger.debug(f" Current cutfile variables: {current_variables}. Previous: {backup_variables}")
                 build_dataframe = True
 
     # if backup doesn't exit, make backup and check if there is already a pickle file
@@ -205,7 +208,7 @@ def if_build_dataframe(current_cutfile: str,
             yn = input(f"No cutfile backups found in {backup_dirpath}. Continue with current pickle file? (y/n) ")
             while True:
                 if yn.lower() in ('yes', 'y'):
-                    print(f"Using dataframe {pkl_filepath}")
+                    logger.info(f"Using dataframe {pkl_filepath}")
                     break
                 elif yn.lower() in ('no', 'n'):
                     yn = input("Rebuild dataframe? (y/n) ")
@@ -222,7 +225,7 @@ def if_build_dataframe(current_cutfile: str,
                     yn = input("yes or no ")
         # if no backup or pickle file, rebuild
         else:
-            print("No picke file found. Will rebuild dataframe")
+            logger.info("No picke file found. Will rebuild dataframe")
             build_dataframe = True
 
     # check pickle file is actually there before trying to read from it
@@ -244,4 +247,4 @@ def backup_cutfile(path: str, cutfile: str) -> None:
     curr_filename = get_filename(cutfile)
     cutfile_backup_filepath = path + curr_filename + '_' + time.strftime("%Y-%m-%d_%H-%M-%S") + ".txt"
     copyfile(cutfile, cutfile_backup_filepath)
-    print(f"Backup cutfile saved in {cutfile_backup_filepath}")
+    logger.info(f"Backup cutfile saved in {cutfile_backup_filepath}")

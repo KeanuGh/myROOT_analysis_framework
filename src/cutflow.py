@@ -1,3 +1,4 @@
+import logging
 from time import strftime
 from typing import Dict, List, OrderedDict, Optional
 
@@ -6,6 +7,8 @@ import mplhep as hep
 import pandas as pd
 
 import src.config as config
+
+logger = logging.getLogger('analysis')
 
 
 class Cutflow:
@@ -139,7 +142,7 @@ class Cutflow:
                 },
             }
 
-    def terminal_printout(self) -> None:
+    def printout(self) -> None:
         """
         Prints out cutflow table to terminal
         """
@@ -149,14 +152,15 @@ class Cutflow:
 
         if self._is_sequential:
             # cutflow printout
-            print(f"\n=========== CUTFLOW =============")
-            print("Option: Sequential")
-            print("---------------------------------")
-            print("Cut " + " " * (max_name_len - 3) +
-                  "Events " + " " * (max_n_len - 6) +
-                  "Ratio A. Ratio Cum. Ratio")
+            logger.info('')
+            logger.info(f"=========== CUTFLOW =============")
+            logger.info("Option: Sequential")
+            logger.info("---------------------------------")
+            logger.info("Cut " + " " * (max_name_len - 3) +
+                        "Events " + " " * (max_n_len - 6) +
+                        "Ratio A. Ratio Cum. Ratio")
             # first line is inclusive sample
-            print("Inclusive " + " " * (max_name_len - 9) + f"{self._n_events_tot} -     -        -")
+            logger.info("Inclusive " + " " * (max_name_len - 9) + f"{self._n_events_tot} -     -        -")
 
             # print line
             for i, cutname in enumerate(self.cutflow_labels[1:]):
@@ -164,30 +168,30 @@ class Cutflow:
                 ratio = self.cutflow_ratio[i + 1]
                 cum_ratio = self.cutflow_cum[i + 1]
                 a_ratio = self.cutflow_a_ratio[i + 1]
-                print(f"{cutname:<{max_name_len}} "
-                      f"{n_events:<{max_n_len}} "
-                      f"{ratio:.3f} "
-                      f"{a_ratio:.3f}    "
-                      f"{cum_ratio:.3f}")
+                logger.info(f"{cutname:<{max_name_len}} "
+                            f"{n_events:<{max_n_len}} "
+                            f"{ratio:.3f} "
+                            f"{a_ratio:.3f}    "
+                            f"{cum_ratio:.3f}")
         else:
             # cutflow printout
-            print(f"=========== CUTFLOW =============")
-            print("Option: Non-sequential")
-            print("---------------------------------")
-            print("Cut " + " " * (max_name_len - 3) +
-                  "Events " + " " * (max_n_len - 6) +
-                  "Ratio")
+            logger.info(f"=========== CUTFLOW =============")
+            logger.info("Option: Non-sequential")
+            logger.info("---------------------------------")
+            logger.info("Cut " + " " * (max_name_len - 3) +
+                         "Events " + " " * (max_n_len - 6) +
+                         "Ratio")
             # first line is inclusive sample
-            print("Inclusive " + " " * (max_name_len - 9) + f"{self._n_events_tot}   -")
+            logger.info("Inclusive " + " " * (max_name_len - 9) + f"{self._n_events_tot}   -")
 
             # print line
             for i, cutname in enumerate(self.cutflow_labels[1:]):
                 n_events = self.cutflow_n_events[i + 1]
                 ratio = self.cutflow_ratio[i + 1]
-                print(f"{cutname:<{max_name_len}} "
-                      f"{n_events:<{max_n_len}} "
-                      f"{ratio:.3f}    ")
-        print('')
+                logger.info(f"{cutname:<{max_name_len}} "
+                            f"{n_events:<{max_n_len}} "
+                            f"{ratio:.3f}    ")
+        logger.info('')
 
     def print_histogram(self, kind: str, plot_label: str = '', **kwargs) -> None:
         """
@@ -218,9 +222,9 @@ class Cutflow:
         hep.atlas.label(llabel="Internal", loc=0, ax=ax, rlabel=plot_label)
         ax.grid(b=True, which='both', axis='y', alpha=0.3)
 
-        filepath = self._cuthist_options[kind]['filepath'].format(config.plot_dir)
+        filepath = self._cuthist_options[kind]['filepath'].format(config.paths['plot_dir'])
         fig.savefig(filepath)
-        print(f"Cutflow histogram saved to {filepath}")
+        logger.info(f"Cutflow histogram saved to {filepath}")
 
     def print_latex_table(self, filepath: str, filename_prefix: str = '') -> str:
         """
@@ -250,5 +254,5 @@ class Cutflow:
             f.write("\\hline\n"
                     "\\end{tabular}\n")
 
-        print(f"Saved LaTeX cutflow table in {latex_filepath}")
+        logger.info(f"Saved LaTeX cutflow table in {latex_filepath}")
         return latex_filepath

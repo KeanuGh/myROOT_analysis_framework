@@ -1,3 +1,4 @@
+import logging
 from dataclasses import dataclass, field
 from itertools import combinations
 from typing import Optional, Union
@@ -17,6 +18,8 @@ from utils.cutfile_utils import (
     if_make_cutfile_backup,
     backup_cutfile
 )
+
+logger = logging.getLogger('analysis')
 
 
 @dataclass
@@ -38,13 +41,14 @@ class Dataset:
 
     def __post_init__(self):
         """Dataset generation pipeline"""
-        print(f"\n======== INITIALISING DATASET '{self.name}' =========")
+        logger.info("")
+        logger.info(f"======== INITIALISING DATASET '{self.name}' =========")
         if not file_utils.file_exists(self.datapath):
             raise FileExistsError(f"File {self.datapath} not found.")
 
         if not self.pkl_path:
             # initialise pickle filepath with given name
-            self.pkl_path = config.pkl_df_filepath + self.name + '_df.pkl'
+            self.pkl_path = config.paths['pkl_df_filepath'] + self.name + '_df.pkl'
 
         # READ AND GET OPTIONS FROM CUTFILE
         # ========================
@@ -57,8 +61,7 @@ class Dataset:
         # GENERATE CUTFLOW
         # ========================
         self.__gen_cutflow()
-        self.cutflow_printout()
-        print(f"========= DATASET '{self.name}' INITIALISED =========\n")
+        logger.info(f"========= DATASET '{self.name}' INITIALISED =========")
 
     # Builtins
     # ===================
@@ -95,7 +98,7 @@ class Dataset:
     # ===============================
     def __cutfile_pipeline(self) -> None:
         """Define the pipeline for parsing cutfile"""
-        print(f"Parsting cutfile for {self.name}...")
+        logger.info(f"Parsting cutfile for {self.name}...")
 
         self._cut_dicts, self._vars_to_cut, self._cutflow_options = parse_cutfile(self.cutfile)
 
@@ -103,22 +106,22 @@ class Dataset:
         self._cutgroups = gen_cutgroups(self._cut_dicts)
 
         # check if a backup of the input cutfile should be made
-        self._make_backup = if_make_cutfile_backup(self.cutfile, config.backup_cutfiles_dir)
+        self._make_backup = if_make_cutfile_backup(self.cutfile, config.paths['backup_cutfiles_dir'])
 
         # if new cutfile, save backup
         if self._make_backup:
-            backup_cutfile(config.backup_cutfiles_dir + self.name + '_', self.cutfile)
+            backup_cutfile(config.paths['backup_cutfiles_dir'] + self.name + '_', self.cutfile)
 
         self._rebuild = if_build_dataframe(self.cutfile,
                                            self._make_backup,
-                                           config.backup_cutfiles_dir,
+                                           config.paths['backup_cutfiles_dir'],
                                            self.pkl_path)
 
     def __dataframe_pipeline(self) -> None:
         """Define pipeline for building dataset dataframe"""
         # extract and clean data
         if self._rebuild or config.force_rebuild:
-            print(f"Building {self.name} dataframe from {self.datapath}...")
+            logger.info(f"Building {self.name} dataframe from {self.datapath}...")
             self.df = df_utils.build_analysis_dataframe(datapath=self.datapath,
                                                         TTree_name=self.TTree_name,
                                                         cut_list_dicts=self._cut_dicts,
@@ -127,33 +130,47 @@ class Dataset:
                                                         pkl_path=self.pkl_path)
 
         else:
-            print(f"Reading data for {self.name} dataframe from {self.pkl_path}...")
+            logger.info(f"Reading data for {self.name} dataframe from {self.pkl_path}...")
             self.df = pd.read_pickle(self.pkl_path)
 
         # map appropriate weights
-        print(f"Creating weights for {self.name}...")
+        logger.info(f"Creating weights for {self.name}...")
         if self.is_slices:
             self.df['weight'] = df_utils.gen_weight_column_slices(self.df)
         else:
             self.df['weight'] = df_utils.gen_weight_column(self.df)
 
+        # print some dataset ID metadata
+        if logger.level == logging.DEBUG:
+            logger.debug("PER-DSID INFO:")
+            logger.debug("--------------")
+            logger.debug("DSID       n_events   sum_w         x-s           lumi")
+            logger.debug("==========================================================")
+            for dsid in self.df['DSID'].unique():
+                df_id = self.df[self.df['DSID'] == dsid]
+                logger.debug(f"{int(dsid):<10} "
+                             f"{len(df_id):<10} "
+                             f"{df_id['weight_mc'].sum():<10.6e}  "
+                             f"{df_utils.get_cross_section(df_id):<10.6e}  "
+                             f"{df_utils.get_luminosity(df_id):.<10.6e}")
+
         # apply cuts to generate cut columns
-        print(f"Creating cuts for {self.name}...")
-        df_utils.create_cut_columns(self.df, cut_dicts=self._cut_dicts, printout=True)
+        logger.info(f"Creating cuts for {self.name}...")
+        df_utils.create_cut_columns(self.df, cut_dicts=self._cut_dicts)
 
     # ===============================
     # ========= PRINTOUTS ===========
     # ===============================
     def cutflow_printout(self) -> None:
         """Prints cutflow table to terminal"""
-        self.cutflow.terminal_printout()
+        self.cutflow.printout()
 
     def kinematics_printout(self) -> None:
         """Prints some kinematic variables to terminal"""
-        print(f"\n========{self.name.upper()} KINEMATICS ===========")
-        print(f"cross-section: {self.cross_section:.2f} fb\n"
-              f"luminosity   : {self.luminosity:.2f} fb-1\n"
-              )
+        logger.info("")
+        logger.info(f"========{self.name.upper()} KINEMATICS ===========")
+        logger.info(f"cross-section: {self.cross_section:.2f} fb")
+        logger.info(f"luminosity   : {self.luminosity:.2f} fb-1")
 
     def print_cutflow_latex_table(self, check_backup: bool = True) -> None:
         """
@@ -163,12 +180,12 @@ class Dataset:
         :return: None
         """
         if check_backup:
-            last_backup = file_utils.get_last_backup(config.latex_table_dir)
-            latex_file = self.cutflow.print_latex_table(config.latex_table_dir, self.name)
+            last_backup = file_utils.get_last_backup(config.paths['latex_table_dir'])
+            latex_file = self.cutflow.print_latex_table(config.paths['latex_table_dir'], self.name)
             if file_utils.identical_to_backup(latex_file, backup_file=last_backup):
                 file_utils.delete_file(latex_file)
         else:
-            self.cutflow.print_latex_table(config.latex_table_dir, self.name)
+            self.cutflow.print_latex_table(config.paths['latex_table_dir'], self.name)
 
     # ===============================
     # =========== PLOTS =============
@@ -191,7 +208,7 @@ class Dataset:
         :param kwargs: keyword arguments to pass to plotting_utils.plot_1d_overlay_and_acceptance_cutgroups()
         """
         for var_to_plot in self._vars_to_cut:
-            print(f"Generating histogram for {var_to_plot}...")
+            logger.info(f"Generating histogram for {var_to_plot}...")
             plt_utils.plot_1d_overlay_and_acceptance_cutgroups(
                 df=self.df,
                 lepton=self.lepton,
@@ -221,7 +238,7 @@ class Dataset:
                 xbins = bins
             if not ybins:
                 ybins = bins
-            print(f"Generating 2d histogram for {x_var}-{y_var}...")
+            logger.info(f"Generating 2d histogram for {x_var}-{y_var}...")
             plt_utils.plot_2d_cutgroups(self.df,
                                         lepton=self.lepton,
                                         x_var=x_var, y_var=y_var,

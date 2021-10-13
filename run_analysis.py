@@ -21,12 +21,12 @@ if __name__ == '__main__':
         }
     }
 
-    my_analysis = Analysis(datasets, analysis_label='test_slices', force_rebuild=False)
+    my_analysis = Analysis(datasets, analysis_label='test_slices', force_rebuild=False, log_level=10)
 
     # pipeline
-    # my_analysis.plot_mass_slices(ds_name='truth_slices', xvar='MC_WZ_dilep_m_born', logx=True, to_pkl=True)
-    my_analysis.plot_with_cuts(scaling='xs', to_pkl=False)
-    my_analysis.make_all_cutgroup_2dplots(to_pkl=False)
+    my_analysis.plot_mass_slices(xvar='MC_WZ_dilep_m_born', logx=True, to_pkl=True)
+    # my_analysis.plot_with_cuts(scaling='xs', to_pkl=False)
+    # my_analysis.make_all_cutgroup_2dplots(to_pkl=False)
     my_analysis.gen_cutflow_hist(all_plots=True)
     my_analysis.cutflow_printout()
     my_analysis.kinematics_printouts()

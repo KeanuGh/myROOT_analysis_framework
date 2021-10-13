@@ -33,11 +33,11 @@ special_binning = {
 # FILEPATHS
 # ====================
 # {} for formatting with name of analysis
-_out_dir = 'outputs/'  # where outputs go
+out_dir = 'outputs/'  # where outputs go
 paths = {
-    'plot_dir': _out_dir + '{}/plots/',  # where plots go
-    'pkl_df_filepath': _out_dir + '{}/data/',  # pickle file containing extracted data, format to used dataset
-    'pkl_hist_dir': _out_dir + "{}/histograms/",  # pickle file to place histograms into
-    'backup_cutfiles_dir': _out_dir + '{}/cutfiles/',  # _cutfile backups
-    'latex_table_dir': _out_dir + "{}/LaTeX_cutflow_table/",  # where to print latex cutflow table
+    'plot_dir': out_dir + '{}/plots/',  # where plots go
+    'pkl_df_filepath': out_dir + '{}/data/',  # pickle file containing extracted data, format to used dataset
+    'pkl_hist_dir': out_dir + "{}/histograms/",  # pickle file to place histograms into
+    'backup_cutfiles_dir': out_dir + '{}/cutfiles/',  # _cutfile backups
+    'latex_table_dir': out_dir + "{}/LaTeX_cutflow_table/",  # where to print latex cutflow table
 }
