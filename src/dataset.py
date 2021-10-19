@@ -141,6 +141,7 @@ class Dataset:
             self.df['weight'] = df_utils.gen_weight_column(self.df)
 
         # print some dataset ID metadata
+        # TODO: avg event weight
         if logger.level == logging.DEBUG:
             logger.debug("PER-DSID INFO:")
             logger.debug("--------------")

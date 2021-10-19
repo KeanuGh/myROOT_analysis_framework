@@ -145,7 +145,7 @@ def gen_weight_column(df: pd.DataFrame,
 def gen_weight_column_slices(df: pd.DataFrame,
                              mc_weight_col: str = 'weight_mc',
                              tot_weighted_events_col: str = 'totalEventsWeighted',
-                             global_scale: float = 1.,
+                             global_scale: float = config.lumi,
                              ) -> pd.Series:
     """Returns series of weights for mass slices based off weight_mc column and total events weighed"""
     # TODO: For efficiency, perform batchwise across DSID
@@ -178,7 +178,7 @@ def get_cross_section(df: pd.DataFrame, n_events=None, weight_mc_col: str = 'wei
     """
     if not n_events:
         n_events = len(df.index)
-    return df[weight_mc_col].abs().sum() / n_events
+    return df[weight_mc_col].sum() / n_events
 
 
 def get_luminosity(df: pd.DataFrame, xs=None, weight_col: str = 'weight'):
