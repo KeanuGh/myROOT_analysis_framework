@@ -1,0 +1,459 @@
+2021-10-22 18:22:57,215 INFO:INITIALISING ANALYSIS 'jesal_cutflow'...
+2021-10-22 18:22:57,216 INFO:========================================
+2021-10-22 18:22:57,217 INFO:
+2021-10-22 18:22:57,218 INFO:======== INITIALISING DATASET 'wmintaunu_nominal' =========
+2021-10-22 18:22:57,230 DEBUG:DATASET INPUT OPTIONS: 
+2021-10-22 18:22:57,230 DEBUG:----------------------------
+2021-10-22 18:22:57,230 DEBUG:Input file(s):  /data/atlas/HighMassDrellYan/test_mc16a/wmintaunu_*/*.root
+2021-10-22 18:22:57,231 DEBUG:TTree: nominal_Loose
+2021-10-22 18:22:57,232 DEBUG:Cutfile: options/jesal_cutflow/cutfile_jesal.txt
+2021-10-22 18:22:57,232 DEBUG:Slices: True
+2021-10-22 18:22:57,233 DEBUG:groupted cutflow: True
+2021-10-22 18:22:57,233 DEBUG:----------------------------
+2021-10-22 18:22:57,233 DEBUG:
+2021-10-22 18:22:57,233 DEBUG:CUTFILE CONTENTS
+2021-10-22 18:22:57,233 DEBUG:---------------------------
+2021-10-22 18:22:57,235 DEBUG:[CUTS]
+2021-10-22 18:22:57,235 DEBUG:# Name	Variable	</>	Cut (in GeV if applicable)	Group Symmetric
+2021-10-22 18:22:57,236 DEBUG:# !!REMEMBER DEFAULT ANALYSISTOP OUTPUT IS IN MeV NOT GeV!!
+2021-10-22 18:22:57,237 DEBUG:Tight muon	mu_isTight	=	1	tight muon cut	false
+2021-10-22 18:22:57,237 DEBUG:eta	mu_eta	<	2.4	eta	true
+2021-10-22 18:22:57,237 DEBUG:E_{T}^{MISS}	met_met	>	65	met	false
+2021-10-22 18:22:57,238 DEBUG:p_T	mu_pt	>	65	mu pt	false
+2021-10-22 18:22:57,238 DEBUG:M_T	PDFinfo_Q	>	55	dilepton mass	false
+2021-10-22 18:22:57,238 DEBUG:
+2021-10-22 18:22:57,239 DEBUG:[OUTPUTS]
+2021-10-22 18:22:57,239 DEBUG:# variables to process
+2021-10-22 18:22:57,239 DEBUG:PDFinfo_Q
+2021-10-22 18:22:57,240 DEBUG:
+2021-10-22 18:22:57,240 DEBUG:[OPTIONS]
+2021-10-22 18:22:57,240 DEBUG:# case-insensitive
+2021-10-22 18:22:57,240 DEBUG:sequential	false
+2021-10-22 18:22:57,240 DEBUG:grouped cutflow	false
+2021-10-22 18:22:57,241 DEBUG:---------------------------
+2021-10-22 18:22:57,241 INFO:Parsting cutfile for wmintaunu_nominal...
+2021-10-22 18:22:57,248 INFO:Backup cutfile saved in outputs/jesal_cutflow/cutfiles/wmintaunu_nominal_cutfile_jesal_2021-10-22_18-22-57.txt
+2021-10-22 18:22:57,250 DEBUG:Datafile found
+2021-10-22 18:22:57,250 DEBUG:New cutfile, will save backup.
+2021-10-22 18:22:57,252 INFO:Building wmintaunu_nominal dataframe from /data/atlas/HighMassDrellYan/test_mc16a/wmintaunu_*/*.root...
+2021-10-22 18:22:57,253 DEBUG:Variables to extract: 
+2021-10-22 18:22:57,253 DEBUG:  - mu_eta
+2021-10-22 18:22:57,254 DEBUG:  - mu_isTight
+2021-10-22 18:22:57,254 DEBUG:  - weight_mc
+2021-10-22 18:22:57,254 DEBUG:  - met_met
+2021-10-22 18:22:57,254 DEBUG:  - mu_pt
+2021-10-22 18:22:57,254 DEBUG:  - PDFinfo_Q
+2021-10-22 18:22:57,255 DEBUG:Checking TTree and TBranch values in file(s) '/data/atlas/HighMassDrellYan/test_mc16a/wmintaunu_*/*.root'...
+2021-10-22 18:23:02,134 DEBUG:All required variables found.
+2021-10-22 18:23:02,135 WARNING:Warning: variable(s) ['mu_isTight'] not contained in labels dictionary. Some unexpected behaviour may occur.
+2021-10-22 18:23:02,135 INFO:Extracting data from /data/atlas/HighMassDrellYan/test_mc16a/wmintaunu_*/*.root...
+2021-10-22 18:23:02,135 INFO:Extracting in slices...
+2021-10-22 18:23:08,441 DEBUG:Found 19 unique dsid(s).
+2021-10-22 18:23:08,451 WARNING:Value of 'totalEventsWeighted' (145.32899475097656) is not the same as the total summed values of 'weight_mc' (6.467325210571289) for DISD 301166.
+2021-10-22 18:23:08,452 WARNING:Value of 'totalEventsWeighted' (10433584.0) is not the same as the total summed values of 'weight_mc' (3148.68505859375) for DISD 301160.
+2021-10-22 18:23:08,454 WARNING:Value of 'totalEventsWeighted' (50.13829803466797) is not the same as the total summed values of 'weight_mc' (2.441737413406372) for DISD 301167.
+2021-10-22 18:23:08,457 WARNING:Value of 'totalEventsWeighted' (18.406715393066406) is not the same as the total summed values of 'weight_mc' (0.9078122973442078) for DISD 301168.
+2021-10-22 18:23:08,460 WARNING:Value of 'totalEventsWeighted' (7.473324775695801) is not the same as the total summed values of 'weight_mc' (0.3670908212661743) for DISD 301169.
+2021-10-22 18:23:08,461 WARNING:Value of 'totalEventsWeighted' (821307.6875) is not the same as the total summed values of 'weight_mc' (4072.830810546875) for DISD 301161.
+2021-10-22 18:23:08,464 WARNING:Value of 'totalEventsWeighted' (3.265511989593506) is not the same as the total summed values of 'weight_mc' (0.16862958669662476) for DISD 301170.
+2021-10-22 18:23:08,467 WARNING:Value of 'totalEventsWeighted' (1.5084095001220703) is not the same as the total summed values of 'weight_mc' (0.07210100442171097) for DISD 301171.
+2021-10-22 18:23:08,469 WARNING:Value of 'totalEventsWeighted' (162471.15625) is not the same as the total summed values of 'weight_mc' (2467.95947265625) for DISD 301162.
+2021-10-22 18:23:08,471 WARNING:Value of 'totalEventsWeighted' (0.7274540066719055) is not the same as the total summed values of 'weight_mc' (0.03714439272880554) for DISD 301172.
+2021-10-22 18:23:08,473 WARNING:Value of 'totalEventsWeighted' (0.36294829845428467) is not the same as the total summed values of 'weight_mc' (0.018386848270893097) for DISD 301173.
+2021-10-22 18:23:08,474 WARNING:Value of 'totalEventsWeighted' (0.283456414937973) is not the same as the total summed values of 'weight_mc' (0.014076698571443558) for DISD 301174.
+2021-10-22 18:23:08,476 WARNING:Value of 'totalEventsWeighted' (0.07986969500780106) is not the same as the total summed values of 'weight_mc' (0.003937546629458666) for DISD 301175.
+2021-10-22 18:23:08,478 WARNING:Value of 'totalEventsWeighted' (17540.888671875) is not the same as the total summed values of 'weight_mc' (493.302490234375) for DISD 301163.
+2021-10-22 18:23:08,480 WARNING:Value of 'totalEventsWeighted' (0.023605169728398323) is not the same as the total summed values of 'weight_mc' (0.001116049475967884) for DISD 301176.
+2021-10-22 18:23:08,482 WARNING:Value of 'totalEventsWeighted' (0.007140154950320721) is not the same as the total summed values of 'weight_mc' (0.0003350143670104444) for DISD 301177.
+2021-10-22 18:23:08,484 WARNING:Value of 'totalEventsWeighted' (0.0030812351033091545) is not the same as the total summed values of 'weight_mc' (0.000131876120576635) for DISD 301178.
+2021-10-22 18:23:08,486 WARNING:Value of 'totalEventsWeighted' (1548.9874267578125) is not the same as the total summed values of 'weight_mc' (59.91420364379883) for DISD 301164.
+2021-10-22 18:23:08,487 WARNING:Value of 'totalEventsWeighted' (414.3192138671875) is not the same as the total summed values of 'weight_mc' (17.649803161621094) for DISD 301165.
+2021-10-22 18:23:08,487 INFO:time to build dataframe: 6.4s
+2021-10-22 18:23:08,490 DEBUG:Rescaled columns ['mu_pt', 'PDFinfo_Q'] to GeV.
+2021-10-22 18:23:08,514 INFO:Dataframe built and saved in outputs/jesal_cutflow/data/wmintaunu_nominal_df.pkl
+2021-10-22 18:23:08,514 INFO:Creating weights for wmintaunu_nominal...
+2021-10-22 18:23:08,517 DEBUG:PER-DSID INFO:
+2021-10-22 18:23:08,517 DEBUG:--------------
+2021-10-22 18:23:08,518 DEBUG:DSID       n_events   sum_w         x-s fb        lumi fb-1
+2021-10-22 18:23:08,518 DEBUG:==========================================================
+2021-10-22 18:23:08,521 DEBUG:301166     2047       6.467326e+00  3.159417e-03  6.230181e+00
+2021-10-22 18:23:08,523 DEBUG:301160     141        3.148685e+03  2.233110e+01  4.224972e-02
+2021-10-22 18:23:08,525 DEBUG:301167     2435       2.441737e+00  1.002767e-03  6.818008e+00
+2021-10-22 18:23:08,528 DEBUG:301168     2466       9.078124e-01  3.681315e-04  6.904750e+00
+2021-10-22 18:23:08,530 DEBUG:301169     2456       3.670908e-01  1.494669e-04  6.876823e+00
+2021-10-22 18:23:08,532 DEBUG:301161     1237       4.072831e+03  3.292507e+00  6.942543e-01
+2021-10-22 18:23:08,534 DEBUG:301170     2582       1.686296e-01  6.530968e-05  7.229541e+00
+2021-10-22 18:23:08,535 DEBUG:301171     2390       7.210101e-02  3.016779e-05  6.691912e+00
+2021-10-22 18:23:08,537 DEBUG:301162     2277       2.467959e+03  1.083865e+00  2.126620e+00
+2021-10-22 18:23:08,539 DEBUG:301172     2553       3.714439e-02  1.454931e-05  7.148516e+00
+2021-10-22 18:23:08,541 DEBUG:301173     2533       1.838685e-02  7.258922e-06  7.092359e+00
+2021-10-22 18:23:08,543 DEBUG:301174     2483       1.407670e-02  5.669230e-06  6.952527e+00
+2021-10-22 18:23:08,545 DEBUG:301175     2465       3.937546e-03  1.597382e-06  6.901951e+00
+2021-10-22 18:23:08,547 DEBUG:301163     2812       4.933025e+02  1.754276e-01  3.937222e+00
+2021-10-22 18:23:08,549 DEBUG:301176     2364       1.116049e-03  4.721021e-07  6.619185e+00
+2021-10-22 18:23:08,551 DEBUG:301177     2346       3.350144e-04  1.428024e-07  6.568769e+00
+2021-10-22 18:23:08,553 DEBUG:301178     2140       1.318761e-04  6.162436e-08  5.991969e+00
+2021-10-22 18:23:08,555 DEBUG:301164     1934       5.991421e+01  3.097942e-02  5.415145e+00
+2021-10-22 18:23:08,557 DEBUG:301165     2130       1.764980e+01  8.286293e-03  5.963937e+00
+2021-10-22 18:23:08,557 INFO:Creating cuts for wmintaunu_nominal...
+2021-10-22 18:23:08,562 INFO:
+2021-10-22 18:23:08,562 INFO:========== CUTS USED ============
+2021-10-22 18:23:08,562 INFO:Tight muon  : mu_isTight = 1.0
+2021-10-22 18:23:08,563 INFO:eta         :    |mu_eta| < 2.4
+2021-10-22 18:23:08,564 INFO:E_{T}^{MISS}:    met_met > 65.0
+2021-10-22 18:23:08,564 INFO:p_T         :      mu_pt > 65.0
+2021-10-22 18:23:08,564 INFO:M_T         :  PDFinfo_Q > 55.0
+2021-10-22 18:23:08,564 INFO:
+2021-10-22 18:23:08,576 INFO:=========== CUTFLOW =============
+2021-10-22 18:23:08,576 INFO:Option: Non-sequential
+2021-10-22 18:23:08,576 INFO:---------------------------------
+2021-10-22 18:23:08,576 INFO:Cut            Events Ratio
+2021-10-22 18:23:08,577 INFO:Inclusive      41791   -
+2021-10-22 18:23:08,578 INFO:tight muon cut 41791 1.000    
+2021-10-22 18:23:08,578 INFO:eta            41791 1.000    
+2021-10-22 18:23:08,578 INFO:met            41791 1.000    
+2021-10-22 18:23:08,578 INFO:mu pt          41791 1.000    
+2021-10-22 18:23:08,578 INFO:dilepton mass  0     0.000    
+2021-10-22 18:23:08,578 INFO:
+2021-10-22 18:23:08,578 INFO:========= DATASET 'wmintaunu_nominal' INITIALISED =========
+2021-10-22 18:23:08,578 INFO:
+2021-10-22 18:23:08,579 INFO:======== INITIALISING DATASET 'wplustaunu_nominal' =========
+2021-10-22 18:23:08,587 DEBUG:DATASET INPUT OPTIONS: 
+2021-10-22 18:23:08,587 DEBUG:----------------------------
+2021-10-22 18:23:08,587 DEBUG:Input file(s):  /data/atlas/HighMassDrellYan/test_mc16a/wplustaunu_*/*.root
+2021-10-22 18:23:08,587 DEBUG:TTree: nominal_Loose
+2021-10-22 18:23:08,587 DEBUG:Cutfile: options/jesal_cutflow/cutfile_jesal.txt
+2021-10-22 18:23:08,588 DEBUG:Slices: True
+2021-10-22 18:23:08,589 DEBUG:groupted cutflow: True
+2021-10-22 18:23:08,589 DEBUG:----------------------------
+2021-10-22 18:23:08,589 DEBUG:
+2021-10-22 18:23:08,589 DEBUG:CUTFILE CONTENTS
+2021-10-22 18:23:08,589 DEBUG:---------------------------
+2021-10-22 18:23:08,590 DEBUG:[CUTS]
+2021-10-22 18:23:08,591 DEBUG:# Name	Variable	</>	Cut (in GeV if applicable)	Group Symmetric
+2021-10-22 18:23:08,591 DEBUG:# !!REMEMBER DEFAULT ANALYSISTOP OUTPUT IS IN MeV NOT GeV!!
+2021-10-22 18:23:08,591 DEBUG:Tight muon	mu_isTight	=	1	tight muon cut	false
+2021-10-22 18:23:08,591 DEBUG:eta	mu_eta	<	2.4	eta	true
+2021-10-22 18:23:08,592 DEBUG:E_{T}^{MISS}	met_met	>	65	met	false
+2021-10-22 18:23:08,592 DEBUG:p_T	mu_pt	>	65	mu pt	false
+2021-10-22 18:23:08,592 DEBUG:M_T	PDFinfo_Q	>	55	dilepton mass	false
+2021-10-22 18:23:08,592 DEBUG:
+2021-10-22 18:23:08,592 DEBUG:[OUTPUTS]
+2021-10-22 18:23:08,592 DEBUG:# variables to process
+2021-10-22 18:23:08,592 DEBUG:PDFinfo_Q
+2021-10-22 18:23:08,593 DEBUG:
+2021-10-22 18:23:08,594 DEBUG:[OPTIONS]
+2021-10-22 18:23:08,595 DEBUG:# case-insensitive
+2021-10-22 18:23:08,595 DEBUG:sequential	false
+2021-10-22 18:23:08,595 DEBUG:grouped cutflow	false
+2021-10-22 18:23:08,595 DEBUG:---------------------------
+2021-10-22 18:23:08,595 INFO:Parsting cutfile for wplustaunu_nominal...
+2021-10-22 18:23:15,401 INFO:Building wplustaunu_nominal dataframe from /data/atlas/HighMassDrellYan/test_mc16a/wplustaunu_*/*.root...
+2021-10-22 18:23:15,402 DEBUG:Variables to extract: 
+2021-10-22 18:23:15,402 DEBUG:  - mu_eta
+2021-10-22 18:23:15,403 DEBUG:  - mu_isTight
+2021-10-22 18:23:15,404 DEBUG:  - weight_mc
+2021-10-22 18:23:15,405 DEBUG:  - met_met
+2021-10-22 18:23:15,405 DEBUG:  - mu_pt
+2021-10-22 18:23:15,405 DEBUG:  - PDFinfo_Q
+2021-10-22 18:23:15,405 DEBUG:Checking TTree and TBranch values in file(s) '/data/atlas/HighMassDrellYan/test_mc16a/wplustaunu_*/*.root'...
+2021-10-22 18:23:20,224 DEBUG:All required variables found.
+2021-10-22 18:23:20,224 WARNING:Warning: variable(s) ['mu_isTight'] not contained in labels dictionary. Some unexpected behaviour may occur.
+2021-10-22 18:23:20,225 INFO:Extracting data from /data/atlas/HighMassDrellYan/test_mc16a/wplustaunu_*/*.root...
+2021-10-22 18:23:20,225 INFO:Extracting in slices...
+2021-10-22 18:23:43,083 DEBUG:Found 19 unique dsid(s).
+2021-10-22 18:23:43,092 WARNING:Value of 'totalEventsWeighted' (364.46539306640625) is not the same as the total summed values of 'weight_mc' (18.361541748046875) for DISD 301146.
+2021-10-22 18:23:43,094 WARNING:Value of 'totalEventsWeighted' (16026548.0) is not the same as the total summed values of 'weight_mc' (5472.89111328125) for DISD 301140.
+2021-10-22 18:23:43,096 WARNING:Value of 'totalEventsWeighted' (125.35179901123047) is not the same as the total summed values of 'weight_mc' (6.423099517822266) for DISD 301147.
+2021-10-22 18:23:43,098 WARNING:Value of 'totalEventsWeighted' (49.313682556152344) is not the same as the total summed values of 'weight_mc' (2.5712640285491943) for DISD 301148.
+2021-10-22 18:23:43,100 WARNING:Value of 'totalEventsWeighted' (21.228139877319336) is not the same as the total summed values of 'weight_mc' (1.1204354763031006) for DISD 301149.
+2021-10-22 18:23:43,102 WARNING:Value of 'totalEventsWeighted' (1250719.625) is not the same as the total summed values of 'weight_mc' (6614.326171875) for DISD 301141.
+2021-10-22 18:23:43,105 WARNING:Value of 'totalEventsWeighted' (9.731880187988281) is not the same as the total summed values of 'weight_mc' (0.507223904132843) for DISD 301150.
+2021-10-22 18:23:43,107 WARNING:Value of 'totalEventsWeighted' (4.667399883270264) is not the same as the total summed values of 'weight_mc' (0.24186235666275024) for DISD 301151.
+2021-10-22 18:23:43,109 WARNING:Value of 'totalEventsWeighted' (263143.0625) is not the same as the total summed values of 'weight_mc' (4324.9580078125) for DISD 301142.
+2021-10-22 18:23:43,111 WARNING:Value of 'totalEventsWeighted' (2.3129725456237793) is not the same as the total summed values of 'weight_mc' (0.11976505815982819) for DISD 301152.
+2021-10-22 18:23:43,113 WARNING:Value of 'totalEventsWeighted' (1.173790454864502) is not the same as the total summed values of 'weight_mc' (0.06225819140672684) for DISD 301153.
+2021-10-22 18:23:43,115 WARNING:Value of 'totalEventsWeighted' (0.9224629402160645) is not the same as the total summed values of 'weight_mc' (0.04789601266384125) for DISD 301154.
+2021-10-22 18:23:43,117 WARNING:Value of 'totalEventsWeighted' (0.2548375427722931) is not the same as the total summed values of 'weight_mc' (0.012838433496654034) for DISD 301155.
+2021-10-22 18:23:43,119 WARNING:Value of 'totalEventsWeighted' (31235.4140625) is not the same as the total summed values of 'weight_mc' (989.6356811523438) for DISD 301143.
+2021-10-22 18:23:43,121 WARNING:Value of 'totalEventsWeighted' (0.0715329498052597) is not the same as the total summed values of 'weight_mc' (0.003556682262569666) for DISD 301156.
+2021-10-22 18:23:43,123 WARNING:Value of 'totalEventsWeighted' (0.02006404474377632) is not the same as the total summed values of 'weight_mc' (0.0009835516102612019) for DISD 301157.
+2021-10-22 18:23:43,125 WARNING:Value of 'totalEventsWeighted' (0.0076729897409677505) is not the same as the total summed values of 'weight_mc' (0.00033439145772717893) for DISD 301158.
+2021-10-22 18:23:43,127 WARNING:Value of 'totalEventsWeighted' (883.4165649414062) is not the same as the total summed values of 'weight_mc' (39.099918365478516) for DISD 301145.
+2021-10-22 18:23:43,129 WARNING:Value of 'totalEventsWeighted' (3039.623779296875) is not the same as the total summed values of 'weight_mc' (119.39571380615234) for DISD 301144.
+2021-10-22 18:23:43,129 INFO:time to build dataframe: 23s
+2021-10-22 18:23:43,131 DEBUG:Rescaled columns ['mu_pt', 'PDFinfo_Q'] to GeV.
+2021-10-22 18:23:43,153 INFO:Dataframe built and saved in outputs/jesal_cutflow/data/wplustaunu_nominal_df.pkl
+2021-10-22 18:23:43,153 INFO:Creating weights for wplustaunu_nominal...
+2021-10-22 18:23:43,155 DEBUG:PER-DSID INFO:
+2021-10-22 18:23:43,155 DEBUG:--------------
+2021-10-22 18:23:43,156 DEBUG:DSID       n_events   sum_w         x-s fb        lumi fb-1
+2021-10-22 18:23:43,156 DEBUG:==========================================================
+2021-10-22 18:23:43,159 DEBUG:301146     2519       1.836154e+01  7.289219e-03  7.053117e+00
+2021-10-22 18:23:43,161 DEBUG:301140     170        5.472892e+03  3.219348e+01  4.780848e-02
+2021-10-22 18:23:43,164 DEBUG:301147     2562       6.423100e+00  2.507065e-03  7.173686e+00
+2021-10-22 18:23:43,166 DEBUG:301148     2607       2.571264e+00  9.862923e-04  7.299743e+00
+2021-10-22 18:23:43,168 DEBUG:301149     2639       1.120435e+00  4.245682e-04  7.389300e+00
+2021-10-22 18:23:43,170 DEBUG:301141     1320       6.614326e+03  5.010853e+00  7.403784e-01
+2021-10-22 18:23:43,172 DEBUG:301150     2606       5.072240e-01  1.946370e-04  7.296780e+00
+2021-10-22 18:23:43,174 DEBUG:301151     2591       2.418624e-01  9.334711e-05  7.254736e+00
+2021-10-22 18:23:43,176 DEBUG:301142     2468       4.324958e+03  1.752414e+00  2.304744e+00
+2021-10-22 18:23:43,178 DEBUG:301152     2589       1.197651e-01  4.625920e-05  7.249165e+00
+2021-10-22 18:23:43,180 DEBUG:301153     2652       6.225819e-02  2.347594e-05  7.425647e+00
+2021-10-22 18:23:43,182 DEBUG:301154     2596       4.789601e-02  1.844993e-05  7.269069e+00
+2021-10-22 18:23:43,184 DEBUG:301155     2519       1.283843e-02  5.096639e-06  7.053050e+00
+2021-10-22 18:23:43,186 DEBUG:301143     3168       9.896357e+02  3.123850e-01  4.435640e+00
+2021-10-22 18:23:43,188 DEBUG:301156     2486       3.556682e-03  1.430685e-06  6.960931e+00
+2021-10-22 18:23:43,190 DEBUG:301157     2451       9.835515e-04  4.012858e-07  6.862889e+00
+2021-10-22 18:23:43,191 DEBUG:301158     2179       3.343915e-04  1.534610e-07  6.101253e+00
+2021-10-22 18:23:43,193 DEBUG:301145     2213       3.909992e+01  1.766829e-02  6.196388e+00
+2021-10-22 18:23:43,195 DEBUG:301144     1964       1.193957e+02  6.079211e-02  5.499170e+00
+2021-10-22 18:23:43,195 INFO:Creating cuts for wplustaunu_nominal...
+2021-10-22 18:23:43,201 INFO:
+2021-10-22 18:23:43,201 INFO:========== CUTS USED ============
+2021-10-22 18:23:43,201 INFO:Tight muon  : mu_isTight = 1.0
+2021-10-22 18:23:43,201 INFO:eta         :    |mu_eta| < 2.4
+2021-10-22 18:23:43,202 INFO:E_{T}^{MISS}:    met_met > 65.0
+2021-10-22 18:23:43,202 INFO:p_T         :      mu_pt > 65.0
+2021-10-22 18:23:43,203 INFO:M_T         :  PDFinfo_Q > 55.0
+2021-10-22 18:23:43,203 INFO:
+2021-10-22 18:23:43,214 INFO:=========== CUTFLOW =============
+2021-10-22 18:23:43,215 INFO:Option: Non-sequential
+2021-10-22 18:23:43,215 INFO:---------------------------------
+2021-10-22 18:23:43,215 INFO:Cut            Events Ratio
+2021-10-22 18:23:43,215 INFO:Inclusive      44299   -
+2021-10-22 18:23:43,216 INFO:tight muon cut 44299 1.000    
+2021-10-22 18:23:43,216 INFO:eta            44299 1.000    
+2021-10-22 18:23:43,217 INFO:met            44299 1.000    
+2021-10-22 18:23:43,217 INFO:mu pt          44299 1.000    
+2021-10-22 18:23:43,217 INFO:dilepton mass  0     0.000    
+2021-10-22 18:23:43,217 INFO:
+2021-10-22 18:23:43,217 INFO:========= DATASET 'wplustaunu_nominal' INITIALISED =========
+2021-10-22 18:23:43,217 INFO:
+2021-10-22 18:23:43,217 INFO:======== INITIALISING DATASET 'wminmunu_nominal' =========
+2021-10-22 18:23:43,246 DEBUG:DATASET INPUT OPTIONS: 
+2021-10-22 18:23:43,246 DEBUG:----------------------------
+2021-10-22 18:23:43,246 DEBUG:Input file(s):  /data/atlas/HighMassDrellYan/test_mc16a/wminmunu_*/*.root
+2021-10-22 18:23:43,248 DEBUG:TTree: nominal_Loose
+2021-10-22 18:23:43,249 DEBUG:Cutfile: options/jesal_cutflow/cutfile_jesal.txt
+2021-10-22 18:23:43,249 DEBUG:Slices: True
+2021-10-22 18:23:43,249 DEBUG:groupted cutflow: True
+2021-10-22 18:23:43,249 DEBUG:----------------------------
+2021-10-22 18:23:43,249 DEBUG:
+2021-10-22 18:23:43,249 DEBUG:CUTFILE CONTENTS
+2021-10-22 18:23:43,249 DEBUG:---------------------------
+2021-10-22 18:23:43,250 DEBUG:[CUTS]
+2021-10-22 18:23:43,250 DEBUG:# Name	Variable	</>	Cut (in GeV if applicable)	Group Symmetric
+2021-10-22 18:23:43,250 DEBUG:# !!REMEMBER DEFAULT ANALYSISTOP OUTPUT IS IN MeV NOT GeV!!
+2021-10-22 18:23:43,250 DEBUG:Tight muon	mu_isTight	=	1	tight muon cut	false
+2021-10-22 18:23:43,251 DEBUG:eta	mu_eta	<	2.4	eta	true
+2021-10-22 18:23:43,251 DEBUG:E_{T}^{MISS}	met_met	>	65	met	false
+2021-10-22 18:23:43,252 DEBUG:p_T	mu_pt	>	65	mu pt	false
+2021-10-22 18:23:43,252 DEBUG:M_T	PDFinfo_Q	>	55	dilepton mass	false
+2021-10-22 18:23:43,252 DEBUG:
+2021-10-22 18:23:43,252 DEBUG:[OUTPUTS]
+2021-10-22 18:23:43,252 DEBUG:# variables to process
+2021-10-22 18:23:43,253 DEBUG:PDFinfo_Q
+2021-10-22 18:23:43,253 DEBUG:
+2021-10-22 18:23:43,254 DEBUG:[OPTIONS]
+2021-10-22 18:23:43,254 DEBUG:# case-insensitive
+2021-10-22 18:23:43,254 DEBUG:sequential	false
+2021-10-22 18:23:43,254 DEBUG:grouped cutflow	false
+2021-10-22 18:23:43,254 DEBUG:---------------------------
+2021-10-22 18:23:43,254 INFO:Parsting cutfile for wminmunu_nominal...
+2021-10-22 18:24:02,281 INFO:Building wminmunu_nominal dataframe from /data/atlas/HighMassDrellYan/test_mc16a/wminmunu_*/*.root...
+2021-10-22 18:24:02,282 DEBUG:Variables to extract: 
+2021-10-22 18:24:02,282 DEBUG:  - mu_eta
+2021-10-22 18:24:02,283 DEBUG:  - mu_isTight
+2021-10-22 18:24:02,283 DEBUG:  - weight_mc
+2021-10-22 18:24:02,284 DEBUG:  - met_met
+2021-10-22 18:24:02,284 DEBUG:  - mu_pt
+2021-10-22 18:24:02,285 DEBUG:  - PDFinfo_Q
+2021-10-22 18:24:02,285 DEBUG:Checking TTree and TBranch values in file(s) '/data/atlas/HighMassDrellYan/test_mc16a/wminmunu_*/*.root'...
+2021-10-22 18:24:17,165 DEBUG:All required variables found.
+2021-10-22 18:24:17,165 WARNING:Warning: variable(s) ['mu_isTight'] not contained in labels dictionary. Some unexpected behaviour may occur.
+2021-10-22 18:24:17,166 INFO:Extracting data from /data/atlas/HighMassDrellYan/test_mc16a/wminmunu_*/*.root...
+2021-10-22 18:24:17,166 INFO:Extracting in slices...
+2021-10-22 18:24:57,552 DEBUG:Found 19 unique dsid(s).
+2021-10-22 18:24:57,638 WARNING:Value of 'totalEventsWeighted' (157.9665985107422) is not the same as the total summed values of 'weight_mc' (85.26067352294922) for DISD 301126.
+2021-10-22 18:24:57,655 WARNING:Value of 'totalEventsWeighted' (110953424.0) is not the same as the total summed values of 'weight_mc' (8438777.0) for DISD 301120.
+2021-10-22 18:24:57,659 WARNING:Value of 'totalEventsWeighted' (50.138301849365234) is not the same as the total summed values of 'weight_mc' (27.5499210357666) for DISD 301127.
+2021-10-22 18:24:57,663 WARNING:Value of 'totalEventsWeighted' (18.406715393066406) is not the same as the total summed values of 'weight_mc' (10.239676475524902) for DISD 301128.
+2021-10-22 18:24:57,666 WARNING:Value of 'totalEventsWeighted' (7.473325252532959) is not the same as the total summed values of 'weight_mc' (4.116023540496826) for DISD 301129.
+2021-10-22 18:24:57,684 WARNING:Value of 'totalEventsWeighted' (4926816.5) is not the same as the total summed values of 'weight_mc' (1471386.25) for DISD 301121.
+2021-10-22 18:24:57,688 WARNING:Value of 'totalEventsWeighted' (3.265511989593506) is not the same as the total summed values of 'weight_mc' (1.8122966289520264) for DISD 301130.
+2021-10-22 18:24:57,692 WARNING:Value of 'totalEventsWeighted' (1.5084095001220703) is not the same as the total summed values of 'weight_mc' (0.8358996510505676) for DISD 301131.
+2021-10-22 18:24:57,704 WARNING:Value of 'totalEventsWeighted' (643254.875) is not the same as the total summed values of 'weight_mc' (261016.421875) for DISD 301122.
+2021-10-22 18:24:57,708 WARNING:Value of 'totalEventsWeighted' (0.7274540066719055) is not the same as the total summed values of 'weight_mc' (0.40101632475852966) for DISD 301132.
+2021-10-22 18:24:57,712 WARNING:Value of 'totalEventsWeighted' (0.36294829845428467) is not the same as the total summed values of 'weight_mc' (0.20017383992671967) for DISD 301133.
+2021-10-22 18:24:57,715 WARNING:Value of 'totalEventsWeighted' (0.28345638513565063) is not the same as the total summed values of 'weight_mc' (0.15630419552326202) for DISD 301134.
+2021-10-22 18:24:57,719 WARNING:Value of 'totalEventsWeighted' (0.07986970245838165) is not the same as the total summed values of 'weight_mc' (0.04363603889942169) for DISD 301135.
+2021-10-22 18:24:57,723 WARNING:Value of 'totalEventsWeighted' (17540.890625) is not the same as the total summed values of 'weight_mc' (8366.962890625) for DISD 301123.
+2021-10-22 18:24:57,727 WARNING:Value of 'totalEventsWeighted' (0.023605169728398323) is not the same as the total summed values of 'weight_mc' (0.012712830677628517) for DISD 301136.
+2021-10-22 18:24:57,730 WARNING:Value of 'totalEventsWeighted' (0.007140154950320721) is not the same as the total summed values of 'weight_mc' (0.00380129087716341) for DISD 301137.
+2021-10-22 18:24:57,733 WARNING:Value of 'totalEventsWeighted' (0.003081234870478511) is not the same as the total summed values of 'weight_mc' (0.0016159865772351623) for DISD 301138.
+2021-10-22 18:24:57,737 WARNING:Value of 'totalEventsWeighted' (1548.987548828125) is not the same as the total summed values of 'weight_mc' (796.8318481445312) for DISD 301124.
+2021-10-22 18:24:57,740 WARNING:Value of 'totalEventsWeighted' (414.3192138671875) is not the same as the total summed values of 'weight_mc' (221.39540100097656) for DISD 301125.
+2021-10-22 18:24:57,740 INFO:time to build dataframe: 41s
+2021-10-22 18:24:57,755 DEBUG:Rescaled columns ['mu_pt', 'PDFinfo_Q'] to GeV.
+2021-10-22 18:24:58,325 INFO:Dataframe built and saved in outputs/jesal_cutflow/data/wminmunu_nominal_df.pkl
+2021-10-22 18:24:58,326 INFO:Creating weights for wminmunu_nominal...
+2021-10-22 18:24:58,346 DEBUG:PER-DSID INFO:
+2021-10-22 18:24:58,346 DEBUG:--------------
+2021-10-22 18:24:58,346 DEBUG:DSID       n_events   sum_w         x-s fb        lumi fb-1
+2021-10-22 18:24:58,346 DEBUG:==========================================================
+2021-10-22 18:24:58,375 DEBUG:301126     26987      8.526067e+01  3.159324e-03  7.556344e+01
+2021-10-22 18:24:58,402 DEBUG:301120     379939     8.438777e+06  2.221087e+01  1.070534e+01
+2021-10-22 18:24:58,408 DEBUG:301127     27474      2.754992e+01  1.002763e-03  7.692703e+01
+2021-10-22 18:24:58,414 DEBUG:301128     27815      1.023968e+01  3.681351e-04  7.788219e+01
+2021-10-22 18:24:58,420 DEBUG:301129     27538      4.116024e+00  1.494670e-04  7.710671e+01
+2021-10-22 18:24:58,443 DEBUG:301121     448139     1.471386e+06  3.283325e+00  4.192606e+01
+2021-10-22 18:24:58,449 DEBUG:301130     27749      1.812297e+00  6.531034e-05  7.769735e+01
+2021-10-22 18:24:58,454 DEBUG:301131     27708      8.358996e-01  3.016817e-05  7.758238e+01
+2021-10-22 18:24:58,469 DEBUG:301122     241088     2.610164e+05  1.082660e+00  5.686977e+01
+2021-10-22 18:24:58,493 DEBUG:301132     27563      4.010164e-01  1.454908e-05  7.717643e+01
+2021-10-22 18:24:58,498 DEBUG:301133     27576      2.001739e-01  7.258988e-06  7.721305e+01
+2021-10-22 18:24:58,502 DEBUG:301134     27571      1.563042e-01  5.669152e-06  7.719915e+01
+2021-10-22 18:24:58,507 DEBUG:301135     27317      4.363604e-02  1.597395e-06  7.648766e+01
+2021-10-22 18:24:58,511 DEBUG:301123     47701      8.366963e+03  1.754043e-01  6.678808e+01
+2021-10-22 18:24:58,515 DEBUG:301136     26928      1.271283e-02  4.721045e-07  7.539860e+01
+2021-10-22 18:24:58,519 DEBUG:301137     26619      3.801291e-03  1.428037e-07  7.453352e+01
+2021-10-22 18:24:58,523 DEBUG:301138     26223      1.615986e-03  6.162477e-08  7.342453e+01
+2021-10-22 18:24:58,526 DEBUG:301124     25721      7.968318e+02  3.097982e-02  7.201898e+01
+2021-10-22 18:24:58,530 DEBUG:301125     26718      2.213954e+02  8.286376e-03  7.481036e+01
+2021-10-22 18:24:58,530 INFO:Creating cuts for wminmunu_nominal...
+2021-10-22 18:24:58,557 INFO:
+2021-10-22 18:24:58,557 INFO:========== CUTS USED ============
+2021-10-22 18:24:58,557 INFO:Tight muon  : mu_isTight = 1.0
+2021-10-22 18:24:58,559 INFO:eta         :    |mu_eta| < 2.4
+2021-10-22 18:24:58,578 INFO:E_{T}^{MISS}:    met_met > 65.0
+2021-10-22 18:24:58,578 INFO:p_T         :      mu_pt > 65.0
+2021-10-22 18:24:58,578 INFO:M_T         :  PDFinfo_Q > 55.0
+2021-10-22 18:24:58,579 INFO:
+2021-10-22 18:24:58,742 INFO:=========== CUTFLOW =============
+2021-10-22 18:24:58,742 INFO:Option: Non-sequential
+2021-10-22 18:24:58,742 INFO:---------------------------------
+2021-10-22 18:24:58,742 INFO:Cut            Events  Ratio
+2021-10-22 18:24:58,742 INFO:Inclusive      1524374   -
+2021-10-22 18:24:58,742 INFO:tight muon cut 1524374 1.000    
+2021-10-22 18:24:58,743 INFO:eta            1524374 1.000    
+2021-10-22 18:24:58,744 INFO:met            1524374 1.000    
+2021-10-22 18:24:58,744 INFO:mu pt          1524374 1.000    
+2021-10-22 18:24:58,744 INFO:dilepton mass  0       0.000    
+2021-10-22 18:24:58,744 INFO:
+2021-10-22 18:24:58,744 INFO:========= DATASET 'wminmunu_nominal' INITIALISED =========
+2021-10-22 18:24:58,744 INFO:
+2021-10-22 18:24:58,745 INFO:======== INITIALISING DATASET 'wplusmunu_nominal' =========
+2021-10-22 18:24:58,783 DEBUG:DATASET INPUT OPTIONS: 
+2021-10-22 18:24:58,783 DEBUG:----------------------------
+2021-10-22 18:24:58,783 DEBUG:Input file(s):  /data/atlas/HighMassDrellYan/test_mc16a/wplusmunu_*/*.root
+2021-10-22 18:24:58,783 DEBUG:TTree: nominal_Loose
+2021-10-22 18:24:58,783 DEBUG:Cutfile: options/jesal_cutflow/cutfile_jesal.txt
+2021-10-22 18:24:58,784 DEBUG:Slices: True
+2021-10-22 18:24:58,784 DEBUG:groupted cutflow: True
+2021-10-22 18:24:58,785 DEBUG:----------------------------
+2021-10-22 18:24:58,785 DEBUG:
+2021-10-22 18:24:58,785 DEBUG:CUTFILE CONTENTS
+2021-10-22 18:24:58,785 DEBUG:---------------------------
+2021-10-22 18:24:58,786 DEBUG:[CUTS]
+2021-10-22 18:24:58,786 DEBUG:# Name	Variable	</>	Cut (in GeV if applicable)	Group Symmetric
+2021-10-22 18:24:58,786 DEBUG:# !!REMEMBER DEFAULT ANALYSISTOP OUTPUT IS IN MeV NOT GeV!!
+2021-10-22 18:24:58,786 DEBUG:Tight muon	mu_isTight	=	1	tight muon cut	false
+2021-10-22 18:24:58,786 DEBUG:eta	mu_eta	<	2.4	eta	true
+2021-10-22 18:24:58,787 DEBUG:E_{T}^{MISS}	met_met	>	65	met	false
+2021-10-22 18:24:58,787 DEBUG:p_T	mu_pt	>	65	mu pt	false
+2021-10-22 18:24:58,787 DEBUG:M_T	PDFinfo_Q	>	55	dilepton mass	false
+2021-10-22 18:24:58,788 DEBUG:
+2021-10-22 18:24:58,788 DEBUG:[OUTPUTS]
+2021-10-22 18:24:58,788 DEBUG:# variables to process
+2021-10-22 18:24:58,788 DEBUG:PDFinfo_Q
+2021-10-22 18:24:58,788 DEBUG:
+2021-10-22 18:24:58,788 DEBUG:[OPTIONS]
+2021-10-22 18:24:58,788 DEBUG:# case-insensitive
+2021-10-22 18:24:58,788 DEBUG:sequential	false
+2021-10-22 18:24:58,789 DEBUG:grouped cutflow	false
+2021-10-22 18:24:58,789 DEBUG:---------------------------
+2021-10-22 18:24:58,789 INFO:Parsting cutfile for wplusmunu_nominal...
+2021-10-22 18:25:01,192 INFO:Building wplusmunu_nominal dataframe from /data/atlas/HighMassDrellYan/test_mc16a/wplusmunu_*/*.root...
+2021-10-22 18:25:01,193 DEBUG:Variables to extract: 
+2021-10-22 18:25:01,193 DEBUG:  - mu_eta
+2021-10-22 18:25:01,194 DEBUG:  - mu_isTight
+2021-10-22 18:25:01,195 DEBUG:  - weight_mc
+2021-10-22 18:25:01,195 DEBUG:  - met_met
+2021-10-22 18:25:01,195 DEBUG:  - mu_pt
+2021-10-22 18:25:01,195 DEBUG:  - PDFinfo_Q
+2021-10-22 18:25:01,196 DEBUG:Checking TTree and TBranch values in file(s) '/data/atlas/HighMassDrellYan/test_mc16a/wplusmunu_*/*.root'...
+2021-10-22 18:25:37,676 DEBUG:All required variables found.
+2021-10-22 18:25:37,677 WARNING:Warning: variable(s) ['mu_isTight'] not contained in labels dictionary. Some unexpected behaviour may occur.
+2021-10-22 18:25:37,677 INFO:Extracting data from /data/atlas/HighMassDrellYan/test_mc16a/wplusmunu_*/*.root...
+2021-10-22 18:25:37,677 INFO:Extracting in slices...
+2021-10-22 18:26:26,458 DEBUG:Found 19 unique dsid(s).
+2021-10-22 18:26:26,537 WARNING:Value of 'totalEventsWeighted' (160037216.0) is not the same as the total summed values of 'weight_mc' (11783292.0) for DISD 301100.
+2021-10-22 18:26:26,541 WARNING:Value of 'totalEventsWeighted' (364.46539306640625) is not the same as the total summed values of 'weight_mc' (213.90431213378906) for DISD 301106.
+2021-10-22 18:26:26,545 WARNING:Value of 'totalEventsWeighted' (125.35179901123047) is not the same as the total summed values of 'weight_mc' (74.56197357177734) for DISD 301107.
+2021-10-22 18:26:26,549 WARNING:Value of 'totalEventsWeighted' (49.313682556152344) is not the same as the total summed values of 'weight_mc' (29.275611877441406) for DISD 301108.
+2021-10-22 18:26:26,552 WARNING:Value of 'totalEventsWeighted' (21.22814178466797) is not the same as the total summed values of 'weight_mc' (12.57727336883545) for DISD 301109.
+2021-10-22 18:26:26,555 WARNING:Value of 'totalEventsWeighted' (9.731880187988281) is not the same as the total summed values of 'weight_mc' (5.742203712463379) for DISD 301110.
+2021-10-22 18:26:26,559 WARNING:Value of 'totalEventsWeighted' (4.667399883270264) is not the same as the total summed values of 'weight_mc' (2.759563446044922) for DISD 301111.
+2021-10-22 18:26:26,562 WARNING:Value of 'totalEventsWeighted' (2.3129725456237793) is not the same as the total summed values of 'weight_mc' (1.3693233728408813) for DISD 301112.
+2021-10-22 18:26:26,565 WARNING:Value of 'totalEventsWeighted' (0.9224629402160645) is not the same as the total summed values of 'weight_mc' (0.5336453914642334) for DISD 301114.
+2021-10-22 18:26:26,570 WARNING:Value of 'totalEventsWeighted' (31235.412109375) is not the same as the total summed values of 'weight_mc' (17030.017578125) for DISD 301103.
+2021-10-22 18:26:26,573 WARNING:Value of 'totalEventsWeighted' (0.02006404474377632) is not the same as the total summed values of 'weight_mc' (0.011159650050103664) for DISD 301117.
+2021-10-22 18:26:26,576 WARNING:Value of 'totalEventsWeighted' (1.1737905740737915) is not the same as the total summed values of 'weight_mc' (0.6861993670463562) for DISD 301113.
+2021-10-22 18:26:26,580 WARNING:Value of 'totalEventsWeighted' (0.2548375427722931) is not the same as the total summed values of 'weight_mc' (0.14528857171535492) for DISD 301115.
+2021-10-22 18:26:26,583 WARNING:Value of 'totalEventsWeighted' (0.0076729897409677505) is not the same as the total summed values of 'weight_mc' (0.0041601466946303844) for DISD 301118.
+2021-10-22 18:26:26,600 WARNING:Value of 'totalEventsWeighted' (7495199.0) is not the same as the total summed values of 'weight_mc' (2389401.0) for DISD 301101.
+2021-10-22 18:26:26,604 WARNING:Value of 'totalEventsWeighted' (883.41650390625) is not the same as the total summed values of 'weight_mc' (518.955322265625) for DISD 301105.
+2021-10-22 18:26:26,617 WARNING:Value of 'totalEventsWeighted' (1052686.375) is not the same as the total summed values of 'weight_mc' (486059.75) for DISD 301102.
+2021-10-22 18:26:26,621 WARNING:Value of 'totalEventsWeighted' (0.0715329498052597) is not the same as the total summed values of 'weight_mc' (0.040646299719810486) for DISD 301116.
+2021-10-22 18:26:26,624 WARNING:Value of 'totalEventsWeighted' (3039.623779296875) is not the same as the total summed values of 'weight_mc' (1750.0435791015625) for DISD 301104.
+2021-10-22 18:26:26,624 INFO:time to build dataframe: 49s
+2021-10-22 18:26:26,637 DEBUG:Rescaled columns ['mu_pt', 'PDFinfo_Q'] to GeV.
+2021-10-22 18:26:27,252 INFO:Dataframe built and saved in outputs/jesal_cutflow/data/wplusmunu_nominal_df.pkl
+2021-10-22 18:26:27,253 INFO:Creating weights for wplusmunu_nominal...
+2021-10-22 18:26:27,267 DEBUG:PER-DSID INFO:
+2021-10-22 18:26:27,267 DEBUG:--------------
+2021-10-22 18:26:27,268 DEBUG:DSID       n_events   sum_w         x-s fb        lumi fb-1
+2021-10-22 18:26:27,269 DEBUG:==========================================================
+2021-10-22 18:26:27,315 DEBUG:301100     367544     1.178329e+07  3.205954e+01  1.035085e+01
+2021-10-22 18:26:27,321 DEBUG:301106     29345      2.139043e+02  7.289294e-03  8.216588e+01
+2021-10-22 18:26:27,327 DEBUG:301107     29741      7.456198e+01  2.507044e-03  8.327508e+01
+2021-10-22 18:26:27,332 DEBUG:301108     29683      2.927561e+01  9.862754e-04  8.311259e+01
+2021-10-22 18:26:27,337 DEBUG:301109     29624      1.257727e+01  4.245636e-04  8.294741e+01
+2021-10-22 18:26:27,342 DEBUG:301110     29502      5.742204e+00  1.946378e-04  8.260572e+01
+2021-10-22 18:26:27,347 DEBUG:301111     29562      2.759563e+00  9.334833e-05  8.277396e+01
+2021-10-22 18:26:27,351 DEBUG:301112     29601      1.369323e+00  4.625936e-05  8.288270e+01
+2021-10-22 18:26:27,356 DEBUG:301114     28925      5.336454e-01  1.844928e-05  8.099015e+01
+2021-10-22 18:26:27,362 DEBUG:301103     54523      1.703002e+04  3.123456e-01  7.633853e+01
+2021-10-22 18:26:27,366 DEBUG:301117     27810      1.115965e-02  4.012819e-07  7.786825e+01
+2021-10-22 18:26:27,370 DEBUG:301113     29230      6.861994e-01  2.347586e-05  8.184422e+01
+2021-10-22 18:26:27,374 DEBUG:301115     28506      1.452885e-01  5.096771e-06  7.981719e+01
+2021-10-22 18:26:27,379 DEBUG:301118     27109      4.160146e-03  1.534600e-07  7.590538e+01
+2021-10-22 18:26:27,399 DEBUG:301101     477625     2.389401e+06  5.002671e+00  4.470655e+01
+2021-10-22 18:26:27,403 DEBUG:301105     29372      5.189553e+02  1.766837e-02  8.224183e+01
+2021-10-22 18:26:27,417 DEBUG:301102     277038     4.860598e+05  1.754488e+00  6.467622e+01
+2021-10-22 18:26:27,421 DEBUG:301116     28411      4.064630e-02  1.430654e-06  7.955056e+01
+2021-10-22 18:26:27,425 DEBUG:301104     28787      1.750044e+03  6.079284e-02  8.060414e+01
+2021-10-22 18:26:27,425 INFO:Creating cuts for wplusmunu_nominal...
+2021-10-22 18:26:27,439 INFO:
+2021-10-22 18:26:27,439 INFO:========== CUTS USED ============
+2021-10-22 18:26:27,439 INFO:Tight muon  : mu_isTight = 1.0
+2021-10-22 18:26:27,439 INFO:eta         :    |mu_eta| < 2.4
+2021-10-22 18:26:27,439 INFO:E_{T}^{MISS}:    met_met > 65.0
+2021-10-22 18:26:27,440 INFO:p_T         :      mu_pt > 65.0
+2021-10-22 18:26:27,441 INFO:M_T         :  PDFinfo_Q > 55.0
+2021-10-22 18:26:27,441 INFO:
+2021-10-22 18:26:27,564 INFO:=========== CUTFLOW =============
+2021-10-22 18:26:27,564 INFO:Option: Non-sequential
+2021-10-22 18:26:27,564 INFO:---------------------------------
+2021-10-22 18:26:27,564 INFO:Cut            Events  Ratio
+2021-10-22 18:26:27,564 INFO:Inclusive      1611938   -
+2021-10-22 18:26:27,564 INFO:tight muon cut 1611938 1.000    
+2021-10-22 18:26:27,565 INFO:eta            1611938 1.000    
+2021-10-22 18:26:27,566 INFO:met            1611938 1.000    
+2021-10-22 18:26:27,566 INFO:mu pt          1611938 1.000    
+2021-10-22 18:26:27,566 INFO:dilepton mass  0       0.000    
+2021-10-22 18:26:27,566 INFO:
+2021-10-22 18:26:27,566 INFO:========= DATASET 'wplusmunu_nominal' INITIALISED =========
+2021-10-22 18:26:27,566 INFO:====================================
+2021-10-22 18:26:27,566 INFO:ANALYSIS 'jesal_cutflow' INITIALISED

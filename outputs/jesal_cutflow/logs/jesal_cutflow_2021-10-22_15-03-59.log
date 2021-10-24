@@ -1,0 +1,65 @@
+2021-10-22 15:03:59,802 INFO:INITIALISING ANALYSIS 'jesal_cutflow'...
+2021-10-22 15:03:59,802 INFO:========================================
+2021-10-22 15:03:59,802 INFO:
+2021-10-22 15:03:59,802 INFO:======== INITIALISING DATASET 'truth' =========
+2021-10-22 15:03:59,932 DEBUG:DATASET INPUT OPTIONS: 
+2021-10-22 15:03:59,932 DEBUG:----------------------------
+2021-10-22 15:03:59,932 DEBUG:Input file:  /data/atlas/HighMassDrellYan/test_mc16a/wmintaunu/*.root
+2021-10-22 15:03:59,932 DEBUG:TTree: nominal_Loose
+2021-10-22 15:03:59,932 DEBUG:Cutfile: options/jesal_cutflow/cutfile_jesal.txt
+2021-10-22 15:03:59,932 DEBUG:Slices: True
+2021-10-22 15:03:59,933 DEBUG:groupted cutflow: True
+2021-10-22 15:03:59,934 DEBUG:CUTFILE CONTENTS
+2021-10-22 15:03:59,934 DEBUG:---------------------------
+2021-10-22 15:03:59,935 DEBUG:[CUTS]
+2021-10-22 15:03:59,936 DEBUG:# Name	Variable	</>	Cut (in GeV if applicable)	Group Symmetric
+2021-10-22 15:03:59,936 DEBUG:# !!REMEMBER DEFAULT ANALYSISTOP OUTPUT IS IN MeV NOT GeV!!
+2021-10-22 15:03:59,936 DEBUG:Tight muon	mu_isTight	=	1	tight muon cut	false
+2021-10-22 15:03:59,936 DEBUG:eta	mu_eta	<	2.4	eta	true
+2021-10-22 15:03:59,936 DEBUG:E_{T}^{MISS}	met_met	>	65	met	false
+2021-10-22 15:03:59,937 DEBUG:p_T	mu_pt	>	65	mu pt	false
+2021-10-22 15:03:59,937 DEBUG:M_T	PDFinfo_Q	>	55	dilepton mass	false
+2021-10-22 15:03:59,937 DEBUG:
+2021-10-22 15:03:59,937 DEBUG:[OUTPUTS]
+2021-10-22 15:03:59,937 DEBUG:# variables to process
+2021-10-22 15:03:59,937 DEBUG:PDFinfo_Q
+2021-10-22 15:03:59,938 DEBUG:
+2021-10-22 15:03:59,938 DEBUG:[OPTIONS]
+2021-10-22 15:03:59,938 DEBUG:# case-insensitive
+2021-10-22 15:03:59,938 DEBUG:sequential	false
+2021-10-22 15:03:59,938 DEBUG:grouped cutflow	false
+2021-10-22 15:03:59,938 DEBUG:---------------------------
+2021-10-22 15:03:59,938 INFO:Parsting cutfile for truth...
+2021-10-22 15:03:59,942 DEBUG:Datafile found
+2021-10-22 15:03:59,942 INFO:Reading data for truth dataframe from outputs/jesal_cutflow/data/truth_df.pkl...
+2021-10-22 15:03:59,944 INFO:Creating weights for truth...
+2021-10-22 15:03:59,947 DEBUG:PER-DSID INFO:
+2021-10-22 15:03:59,947 DEBUG:--------------
+2021-10-22 15:03:59,948 DEBUG:DSID       n_events   sum_w         x-s fb        lumi fb-1
+2021-10-22 15:03:59,948 DEBUG:==========================================================
+2021-10-22 15:03:59,951 DEBUG:361105     118        9.953306e+05  8.435005e+03  8.431161e-04
+2021-10-22 15:03:59,952 INFO:Creating cuts for truth...
+2021-10-22 15:03:59,957 INFO:
+2021-10-22 15:03:59,957 INFO:========== CUTS USED ============
+2021-10-22 15:03:59,957 INFO:Tight muon  : mu_isTight = 1.0
+2021-10-22 15:03:59,957 INFO:eta         :    |mu_eta| < 2.4
+2021-10-22 15:03:59,957 INFO:E_{T}^{MISS}:    met_met > 65.0
+2021-10-22 15:03:59,958 INFO:p_T         :      mu_pt > 65.0
+2021-10-22 15:03:59,959 INFO:M_T         :  PDFinfo_Q > 55.0
+2021-10-22 15:03:59,959 INFO:
+2021-10-22 15:03:59,968 INFO:========= DATASET 'truth' INITIALISED =========
+2021-10-22 15:03:59,968 INFO:====================================
+2021-10-22 15:03:59,968 INFO:ANALYSIS 'jesal_cutflow' INITIALISED
+2021-10-22 15:04:00,633 INFO:Cutflow histogram saved to outputs/jesal_cutflow/plots/cutflow.png
+2021-10-22 15:04:00,633 INFO:=========== CUTFLOW =============
+2021-10-22 15:04:00,633 INFO:Option: Non-sequential
+2021-10-22 15:04:00,634 INFO:---------------------------------
+2021-10-22 15:04:00,634 INFO:Cut            Events Ratio
+2021-10-22 15:04:00,634 INFO:Inclusive      118   -
+2021-10-22 15:04:00,635 INFO:tight muon cut 118 1.000    
+2021-10-22 15:04:00,636 INFO:eta            118 1.000    
+2021-10-22 15:04:00,636 INFO:met            118 1.000    
+2021-10-22 15:04:00,636 INFO:mu pt          118 1.000    
+2021-10-22 15:04:00,636 INFO:dilepton mass  0   0.000    
+2021-10-22 15:04:00,636 INFO:
+2021-10-22 15:04:01,150 INFO:Figure saved to outputs/jesal_cutflow/plots/PDFinfo_Q_mass_slices_full.png
