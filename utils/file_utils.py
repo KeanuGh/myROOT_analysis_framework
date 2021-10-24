@@ -28,7 +28,7 @@ def identical_to_backup(file: str, backup_dir: Optional[str] = None, backup_file
     if backup_dir and backup_file:
         raise Exception("Input either directory or filepath")
     elif not backup_dir and not backup_file:
-        warn("Backup directory is empty")
+        logging.warning("Backup directory is empty")
         return False
     elif backup_dir:
         backup_file = get_last_backup(backup_dir)

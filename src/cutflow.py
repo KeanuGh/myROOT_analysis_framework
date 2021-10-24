@@ -115,15 +115,13 @@ class Cutflow:
             if self._cutgroups:
                 # loop over groups
                 for group in self._cutgroups.values():
-                    # calculations
                     cut_cols = [cut + config.cut_label for cut in group]
                     n_events_cut = len(df[df[cut_cols].all(1)].index)
-                    del cut_cols
                     self.cutflow_n_events.append(n_events_cut)
                     self.cutflow_ratio.append(n_events_cut / self._n_events_tot)
+                    del cut_cols
             else:
                 for cut in cut_dicts:
-                    # calculations
                     n_events_cut = len(df[df[cut['name'] + config.cut_label].all(1)].index)
                     self.cutflow_n_events.append(n_events_cut)
                     self.cutflow_ratio.append(n_events_cut / self._n_events_tot)
@@ -141,6 +139,10 @@ class Cutflow:
                     'ylabel': 'Events',
                 },
             }
+        
+        if logger.level == logging.DEBUG:
+            self.printout()
+
 
     def printout(self) -> None:
         """

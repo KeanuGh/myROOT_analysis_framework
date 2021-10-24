@@ -36,7 +36,9 @@ def build_analysis_dataframe(datapath: str,
     # create list of all necessary values extract
     vars_to_extract = extract_cut_variables(cut_list_dicts, vars_to_cut)
     vars_to_extract.add('weight_mc')
-    logger.debug("Variables to extract:{}".format('\n  -'.join(['', *vars_to_extract])))
+    logger.debug("Variables to extract: ")
+    for var in vars_to_extract:
+        logger.debug(f"  - {var}")
 
     # check that TTree and variables exist in file(s)
     logger.debug(f"Checking TTree and TBranch values in file(s) '{datapath}'...")
@@ -54,7 +56,7 @@ def build_analysis_dataframe(datapath: str,
     # check if vars are contained in label dictionary
     if unexpected_vars := [unexpected_var for unexpected_var in vars_to_extract
                            if unexpected_var not in labels_xs]:
-        logger.warning(f"Warning: variable(s) {unexpected_vars} not contained in labels dictionary."
+        logger.warning(f"Variable(s) {unexpected_vars} not contained in labels dictionary. "
                        "Some unexpected behaviour may occur.")
 
     t1 = time.time()
@@ -233,7 +235,7 @@ def create_cut_columns(df: pd.DataFrame,
         if not cut['is_symmetric']:
             logger.info(f"{cut['name']:<{name_len}}: {cut['cut_var']:>{var_len}} {cut['relation']} {cut['cut_val']}")
         else:
-            logger.info(f"{cut['name']:<{name_len}}: {cut['cut_var']:>{var_len}} {cut['relation']} |{cut['cut_val']}|")
+            logger.info(f"{cut['name']:<{name_len}}: {'|'+cut['cut_var']:>{var_len}}| {cut['relation']} {cut['cut_val']}")
     logger.info('')
 
 

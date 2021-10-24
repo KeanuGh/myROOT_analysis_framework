@@ -45,10 +45,10 @@ class Analysis:
         # ============================
         logger = logging.getLogger('analysis')
         logger.setLevel(log_level)
-        filehandler = logging.FileHandler(f"{config.out_dir}{analysis_label}/{analysis_label}_{time.strftime('%Y-%m-%d_%H-%M-%S')}.log")
+        filehandler = logging.FileHandler(f"{config.paths['log_dir']}/{analysis_label}_{time.strftime('%Y-%m-%d_%H-%M-%S')}.log")
         filehandler.setFormatter(logging.Formatter('%(asctime)s %(levelname)s:%(message)s'))
         logger.addHandler(filehandler)
-        if logger.level == logging.debug:  # print to stdout as well as log file
+        if logger.level == logging.DEBUG:  # print to stdout as well as log file
             logger.addHandler(logging.StreamHandler(sys.stdout))
 
         logger.info(f"INITIALISING ANALYSIS '{analysis_label}'...")

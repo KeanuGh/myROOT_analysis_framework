@@ -50,6 +50,26 @@ class Dataset:
             # initialise pickle filepath with given name
             self.pkl_path = config.paths['pkl_df_filepath'] + self.name + '_df.pkl'
 
+        # some debug information
+        logger.debug("DATASET INPUT OPTIONS: ")
+        logger.debug("----------------------------")
+        logger.debug(f"Input file(s):  {self.datapath}")
+        logger.debug(f"TTree: {self.TTree_name}")
+        logger.debug(f"Cutfile: {self.cutfile}")
+        logger.debug(f"Slices: {self.is_slices}")
+        logger.debug(f"grouped cutflow: {self.grouped_cutflow}")
+        logger.debug("----------------------------")
+        logger.debug("")
+
+        if logger.level == logging.DEBUG:
+            # log contents of cutfile
+            logger.debug("CUTFILE CONTENTS")
+            logger.debug('---------------------------')
+            with open(self.cutfile) as f:
+                for line in f.readlines():
+                    logger.debug(line.rstrip('\n'))
+            logger.debug('---------------------------')
+
         # READ AND GET OPTIONS FROM CUTFILE
         # ========================
         self.__cutfile_pipeline()
@@ -145,7 +165,7 @@ class Dataset:
         if logger.level == logging.DEBUG:
             logger.debug("PER-DSID INFO:")
             logger.debug("--------------")
-            logger.debug("DSID       n_events   sum_w         x-s           lumi")
+            logger.debug("DSID       n_events   sum_w         x-s fb        lumi fb-1")
             logger.debug("==========================================================")
             for dsid in self.df['DSID'].unique():
                 df_id = self.df[self.df['DSID'] == dsid]

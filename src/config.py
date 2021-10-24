@@ -40,4 +40,5 @@ paths = {
     'pkl_hist_dir': out_dir + "{}/histograms/",  # pickle file to place histograms into
     'backup_cutfiles_dir': out_dir + '{}/cutfiles/',  # _cutfile backups
     'latex_table_dir': out_dir + "{}/LaTeX_cutflow_table/",  # where to print latex cutflow table
+    'log_dir': out_dir + "{}/logs/"  # for .log files
 }

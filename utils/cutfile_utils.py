@@ -21,7 +21,7 @@ def parse_cutline(cutline: str, sep='\t') -> dict:
 
     # if badly formatted
     if len(cutline_split) != 6:
-        raise SyntaxError(f"Check cutfile. Line {cutline} is badly formatted.")
+        raise SyntaxError(f"Check cutfile. Line {cutline} is badly formatted. Got {cutline_split}.")
 
     name = cutline_split[0]
     cut_var = cutline_split[1]
@@ -171,7 +171,7 @@ def if_build_dataframe(current_cutfile: str,
     :return: tuple of bools: (whether to rebuild dataframe, whether to save cutfile backup)
     """
 
-    cut_list_dicts, vars_to_cut, options_dict = parse_cutfile(current_cutfile)
+    cut_list_dicts, vars_to_cut, _ = parse_cutfile(current_cutfile)
 
     is_pkl_file = os.path.isfile(pkl_filepath)
     if is_pkl_file:
@@ -230,15 +230,7 @@ def if_build_dataframe(current_cutfile: str,
 
     # check pickle file is actually there before trying to read from it
     if not build_dataframe and not is_pkl_file:
-        yn = input(f"Pickle datafile not found at {pkl_filepath}. Rebuild? (y/n) ")
-        while True:
-            if yn.lower() in ('yes', 'y'):
-                build_dataframe = True
-                break
-            elif yn.lower() in ('no', 'n'):
-                sys.exit("Exiting")
-            else:
-                yn = input("yes or no ")
+        build_dataframe = True
 
     return build_dataframe
 
