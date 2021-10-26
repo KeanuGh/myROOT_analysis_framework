@@ -1,0 +1,52 @@
+2021-10-26 20:07:45,188 INFO:INITIALISING ANALYSIS 'jesal_cutflow'...
+2021-10-26 20:07:45,188 INFO:========================================
+2021-10-26 20:07:45,188 INFO:
+2021-10-26 20:07:45,188 INFO:======== INITIALISING DATASET 'wmintaunu_nominal' =========
+2021-10-26 20:07:45,912 DEBUG:DATASET INPUT OPTIONS: 
+2021-10-26 20:07:45,912 DEBUG:----------------------------
+2021-10-26 20:07:45,912 DEBUG:Input file(s):  /data/atlas/HighMassDrellYan/test_mc16a/wmintaunu*/*.root
+2021-10-26 20:07:45,912 DEBUG:TTree: nominal_Loose
+2021-10-26 20:07:45,912 DEBUG:Cutfile: options/jesal_cutflow/cutfile_jesal.txt
+2021-10-26 20:07:45,912 DEBUG:Slices: True
+2021-10-26 20:07:45,912 DEBUG:grouped cutflow: True
+2021-10-26 20:07:45,913 DEBUG:----------------------------
+2021-10-26 20:07:45,913 DEBUG:
+2021-10-26 20:07:45,913 DEBUG:CUTFILE CONTENTS
+2021-10-26 20:07:45,913 DEBUG:---------------------------
+2021-10-26 20:07:45,914 DEBUG:[CUTS]
+2021-10-26 20:07:45,914 DEBUG:# Name	Variable	</>	Cut (in GeV if applicable)	Group Symmetric
+2021-10-26 20:07:45,914 DEBUG:# !!REMEMBER DEFAULT ANALYSISTOP OUTPUT IS IN MeV NOT GeV!!
+2021-10-26 20:07:45,914 DEBUG:Tight muon	mu_isTight	=	1	tight muon cut	false
+2021-10-26 20:07:45,914 DEBUG:eta	mu_eta	<	2.4	eta	true
+2021-10-26 20:07:45,915 DEBUG:E_{T}^{MISS}	met_met	>	65	met	false
+2021-10-26 20:07:45,915 DEBUG:p_T	mu_pt	>	65	mu pt	false
+2021-10-26 20:07:45,915 DEBUG:M_T	mu_mt	>	55	muon mt	false
+2021-10-26 20:07:45,915 DEBUG:M_W	MC_WZ_m	<	120	W m	false	truth
+2021-10-26 20:07:45,916 DEBUG:
+2021-10-26 20:07:45,916 DEBUG:[OUTPUTS]
+2021-10-26 20:07:45,916 DEBUG:# variables to process
+2021-10-26 20:07:45,916 DEBUG:mu_mt
+2021-10-26 20:07:45,916 DEBUG:mu_pt
+2021-10-26 20:07:45,916 DEBUG:mu_eta
+2021-10-26 20:07:45,916 DEBUG:
+2021-10-26 20:07:45,916 DEBUG:[OPTIONS]
+2021-10-26 20:07:45,916 DEBUG:# case-insensitive
+2021-10-26 20:07:45,916 DEBUG:sequential	false
+2021-10-26 20:07:45,916 DEBUG:grouped cutflow	false
+2021-10-26 20:07:45,916 DEBUG:---------------------------
+2021-10-26 20:07:45,916 INFO:Parsting cutfile for wmintaunu_nominal...
+2021-10-26 20:07:45,936 INFO:Backup cutfile saved in outputs/jesal_cutflow/cutfiles/wmintaunu_nominal_cutfile_jesal_2021-10-26_20-07-45.txt
+2021-10-26 20:07:45,937 DEBUG:Datafile found
+2021-10-26 20:07:45,938 DEBUG:New cutfile, will save backup.
+2021-10-26 20:07:45,939 INFO:Building wmintaunu_nominal dataframe from /data/atlas/HighMassDrellYan/test_mc16a/wmintaunu*/*.root...
+2021-10-26 20:07:45,939 DEBUG:Variables to extract: 
+2021-10-26 20:07:45,939 DEBUG:  - eventNumber
+2021-10-26 20:07:45,939 DEBUG:  - mu_phi
+2021-10-26 20:07:45,939 DEBUG:  - mu_pt
+2021-10-26 20:07:45,939 DEBUG:  - met_phi
+2021-10-26 20:07:45,940 DEBUG:  - met_met
+2021-10-26 20:07:45,940 DEBUG:  - weight_mc
+2021-10-26 20:07:45,940 DEBUG:  - mu_isTight
+2021-10-26 20:07:45,940 DEBUG:  - mu_mt
+2021-10-26 20:07:45,940 DEBUG:  - mu_eta
+2021-10-26 20:07:45,940 DEBUG:Checking TTree and TBranch values in file(s) '/data/atlas/HighMassDrellYan/test_mc16a/wmintaunu*/*.root'...

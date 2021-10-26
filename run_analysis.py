@@ -5,28 +5,28 @@ if __name__ == '__main__':
     # dataset inputs
     datasets = {
         'wmintaunu_nominal': {
-            'datapath': '/data/atlas/HighMassDrellYan/test_mc16a/wmintaunu_*/*.root',
+            'datapath': '/data/atlas/HighMassDrellYan/test_mc16a/wmintaunu*/*.root',
             'cutfile': 'options/jesal_cutflow/cutfile_jesal.txt',
             'TTree_name': 'nominal_Loose',
             'is_slices': True,
             'lepton': 'tau'
         },
         'wplustaunu_nominal': {
-            'datapath': '/data/atlas/HighMassDrellYan/test_mc16a/wplustaunu_*/*.root',
+            'datapath': '/data/atlas/HighMassDrellYan/test_mc16a/wplustaunu*/*.root',
             'cutfile': 'options/jesal_cutflow/cutfile_jesal.txt',
             'TTree_name': 'nominal_Loose',
             'is_slices': True,
             'lepton': 'tau'
         },
         'wminmunu_nominal': {
-            'datapath': '/data/atlas/HighMassDrellYan/test_mc16a/wminmunu_*/*.root',
+            'datapath': '/data/atlas/HighMassDrellYan/test_mc16a/wminmunu*/*.root',
             'cutfile': 'options/jesal_cutflow/cutfile_jesal.txt',
             'TTree_name': 'nominal_Loose',
             'is_slices': True,
             'lepton': 'muon'
         },
         'wplusmunu_nominal': {
-            'datapath': '/data/atlas/HighMassDrellYan/test_mc16a/wplusmunu_*/*.root',
+            'datapath': '/data/atlas/HighMassDrellYan/test_mc16a/wplusmunu*/*.root',
             'cutfile': 'options/jesal_cutflow/cutfile_jesal.txt',
             'TTree_name': 'nominal_Loose',
             'is_slices': True,
@@ -38,7 +38,7 @@ if __name__ == '__main__':
 
     # pipeline
     my_analysis.gen_cutflow_hist(event=True)
-    my_analysis.plot_mass_slices(xvar='PDFinfo_Q', logx=True, to_pkl=False)
+    my_analysis.plot_mass_slices(xvar='mu_mt', logx=True, to_pkl=False)
     # my_analysis.plot_with_cuts(scaling='xs', to_pkl=False)
     # my_analysis.make_all_cutgroup_2dplots(to_pkl=False)
     # my_analysis.kinematics_printouts()
