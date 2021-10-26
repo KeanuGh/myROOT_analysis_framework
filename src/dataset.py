@@ -58,6 +58,7 @@ class Dataset:
         logger.debug(f"Cutfile: {self.cutfile}")
         logger.debug(f"Slices: {self.is_slices}")
         logger.debug(f"grouped cutflow: {self.grouped_cutflow}")
+        logger.debug(f"Forced dataset rebuild: {config.force_rebuild}")
         logger.debug("----------------------------")
         logger.debug("")
 

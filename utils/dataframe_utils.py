@@ -56,14 +56,13 @@ def build_analysis_dataframe(datapath: str,
             logger.debug(f"  - {var}")
         if alt_trees:
             for tree in alt_trees:
-                logger.debug(f"Variables to extract from {TTree_name} tree: ")
+                logger.debug(f"Variables to extract from {tree} tree: ")
                 for var in alt_trees[tree]:
                     logger.debug(f"  - {var}")
         if vars_to_calc:
             logger.debug("Variables to calculate: ")
             for var in vars_to_calc:
                 logger.debug(f"  - {var}")
-
 
     # check that TTree(s) and variables exist in file(s)
     logger.debug(f"Checking TTree and TBranch values in file(s) '{datapath}'...")
@@ -88,7 +87,7 @@ def build_analysis_dataframe(datapath: str,
     t1 = time.time()
     # extract pandas dataframe from root file with necessary variables
     if not is_slices:  # If importing inclusive sample
-        logger.info(f"Extracting data from {datapath}...")
+        logger.info(f"Extracting {default_tree_vars} from {datapath}...")
         df = uproot.concatenate(datapath + ':' + TTree_name, default_tree_vars,
                                 library='pd', num_workers=config.n_threads)
         logger.debug(f"Extracted {len(df)} events.")
@@ -106,12 +105,12 @@ def build_analysis_dataframe(datapath: str,
         logger.info(f"Extracting mass slices from {datapath}...")
         default_tree_vars.add('mcChannelNumber')  # to keep track of dataset IDs (DSIDs)
 
-        logger.debug(f"Extracting variables from tree {TTree_name}...")
+        logger.debug(f"Extracting {default_tree_vars} from {TTree_name} tree...")
         df = uproot.concatenate(datapath + ':' + TTree_name, default_tree_vars, library='pd',
                                 num_workers=config.n_threads)
         logger.debug(f"Extracted {len(df)} events.")
 
-        logger.debug(f"Extracting required variables from 'sumWeights' tree...")
+        logger.debug(f"Extracting ['total_EventsWeighted', 'dsid'] from 'sumWeights' tree...")
         sumw = uproot.concatenate(datapath + ':sumWeights', ['totalEventsWeighted', 'dsid'],
                                   library='pd', num_workers=config.n_threads)
 
@@ -122,7 +121,7 @@ def build_analysis_dataframe(datapath: str,
 
         if alt_trees:
             for tree in alt_trees:
-                logger.debug(f"Extracting {alt_trees[tree]} from TTree {tree}...")
+                logger.debug(f"Extracting {alt_trees[tree]} from {tree} tree...")
                 alt_df = uproot.concatenate(datapath + ":" + tree, alt_trees[tree] + [event_n_col],
                                             library='pd', num_workers=config.n_threads)
 

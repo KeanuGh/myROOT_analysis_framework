@@ -617,6 +617,7 @@ def plot_mass_slices(df: pd.DataFrame,
                      id_col: str = 'DSID',
                      weight_col: str = 'weight',
                      plot_label: str = '',
+                     inclusive_dataset: pd.DataFrame = None,
                      to_pkl: bool = False
                      ) -> None:
     """Plots all mass slices as well as inclusive sample (in this case just all given slices together)"""
@@ -631,8 +632,12 @@ def plot_mass_slices(df: pd.DataFrame,
         if to_pkl:
             hists[dsid] = hist
 
-    hist_inc = histplot_1d(var_x=df[xvar], weights=df[weight_col], bins=xbins, fig_axis=ax, yerr=None, is_logbins=logbins, scaling='widths',
-                           color='k', linewidth=2, label='Inclusive')
+    if inclusive_dataset:
+        hist_inc = histplot_1d(var_x=inclusive_dataset[xvar], weights=inclusive_dataset[weight_col], bins=xbins, fig_axis=ax, yerr=None, is_logbins=logbins,
+                               scaling='widths', color='k', linewidth=2, label='Inclusive')
+    else:
+        hist_inc = histplot_1d(var_x=df[xvar], weights=df[weight_col], bins=xbins, fig_axis=ax, yerr=None, is_logbins=logbins, scaling='widths',
+                               color='k', linewidth=2, label='Inclusive')
     if to_pkl:
         hists['inclusive'] = hist_inc
 

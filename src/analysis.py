@@ -50,13 +50,13 @@ class Analysis:
         logger.addHandler(filehandler)
         if logger.level == logging.DEBUG:  # print to stdout as well as log file
             logger.addHandler(logging.StreamHandler(sys.stdout))
-
+        
         logger.info(f"INITIALISING ANALYSIS '{analysis_label}'...")
         logger.info("="*(len(analysis_label)+27))
 
         # SET OTHER GLOBAL OPTIONS
         # ============================
-        config.force_rebuild = force_rebuild
+        config.force_rebuild = force_rebuild  # TODO: do this per dataset
         if global_lumi:
             config.lumi = global_lumi
 
@@ -70,7 +70,7 @@ class Analysis:
             '_phi_': config.phibins,
             'w_y': config.phibins
         }
-
+        
         # BUILD DATASETS
         # ============================
         self.datasets = {name: Dataset(name, **ds) for name, ds in data_dict.items()}
@@ -105,6 +105,13 @@ class Analysis:
     # can iterate over datasets
     def __iter__(self):
         yield from self.datasets.values()
+    
+    # ===============================
+    # ========= FUNCTIONS ===========
+    # ===============================
+    def convert_hists_to_root(**kwargs):
+        file_utils.convert_pkl_to_root(**kwargs)
+
 
     # ===============================
     # =========== PLOTS =============
@@ -139,15 +146,19 @@ class Analysis:
         self.datasets[ds_name].make_all_cutgroup_2dplots(**kwargs)
 
     @decorators.check_single_datafile
-    def plot_mass_slices(self, ds_name: Optional[str], xvar: str, **kwargs) -> None:
+    def plot_mass_slices(self, ds_name: Optional[str], xvar: str, inclusive_dataset: str, **kwargs) -> None:
         """
         Plots mass slices for input variable xvar if dataset is_slices
 
         :param ds_name: name of dataset (in slices) to plot
         :param xvar: variable in dataframe to plot
+        :param inclusive_dataset: if given, uses given dataset in analysis as inclusive overlay
         :param kwargs: keyword args to pass to dataclass.plot_mass_slices()
         """
-        self.datasets[ds_name].plot_mass_slices(xvar=xvar, **kwargs)
+        if inclusive_dataset:
+            self.datasets[ds_name].plot_mass_slices(xvar=xvar, inclusive_dataset=self.datasets[inclusive_dataset].df, **kwargs)
+        else:
+            self.datasets[ds_name].plot_mass_slices(xvar=xvar, **kwargs)
 
     # ===============================
     # ========= PRINTOUTS ===========
