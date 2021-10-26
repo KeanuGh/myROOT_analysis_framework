@@ -1,0 +1,7 @@
+2021-10-20 17:35:27,922 INFO:INITIALISING ANALYSIS 'test_slices'...
+2021-10-20 17:35:27,922 INFO:======================================
+2021-10-20 17:35:27,922 INFO:
+2021-10-20 17:35:27,922 INFO:======== INITIALISING DATASET 'truth' =========
+2021-10-20 17:35:28,064 INFO:Parsting cutfile for truth...
+2021-10-20 17:35:28,069 INFO:Backup cutfile saved in outputs/test_slices/cutfiles/truth_cutfile_EXAMPLE_2021-10-20_17-35-28.txt
+2021-10-20 17:35:28,070 DEBUG:New cutfile, will save backup.

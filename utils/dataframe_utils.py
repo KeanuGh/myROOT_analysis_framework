@@ -39,6 +39,10 @@ def build_analysis_dataframe(datapath: str,
     default_tree_vars = extract_cut_variables(cut_list_dicts, vars_to_cut)
     default_tree_vars.add('weight_mc')
 
+    # get any variables that need to be calculated rather than extracted from ROOT file
+    vars_to_calc = {calc_var for calc_var in default_tree_vars if calc_var in derived_vars}
+    default_tree_vars -= vars_to_calc
+
     # get any variables in trees outside the default tree (TTree_name)
     alt_trees = gen_alt_tree_dict(cut_list_dicts)
     if alt_trees:
@@ -47,9 +51,19 @@ def build_analysis_dataframe(datapath: str,
         default_tree_vars -= {var for varlist in alt_trees.values() for var in varlist}
 
     if logger.level == logging.DEBUG:
-        logger.debug("Variables to extract: ")
+        logger.debug(f"Variables to extract from {TTree_name} tree: ")
         for var in default_tree_vars:
             logger.debug(f"  - {var}")
+        if alt_trees:
+            for tree in alt_trees:
+                logger.debug(f"Variables to extract from {TTree_name} tree: ")
+                for var in alt_trees[tree]:
+                    logger.debug(f"  - {var}")
+        if vars_to_calc:
+            logger.debug("Variables to calculate: ")
+            for var in vars_to_calc:
+                logger.debug(f"  - {var}")
+
 
     # check that TTree(s) and variables exist in file(s)
     logger.debug(f"Checking TTree and TBranch values in file(s) '{datapath}'...")
@@ -62,7 +76,8 @@ def build_analysis_dataframe(datapath: str,
                 if missing_branches := [branch for branch in default_tree_vars
                                         if branch not in file[TTree_name].keys()]:
                     raise ValueError(f"Missing TBranch(es) {missing_branches} in TTree '{TTree_name}' of file '{datapath}'.")
-    logger.debug("All required variables found.")
+        logger.debug(f"All TTrees and variables found in {filepath}...")
+    logger.debug("All required TTrees variables found.")
 
     # check if vars are contained in label dictionary
     if unexpected_vars := [unexpected_var for unexpected_var in default_tree_vars
@@ -72,32 +87,46 @@ def build_analysis_dataframe(datapath: str,
 
     t1 = time.time()
     # extract pandas dataframe from root file with necessary variables
-    logger.info(f"Extracting data from {datapath}...")
-
     if not is_slices:  # If importing inclusive sample
+        logger.info(f"Extracting data from {datapath}...")
         df = uproot.concatenate(datapath + ':' + TTree_name, default_tree_vars,
                                 library='pd', num_workers=config.n_threads)
+        logger.debug(f"Extracted {len(df)} events.")
+
         if alt_trees:
             for tree in alt_trees:
+                logger.debug(f"Extracting {alt_trees[tree]} from TTree {tree}...")
                 alt_df = uproot.concatenate(datapath + ":" + tree, alt_trees[tree] + [event_n_col],
                                             library='pd', num_workers=config.n_threads)
+
+                logger.debug("Merging with rest of dataframe...")
                 df = pd.merge(df, alt_df, on=event_n_col, sort=False)
 
     else:  # if importing mass slices
-        logger.info("Extracting in slices...")
+        logger.info(f"Extracting mass slices from {datapath}...")
         default_tree_vars.add('mcChannelNumber')  # to keep track of dataset IDs (DSIDs)
+
+        logger.debug(f"Extracting variables from tree {TTree_name}...")
         df = uproot.concatenate(datapath + ':' + TTree_name, default_tree_vars, library='pd',
                                 num_workers=config.n_threads)
+        logger.debug(f"Extracted {len(df)} events.")
+
+        logger.debug(f"Extracting required variables from 'sumWeights' tree...")
         sumw = uproot.concatenate(datapath + ':sumWeights', ['totalEventsWeighted', 'dsid'],
                                   library='pd', num_workers=config.n_threads)
+
+        logger.debug(f"Calculating sum of weights and merging...")
         sumw = sumw.groupby('dsid').sum()
         df = pd.merge(df, sumw, left_on='mcChannelNumber', right_on='dsid', sort=False)
-        df.rename(columns={'mcChannelNumber': 'DSID'},
-                  inplace=True)  # rename mcChannelNumber to DSID (why are they different)
+        df.rename(columns={'mcChannelNumber': 'DSID'}, inplace=True)  # rename mcChannelNumber to DSID (why are they different)
+
         if alt_trees:
             for tree in alt_trees:
+                logger.debug(f"Extracting {alt_trees[tree]} from TTree {tree}...")
                 alt_df = uproot.concatenate(datapath + ":" + tree, alt_trees[tree] + [event_n_col],
                                             library='pd', num_workers=config.n_threads)
+
+                logger.debug("Merging with rest of dataframe...")
                 df = pd.merge(df, alt_df, on=event_n_col, sort=False)
 
         if logger.level == logging.DEBUG:
@@ -125,7 +154,7 @@ def build_analysis_dataframe(datapath: str,
     logger.info(f"time to build dataframe: {t2 - t1:.2g}s")
 
     # calculate and combine special derived variables
-    if to_calc := [calc_var for calc_var in vars_to_cut if calc_var in derived_vars]:
+    if vars_to_calc:
 
         def row_calc(deriv_var: str, row: pd.Series) -> pd.Series:
             """Helper for applying derived variable calculation function to a dataframe row"""
@@ -134,7 +163,7 @@ def build_analysis_dataframe(datapath: str,
 
         # save which variables are actually necessary in order to drop extras
         og_vars = all_vars(cut_list_dicts, vars_to_cut)
-        for var in to_calc:
+        for var in vars_to_calc:
             # compute new column
             temp_cols = derived_vars[var]['var_args']
             logger.info(f"Computing '{var}' column from {temp_cols}...")
