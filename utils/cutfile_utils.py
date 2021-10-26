@@ -22,17 +22,27 @@ def parse_cutline(cutline: str, sep='\t') -> dict:
     # if badly formatted
     if len(cutline_split) not in (6, 7):
         raise SyntaxError(f"Check cutfile. Line {cutline} is badly formatted. Got {cutline_split}.")
+    for v in cutline_split:
+        if len(v) == 0:
+            raise SyntaxError(f"Check cutfile. Blank value given in line {cutline}. Got {cutline_split}")
+        if v[0] == ' ' or v[-1] == ' ':
+            logger.warning(f"Found trailing space in option cutfile line {cutline}: Variable '{v}'.")
 
     name = cutline_split[0]
     cut_var = cutline_split[1]
     relation = cutline_split[2]
-    cut_val = float(cutline_split[3])
+    try:
+        cut_val = float(cutline_split[3])
+    except ValueError:  # make sure the cut value is actually a number
+        raise SyntaxError(f"Check 'cut_val' argument in line {cutline}. Got {cutline_split[3]}.")
     group = cutline_split[4]
     is_symmetric = bool(strtobool(cutline_split[5].lower()))  # converts string to boolean
     try:
         tree = cutline_split[6]  # if an alternate TTree is given
     except IndexError:
         tree = None
+    if tree == '':
+        raise SyntaxError(f"Check cutfile. Line {cutline} is badly formatted. Got {cutline_split}.")
 
     # check values
     if relation not in ('>', '<', '<=', '>=', '=', '!='):

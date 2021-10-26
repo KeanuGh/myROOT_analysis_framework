@@ -87,6 +87,76 @@ class TestParseCutfile(object):
             f"Cutfile parser failed options. Expected: {test_options_dict}. Got: {self.output[2]}"
 
 
+class TestParseCutline(object):
+    sep = '\t'
+
+    def test_no_tree(self):
+        line = 'cut 1{0}testvar1{0}<={0}100{0}var1cut{0}true'.format(self.sep)
+        expected_output = {'name': 'cut 1',
+                           'cut_var': 'testvar1',
+                           'relation': '<=',
+                           'cut_val': 100,
+                           'group': 'var1cut',
+                           'is_symmetric': True}
+        actual_output = parse_cutline(line)
+        assert expected_output == actual_output
+
+    def test_tree(self):
+        line = 'cut 1{0}testvar1{0}<={0}100{0}var1cut{0}true{0}tree2'.format(self.sep)
+        expected_output = {'name': 'cut 1',
+                           'cut_var': 'testvar1',
+                           'relation': '<=',
+                           'cut_val': 100,
+                           'group': 'var1cut',
+                           'is_symmetric': True,
+                           'tree': 'tree2'}
+        actual_output = parse_cutline(line)
+        assert expected_output == actual_output
+
+    def test_missing_value(self):
+        line = 'cut 1{0}testvar1{0}<={0}100{0}true'.format(self.sep)
+        with pytest.raises(SyntaxError) as e:
+            _ = parse_cutline(line)
+            assert e.match(f"Check cutfile. Line {line} is badly formatted. Got {line.split(self.sep)}.")
+
+    def test_extra_value(self):
+        line = 'cut 1{0}testvar1{0}<={0}100{0}var1cut{0}true{0}tree2{0}woah'.format(self.sep)
+        with pytest.raises(SyntaxError) as e:
+            _ = parse_cutline(line)
+            assert e.match(f"Check cutfile. Line {line} is badly formatted. Got {line.split(self.sep)}.")
+
+    def test_incorrect_cutval(self):
+        line = 'cut 1{0}testvar1{0}<={0}woops{0}var1cut{0}true{0}tree2'.format(self.sep)
+        with pytest.raises(SyntaxError) as e:
+            _ = parse_cutline(line)
+            assert e.match(f"Check 'cut_val' argument in line {line}. Got 'woops'.")
+
+    def test_blank_value(self):
+        line = 'cut 1{0}{0}<={0}100{0}var1cut{0}true{0}tree2{0}woah'.format(self.sep)
+        with pytest.raises(SyntaxError) as e:
+            _ = parse_cutline(line)
+            assert e.match(f"Check cutfile. Line {line} is badly formatted. Got {line.split(self.sep)}.")
+
+    def test_trailing_separator_with_tree(self):
+        line = 'cut 1{0}testvar1{0}<={0}100{0}var1cut{0}true{0}tree2{0}'.format(self.sep)
+        with pytest.raises(SyntaxError) as e:
+            _ = parse_cutline(line)
+            assert e.match(f"Check cutfile. Line {line} is badly formatted. Got {line.split(self.sep)}.")
+
+    def test_trailing_separator_without_tree(self):
+        line = 'cut 1{0}testvar1{0}<={0}100{0}var1cut{0}true{0}'.format(self.sep)
+        with pytest.raises(SyntaxError) as e:
+            _ = parse_cutline(line)
+            assert e.match(f"Check cutfile. Line {line} is badly formatted. Got {line.split(self.sep)}.")
+
+    def test_trailing_space(self, caplog):
+        line = 'cut 1{0}testvar1 {0}<={0}100{0}var1cut{0}true'.format(self.sep)
+        _ = parse_cutline(line)
+        for record in caplog.records:
+            assert record.levelname == 'WARNING'
+        assert caplog.text == f"WARNING  analysis:cutfile_utils.py:29 Found trailing space in option cutfile line {line}: Variable 'testvar1 '.\n"
+
+
 class TestGenAltTreeDict(object):
     def test_default_input(self):
         expected = {'tree2': ['testvar4']}

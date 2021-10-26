@@ -79,9 +79,9 @@ def build_analysis_dataframe(datapath: str,
                                 library='pd', num_workers=config.n_threads)
         if alt_trees:
             for tree in alt_trees:
-                alt_df = uproot.concatenate(datapath + ":" + tree, alt_trees[tree] + ['eventNumber'],
+                alt_df = uproot.concatenate(datapath + ":" + tree, alt_trees[tree] + [event_n_col],
                                             library='pd', num_workers=config.n_threads)
-                df = pd.merge(df, alt_df, on='eventNumber', sort=False)
+                df = pd.merge(df, alt_df, on=event_n_col, sort=False)
 
     else:  # if importing mass slices
         logger.info("Extracting in slices...")
@@ -96,9 +96,9 @@ def build_analysis_dataframe(datapath: str,
                   inplace=True)  # rename mcChannelNumber to DSID (why are they different)
         if alt_trees:
             for tree in alt_trees:
-                alt_df = uproot.concatenate(datapath + ":" + tree, alt_trees[tree] + ['eventNumber'],
+                alt_df = uproot.concatenate(datapath + ":" + tree, alt_trees[tree] + [event_n_col],
                                             library='pd', num_workers=config.n_threads)
-                df = pd.merge(df, alt_df, on='eventNumber', sort=False)
+                df = pd.merge(df, alt_df, on=event_n_col, sort=False)
 
         if logger.level == logging.DEBUG:
             # sanity check to make sure totalEventsWeighted really is what it says it is
