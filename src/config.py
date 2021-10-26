@@ -6,7 +6,7 @@ from math import pi
 
 # OS SETTINGS
 # ====================
-n_threads = os.cpu_count() // 2  # number of threads used for filling histograms
+n_threads = os.cpu_count()  # number of threads used for filling histograms
 
 # MISC SETTINGS
 # ====================

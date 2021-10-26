@@ -20,7 +20,7 @@ def parse_cutline(cutline: str, sep='\t') -> dict:
     cutline_split = cutline.split(sep)
 
     # if badly formatted
-    if len(cutline_split) != 6:
+    if len(cutline_split) not in (6, 7):
         raise SyntaxError(f"Check cutfile. Line {cutline} is badly formatted. Got {cutline_split}.")
 
     name = cutline_split[0]
@@ -29,6 +29,10 @@ def parse_cutline(cutline: str, sep='\t') -> dict:
     cut_val = float(cutline_split[3])
     group = cutline_split[4]
     is_symmetric = bool(strtobool(cutline_split[5].lower()))  # converts string to boolean
+    try:
+        tree = cutline_split[6]  # if an alternate TTree is given
+    except IndexError:
+        tree = None
 
     # check values
     if relation not in ('>', '<', '<=', '>=', '=', '!='):
@@ -43,6 +47,9 @@ def parse_cutline(cutline: str, sep='\t') -> dict:
         'group': group,
         'is_symmetric': is_symmetric,
     }
+    if tree:
+        cut_dict['tree'] = tree
+
     return cut_dict
 
 
@@ -147,6 +154,18 @@ def gen_cutgroups(cut_list_of_dicts: List[dict]) -> OrderedDict[str, List[str]]:
             cutgroups.append((cut_dict['group'], [cut_dict['name']]))
 
     return collections.OrderedDict(cutgroups)
+
+
+def gen_alt_tree_dict(list_of_cut_dicts: List[dict]) -> Dict[str, List[str]]:
+    """generate dictionary like {'tree': ['var', ...], ...} in order to extract variables from other trees in root file"""
+    out = dict()
+    for cut_dict in list_of_cut_dicts:
+        if 'tree' in cut_dict:
+            if cut_dict['tree'] not in out:
+                out[cut_dict['tree']] = [cut_dict['cut_var']]
+            else:
+                out[cut_dict['tree']] += [cut_dict['cut_var']]
+    return out
 
 
 def if_make_cutfile_backup(current_cutfile: str, backup_dirpath: str) -> bool:

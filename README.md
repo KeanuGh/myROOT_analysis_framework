@@ -3,13 +3,14 @@ So far it is able to:
 - Read in many root files and concatenate.
 - Read in a cutfile and apply cuts in groups or independently (todo: writeup how to use cutfile). The file allows you to specify which cuts to apply and how, and specify which variables are going to be plotted.
 - Supports holding multiple datasets.
+- Supports reading off from multiple TTrees at once
 - Generate a cutflow for the cuts applied, and print out cutflow histograms, a LaTeX table with cut summaries and a terminal printout of table.
 - Plot root data in 1D Histograms with and without cuts applied, and plot overlaid cuts with corresponding acceptance ratios.
 - Plot 2D histograms of multiple variables with cuts applied.
 - Read in mass slices and normalise all to a specific luminosity.
 - Backs up cutfiles and latex table when changes are made, and saves the last analysis data in pickle files for faster readin next time round.
-- Organises plots by cutfile name.
-- Converts boost-histograms to ROOT TH1 histograms and back
+- Organise plots by cutfile name.
+- Convert boost-histograms to ROOT TH1 histograms and back
 
 ### In the works:
 - Logging: as soon as I get around to learning how to use the python logging library.
@@ -61,40 +62,42 @@ convert_pkl_to_root(conv_all=True)
 Example cutfile:
 ```
 [CUTS]
-# Name	Variable	comparison	Cut (in GeV if applicable)	Group Symmetric
+# Name	Variable	</>	Cut (in GeV if applicable)	Group Symmetric Alt TTree
 # !!REMEMBER DEFAULT ANALYSISTOP OUTPUT IS IN MeV NOT GeV!!
-Muon $|#eta|$	MC_WZmu_el_eta_born	<	2.4	eta cut	true
-Muon $p_{T}$	MC_WZmu_el_pt_born	>	25	pT cut	false
-Neutrino $p_{T}$	MC_WZneutrino_pt_born	>	25	pT cut	false
+Tight muon	mu_isTight	=	1	tight muon cut	false
+eta	mu_eta	<	2.4	eta	true
+E_{T}^{MISS}	met_met	>	65	met	false
+p_T	mu_pt	>	65	mu pt	false
+M_T	mu_mt	>	55	muon mt	false
+M_W	MC_WZ_m <	120	W m	false	truth
 
 [OUTPUTS]
 # variables to process
-MC_WZ_dilep_m_born
-MC_WZ_dilep_m_bare
-MC_WZ_dilep_m_dres
-MC_WZ_pt
+PDFinfo_Q
 
 [OPTIONS]
 # case-insensitive
-sequential	true
-grouped cutdlow false
+sequential	false
+grouped cutflow	false
 ```
 Cutfile contains lists of tab-separated values. 
 
-For [CUTS] The columns are:
-- Name: name of cut. This will be the label added to plots and cutflow for that cut
-- Variable: variable in root file to cut on
-- comparison: relational operator =/!=/</<=/>/>=
-- Cut: value to cut variable at (in GeV)
-- Group: Cuts with the same 'group' value will be applied simultaneously
-- Symmetric: whether the cut is symmetric. Eg in the example the cut on `MC_WZmu_el_eta_born` will actually be `|MC_WZmu_el_eta_born| < 2.4`
+For **[CUTS]** The columns are:
+- **Name**: name of cut. This will be the label added to plots and cutflow for that cut
+- **Variable**: variable in root file to cut on
+- **comparison**: relational operator (=, !=, <, <=, >, >=)
+- **Cut**: value to cut variable at (in GeV)
+- **Group**: Cuts with the same 'group' value will be applied simultaneously
+- **Symmetric**: whether the cut is symmetric. Eg in the example the cut on `MC_WZmu_el_eta_born` will actually be `|MC_WZmu_el_eta_born| < 2.4`
+- **Alt TTree**: if the given variable is in a different tree, imports and matches by including the 'eventNumber' TBranch
 
-[OUTPUTS] 
+**[OUTPUTS]** 
+
 List of the variables that you plan to plot. The variables that are cut on will still be accessible in the dataframe though so you can plot them if you want 
 
-[OPTIONS] 
-'sequential': This set whether the cuts should be applied one after the other or separately. Remember if sequential is true that the order in which you write in [CUTS] matters
-'grouped cutflow': this sets whether the different cut groupings should be set applied as a single cut in the cutflow
+**[OPTIONS]** 
+- '_sequential_': This set whether the cuts should be applied one after the other or separately. Remember if sequential is true that the order in which you write in [CUTS] matters
+- '_grouped cutflow_': this sets whether the different cut groupings should be set applied as a single cut in the cutflow
 
 ## Extra variables
 In `utils.var_helpers` I've definied a few variables aren't in AnalysisTop outputs, eg transverse mass or boson rapidity. These can be used as variables in the cutfile and the framework will calculate them for you: extracting the variables it needs to calculate then deleting the unnecessary columns afterwards. 

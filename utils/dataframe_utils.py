@@ -9,7 +9,7 @@ import uproot
 
 import src.config as config
 from utils.axis_labels import labels_xs
-from utils.cutfile_utils import extract_cut_variables, all_vars
+from utils.cutfile_utils import extract_cut_variables, all_vars, gen_alt_tree_dict
 from utils.var_helpers import derived_vars
 
 logger = logging.getLogger('analysis')
@@ -21,6 +21,7 @@ def build_analysis_dataframe(datapath: str,
                              vars_to_cut: List[str],
                              is_slices: bool = False,
                              pkl_path: str = None,
+                             event_n_col: str = 'eventNumber'
                              ) -> pd.DataFrame:
     """
     Builds a dataframe from cutfile inputs
@@ -30,31 +31,41 @@ def build_analysis_dataframe(datapath: str,
     :param vars_to_cut: list of strings of variables in file to cut on
     :param is_slices: whether or not data is in mass slices
     :param pkl_path: path to output pickle file (optional)
+    :param event_n_col: name of event number variable in root file for merging across TTrees if necessary
     :return: output dataframe containing columns corresponding to necessary variables
     """
 
     # create list of all necessary values extract
-    vars_to_extract = extract_cut_variables(cut_list_dicts, vars_to_cut)
-    vars_to_extract.add('weight_mc')
-    logger.debug("Variables to extract: ")
-    for var in vars_to_extract:
-        logger.debug(f"  - {var}")
+    default_tree_vars = extract_cut_variables(cut_list_dicts, vars_to_cut)
+    default_tree_vars.add('weight_mc')
 
-    # check that TTree and variables exist in file(s)
+    # get any variables in trees outside the default tree (TTree_name)
+    alt_trees = gen_alt_tree_dict(cut_list_dicts)
+    if alt_trees:
+        default_tree_vars.add(event_n_col)  # need event number to merge across
+        # remove alt tree variables from variables to extract from default tree
+        default_tree_vars -= {var for varlist in alt_trees.values() for var in varlist}
+
+    if logger.level == logging.DEBUG:
+        logger.debug("Variables to extract: ")
+        for var in default_tree_vars:
+            logger.debug(f"  - {var}")
+
+    # check that TTree(s) and variables exist in file(s)
     logger.debug(f"Checking TTree and TBranch values in file(s) '{datapath}'...")
     for filepath in glob(datapath):
         with uproot.open(filepath) as file:
             tree_list = [tree.split(';')[0] for tree in file.keys()]  # TTrees are labelled '<name>;<cycle number>'
-            if TTree_name not in tree_list:
-                raise ValueError(f"TTree '{TTree_name}' not found in file {filepath}.")
+            if missing_trees := [t for t in [a_t for a_t in alt_trees] + [TTree_name] if t not in tree_list]:
+                raise ValueError(f"TTree(s) {', '.join(missing_trees)} not found in file {filepath}")
             else:
-                if missing_branches := [branch for branch in vars_to_extract
+                if missing_branches := [branch for branch in default_tree_vars
                                         if branch not in file[TTree_name].keys()]:
                     raise ValueError(f"Missing TBranch(es) {missing_branches} in TTree '{TTree_name}' of file '{datapath}'.")
     logger.debug("All required variables found.")
 
     # check if vars are contained in label dictionary
-    if unexpected_vars := [unexpected_var for unexpected_var in vars_to_extract
+    if unexpected_vars := [unexpected_var for unexpected_var in default_tree_vars
                            if unexpected_var not in labels_xs]:
         logger.warning(f"Variable(s) {unexpected_vars} not contained in labels dictionary. "
                        "Some unexpected behaviour may occur.")
@@ -62,14 +73,20 @@ def build_analysis_dataframe(datapath: str,
     t1 = time.time()
     # extract pandas dataframe from root file with necessary variables
     logger.info(f"Extracting data from {datapath}...")
+
     if not is_slices:  # If importing inclusive sample
-        df = uproot.concatenate(datapath + ':' + TTree_name, vars_to_extract,
+        df = uproot.concatenate(datapath + ':' + TTree_name, default_tree_vars,
                                 library='pd', num_workers=config.n_threads)
+        if alt_trees:
+            for tree in alt_trees:
+                alt_df = uproot.concatenate(datapath + ":" + tree, alt_trees[tree] + ['eventNumber'],
+                                            library='pd', num_workers=config.n_threads)
+                df = pd.merge(df, alt_df, on='eventNumber', sort=False)
 
     else:  # if importing mass slices
         logger.info("Extracting in slices...")
-        vars_to_extract.add('mcChannelNumber')  # to keep track of dataset IDs (DSIDs)
-        df = uproot.concatenate(datapath + ':' + TTree_name, vars_to_extract, library='pd',
+        default_tree_vars.add('mcChannelNumber')  # to keep track of dataset IDs (DSIDs)
+        df = uproot.concatenate(datapath + ':' + TTree_name, default_tree_vars, library='pd',
                                 num_workers=config.n_threads)
         sumw = uproot.concatenate(datapath + ':sumWeights', ['totalEventsWeighted', 'dsid'],
                                   library='pd', num_workers=config.n_threads)
@@ -77,6 +94,11 @@ def build_analysis_dataframe(datapath: str,
         df = pd.merge(df, sumw, left_on='mcChannelNumber', right_on='dsid', sort=False)
         df.rename(columns={'mcChannelNumber': 'DSID'},
                   inplace=True)  # rename mcChannelNumber to DSID (why are they different)
+        if alt_trees:
+            for tree in alt_trees:
+                alt_df = uproot.concatenate(datapath + ":" + tree, alt_trees[tree] + ['eventNumber'],
+                                            library='pd', num_workers=config.n_threads)
+                df = pd.merge(df, alt_df, on='eventNumber', sort=False)
 
         if logger.level == logging.DEBUG:
             # sanity check to make sure totalEventsWeighted really is what it says it is
@@ -95,10 +117,10 @@ def build_analysis_dataframe(datapath: str,
                 totalEventsWeighted = df_id['totalEventsWeighted'].values[0]
                 if dsid_weight != totalEventsWeighted:
                     logger.warning(f"Value of 'totalEventsWeighted' ({totalEventsWeighted}) is not the same as the total summed values of "
-                                   f"'weight_mc' ({dsid_weight}) for DISD {dsid}.")
+                                   f"'weight_mc' ({dsid_weight}) for DISD {dsid}. Ratio = {totalEventsWeighted / dsid_weight:.2g}")
 
-        vars_to_extract.remove('mcChannelNumber')
-        vars_to_extract.add('DSID')
+        default_tree_vars.remove('mcChannelNumber')
+        default_tree_vars.add('DSID')
     t2 = time.time()
     logger.info(f"time to build dataframe: {t2 - t1:.2g}s")
 

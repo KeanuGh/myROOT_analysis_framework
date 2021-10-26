@@ -25,3 +25,27 @@ You might see some difference in the diboson samples (I think this is up to date
 
 Thanks,
 Jesal
+
+ I've attached the section about luminosity weighting and here are some screenshots of how I do this in my code.
+
+finalWeight is what I used to scale each of my histograms to the correct lumi.
+
+-The get the sum of weights you need to access information in the sum of weights tree.
+-I added a screenshot of all the scale factors but you only need to use weight_leptonSF as this variable conveniently already is the sum of the other scale factors.
+
+Also just to be extra clear, the variables names you use:
+SF = weight_leptonSF;
+kFactor = weight_KFactor;
+pileup = weight_pileup;
+mc_weight = weight_mc;
+lumi_sample = lumi_data * cross_section (cross section of each sample so for each mass slice or the peak sample)
+
+
+From: Jesal Paresh Mandalia <j.p.mandalia@qmul.ac.uk>
+Sent: 26 October 2021 15:41
+To: Keanu Ghorbanian <k.ghorbanian@qmul.ac.uk>
+Subject: Re: meeting link
+
+ hn-atlas-top-reconstruction
+
+Analysis top group. Email them for help.

@@ -13,13 +13,14 @@ class TestBuildAnalysisDataframe(object):
     test_vars_to_cut = ['testvar1', 'testvar3']
     expected_output = pd.DataFrame({'testvar1': np.arange(1000),
                                     'testvar3': np.arange(1000) * 3,
-                                    'weight_mc': np.append(np.ones(990), -1*np.ones(10)),
+                                    'weight_mc': np.append(np.ones(990), -1 * np.ones(10)),
                                     })
+    default_TTree = 'tree1'
 
     @pytest.mark.filterwarnings("ignore::UserWarning")
     def test_normal_input(self, tmp_root_datafile):
         output = build_analysis_dataframe(tmp_root_datafile,
-                                          TTree_name='tree1',
+                                          TTree_name=self.default_TTree,
                                           cut_list_dicts=self.test_cut_dicts,
                                           vars_to_cut=self.test_vars_to_cut
                                           )
@@ -42,7 +43,7 @@ class TestBuildAnalysisDataframe(object):
         with pytest.raises(ValueError) as e:
             missing_branches = ['missing1', 'missing2']
             _ = build_analysis_dataframe(tmp_root_datafile,
-                                         TTree_name='tree1',
+                                         TTree_name=self.default_TTree,
                                          cut_list_dicts=self.test_cut_dicts,
                                          vars_to_cut=missing_branches
                                          )
@@ -51,17 +52,17 @@ class TestBuildAnalysisDataframe(object):
     @pytest.mark.filterwarnings("ignore::UserWarning")
     def test_multifile(self, tmp_root_datafiles):
         expected_output = pd.DataFrame({'testvar1': np.concatenate((np.arange(3000),
-                                                                   np.arange(2000),
-                                                                   np.arange(1000))),
+                                                                    np.arange(2000),
+                                                                    np.arange(1000))),
                                         'testvar3': np.concatenate((np.arange(3000) * 3,
-                                                                   np.arange(2000) * 2,
-                                                                   np.arange(1000))),
+                                                                    np.arange(2000) * 2,
+                                                                    np.arange(1000))),
                                         'weight_mc': np.concatenate((np.append(np.ones(2970), -1 * np.ones(30)),
-                                                                    np.append(np.ones(1980), -1 * np.ones(20)),
-                                                                    np.append(np.ones(990), -1 * np.ones(10)),)),
+                                                                     np.append(np.ones(1980), -1 * np.ones(20)),
+                                                                     np.append(np.ones(990), -1 * np.ones(10)),)),
                                         })
         output = build_analysis_dataframe(tmp_root_datafiles,
-                                          TTree_name='tree1',
+                                          TTree_name=self.default_TTree,
                                           cut_list_dicts=self.test_cut_dicts,
                                           vars_to_cut=self.test_vars_to_cut
                                           )
@@ -70,22 +71,22 @@ class TestBuildAnalysisDataframe(object):
         # test contents are the same
         for col in output.columns:
             assert np.array_equal(output[col], expected_output[col]), \
-                        f"Dataframe builder failed in column {col};\n" \
-                        f"Expected: \n{expected_output[col]},\n" \
-                        f"Got: \n{output[col]}"
+                f"Dataframe builder failed in column {col};\n" \
+                f"Expected: \n{expected_output[col]},\n" \
+                f"Got: \n{output[col]}"
 
     @pytest.mark.filterwarnings("ignore::UserWarning")
     def test_mass_slices(self, tmp_root_datafiles):
         """Test input as 'mass slices'"""
         expected_output = pd.DataFrame({'testvar1': np.concatenate((np.arange(3000),
-                                                                   np.arange(2000),
-                                                                   np.arange(1000))),
+                                                                    np.arange(2000),
+                                                                    np.arange(1000))),
                                         'testvar3': np.concatenate((np.arange(3000) * 3,
-                                                                   np.arange(2000) * 2,
-                                                                   np.arange(1000))),
+                                                                    np.arange(2000) * 2,
+                                                                    np.arange(1000))),
                                         'weight_mc': np.concatenate((np.append(np.ones(2970), -1 * np.ones(30)),
-                                                                    np.append(np.ones(1980), -1 * np.ones(20)),
-                                                                    np.append(np.ones(990), -1 * np.ones(10)),)),
+                                                                     np.append(np.ones(1980), -1 * np.ones(20)),
+                                                                     np.append(np.ones(990), -1 * np.ones(10)),)),
                                         # dataset IDs
                                         'DSID': np.concatenate((np.full(3000, 3),
                                                                 np.full(2000, 2),
@@ -93,11 +94,11 @@ class TestBuildAnalysisDataframe(object):
                                                                 )),
                                         # sum of weights for events with same dataset IDs
                                         'totalEventsWeighted': np.concatenate((np.full(3000, 2940),
-                                                                              np.full(2000, 1960),
-                                                                              np.full(1000, 980)))
+                                                                               np.full(2000, 1960),
+                                                                               np.full(1000, 980)))
                                         })
         output = build_analysis_dataframe(tmp_root_datafiles,
-                                          TTree_name='tree1',
+                                          TTree_name=self.default_TTree,
                                           cut_list_dicts=self.test_cut_dicts,
                                           vars_to_cut=self.test_vars_to_cut,
                                           is_slices=True,
@@ -112,8 +113,36 @@ class TestBuildAnalysisDataframe(object):
                 f"Got: \n{output[col]}"
         # TODO: check lumi
 
+    @pytest.mark.filterwarnings("ignore::UserWarning")
+    def test_alt_trees(self, tmp_root_datafile):
+        newcut = {
+            'name': 'cut 3',
+            'cut_var': 'testvar4',
+            'relation': '<',
+            'cut_val': -10,
+            'group': 'var4cut',
+            'is_symmetric': False,
+            'tree': 'tree2'
+        }
+        list_of_dicts = self.test_cut_dicts
+        list_of_dicts += [newcut]
+        expected_output = self.expected_output.copy()
+        expected_output['testvar4'] = np.arange(1000) * -1
+        expected_output['eventNumber'] = np.arange(1000)
+        output = build_analysis_dataframe(tmp_root_datafile,
+                                          TTree_name=self.default_TTree,
+                                          cut_list_dicts=list_of_dicts,
+                                          vars_to_cut=self.test_vars_to_cut,
+                                          is_slices=False)
+        assert set(output.columns) == set(expected_output.columns)
+        # test contents are the same
+        for col in output.columns:
+            assert np.array_equal(output[col], expected_output[col]), \
+                f"Dataframe builder failed in column {col};\n" \
+                f"Expected: \n{expected_output[col]},\n" \
+                f"Got: \n{output[col]}"
+
     # TODO: test on derived variables
-    # TODO: test on large files(?)
 
 
 class TestCreateCutColumns(object):
@@ -129,7 +158,7 @@ class TestCreateCutColumns(object):
                           ]
         cut_label = config.cut_label
 
-        create_cut_columns(test_df, test_cut_dicts, printout=False)
+        create_cut_columns(test_df, test_cut_dicts)
         out_column1 = pd.Series(data=[True, True, True, False, True, True, True, False, True, True],
                                 name='cut 1' + cut_label)
         out_column2 = pd.Series(data=[False, False, True, True, True, True, False, False, False, True],
@@ -152,7 +181,7 @@ class TestCreateCutColumns(object):
                           ]
         cut_label = config.cut_label
 
-        create_cut_columns(test_df, test_cut_dicts, printout=False)
+        create_cut_columns(test_df, test_cut_dicts)
         out_column1 = pd.Series(data=[True, False, True, False, False, False, True, True, True, False],
                                 name='cut 1' + cut_label)
         out_column2 = pd.Series(data=[False, True, False, True, True, True, False, False, False, True],
