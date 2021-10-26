@@ -34,6 +34,7 @@ def build_analysis_dataframe(datapath: str,
     :param event_n_col: name of event number variable in root file for merging across TTrees if necessary
     :return: output dataframe containing columns corresponding to necessary variables
     """
+    chunksize = 2560
 
     # create list of all necessary values extract
     default_tree_vars = extract_cut_variables(cut_list_dicts, vars_to_cut)
@@ -89,17 +90,17 @@ def build_analysis_dataframe(datapath: str,
     if not is_slices:  # If importing inclusive sample
         logger.info(f"Extracting {default_tree_vars} from {datapath}...")
         df = uproot.concatenate(datapath + ':' + TTree_name, default_tree_vars,
-                                library='pd', num_workers=config.n_threads)
+                                library='pd', num_workers=config.n_threads, begin_chunk_size=chunksize)
         logger.debug(f"Extracted {len(df)} events.")
 
         if alt_trees:
             for tree in alt_trees:
                 logger.debug(f"Extracting {alt_trees[tree]} from TTree {tree}...")
                 alt_df = uproot.concatenate(datapath + ":" + tree, alt_trees[tree] + [event_n_col],
-                                            library='pd', num_workers=config.n_threads)
+                                            library='pd', num_workers=config.n_threads, begin_chunk_size=chunksize)
 
                 logger.debug("Merging with rest of dataframe...")
-                df = pd.merge(df, alt_df, on=event_n_col, sort=False)
+                df = pd.merge(df, alt_df, how='left', on=event_n_col, sort=False)
 
     else:  # if importing mass slices
         logger.info(f"Extracting mass slices from {datapath}...")
@@ -107,12 +108,12 @@ def build_analysis_dataframe(datapath: str,
 
         logger.debug(f"Extracting {default_tree_vars} from {TTree_name} tree...")
         df = uproot.concatenate(datapath + ':' + TTree_name, default_tree_vars, library='pd',
-                                num_workers=config.n_threads)
+                                num_workers=config.n_threads, begin_chunk_size=chunksize)
         logger.debug(f"Extracted {len(df)} events.")
 
         logger.debug(f"Extracting ['total_EventsWeighted', 'dsid'] from 'sumWeights' tree...")
         sumw = uproot.concatenate(datapath + ':sumWeights', ['totalEventsWeighted', 'dsid'],
-                                  library='pd', num_workers=config.n_threads)
+                                  library='pd', num_workers=config.n_threads, begin_chunk_size=chunksize)
 
         logger.debug(f"Calculating sum of weights and merging...")
         sumw = sumw.groupby('dsid').sum()
@@ -123,10 +124,10 @@ def build_analysis_dataframe(datapath: str,
             for tree in alt_trees:
                 logger.debug(f"Extracting {alt_trees[tree]} from {tree} tree...")
                 alt_df = uproot.concatenate(datapath + ":" + tree, alt_trees[tree] + [event_n_col],
-                                            library='pd', num_workers=config.n_threads)
+                                            library='pd', num_workers=config.n_threads, begin_chunk_size=chunksize)
 
                 logger.debug("Merging with rest of dataframe...")
-                df = pd.merge(df, alt_df, on=event_n_col, sort=False)
+                df = pd.merge(df, alt_df, how='left', on=event_n_col, sort=False)
 
         if logger.level == logging.DEBUG:
             # sanity check to make sure totalEventsWeighted really is what it says it is
