@@ -164,18 +164,30 @@ class Dataset:
 
         # print some dataset ID metadata
         # TODO: avg event weight
-        if self.is_slices and logger.level == logging.DEBUG:
-            logger.debug("PER-DSID INFO:")
-            logger.debug("--------------")
-            logger.debug("DSID       n_events   sum_w         x-s fb        lumi fb-1")
-            logger.debug("==========================================================")
-            for dsid in self.df['DSID'].unique():
-                df_id = self.df[self.df['DSID'] == dsid]
-                logger.debug(f"{int(dsid):<10} "
-                             f"{len(df_id):<10} "
-                             f"{df_id['weight_mc'].sum():<10.6e}  "
-                             f"{df_utils.get_cross_section(df_id):<10.6e}  "
-                             f"{df_utils.get_luminosity(df_id):.<10.6e}")
+        if logger.level == logging.DEBUG:
+            if self.is_slices:
+                logger.debug("PER-DSID INFO:")
+                logger.debug("--------------")
+                logger.debug("DSID       n_events   sum_w         x-s fb        lumi fb-1")
+                logger.debug("==========================================================")
+                for dsid in self.df['DSID'].unique():
+                    df_id = self.df[self.df['DSID'] == dsid]
+                    logger.debug(f"{int(dsid):<10} "
+                                f"{len(df_id):<10} "
+                                f"{df_id['weight_mc'].sum():<10.6e}  "
+                                f"{df_utils.get_cross_section(df_id):<10.6e}  "
+                                f"{df_utils.get_luminosity(df_id):.<10.6e}")
+            else:
+                logger.debug("INCLUSIVE SAMPLE METADATA:")
+                logger.debug("--------------------------")
+                logger.debug("n_events   sum_w         x-s fb        lumi fb-1")
+                logger.debug("==========================================================")
+                logger.debug(f"{len(self.df):<10} "
+                                f"{self.df['weight_mc'].sum():<10.6e}  "
+                                f"{df_utils.get_cross_section(self.df):<10.6e}  "
+                                f"{df_utils.get_luminosity(self.df):.<10.6e}")
+
+
 
         # apply cuts to generate cut columns
         logger.info(f"Creating cuts for {self.name}...")
