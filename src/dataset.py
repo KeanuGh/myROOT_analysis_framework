@@ -187,8 +187,6 @@ class Dataset:
                                 f"{df_utils.get_cross_section(self.df):<10.6e}  "
                                 f"{df_utils.get_luminosity(self.df):.<10.6e}")
 
-
-
         # apply cuts to generate cut columns
         logger.info(f"Creating cuts for {self.name}...")
         df_utils.create_cut_columns(self.df, cut_dicts=self._cut_dicts)
