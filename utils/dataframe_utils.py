@@ -98,7 +98,7 @@ def build_analysis_dataframe(datapath: str,
                 logger.debug(f"Extracting {alt_trees[tree]} from TTree {tree}...")
                 alt_df = uproot.concatenate(datapath + ":" + tree, alt_trees[tree] + [event_n_col],
                                             library='pd', num_workers=config.n_threads, begin_chunk_size=chunksize)
-
+                logger.debug(f"Extracted {len(alt_df)} events.")
                 logger.debug("Merging with rest of dataframe...")
                 df = pd.merge(df, alt_df, how='left', on=event_n_col, sort=False)
 
@@ -125,7 +125,7 @@ def build_analysis_dataframe(datapath: str,
                 logger.debug(f"Extracting {alt_trees[tree]} from {tree} tree...")
                 alt_df = uproot.concatenate(datapath + ":" + tree, alt_trees[tree] + [event_n_col],
                                             library='pd', num_workers=config.n_threads, begin_chunk_size=chunksize)
-
+                logger.debug(f"Extracted {len(alt_df)} events.")
                 logger.debug("Merging with rest of dataframe...")
                 df = pd.merge(df, alt_df, how='left', on=event_n_col, sort=False)
 

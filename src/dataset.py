@@ -153,6 +153,7 @@ class Dataset:
         else:
             logger.info(f"Reading data for {self.name} dataframe from {self.pkl_path}...")
             self.df = pd.read_pickle(self.pkl_path)
+        logger.info(f"Number of events in dataset {self.name}: {len(self.df)}")
 
         # map appropriate weights
         logger.info(f"Creating weights for {self.name}...")
@@ -163,7 +164,7 @@ class Dataset:
 
         # print some dataset ID metadata
         # TODO: avg event weight
-        if logger.level == logging.DEBUG:
+        if self.is_slices and logger.level == logging.DEBUG:
             logger.debug("PER-DSID INFO:")
             logger.debug("--------------")
             logger.debug("DSID       n_events   sum_w         x-s fb        lumi fb-1")
