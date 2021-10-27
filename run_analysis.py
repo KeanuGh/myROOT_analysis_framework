@@ -62,7 +62,7 @@ if __name__ == '__main__':
         },
     }
 
-    my_analysis = Analysis(datasets, analysis_label='jesal_cutflow', force_rebuild=True, log_level=10)
+    my_analysis = Analysis(datasets, analysis_label='jesal_cutflow', force_rebuild=False, log_level=10)
 
     # pipeline
     my_analysis.plot_mass_slices(ds_name='wmintaunu_nominal', xvar='mu_mt',

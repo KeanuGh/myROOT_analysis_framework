@@ -151,7 +151,7 @@ def build_analysis_dataframe(datapath: str,
         default_tree_vars.remove('mcChannelNumber')
         default_tree_vars.add('DSID')
     t2 = time.time()
-    logger.info(f"time to build dataframe: {t2 - t1:.2g}s")
+    logger.info(f"time to build dataframe: {time.strftime('%H:%M:%S', time.gmtime(t2 - t1))}s")
 
     # calculate and combine special derived variables
     if vars_to_calc:
