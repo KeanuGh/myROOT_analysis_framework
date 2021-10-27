@@ -46,7 +46,7 @@ class Analysis:
         logger = logging.getLogger('analysis')
         logger.setLevel(log_level)
         filehandler = logging.FileHandler(f"{config.paths['log_dir']}/{analysis_label}_{time.strftime('%Y-%m-%d_%H-%M-%S')}.log")
-        filehandler.setFormatter(logging.Formatter('%(asctime)s %(levelname)s:%(message)s'))
+        filehandler.setFormatter(logging.Formatter('%(asctime)s %(levelname)s: %(message)s'))
         logger.addHandler(filehandler)
         if logger.level == logging.DEBUG:  # print to stdout as well as log file
             logger.addHandler(logging.StreamHandler(sys.stdout))

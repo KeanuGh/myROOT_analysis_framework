@@ -6,7 +6,7 @@ eta	mu_eta	<	2.4	eta	true
 E_{T}^{MISS}	met_met	>	65	met	false
 p_T	mu_pt	>	65	mu pt	false
 M_T	mu_mt	>	55	muon mt	false
-M_W	MC_WZ_m	<	120	W m	false	truth
+M_W	MC_WZ_m	>	120	W m	false	truth
 
 [OUTPUTS]
 # variables to process

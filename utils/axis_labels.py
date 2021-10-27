@@ -22,11 +22,11 @@ labels_xs = {
     # DERIVED KINEMATIC VARIABLES
     # =======================================================
     'mu_mt': {  # boson pt from muon decay
-        'xlabel': r'Vector boson transverse momentum $m_{T}$ [GeV]',
+        'xlabel': r'Vector boson transverse momentum $m^{W}_{T}$ [GeV]',
         'ylabel': r'$\frac{d\sigma}{dm_{T}}$ [fb GeV$^{-1}$]',
     },
     'e_mt': {  # boson pt from electron decay
-        'xlabel': r'Vector boson transverse momentum $m_{T}$ [GeV]',
+        'xlabel': r'Vector boson transverse momentum $m^{W}_{T}$ [GeV]',
         'ylabel': r'$\frac{d\sigma}{dm_{T}}$ [fb GeV$^{-1}$]',
     },
     'w_y': {  # boson rapidity

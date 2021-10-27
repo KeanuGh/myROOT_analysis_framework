@@ -151,7 +151,7 @@ def build_analysis_dataframe(datapath: str,
         default_tree_vars.remove('mcChannelNumber')
         default_tree_vars.add('DSID')
     t2 = time.time()
-    logger.info(f"time to build dataframe: {t2 - t1:.2g}s")
+    logger.info(f"time to build dataframe: {time.strftime('%H:%M:%S', time.gmtime(t2 - t1))}")
 
     # calculate and combine special derived variables
     if vars_to_calc:
@@ -169,10 +169,10 @@ def build_analysis_dataframe(datapath: str,
             logger.info(f"Computing '{var}' column from {temp_cols}...")
             df[var] = df.apply(lambda row: row_calc(var, row), axis=1)
 
-            # drop unnecessary columns extracted just for calculations
-            to_drop = [var for var in temp_cols if var not in og_vars]
-            logger.debug(f"dropping {to_drop}")
-            df.drop(columns=to_drop, inplace=True)
+            # # drop unnecessary columns extracted just for calculations
+            # to_drop = [var for var in temp_cols if var not in og_vars]
+            # logger.debug(f"dropping {to_drop}")
+            # df.drop(columns=to_drop, inplace=True)
 
     # properly scale GeV columns
     df = rescale_to_gev(df)

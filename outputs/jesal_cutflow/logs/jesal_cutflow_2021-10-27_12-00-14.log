@@ -1,0 +1,690 @@
+2021-10-27 12:00:14,083 INFO:INITIALISING ANALYSIS 'jesal_cutflow'...
+2021-10-27 12:00:14,083 INFO:========================================
+2021-10-27 12:00:14,083 INFO:
+2021-10-27 12:00:14,083 INFO:======== INITIALISING DATASET 'wmintaunu_slices' =========
+2021-10-27 12:00:14,091 DEBUG:DATASET INPUT OPTIONS: 
+2021-10-27 12:00:14,092 DEBUG:----------------------------
+2021-10-27 12:00:14,092 DEBUG:Input file(s):  /data/atlas/HighMassDrellYan/test_mc16a/wmintaunu_*/*.root
+2021-10-27 12:00:14,092 DEBUG:TTree: nominal_Loose
+2021-10-27 12:00:14,092 DEBUG:Cutfile: options/jesal_cutflow/cutfile_jesal.txt
+2021-10-27 12:00:14,092 DEBUG:Slices: True
+2021-10-27 12:00:14,092 DEBUG:grouped cutflow: True
+2021-10-27 12:00:14,093 DEBUG:Forced dataset rebuild: False
+2021-10-27 12:00:14,093 DEBUG:----------------------------
+2021-10-27 12:00:14,093 DEBUG:
+2021-10-27 12:00:14,093 DEBUG:CUTFILE CONTENTS
+2021-10-27 12:00:14,093 DEBUG:---------------------------
+2021-10-27 12:00:14,093 DEBUG:[CUTS]
+2021-10-27 12:00:14,094 DEBUG:# Name	Variable	</>	Cut (in GeV if applicable)	Group Symmetric
+2021-10-27 12:00:14,094 DEBUG:# !!REMEMBER DEFAULT ANALYSISTOP OUTPUT IS IN MeV NOT GeV!!
+2021-10-27 12:00:14,094 DEBUG:Tight muon	mu_isTight	=	1	tight muon cut	false
+2021-10-27 12:00:14,094 DEBUG:eta	mu_eta	<	2.4	eta	true
+2021-10-27 12:00:14,094 DEBUG:E_{T}^{MISS}	met_met	>	65	met	false
+2021-10-27 12:00:14,094 DEBUG:p_T	mu_pt	>	65	mu pt	false
+2021-10-27 12:00:14,094 DEBUG:M_T	mu_mt	>	55	muon mt	false
+2021-10-27 12:00:14,094 DEBUG:M_W	MC_WZ_m	>	120	W m	false	truth
+2021-10-27 12:00:14,094 DEBUG:
+2021-10-27 12:00:14,094 DEBUG:[OUTPUTS]
+2021-10-27 12:00:14,095 DEBUG:# variables to process
+2021-10-27 12:00:14,095 DEBUG:mu_mt
+2021-10-27 12:00:14,095 DEBUG:mu_pt
+2021-10-27 12:00:14,095 DEBUG:mu_eta
+2021-10-27 12:00:14,095 DEBUG:
+2021-10-27 12:00:14,095 DEBUG:[OPTIONS]
+2021-10-27 12:00:14,095 DEBUG:# case-insensitive
+2021-10-27 12:00:14,095 DEBUG:sequential	false
+2021-10-27 12:00:14,095 DEBUG:grouped cutflow	false
+2021-10-27 12:00:14,095 DEBUG:---------------------------
+2021-10-27 12:00:14,095 INFO:Parsting cutfile for wmintaunu_slices...
+2021-10-27 12:00:14,100 INFO:Backup cutfile saved in outputs/jesal_cutflow/cutfiles/wmintaunu_slices_cutfile_jesal_2021-10-27_12-00-14.txt
+2021-10-27 12:00:14,101 DEBUG:Datafile found
+2021-10-27 12:00:14,102 DEBUG:New cutfile, will save backup.
+2021-10-27 12:00:14,103 INFO:Reading data for wmintaunu_slices dataframe from outputs/jesal_cutflow/data/wmintaunu_slices_df.pkl...
+2021-10-27 12:00:14,127 INFO:Number of events in dataset wmintaunu_slices: 726886
+2021-10-27 12:00:14,127 INFO:Creating weights for wmintaunu_slices...
+2021-10-27 12:00:14,137 DEBUG:PER-DSID INFO:
+2021-10-27 12:00:14,137 DEBUG:--------------
+2021-10-27 12:00:14,137 DEBUG:DSID       n_events   sum_w         x-s fb        lumi fb-1
+2021-10-27 12:00:14,137 DEBUG:==========================================================
+2021-10-27 12:00:14,164 DEBUG:301166     38794      1.225665e+02  3.159418e-03  1.180722e+02
+2021-10-27 12:00:14,166 DEBUG:301160     584        1.304203e+04  2.233225e+01  1.750007e-01
+2021-10-27 12:00:14,169 DEBUG:301167     45957      4.608419e+01  1.002768e-03  1.286798e+02
+2021-10-27 12:00:14,173 DEBUG:301168     46553      1.713763e+01  3.681316e-04  1.303474e+02
+2021-10-27 12:00:14,176 DEBUG:301169     46357      6.928842e+00  1.494670e-04  1.298001e+02
+2021-10-27 12:00:14,177 DEBUG:301161     7814       2.572807e+04  3.292561e+00  4.385605e+00
+2021-10-27 12:00:14,181 DEBUG:301170     48747      3.183652e+00  6.530970e-05  1.364905e+02
+2021-10-27 12:00:14,183 DEBUG:301171     45132      1.361533e+00  3.016780e-05  1.263680e+02
+2021-10-27 12:00:14,185 DEBUG:301162     19355      2.097866e+04  1.083888e+00  1.807713e+01
+2021-10-27 12:00:14,188 DEBUG:301172     48195      7.012044e-01  1.454932e-05  1.349483e+02
+2021-10-27 12:00:14,191 DEBUG:301173     47837      3.472451e-01  7.258924e-06  1.339429e+02
+2021-10-27 12:00:14,194 DEBUG:301174     46889      2.658246e-01  5.669233e-06  1.312917e+02
+2021-10-27 12:00:14,196 DEBUG:301175     46518      7.430704e-02  1.597383e-06  1.302495e+02
+2021-10-27 12:00:14,199 DEBUG:301163     32203      5.649394e+03  1.754307e-01  4.508980e+01
+2021-10-27 12:00:14,201 DEBUG:301176     44600      2.105576e-02  4.721023e-07  1.248797e+02
+2021-10-27 12:00:14,204 DEBUG:301177     44286      6.324148e-03  1.428024e-07  1.240002e+02
+2021-10-27 12:00:14,207 DEBUG:301178     40375      2.488081e-03  6.162430e-08  1.130493e+02
+2021-10-27 12:00:14,209 DEBUG:301164     36493      1.130532e+03  3.097943e-02  1.021794e+02
+2021-10-27 12:00:14,212 DEBUG:301165     40197      3.330843e+02  8.286296e-03  1.125505e+02
+2021-10-27 12:00:14,212 INFO:Creating cuts for wmintaunu_slices...
+2021-10-27 12:00:14,219 INFO:
+2021-10-27 12:00:14,219 INFO:========== CUTS USED ============
+2021-10-27 12:00:14,219 INFO:Tight muon  : mu_isTight = 1.0
+2021-10-27 12:00:14,219 INFO:eta         :    |mu_eta| < 2.4
+2021-10-27 12:00:14,219 INFO:E_{T}^{MISS}:    met_met > 65.0
+2021-10-27 12:00:14,219 INFO:p_T         :      mu_pt > 65.0
+2021-10-27 12:00:14,219 INFO:M_T         :      mu_mt > 55.0
+2021-10-27 12:00:14,219 INFO:M_W         :    MC_WZ_m > 120.0
+2021-10-27 12:00:14,219 INFO:
+2021-10-27 12:00:14,305 INFO:=========== CUTFLOW =============
+2021-10-27 12:00:14,305 INFO:Option: Non-sequential
+2021-10-27 12:00:14,305 INFO:---------------------------------
+2021-10-27 12:00:14,305 INFO:Cut            Events Ratio
+2021-10-27 12:00:14,305 INFO:Inclusive      726886   -
+2021-10-27 12:00:14,305 INFO:tight muon cut 726886 1.000    
+2021-10-27 12:00:14,305 INFO:eta            726886 1.000    
+2021-10-27 12:00:14,305 INFO:met            726886 1.000    
+2021-10-27 12:00:14,305 INFO:mu pt          726886 1.000    
+2021-10-27 12:00:14,305 INFO:muon mt        726886 1.000    
+2021-10-27 12:00:14,305 INFO:W m            726886 1.000    
+2021-10-27 12:00:14,305 INFO:
+2021-10-27 12:00:14,305 INFO:========= DATASET 'wmintaunu_slices' INITIALISED =========
+2021-10-27 12:00:14,307 INFO:
+2021-10-27 12:00:14,307 INFO:======== INITIALISING DATASET 'wmintaunu_inclusive' =========
+2021-10-27 12:00:14,308 DEBUG:DATASET INPUT OPTIONS: 
+2021-10-27 12:00:14,308 DEBUG:----------------------------
+2021-10-27 12:00:14,308 DEBUG:Input file(s):  /data/atlas/HighMassDrellYan/test_mc16a/wmintaunu/*.root
+2021-10-27 12:00:14,308 DEBUG:TTree: nominal_Loose
+2021-10-27 12:00:14,308 DEBUG:Cutfile: options/jesal_cutflow/cutfile_jesal.txt
+2021-10-27 12:00:14,308 DEBUG:Slices: False
+2021-10-27 12:00:14,308 DEBUG:grouped cutflow: True
+2021-10-27 12:00:14,308 DEBUG:Forced dataset rebuild: False
+2021-10-27 12:00:14,308 DEBUG:----------------------------
+2021-10-27 12:00:14,308 DEBUG:
+2021-10-27 12:00:14,308 DEBUG:CUTFILE CONTENTS
+2021-10-27 12:00:14,308 DEBUG:---------------------------
+2021-10-27 12:00:14,309 DEBUG:[CUTS]
+2021-10-27 12:00:14,309 DEBUG:# Name	Variable	</>	Cut (in GeV if applicable)	Group Symmetric
+2021-10-27 12:00:14,309 DEBUG:# !!REMEMBER DEFAULT ANALYSISTOP OUTPUT IS IN MeV NOT GeV!!
+2021-10-27 12:00:14,309 DEBUG:Tight muon	mu_isTight	=	1	tight muon cut	false
+2021-10-27 12:00:14,309 DEBUG:eta	mu_eta	<	2.4	eta	true
+2021-10-27 12:00:14,309 DEBUG:E_{T}^{MISS}	met_met	>	65	met	false
+2021-10-27 12:00:14,309 DEBUG:p_T	mu_pt	>	65	mu pt	false
+2021-10-27 12:00:14,309 DEBUG:M_T	mu_mt	>	55	muon mt	false
+2021-10-27 12:00:14,309 DEBUG:M_W	MC_WZ_m	>	120	W m	false	truth
+2021-10-27 12:00:14,309 DEBUG:
+2021-10-27 12:00:14,309 DEBUG:[OUTPUTS]
+2021-10-27 12:00:14,309 DEBUG:# variables to process
+2021-10-27 12:00:14,309 DEBUG:mu_mt
+2021-10-27 12:00:14,309 DEBUG:mu_pt
+2021-10-27 12:00:14,309 DEBUG:mu_eta
+2021-10-27 12:00:14,309 DEBUG:
+2021-10-27 12:00:14,309 DEBUG:[OPTIONS]
+2021-10-27 12:00:14,309 DEBUG:# case-insensitive
+2021-10-27 12:00:14,309 DEBUG:sequential	false
+2021-10-27 12:00:14,310 DEBUG:grouped cutflow	false
+2021-10-27 12:00:14,310 DEBUG:---------------------------
+2021-10-27 12:00:14,310 INFO:Parsting cutfile for wmintaunu_inclusive...
+2021-10-27 12:00:14,312 DEBUG:Datafile found
+2021-10-27 12:00:14,312 INFO:Reading data for wmintaunu_inclusive dataframe from outputs/jesal_cutflow/data/wmintaunu_inclusive_df.pkl...
+2021-10-27 12:00:14,313 INFO:Number of events in dataset wmintaunu_inclusive: 118
+2021-10-27 12:00:14,313 INFO:Creating weights for wmintaunu_inclusive...
+2021-10-27 12:00:14,314 DEBUG:INCLUSIVE SAMPLE METADATA:
+2021-10-27 12:00:14,314 DEBUG:--------------------------
+2021-10-27 12:00:14,314 DEBUG:n_events   sum_w         x-s fb        lumi fb-1
+2021-10-27 12:00:14,314 DEBUG:==========================================================
+2021-10-27 12:00:14,315 DEBUG:118        9.953306e+05  8.435005e+03  1.958505e+00
+2021-10-27 12:00:14,315 INFO:Creating cuts for wmintaunu_inclusive...
+2021-10-27 12:00:14,318 INFO:
+2021-10-27 12:00:14,318 INFO:========== CUTS USED ============
+2021-10-27 12:00:14,318 INFO:Tight muon  : mu_isTight = 1.0
+2021-10-27 12:00:14,318 INFO:eta         :    |mu_eta| < 2.4
+2021-10-27 12:00:14,318 INFO:E_{T}^{MISS}:    met_met > 65.0
+2021-10-27 12:00:14,318 INFO:p_T         :      mu_pt > 65.0
+2021-10-27 12:00:14,318 INFO:M_T         :      mu_mt > 55.0
+2021-10-27 12:00:14,318 INFO:M_W         :    MC_WZ_m > 120.0
+2021-10-27 12:00:14,318 INFO:
+2021-10-27 12:00:14,324 INFO:=========== CUTFLOW =============
+2021-10-27 12:00:14,324 INFO:Option: Non-sequential
+2021-10-27 12:00:14,324 INFO:---------------------------------
+2021-10-27 12:00:14,324 INFO:Cut            Events Ratio
+2021-10-27 12:00:14,324 INFO:Inclusive      118   -
+2021-10-27 12:00:14,324 INFO:tight muon cut 118 1.000    
+2021-10-27 12:00:14,324 INFO:eta            118 1.000    
+2021-10-27 12:00:14,324 INFO:met            118 1.000    
+2021-10-27 12:00:14,324 INFO:mu pt          118 1.000    
+2021-10-27 12:00:14,324 INFO:muon mt        118 1.000    
+2021-10-27 12:00:14,324 INFO:W m            107 0.907    
+2021-10-27 12:00:14,324 INFO:
+2021-10-27 12:00:14,324 INFO:========= DATASET 'wmintaunu_inclusive' INITIALISED =========
+2021-10-27 12:00:14,324 INFO:
+2021-10-27 12:00:14,324 INFO:======== INITIALISING DATASET 'wplustaunu_slices' =========
+2021-10-27 12:00:14,331 DEBUG:DATASET INPUT OPTIONS: 
+2021-10-27 12:00:14,331 DEBUG:----------------------------
+2021-10-27 12:00:14,332 DEBUG:Input file(s):  /data/atlas/HighMassDrellYan/test_mc16a/wplustaunu_*/*.root
+2021-10-27 12:00:14,332 DEBUG:TTree: nominal_Loose
+2021-10-27 12:00:14,332 DEBUG:Cutfile: options/jesal_cutflow/cutfile_jesal.txt
+2021-10-27 12:00:14,332 DEBUG:Slices: True
+2021-10-27 12:00:14,332 DEBUG:grouped cutflow: True
+2021-10-27 12:00:14,332 DEBUG:Forced dataset rebuild: False
+2021-10-27 12:00:14,332 DEBUG:----------------------------
+2021-10-27 12:00:14,333 DEBUG:
+2021-10-27 12:00:14,333 DEBUG:CUTFILE CONTENTS
+2021-10-27 12:00:14,333 DEBUG:---------------------------
+2021-10-27 12:00:14,333 DEBUG:[CUTS]
+2021-10-27 12:00:14,333 DEBUG:# Name	Variable	</>	Cut (in GeV if applicable)	Group Symmetric
+2021-10-27 12:00:14,333 DEBUG:# !!REMEMBER DEFAULT ANALYSISTOP OUTPUT IS IN MeV NOT GeV!!
+2021-10-27 12:00:14,334 DEBUG:Tight muon	mu_isTight	=	1	tight muon cut	false
+2021-10-27 12:00:14,334 DEBUG:eta	mu_eta	<	2.4	eta	true
+2021-10-27 12:00:14,334 DEBUG:E_{T}^{MISS}	met_met	>	65	met	false
+2021-10-27 12:00:14,334 DEBUG:p_T	mu_pt	>	65	mu pt	false
+2021-10-27 12:00:14,334 DEBUG:M_T	mu_mt	>	55	muon mt	false
+2021-10-27 12:00:14,334 DEBUG:M_W	MC_WZ_m	>	120	W m	false	truth
+2021-10-27 12:00:14,334 DEBUG:
+2021-10-27 12:00:14,334 DEBUG:[OUTPUTS]
+2021-10-27 12:00:14,334 DEBUG:# variables to process
+2021-10-27 12:00:14,334 DEBUG:mu_mt
+2021-10-27 12:00:14,334 DEBUG:mu_pt
+2021-10-27 12:00:14,334 DEBUG:mu_eta
+2021-10-27 12:00:14,334 DEBUG:
+2021-10-27 12:00:14,334 DEBUG:[OPTIONS]
+2021-10-27 12:00:14,334 DEBUG:# case-insensitive
+2021-10-27 12:00:14,334 DEBUG:sequential	false
+2021-10-27 12:00:14,334 DEBUG:grouped cutflow	false
+2021-10-27 12:00:14,334 DEBUG:---------------------------
+2021-10-27 12:00:14,334 INFO:Parsting cutfile for wplustaunu_slices...
+2021-10-27 12:00:14,335 DEBUG:Datafile found
+2021-10-27 12:00:14,336 INFO:Reading data for wplustaunu_slices dataframe from outputs/jesal_cutflow/data/wplustaunu_slices_df.pkl...
+2021-10-27 12:00:14,354 INFO:Number of events in dataset wplustaunu_slices: 772578
+2021-10-27 12:00:14,354 INFO:Creating weights for wplustaunu_slices...
+2021-10-27 12:00:14,360 DEBUG:PER-DSID INFO:
+2021-10-27 12:00:14,360 DEBUG:--------------
+2021-10-27 12:00:14,360 DEBUG:DSID       n_events   sum_w         x-s fb        lumi fb-1
+2021-10-27 12:00:14,360 DEBUG:==========================================================
+2021-10-27 12:00:14,385 DEBUG:301146     47861      3.488693e+02  7.289219e-03  1.340092e+02
+2021-10-27 12:00:14,386 DEBUG:301140     521        1.677207e+04  3.219208e+01  1.465126e-01
+2021-10-27 12:00:14,389 DEBUG:301147     48678      1.220389e+02  2.507065e-03  1.363000e+02
+2021-10-27 12:00:14,392 DEBUG:301148     49533      4.885402e+01  9.862924e-04  1.386951e+02
+2021-10-27 12:00:14,396 DEBUG:301149     50141      2.128827e+01  4.245682e-04  1.403967e+02
+2021-10-27 12:00:14,397 DEBUG:301141     8113       4.065248e+04  5.010782e+00  4.550459e+00
+2021-10-27 12:00:14,400 DEBUG:301150     49514      9.637255e+00  1.946370e-04  1.386388e+02
+2021-10-27 12:00:14,403 DEBUG:301151     49229      4.595385e+00  9.334710e-05  1.378400e+02
+2021-10-27 12:00:14,405 DEBUG:301142     21300      3.730728e+04  1.751515e+00  1.989156e+01
+2021-10-27 12:00:14,408 DEBUG:301152     49191      2.275536e+00  4.625919e-05  1.377341e+02
+2021-10-27 12:00:14,411 DEBUG:301153     50388      1.182906e+00  2.347594e-05  1.410873e+02
+2021-10-27 12:00:14,414 DEBUG:301154     49324      9.100242e-01  1.844993e-05  1.381123e+02
+2021-10-27 12:00:14,417 DEBUG:301155     47861      2.439302e-01  5.096639e-06  1.340080e+02
+2021-10-27 12:00:14,419 DEBUG:301143     36357      1.135788e+04  3.123987e-01  5.090710e+01
+2021-10-27 12:00:14,422 DEBUG:301156     47234      6.757697e-02  1.430685e-06  1.322577e+02
+2021-10-27 12:00:14,425 DEBUG:301157     46569      1.868748e-02  4.012858e-07  1.303949e+02
+2021-10-27 12:00:14,428 DEBUG:301158     41401      6.353437e-03  1.534610e-07  1.159238e+02
+2021-10-27 12:00:14,430 DEBUG:301145     42047      7.428984e+02  1.766828e-02  1.177314e+02
+2021-10-27 12:00:14,433 DEBUG:301144     37316      2.268519e+03  6.079211e-02  1.044842e+02
+2021-10-27 12:00:14,433 INFO:Creating cuts for wplustaunu_slices...
+2021-10-27 12:00:14,440 INFO:
+2021-10-27 12:00:14,440 INFO:========== CUTS USED ============
+2021-10-27 12:00:14,440 INFO:Tight muon  : mu_isTight = 1.0
+2021-10-27 12:00:14,440 INFO:eta         :    |mu_eta| < 2.4
+2021-10-27 12:00:14,440 INFO:E_{T}^{MISS}:    met_met > 65.0
+2021-10-27 12:00:14,440 INFO:p_T         :      mu_pt > 65.0
+2021-10-27 12:00:14,440 INFO:M_T         :      mu_mt > 55.0
+2021-10-27 12:00:14,440 INFO:M_W         :    MC_WZ_m > 120.0
+2021-10-27 12:00:14,440 INFO:
+2021-10-27 12:00:14,524 INFO:=========== CUTFLOW =============
+2021-10-27 12:00:14,524 INFO:Option: Non-sequential
+2021-10-27 12:00:14,524 INFO:---------------------------------
+2021-10-27 12:00:14,524 INFO:Cut            Events Ratio
+2021-10-27 12:00:14,524 INFO:Inclusive      772578   -
+2021-10-27 12:00:14,525 INFO:tight muon cut 772578 1.000    
+2021-10-27 12:00:14,525 INFO:eta            772578 1.000    
+2021-10-27 12:00:14,525 INFO:met            772578 1.000    
+2021-10-27 12:00:14,525 INFO:mu pt          772578 1.000    
+2021-10-27 12:00:14,525 INFO:muon mt        772578 1.000    
+2021-10-27 12:00:14,525 INFO:W m            772578 1.000    
+2021-10-27 12:00:14,526 INFO:
+2021-10-27 12:00:14,526 INFO:========= DATASET 'wplustaunu_slices' INITIALISED =========
+2021-10-27 12:00:14,526 INFO:
+2021-10-27 12:00:14,526 INFO:======== INITIALISING DATASET 'wplustaunu_inclusive' =========
+2021-10-27 12:00:14,526 DEBUG:DATASET INPUT OPTIONS: 
+2021-10-27 12:00:14,527 DEBUG:----------------------------
+2021-10-27 12:00:14,527 DEBUG:Input file(s):  /data/atlas/HighMassDrellYan/test_mc16a/wplustaunu/*.root
+2021-10-27 12:00:14,527 DEBUG:TTree: nominal_Loose
+2021-10-27 12:00:14,527 DEBUG:Cutfile: options/jesal_cutflow/cutfile_jesal.txt
+2021-10-27 12:00:14,527 DEBUG:Slices: False
+2021-10-27 12:00:14,527 DEBUG:grouped cutflow: True
+2021-10-27 12:00:14,527 DEBUG:Forced dataset rebuild: False
+2021-10-27 12:00:14,527 DEBUG:----------------------------
+2021-10-27 12:00:14,527 DEBUG:
+2021-10-27 12:00:14,527 DEBUG:CUTFILE CONTENTS
+2021-10-27 12:00:14,527 DEBUG:---------------------------
+2021-10-27 12:00:14,528 DEBUG:[CUTS]
+2021-10-27 12:00:14,528 DEBUG:# Name	Variable	</>	Cut (in GeV if applicable)	Group Symmetric
+2021-10-27 12:00:14,528 DEBUG:# !!REMEMBER DEFAULT ANALYSISTOP OUTPUT IS IN MeV NOT GeV!!
+2021-10-27 12:00:14,528 DEBUG:Tight muon	mu_isTight	=	1	tight muon cut	false
+2021-10-27 12:00:14,528 DEBUG:eta	mu_eta	<	2.4	eta	true
+2021-10-27 12:00:14,528 DEBUG:E_{T}^{MISS}	met_met	>	65	met	false
+2021-10-27 12:00:14,528 DEBUG:p_T	mu_pt	>	65	mu pt	false
+2021-10-27 12:00:14,528 DEBUG:M_T	mu_mt	>	55	muon mt	false
+2021-10-27 12:00:14,528 DEBUG:M_W	MC_WZ_m	>	120	W m	false	truth
+2021-10-27 12:00:14,528 DEBUG:
+2021-10-27 12:00:14,528 DEBUG:[OUTPUTS]
+2021-10-27 12:00:14,528 DEBUG:# variables to process
+2021-10-27 12:00:14,528 DEBUG:mu_mt
+2021-10-27 12:00:14,528 DEBUG:mu_pt
+2021-10-27 12:00:14,528 DEBUG:mu_eta
+2021-10-27 12:00:14,528 DEBUG:
+2021-10-27 12:00:14,528 DEBUG:[OPTIONS]
+2021-10-27 12:00:14,528 DEBUG:# case-insensitive
+2021-10-27 12:00:14,528 DEBUG:sequential	false
+2021-10-27 12:00:14,528 DEBUG:grouped cutflow	false
+2021-10-27 12:00:14,528 DEBUG:---------------------------
+2021-10-27 12:00:14,528 INFO:Parsting cutfile for wplustaunu_inclusive...
+2021-10-27 12:00:14,530 INFO:Building wplustaunu_inclusive dataframe from /data/atlas/HighMassDrellYan/test_mc16a/wplustaunu/*.root...
+2021-10-27 12:00:14,531 DEBUG:Variables to extract from nominal_Loose tree: 
+2021-10-27 12:00:14,531 DEBUG:  - met_phi
+2021-10-27 12:00:14,531 DEBUG:  - mu_pt
+2021-10-27 12:00:14,531 DEBUG:  - eventNumber
+2021-10-27 12:00:14,532 DEBUG:  - mu_eta
+2021-10-27 12:00:14,532 DEBUG:  - mu_isTight
+2021-10-27 12:00:14,532 DEBUG:  - weight_mc
+2021-10-27 12:00:14,532 DEBUG:  - met_met
+2021-10-27 12:00:14,532 DEBUG:  - mu_phi
+2021-10-27 12:00:14,532 DEBUG:Variables to extract from truth tree: 
+2021-10-27 12:00:14,532 DEBUG:  - MC_WZ_m
+2021-10-27 12:00:14,532 DEBUG:Variables to calculate: 
+2021-10-27 12:00:14,532 DEBUG:  - mu_mt
+2021-10-27 12:00:14,532 DEBUG:Checking TTree and TBranch values in file(s) '/data/atlas/HighMassDrellYan/test_mc16a/wplustaunu/*.root'...
+2021-10-27 12:00:14,643 DEBUG:All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wplustaunu/user.jmandali.24799721._000004.prelim_mc16a_tau_sig.root...
+2021-10-27 12:00:14,750 DEBUG:All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wplustaunu/user.jmandali.24799721._000005.prelim_mc16a_tau_sig.root...
+2021-10-27 12:00:14,855 DEBUG:All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wplustaunu/user.jmandali.24799721._000006.prelim_mc16a_tau_sig.root...
+2021-10-27 12:00:14,960 DEBUG:All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wplustaunu/user.jmandali.24799721._000007.prelim_mc16a_tau_sig.root...
+2021-10-27 12:00:15,064 DEBUG:All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wplustaunu/user.jmandali.24799721._000008.prelim_mc16a_tau_sig.root...
+2021-10-27 12:00:15,216 DEBUG:All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wplustaunu/user.jmandali.24799721._000009.prelim_mc16a_tau_sig.root...
+2021-10-27 12:00:15,318 DEBUG:All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wplustaunu/user.jmandali.24799721._000010.prelim_mc16a_tau_sig.root...
+2021-10-27 12:00:15,421 DEBUG:All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wplustaunu/user.jmandali.24799721._000012.prelim_mc16a_tau_sig.root...
+2021-10-27 12:00:15,529 DEBUG:All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wplustaunu/user.jmandali.24799721._000016.prelim_mc16a_tau_sig.root...
+2021-10-27 12:00:15,633 DEBUG:All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wplustaunu/user.jmandali.24799721._000018.prelim_mc16a_tau_sig.root...
+2021-10-27 12:00:15,791 DEBUG:All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wplustaunu/user.jmandali.24799721._000019.prelim_mc16a_tau_sig.root...
+2021-10-27 12:00:15,897 DEBUG:All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wplustaunu/user.jmandali.24799721._000027.prelim_mc16a_tau_sig.root...
+2021-10-27 12:00:15,999 DEBUG:All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wplustaunu/user.jmandali.24799721._000032.prelim_mc16a_tau_sig.root...
+2021-10-27 12:00:16,103 DEBUG:All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wplustaunu/user.jmandali.24799721._000033.prelim_mc16a_tau_sig.root...
+2021-10-27 12:00:16,207 DEBUG:All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wplustaunu/user.jmandali.24799721._000034.prelim_mc16a_tau_sig.root...
+2021-10-27 12:00:16,310 DEBUG:All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wplustaunu/user.jmandali.24799721._000036.prelim_mc16a_tau_sig.root...
+2021-10-27 12:00:16,311 DEBUG:All required TTrees variables found.
+2021-10-27 12:00:16,311 WARNING:Variable(s) ['mu_isTight'] not contained in labels dictionary. Some unexpected behaviour may occur.
+2021-10-27 12:00:16,311 INFO:Extracting {'met_phi', 'mu_pt', 'eventNumber', 'mu_eta', 'mu_isTight', 'weight_mc', 'met_met', 'mu_phi'} from /data/atlas/HighMassDrellYan/test_mc16a/wplustaunu/*.root...
+2021-10-27 12:00:18,238 DEBUG:Extracted 226 events.
+2021-10-27 12:00:18,238 DEBUG:Extracting ['MC_WZ_m'] from TTree truth...
+2021-10-27 16:05:16,850 DEBUG:Extracted 29885000 events.
+2021-10-27 16:05:16,851 DEBUG:Merging with rest of dataframe...
+2021-10-27 16:05:24,608 INFO:time to build dataframe: 04:05:08s
+2021-10-27 16:05:24,608 INFO:Computing 'mu_mt' column from ['mu_pt', 'met_met', 'mu_phi', 'met_phi']...
+2021-10-27 16:05:24,614 DEBUG:dropping ['mu_phi', 'met_phi']
+2021-10-27 16:05:24,616 DEBUG:Rescaled columns ['mu_pt', 'MC_WZ_m', 'mu_mt'] to GeV.
+2021-10-27 16:05:24,621 INFO:Dataframe built and saved in outputs/jesal_cutflow/data/wplustaunu_inclusive_df.pkl
+2021-10-27 16:05:24,640 INFO:Number of events in dataset wplustaunu_inclusive: 226
+2021-10-27 16:05:24,640 INFO:Creating weights for wplustaunu_inclusive...
+2021-10-27 16:05:24,641 DEBUG:INCLUSIVE SAMPLE METADATA:
+2021-10-27 16:05:24,641 DEBUG:--------------------------
+2021-10-27 16:05:24,641 DEBUG:n_events   sum_w         x-s fb        lumi fb-1
+2021-10-27 16:05:24,641 DEBUG:==========================================================
+2021-10-27 16:05:24,642 DEBUG:226        2.566360e+06  1.135558e+04  2.761639e+00
+2021-10-27 16:05:24,642 INFO:Creating cuts for wplustaunu_inclusive...
+2021-10-27 16:05:24,645 INFO:
+2021-10-27 16:05:24,645 INFO:========== CUTS USED ============
+2021-10-27 16:05:24,645 INFO:Tight muon  : mu_isTight = 1.0
+2021-10-27 16:05:24,645 INFO:eta         :    |mu_eta| < 2.4
+2021-10-27 16:05:24,645 INFO:E_{T}^{MISS}:    met_met > 65.0
+2021-10-27 16:05:24,645 INFO:p_T         :      mu_pt > 65.0
+2021-10-27 16:05:24,645 INFO:M_T         :      mu_mt > 55.0
+2021-10-27 16:05:24,645 INFO:M_W         :    MC_WZ_m > 120.0
+2021-10-27 16:05:24,645 INFO:
+2021-10-27 16:05:24,651 INFO:=========== CUTFLOW =============
+2021-10-27 16:05:24,651 INFO:Option: Non-sequential
+2021-10-27 16:05:24,651 INFO:---------------------------------
+2021-10-27 16:05:24,651 INFO:Cut            Events Ratio
+2021-10-27 16:05:24,651 INFO:Inclusive      226   -
+2021-10-27 16:05:24,651 INFO:tight muon cut 226 1.000    
+2021-10-27 16:05:24,651 INFO:eta            226 1.000    
+2021-10-27 16:05:24,651 INFO:met            226 1.000    
+2021-10-27 16:05:24,651 INFO:mu pt          226 1.000    
+2021-10-27 16:05:24,651 INFO:muon mt        226 1.000    
+2021-10-27 16:05:24,651 INFO:W m            193 0.854    
+2021-10-27 16:05:24,651 INFO:
+2021-10-27 16:05:24,651 INFO:========= DATASET 'wplustaunu_inclusive' INITIALISED =========
+2021-10-27 16:05:24,651 INFO:
+2021-10-27 16:05:24,651 INFO:======== INITIALISING DATASET 'wminmunu_slices' =========
+2021-10-27 16:05:25,398 DEBUG:DATASET INPUT OPTIONS: 
+2021-10-27 16:05:25,398 DEBUG:----------------------------
+2021-10-27 16:05:25,398 DEBUG:Input file(s):  /data/atlas/HighMassDrellYan/test_mc16a/wminmunu_*/*.root
+2021-10-27 16:05:25,398 DEBUG:TTree: nominal_Loose
+2021-10-27 16:05:25,398 DEBUG:Cutfile: options/jesal_cutflow/cutfile_jesal.txt
+2021-10-27 16:05:25,398 DEBUG:Slices: True
+2021-10-27 16:05:25,400 DEBUG:grouped cutflow: True
+2021-10-27 16:05:25,401 DEBUG:Forced dataset rebuild: False
+2021-10-27 16:05:25,401 DEBUG:----------------------------
+2021-10-27 16:05:25,401 DEBUG:
+2021-10-27 16:05:25,401 DEBUG:CUTFILE CONTENTS
+2021-10-27 16:05:25,401 DEBUG:---------------------------
+2021-10-27 16:05:25,402 DEBUG:[CUTS]
+2021-10-27 16:05:25,402 DEBUG:# Name	Variable	</>	Cut (in GeV if applicable)	Group Symmetric
+2021-10-27 16:05:25,403 DEBUG:# !!REMEMBER DEFAULT ANALYSISTOP OUTPUT IS IN MeV NOT GeV!!
+2021-10-27 16:05:25,403 DEBUG:Tight muon	mu_isTight	=	1	tight muon cut	false
+2021-10-27 16:05:25,403 DEBUG:eta	mu_eta	<	2.4	eta	true
+2021-10-27 16:05:25,403 DEBUG:E_{T}^{MISS}	met_met	>	65	met	false
+2021-10-27 16:05:25,404 DEBUG:p_T	mu_pt	>	65	mu pt	false
+2021-10-27 16:05:25,405 DEBUG:M_T	mu_mt	>	55	muon mt	false
+2021-10-27 16:05:25,405 DEBUG:M_W	MC_WZ_m	>	120	W m	false	truth
+2021-10-27 16:05:25,405 DEBUG:
+2021-10-27 16:05:25,405 DEBUG:[OUTPUTS]
+2021-10-27 16:05:25,405 DEBUG:# variables to process
+2021-10-27 16:05:25,405 DEBUG:mu_mt
+2021-10-27 16:05:25,405 DEBUG:mu_pt
+2021-10-27 16:05:25,406 DEBUG:mu_eta
+2021-10-27 16:05:25,406 DEBUG:
+2021-10-27 16:05:25,407 DEBUG:[OPTIONS]
+2021-10-27 16:05:25,407 DEBUG:# case-insensitive
+2021-10-27 16:05:25,407 DEBUG:sequential	false
+2021-10-27 16:05:25,407 DEBUG:grouped cutflow	false
+2021-10-27 16:05:25,407 DEBUG:---------------------------
+2021-10-27 16:05:25,407 INFO:Parsting cutfile for wminmunu_slices...
+2021-10-27 16:05:25,410 INFO:Building wminmunu_slices dataframe from /data/atlas/HighMassDrellYan/test_mc16a/wminmunu_*/*.root...
+2021-10-27 16:05:25,410 DEBUG:Variables to extract from nominal_Loose tree: 
+2021-10-27 16:05:25,411 DEBUG:  - met_phi
+2021-10-27 16:05:25,412 DEBUG:  - mu_pt
+2021-10-27 16:05:25,412 DEBUG:  - eventNumber
+2021-10-27 16:05:25,412 DEBUG:  - mu_eta
+2021-10-27 16:05:25,412 DEBUG:  - mu_isTight
+2021-10-27 16:05:25,413 DEBUG:  - weight_mc
+2021-10-27 16:05:25,413 DEBUG:  - met_met
+2021-10-27 16:05:25,413 DEBUG:  - mu_phi
+2021-10-27 16:05:25,413 DEBUG:Variables to extract from truth tree: 
+2021-10-27 16:05:25,413 DEBUG:  - MC_WZ_m
+2021-10-27 16:05:25,413 DEBUG:Variables to calculate: 
+2021-10-27 16:05:25,413 DEBUG:  - mu_mt
+2021-10-27 16:05:25,413 DEBUG:Checking TTree and TBranch values in file(s) '/data/atlas/HighMassDrellYan/test_mc16a/wminmunu_*/*.root'...
+2021-10-27 16:05:25,860 DEBUG:All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wminmunu_1000/user.jmandali.24799520._000001.prelim_mc16a_mu_sig.root...
+2021-10-27 16:05:26,301 DEBUG:All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wminmunu_120/user.jmandali.24799478._000003.prelim_mc16a_mu_sig.root...
+2021-10-27 16:05:26,741 DEBUG:All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wminmunu_120/user.jmandali.24799478._000002.prelim_mc16a_mu_sig.root...
+2021-10-27 16:05:27,116 DEBUG:All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wminmunu_120/user.jmandali.24799478._000004.prelim_mc16a_mu_sig.root...
+2021-10-27 16:05:27,485 DEBUG:All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wminmunu_1250/user.jmandali.24799527._000001.prelim_mc16a_mu_sig.root...
+2021-10-27 16:05:27,938 DEBUG:All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wminmunu_1500/user.jmandali.24799534._000001.prelim_mc16a_mu_sig.root...
+2021-10-27 16:05:28,295 DEBUG:All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wminmunu_1750/user.jmandali.24799541._000001.prelim_mc16a_mu_sig.root...
+2021-10-27 16:05:28,806 DEBUG:All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wminmunu_180/user.jmandali.24799485._000001.prelim_mc16a_mu_sig.root...
+2021-10-27 16:05:29,254 DEBUG:All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wminmunu_180/user.jmandali.24799485._000002.prelim_mc16a_mu_sig.root...
+2021-10-27 16:05:29,729 DEBUG:All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wminmunu_180/user.jmandali.24799485._000003.prelim_mc16a_mu_sig.root...
+2021-10-27 16:05:30,165 DEBUG:All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wminmunu_2000/user.jmandali.24799548._000001.prelim_mc16a_mu_sig.root...
+2021-10-27 16:05:30,622 DEBUG:All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wminmunu_2250/user.jmandali.24799555._000001.prelim_mc16a_mu_sig.root...
+2021-10-27 16:05:31,126 DEBUG:All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wminmunu_250/user.jmandali.24808740._000001.prelim_mc16a_mu_sig.root...
+2021-10-27 16:05:31,574 DEBUG:All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wminmunu_250/user.jmandali.24808740._000002.prelim_mc16a_mu_sig.root...
+2021-10-27 16:05:32,011 DEBUG:All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wminmunu_2500/user.jmandali.24799560._000001.prelim_mc16a_mu_sig.root...
+2021-10-27 16:05:32,432 DEBUG:All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wminmunu_2750/user.jmandali.24799567._000001.prelim_mc16a_mu_sig.root...
+2021-10-27 16:05:33,349 DEBUG:All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wminmunu_3000/user.jmandali.24799574._000001.prelim_mc16a_mu_sig.root...
+2021-10-27 16:05:33,799 DEBUG:All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wminmunu_3500/user.jmandali.24799582._000001.prelim_mc16a_mu_sig.root...
+2021-10-27 16:05:34,246 DEBUG:All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wminmunu_400/user.jmandali.24799498._000001.prelim_mc16a_mu_sig.root...
+2021-10-27 16:05:34,704 DEBUG:All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wminmunu_4000/user.jmandali.24799589._000001.prelim_mc16a_mu_sig.root...
+2021-10-27 16:05:35,156 DEBUG:All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wminmunu_4500/user.jmandali.24799596._000001.prelim_mc16a_mu_sig.root...
+2021-10-27 16:05:35,593 DEBUG:All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wminmunu_5000/user.jmandali.24799601._000001.prelim_mc16a_mu_sig.root...
+2021-10-27 16:05:36,080 DEBUG:All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wminmunu_600/user.jmandali.24799505._000001.prelim_mc16a_mu_sig.root...
+2021-10-27 16:05:36,509 DEBUG:All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wminmunu_800/user.jmandali.24799512._000001.prelim_mc16a_mu_sig.root...
+2021-10-27 16:05:36,509 DEBUG:All required TTrees variables found.
+2021-10-27 16:05:36,509 WARNING:Variable(s) ['mu_isTight'] not contained in labels dictionary. Some unexpected behaviour may occur.
+2021-10-27 16:05:36,510 INFO:Extracting mass slices from /data/atlas/HighMassDrellYan/test_mc16a/wminmunu_*/*.root...
+2021-10-27 16:05:36,510 DEBUG:Extracting {'met_phi', 'mcChannelNumber', 'mu_pt', 'eventNumber', 'mu_eta', 'mu_isTight', 'weight_mc', 'met_met', 'mu_phi'} from nominal_Loose tree...
+2021-10-27 16:06:07,258 DEBUG:Extracted 1524374 events.
+2021-10-27 16:06:07,258 DEBUG:Extracting ['total_EventsWeighted', 'dsid'] from 'sumWeights' tree...
+2021-10-27 16:06:07,997 DEBUG:Calculating sum of weights and merging...
+2021-10-27 16:06:08,101 DEBUG:Extracting ['MC_WZ_m'] from truth tree...
+2021-10-27 16:14:44,424 DEBUG:Extracted 7943000 events.
+2021-10-27 16:14:44,424 DEBUG:Merging with rest of dataframe...
+2021-10-27 16:14:47,393 DEBUG:Found 19 unique dsid(s).
+2021-10-27 16:14:48,273 WARNING:Value of 'totalEventsWeighted' (157.9665985107422) is not the same as the total summed values of 'weight_mc' (1619.952880859375) for DISD 301126. Ratio = 0.098
+2021-10-27 16:14:48,299 WARNING:Value of 'totalEventsWeighted' (110953424.0) is not the same as the total summed values of 'weight_mc' (11105974.0) for DISD 301120. Ratio = 10
+2021-10-27 16:14:48,325 WARNING:Value of 'totalEventsWeighted' (50.138301849365234) is not the same as the total summed values of 'weight_mc' (523.448486328125) for DISD 301127. Ratio = 0.096
+2021-10-27 16:14:48,352 WARNING:Value of 'totalEventsWeighted' (18.406715393066406) is not the same as the total summed values of 'weight_mc' (194.55386352539062) for DISD 301128. Ratio = 0.095
+2021-10-27 16:14:48,378 WARNING:Value of 'totalEventsWeighted' (7.473325252532959) is not the same as the total summed values of 'weight_mc' (78.20445251464844) for DISD 301129. Ratio = 0.096
+2021-10-27 16:14:48,419 WARNING:Value of 'totalEventsWeighted' (4926816.5) is not the same as the total summed values of 'weight_mc' (3101657.0) for DISD 301121. Ratio = 1.6
+2021-10-27 16:14:48,447 WARNING:Value of 'totalEventsWeighted' (3.265511989593506) is not the same as the total summed values of 'weight_mc' (34.43363571166992) for DISD 301130. Ratio = 0.095
+2021-10-27 16:14:48,474 WARNING:Value of 'totalEventsWeighted' (1.5084095001220703) is not the same as the total summed values of 'weight_mc' (15.882092475891113) for DISD 301131. Ratio = 0.095
+2021-10-27 16:14:48,509 WARNING:Value of 'totalEventsWeighted' (643254.875) is not the same as the total summed values of 'weight_mc' (798289.875) for DISD 301122. Ratio = 0.81
+2021-10-27 16:14:48,536 WARNING:Value of 'totalEventsWeighted' (0.7274540066719055) is not the same as the total summed values of 'weight_mc' (7.61931037902832) for DISD 301132. Ratio = 0.095
+2021-10-27 16:14:48,562 WARNING:Value of 'totalEventsWeighted' (0.36294829845428467) is not the same as the total summed values of 'weight_mc' (3.8033030033111572) for DISD 301133. Ratio = 0.095
+2021-10-27 16:14:48,588 WARNING:Value of 'totalEventsWeighted' (0.28345638513565063) is not the same as the total summed values of 'weight_mc' (2.9697797298431396) for DISD 301134. Ratio = 0.095
+2021-10-27 16:14:48,615 WARNING:Value of 'totalEventsWeighted' (0.07986970245838165) is not the same as the total summed values of 'weight_mc' (0.8290846943855286) for DISD 301135. Ratio = 0.096
+2021-10-27 16:14:48,643 WARNING:Value of 'totalEventsWeighted' (17540.890625) is not the same as the total summed values of 'weight_mc' (96359.1171875) for DISD 301123. Ratio = 0.18
+2021-10-27 16:14:48,669 WARNING:Value of 'totalEventsWeighted' (0.023605169728398323) is not the same as the total summed values of 'weight_mc' (0.24154376983642578) for DISD 301136. Ratio = 0.098
+2021-10-27 16:14:48,695 WARNING:Value of 'totalEventsWeighted' (0.007140154950320721) is not the same as the total summed values of 'weight_mc' (0.07222452759742737) for DISD 301137. Ratio = 0.099
+2021-10-27 16:14:48,721 WARNING:Value of 'totalEventsWeighted' (0.003081234870478511) is not the same as the total summed values of 'weight_mc' (0.030703745782375336) for DISD 301138. Ratio = 0.1
+2021-10-27 16:14:48,747 WARNING:Value of 'totalEventsWeighted' (1548.987548828125) is not the same as the total summed values of 'weight_mc' (15139.8056640625) for DISD 301124. Ratio = 0.1
+2021-10-27 16:14:48,773 WARNING:Value of 'totalEventsWeighted' (414.3192138671875) is not the same as the total summed values of 'weight_mc' (4206.5126953125) for DISD 301125. Ratio = 0.098
+2021-10-27 16:14:48,773 INFO:time to build dataframe: 00:09:12s
+2021-10-27 16:14:48,773 INFO:Computing 'mu_mt' column from ['mu_pt', 'met_met', 'mu_phi', 'met_phi']...
+2021-10-27 16:17:44,144 DEBUG:dropping ['mu_phi', 'met_phi']
+2021-10-27 16:17:44,868 DEBUG:Rescaled columns ['mu_pt', 'MC_WZ_m', 'mu_mt'] to GeV.
+2021-10-27 16:18:02,246 INFO:Dataframe built and saved in outputs/jesal_cutflow/data/wminmunu_slices_df.pkl
+2021-10-27 16:18:02,259 INFO:Number of events in dataset wminmunu_slices: 10473533
+2021-10-27 16:18:02,259 INFO:Creating weights for wminmunu_slices...
+2021-10-27 16:18:02,352 DEBUG:PER-DSID INFO:
+2021-10-27 16:18:02,353 DEBUG:--------------
+2021-10-27 16:18:02,353 DEBUG:DSID       n_events   sum_w         x-s fb        lumi fb-1
+2021-10-27 16:18:02,353 DEBUG:==========================================================
+2021-10-27 16:18:02,596 DEBUG:301126     512753     1.619953e+03  3.159324e-03  1.435705e+03
+2021-10-27 16:18:02,622 DEBUG:301120     499915     1.110597e+07  2.221572e+01  1.408600e+01
+2021-10-27 16:18:02,649 DEBUG:301127     522006     5.234484e+02  1.002763e-03  1.461614e+03
+2021-10-27 16:18:02,677 DEBUG:301128     528485     1.945538e+02  3.681350e-04  1.479762e+03
+2021-10-27 16:18:02,704 DEBUG:301129     523222     7.820444e+01  1.494670e-04  1.465028e+03
+2021-10-27 16:18:02,745 DEBUG:301121     944456     3.101657e+06  3.284067e+00  8.836211e+01
+2021-10-27 16:18:02,773 DEBUG:301130     527231     3.443364e+01  6.531034e-05  1.476250e+03
+2021-10-27 16:18:02,800 DEBUG:301131     526452     1.588209e+01  3.016817e-05  1.474065e+03
+2021-10-27 16:18:02,835 DEBUG:301122     737165     7.982900e+05  1.082919e+00  1.738961e+02
+2021-10-27 16:18:02,862 DEBUG:301132     523697     7.619310e+00  1.454908e-05  1.466352e+03
+2021-10-27 16:18:02,890 DEBUG:301133     523944     3.803304e+00  7.258989e-06  1.467048e+03
+2021-10-27 16:18:02,917 DEBUG:301134     523849     2.969780e+00  5.669152e-06  1.466784e+03
+2021-10-27 16:18:02,944 DEBUG:301135     519023     8.290851e-01  1.597396e-06  1.453265e+03
+2021-10-27 16:18:02,972 DEBUG:301123     549364     9.635911e+04  1.754012e-01  7.691939e+02
+2021-10-27 16:18:02,998 DEBUG:301136     511632     2.415438e-01  4.721046e-07  1.432573e+03
+2021-10-27 16:18:03,025 DEBUG:301137     505761     7.222451e-02  1.428036e-07  1.416137e+03
+2021-10-27 16:18:03,052 DEBUG:301138     498237     3.070374e-02  6.162477e-08  1.395066e+03
+2021-10-27 16:18:03,078 DEBUG:301124     488699     1.513980e+04  3.097982e-02  1.368361e+03
+2021-10-27 16:18:03,105 DEBUG:301125     507642     4.206513e+03  8.286377e-03  1.421397e+03
+2021-10-27 16:18:03,105 INFO:Creating cuts for wminmunu_slices...
+2021-10-27 16:18:03,164 INFO:
+2021-10-27 16:18:03,164 INFO:========== CUTS USED ============
+2021-10-27 16:18:03,164 INFO:Tight muon  : mu_isTight = 1.0
+2021-10-27 16:18:03,164 INFO:eta         :    |mu_eta| < 2.4
+2021-10-27 16:18:03,164 INFO:E_{T}^{MISS}:    met_met > 65.0
+2021-10-27 16:18:03,164 INFO:p_T         :      mu_pt > 65.0
+2021-10-27 16:18:03,164 INFO:M_T         :      mu_mt > 55.0
+2021-10-27 16:18:03,164 INFO:M_W         :    MC_WZ_m > 120.0
+2021-10-27 16:18:03,164 INFO:
+2021-10-27 16:18:04,627 INFO:=========== CUTFLOW =============
+2021-10-27 16:18:04,627 INFO:Option: Non-sequential
+2021-10-27 16:18:04,627 INFO:---------------------------------
+2021-10-27 16:18:04,627 INFO:Cut            Events   Ratio
+2021-10-27 16:18:04,628 INFO:Inclusive      10473533   -
+2021-10-27 16:18:04,628 INFO:tight muon cut 10473533 1.000    
+2021-10-27 16:18:04,628 INFO:eta            10473533 1.000    
+2021-10-27 16:18:04,628 INFO:met            10473533 1.000    
+2021-10-27 16:18:04,628 INFO:mu pt          10473533 1.000    
+2021-10-27 16:18:04,628 INFO:muon mt        10473533 1.000    
+2021-10-27 16:18:04,628 INFO:W m            10473533 1.000    
+2021-10-27 16:18:04,628 INFO:
+2021-10-27 16:18:04,628 INFO:========= DATASET 'wminmunu_slices' INITIALISED =========
+2021-10-27 16:18:04,628 INFO:
+2021-10-27 16:18:04,628 INFO:======== INITIALISING DATASET 'wminmunu_inclusive' =========
+2021-10-27 16:18:04,689 DEBUG:DATASET INPUT OPTIONS: 
+2021-10-27 16:18:04,689 DEBUG:----------------------------
+2021-10-27 16:18:04,689 DEBUG:Input file(s):  /data/atlas/HighMassDrellYan/test_mc16a/wminmunu/*.root
+2021-10-27 16:18:04,689 DEBUG:TTree: nominal_Loose
+2021-10-27 16:18:04,689 DEBUG:Cutfile: options/jesal_cutflow/cutfile_jesal.txt
+2021-10-27 16:18:04,689 DEBUG:Slices: False
+2021-10-27 16:18:04,690 DEBUG:grouped cutflow: True
+2021-10-27 16:18:04,690 DEBUG:Forced dataset rebuild: False
+2021-10-27 16:18:04,690 DEBUG:----------------------------
+2021-10-27 16:18:04,690 DEBUG:
+2021-10-27 16:18:04,691 DEBUG:CUTFILE CONTENTS
+2021-10-27 16:18:04,691 DEBUG:---------------------------
+2021-10-27 16:18:04,692 DEBUG:[CUTS]
+2021-10-27 16:18:04,692 DEBUG:# Name	Variable	</>	Cut (in GeV if applicable)	Group Symmetric
+2021-10-27 16:18:04,692 DEBUG:# !!REMEMBER DEFAULT ANALYSISTOP OUTPUT IS IN MeV NOT GeV!!
+2021-10-27 16:18:04,692 DEBUG:Tight muon	mu_isTight	=	1	tight muon cut	false
+2021-10-27 16:18:04,692 DEBUG:eta	mu_eta	<	2.4	eta	true
+2021-10-27 16:18:04,692 DEBUG:E_{T}^{MISS}	met_met	>	65	met	false
+2021-10-27 16:18:04,692 DEBUG:p_T	mu_pt	>	65	mu pt	false
+2021-10-27 16:18:04,692 DEBUG:M_T	mu_mt	>	55	muon mt	false
+2021-10-27 16:18:04,692 DEBUG:M_W	MC_WZ_m	>	120	W m	false	truth
+2021-10-27 16:18:04,692 DEBUG:
+2021-10-27 16:18:04,693 DEBUG:[OUTPUTS]
+2021-10-27 16:18:04,693 DEBUG:# variables to process
+2021-10-27 16:18:04,693 DEBUG:mu_mt
+2021-10-27 16:18:04,693 DEBUG:mu_pt
+2021-10-27 16:18:04,693 DEBUG:mu_eta
+2021-10-27 16:18:04,694 DEBUG:
+2021-10-27 16:18:04,694 DEBUG:[OPTIONS]
+2021-10-27 16:18:04,694 DEBUG:# case-insensitive
+2021-10-27 16:18:04,694 DEBUG:sequential	false
+2021-10-27 16:18:04,694 DEBUG:grouped cutflow	false
+2021-10-27 16:18:04,694 DEBUG:---------------------------
+2021-10-27 16:18:04,694 INFO:Parsting cutfile for wminmunu_inclusive...
+2021-10-27 16:18:04,697 INFO:Building wminmunu_inclusive dataframe from /data/atlas/HighMassDrellYan/test_mc16a/wminmunu/*.root...
+2021-10-27 16:18:04,697 DEBUG:Variables to extract from nominal_Loose tree: 
+2021-10-27 16:18:04,697 DEBUG:  - met_phi
+2021-10-27 16:18:04,697 DEBUG:  - mu_pt
+2021-10-27 16:18:04,698 DEBUG:  - eventNumber
+2021-10-27 16:18:04,698 DEBUG:  - mu_eta
+2021-10-27 16:18:04,698 DEBUG:  - mu_isTight
+2021-10-27 16:18:04,698 DEBUG:  - weight_mc
+2021-10-27 16:18:04,698 DEBUG:  - met_met
+2021-10-27 16:18:04,698 DEBUG:  - mu_phi
+2021-10-27 16:18:04,698 DEBUG:Variables to extract from truth tree: 
+2021-10-27 16:18:04,698 DEBUG:  - MC_WZ_m
+2021-10-27 16:18:04,698 DEBUG:Variables to calculate: 
+2021-10-27 16:18:04,698 DEBUG:  - mu_mt
+2021-10-27 16:18:04,698 DEBUG:Checking TTree and TBranch values in file(s) '/data/atlas/HighMassDrellYan/test_mc16a/wminmunu/*.root'...
+2021-10-27 16:18:05,116 DEBUG:All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wminmunu/user.jmandali.24799470._000001.prelim_mc16a_mu_sig.root...
+2021-10-27 16:18:05,545 DEBUG:All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wminmunu/user.jmandali.24799470._000002.prelim_mc16a_mu_sig.root...
+2021-10-27 16:18:05,967 DEBUG:All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wminmunu/user.jmandali.24799470._000003.prelim_mc16a_mu_sig.root...
+2021-10-27 16:18:06,387 DEBUG:All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wminmunu/user.jmandali.24799470._000004.prelim_mc16a_mu_sig.root...
+2021-10-27 16:18:06,819 DEBUG:All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wminmunu/user.jmandali.24799470._000005.prelim_mc16a_mu_sig.root...
+2021-10-27 16:18:07,286 DEBUG:All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wminmunu/user.jmandali.24799470._000010.prelim_mc16a_mu_sig.root...
+2021-10-27 16:18:07,709 DEBUG:All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wminmunu/user.jmandali.24799470._000012.prelim_mc16a_mu_sig.root...
+2021-10-27 16:18:08,130 DEBUG:All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wminmunu/user.jmandali.24799470._000013.prelim_mc16a_mu_sig.root...
+2021-10-27 16:18:08,555 DEBUG:All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wminmunu/user.jmandali.24799470._000015.prelim_mc16a_mu_sig.root...
+2021-10-27 16:18:08,975 DEBUG:All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wminmunu/user.jmandali.24799470._000016.prelim_mc16a_mu_sig.root...
+2021-10-27 16:18:09,402 DEBUG:All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wminmunu/user.jmandali.24799470._000017.prelim_mc16a_mu_sig.root...
+2021-10-27 16:18:09,856 DEBUG:All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wminmunu/user.jmandali.24799470._000018.prelim_mc16a_mu_sig.root...
+2021-10-27 16:18:10,287 DEBUG:All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wminmunu/user.jmandali.24799470._000019.prelim_mc16a_mu_sig.root...
+2021-10-27 16:18:10,725 DEBUG:All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wminmunu/user.jmandali.24799470._000020.prelim_mc16a_mu_sig.root...
+2021-10-27 16:18:11,152 DEBUG:All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wminmunu/user.jmandali.24799470._000021.prelim_mc16a_mu_sig.root...
+2021-10-27 16:18:11,577 DEBUG:All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wminmunu/user.jmandali.24799470._000022.prelim_mc16a_mu_sig.root...
+2021-10-27 16:18:12,045 DEBUG:All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wminmunu/user.jmandali.24799470._000023.prelim_mc16a_mu_sig.root...
+2021-10-27 16:18:12,045 DEBUG:All required TTrees variables found.
+2021-10-27 16:18:12,045 WARNING:Variable(s) ['mu_isTight'] not contained in labels dictionary. Some unexpected behaviour may occur.
+2021-10-27 16:18:12,045 INFO:Extracting {'met_phi', 'mu_pt', 'eventNumber', 'mu_eta', 'mu_isTight', 'weight_mc', 'met_met', 'mu_phi'} from /data/atlas/HighMassDrellYan/test_mc16a/wminmunu/*.root...
+2021-10-27 16:18:14,197 DEBUG:Extracted 19384 events.
+2021-10-27 16:18:14,197 DEBUG:Extracting ['MC_WZ_m'] from TTree truth...
+2021-10-27 16:52:04,137 DEBUG:Extracted 31973000 events.
+2021-10-27 16:52:04,137 DEBUG:Merging with rest of dataframe...
+2021-10-27 16:52:13,491 INFO:time to build dataframe: 00:34:01s
+2021-10-27 16:52:13,492 INFO:Computing 'mu_mt' column from ['mu_pt', 'met_met', 'mu_phi', 'met_phi']...
+2021-10-27 16:52:13,823 DEBUG:dropping ['mu_phi', 'met_phi']
+2021-10-27 16:52:13,826 DEBUG:Rescaled columns ['mu_pt', 'MC_WZ_m', 'mu_mt'] to GeV.
+2021-10-27 16:52:13,840 INFO:Dataframe built and saved in outputs/jesal_cutflow/data/wminmunu_inclusive_df.pkl
+2021-10-27 16:52:13,860 INFO:Number of events in dataset wminmunu_inclusive: 19384
+2021-10-27 16:52:13,860 INFO:Creating weights for wminmunu_inclusive...
+2021-10-27 16:52:13,865 DEBUG:INCLUSIVE SAMPLE METADATA:
+2021-10-27 16:52:13,865 DEBUG:--------------------------
+2021-10-27 16:52:13,865 DEBUG:n_events   sum_w         x-s fb        lumi fb-1
+2021-10-27 16:52:13,865 DEBUG:==========================================================
+2021-10-27 16:52:13,865 DEBUG:19384      1.617602e+08  8.345036e+03  3.217386e+02
+2021-10-27 16:52:13,866 INFO:Creating cuts for wminmunu_inclusive...
+2021-10-27 16:52:13,868 INFO:
+2021-10-27 16:52:13,869 INFO:========== CUTS USED ============
+2021-10-27 16:52:13,869 INFO:Tight muon  : mu_isTight = 1.0
+2021-10-27 16:52:13,869 INFO:eta         :    |mu_eta| < 2.4
+2021-10-27 16:52:13,869 INFO:E_{T}^{MISS}:    met_met > 65.0
+2021-10-27 16:52:13,869 INFO:p_T         :      mu_pt > 65.0
+2021-10-27 16:52:13,869 INFO:M_T         :      mu_mt > 55.0
+2021-10-27 16:52:13,869 INFO:M_W         :    MC_WZ_m > 120.0
+2021-10-27 16:52:13,869 INFO:
+2021-10-27 16:52:13,876 INFO:=========== CUTFLOW =============
+2021-10-27 16:52:13,876 INFO:Option: Non-sequential
+2021-10-27 16:52:13,877 INFO:---------------------------------
+2021-10-27 16:52:13,877 INFO:Cut            Events Ratio
+2021-10-27 16:52:13,877 INFO:Inclusive      19384   -
+2021-10-27 16:52:13,877 INFO:tight muon cut 19384 1.000    
+2021-10-27 16:52:13,878 INFO:eta            19384 1.000    
+2021-10-27 16:52:13,878 INFO:met            19384 1.000    
+2021-10-27 16:52:13,878 INFO:mu pt          19384 1.000    
+2021-10-27 16:52:13,879 INFO:muon mt        19384 1.000    
+2021-10-27 16:52:13,879 INFO:W m            12171 0.628    
+2021-10-27 16:52:13,879 INFO:
+2021-10-27 16:52:13,879 INFO:========= DATASET 'wminmunu_inclusive' INITIALISED =========
+2021-10-27 16:52:13,879 INFO:
+2021-10-27 16:52:13,879 INFO:======== INITIALISING DATASET 'wplusmunu_inclusive' =========
+2021-10-27 16:52:13,933 DEBUG:DATASET INPUT OPTIONS: 
+2021-10-27 16:52:13,933 DEBUG:----------------------------
+2021-10-27 16:52:13,933 DEBUG:Input file(s):  /data/atlas/HighMassDrellYan/test_mc16a/wplusmunu/*.root
+2021-10-27 16:52:13,934 DEBUG:TTree: nominal_Loose
+2021-10-27 16:52:13,934 DEBUG:Cutfile: options/jesal_cutflow/cutfile_jesal.txt
+2021-10-27 16:52:13,934 DEBUG:Slices: False
+2021-10-27 16:52:13,936 DEBUG:grouped cutflow: True
+2021-10-27 16:52:13,937 DEBUG:Forced dataset rebuild: False
+2021-10-27 16:52:13,937 DEBUG:----------------------------
+2021-10-27 16:52:13,937 DEBUG:
+2021-10-27 16:52:13,938 DEBUG:CUTFILE CONTENTS
+2021-10-27 16:52:13,938 DEBUG:---------------------------
+2021-10-27 16:52:13,939 DEBUG:[CUTS]
+2021-10-27 16:52:13,939 DEBUG:# Name	Variable	</>	Cut (in GeV if applicable)	Group Symmetric
+2021-10-27 16:52:13,939 DEBUG:# !!REMEMBER DEFAULT ANALYSISTOP OUTPUT IS IN MeV NOT GeV!!
+2021-10-27 16:52:13,939 DEBUG:Tight muon	mu_isTight	=	1	tight muon cut	false
+2021-10-27 16:52:13,939 DEBUG:eta	mu_eta	<	2.4	eta	true
+2021-10-27 16:52:13,939 DEBUG:E_{T}^{MISS}	met_met	>	65	met	false
+2021-10-27 16:52:13,939 DEBUG:p_T	mu_pt	>	65	mu pt	false
+2021-10-27 16:52:13,939 DEBUG:M_T	mu_mt	>	55	muon mt	false
+2021-10-27 16:52:13,940 DEBUG:M_W	MC_WZ_m	>	120	W m	false	truth
+2021-10-27 16:52:13,941 DEBUG:
+2021-10-27 16:52:13,941 DEBUG:[OUTPUTS]
+2021-10-27 16:52:13,941 DEBUG:# variables to process
+2021-10-27 16:52:13,941 DEBUG:mu_mt
+2021-10-27 16:52:13,941 DEBUG:mu_pt
+2021-10-27 16:52:13,942 DEBUG:mu_eta
+2021-10-27 16:52:13,942 DEBUG:
+2021-10-27 16:52:13,942 DEBUG:[OPTIONS]
+2021-10-27 16:52:13,942 DEBUG:# case-insensitive
+2021-10-27 16:52:13,942 DEBUG:sequential	false
+2021-10-27 16:52:13,942 DEBUG:grouped cutflow	false
+2021-10-27 16:52:13,942 DEBUG:---------------------------
+2021-10-27 16:52:13,942 INFO:Parsting cutfile for wplusmunu_inclusive...
+2021-10-27 16:52:13,946 INFO:Building wplusmunu_inclusive dataframe from /data/atlas/HighMassDrellYan/test_mc16a/wplusmunu/*.root...
+2021-10-27 16:52:13,946 DEBUG:Variables to extract from nominal_Loose tree: 
+2021-10-27 16:52:13,947 DEBUG:  - met_phi
+2021-10-27 16:52:13,947 DEBUG:  - mu_pt
+2021-10-27 16:52:13,947 DEBUG:  - eventNumber
+2021-10-27 16:52:13,947 DEBUG:  - mu_eta
+2021-10-27 16:52:13,947 DEBUG:  - mu_isTight
+2021-10-27 16:52:13,947 DEBUG:  - weight_mc
+2021-10-27 16:52:13,947 DEBUG:  - met_met
+2021-10-27 16:52:13,947 DEBUG:  - mu_phi
+2021-10-27 16:52:13,947 DEBUG:Variables to extract from truth tree: 
+2021-10-27 16:52:13,947 DEBUG:  - MC_WZ_m
+2021-10-27 16:52:13,947 DEBUG:Variables to calculate: 
+2021-10-27 16:52:13,947 DEBUG:  - mu_mt
+2021-10-27 16:52:13,948 DEBUG:Checking TTree and TBranch values in file(s) '/data/atlas/HighMassDrellYan/test_mc16a/wplusmunu/*.root'...
+2021-10-27 16:52:14,374 DEBUG:All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wplusmunu/user.jmandali.24799324._000001.prelim_mc16a_mu_sig.root...
+2021-10-27 16:52:14,796 DEBUG:All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wplusmunu/user.jmandali.24799324._000002.prelim_mc16a_mu_sig.root...
+2021-10-27 16:52:15,219 DEBUG:All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wplusmunu/user.jmandali.24799324._000003.prelim_mc16a_mu_sig.root...
+2021-10-27 16:52:15,645 DEBUG:All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wplusmunu/user.jmandali.24799324._000010.prelim_mc16a_mu_sig.root...
+2021-10-27 16:52:16,087 DEBUG:All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wplusmunu/user.jmandali.24799324._000011.prelim_mc16a_mu_sig.root...
+2021-10-27 16:52:16,567 DEBUG:All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wplusmunu/user.jmandali.24799324._000012.prelim_mc16a_mu_sig.root...
+2021-10-27 16:52:16,978 DEBUG:All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wplusmunu/user.jmandali.24799324._000013.prelim_mc16a_mu_sig.root...
+2021-10-27 16:52:17,402 DEBUG:All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wplusmunu/user.jmandali.24799324._000004.prelim_mc16a_mu_sig.root...
+2021-10-27 16:52:17,823 DEBUG:All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wplusmunu/user.jmandali.24799324._000007.prelim_mc16a_mu_sig.root...
+2021-10-27 16:52:18,253 DEBUG:All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wplusmunu/user.jmandali.24799324._000009.prelim_mc16a_mu_sig.root...
+2021-10-27 16:52:18,671 DEBUG:All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wplusmunu/user.jmandali.24799324._000014.prelim_mc16a_mu_sig.root...
+2021-10-27 16:52:19,152 DEBUG:All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wplusmunu/user.jmandali.24799324._000015.prelim_mc16a_mu_sig.root...
+2021-10-27 16:52:19,600 DEBUG:All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wplusmunu/user.jmandali.24799324._000016.prelim_mc16a_mu_sig.root...
+2021-10-27 16:52:19,601 DEBUG:All required TTrees variables found.
+2021-10-27 16:52:19,601 WARNING:Variable(s) ['mu_isTight'] not contained in labels dictionary. Some unexpected behaviour may occur.
+2021-10-27 16:52:19,601 INFO:Extracting {'met_phi', 'mu_pt', 'eventNumber', 'mu_eta', 'mu_isTight', 'weight_mc', 'met_met', 'mu_phi'} from /data/atlas/HighMassDrellYan/test_mc16a/wplusmunu/*.root...
+2021-10-27 16:52:21,368 DEBUG:Extracted 25515 events.
+2021-10-27 16:52:21,368 DEBUG:Extracting ['MC_WZ_m'] from TTree truth...

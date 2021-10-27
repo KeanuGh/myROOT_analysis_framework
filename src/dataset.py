@@ -170,13 +170,13 @@ class Dataset:
                 logger.debug("--------------")
                 logger.debug("DSID       n_events   sum_w         x-s fb        lumi fb-1")
                 logger.debug("==========================================================")
-                for dsid in self.df['DSID'].unique():
+                for dsid in self.df['DSID'].unique().sort():
                     df_id = self.df[self.df['DSID'] == dsid]
                     logger.debug(f"{int(dsid):<10} "
                                 f"{len(df_id):<10} "
                                 f"{df_id['weight_mc'].sum():<10.6e}  "
                                 f"{df_utils.get_cross_section(df_id):<10.6e}  "
-                                f"{df_utils.get_luminosity(df_id):.<10.6e}")
+                                f"{df_utils.get_luminosity(df_id):<10.6e}")
             else:
                 logger.debug("INCLUSIVE SAMPLE METADATA:")
                 logger.debug("--------------------------")
