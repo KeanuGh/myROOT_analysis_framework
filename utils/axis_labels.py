@@ -273,7 +273,7 @@ labels_xs = {
     },
     'MC_WZ_m': {
         'xlabel': r'dressed W mass [GeV]',
-        'ylabel': r'$\frac{d\sigma}{d\m}$ [fb GeV$^{-1}$]',
+        'ylabel': r'$\frac{d\sigma}{dm}$ [fb GeV$^{-1}$]',
     },
 
     # DEFAULT & TESTING

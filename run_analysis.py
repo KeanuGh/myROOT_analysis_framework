@@ -60,20 +60,140 @@ if __name__ == '__main__':
             'is_slices': False,
             'lepton': 'muon'
         },
+        'single_antitop_s': {
+            'datapath': '/data/atlas/HighMassDrellYan/test_mc16a/single_antitop_s/*.root',
+            'cutfile': 'options/jesal_cutflow/cutfile_jesal.txt',
+            'TTree_name': 'nominal_Loose',
+            'is_slices': False,
+        },
+        'single_antitop_t': {
+            'datapath': '/data/atlas/HighMassDrellYan/test_mc16a/single_antitop_t/*.root',
+            'cutfile': 'options/jesal_cutflow/cutfile_jesal.txt',
+            'TTree_name': 'nominal_Loose',
+            'is_slices': False,
+        },
+        'single_top_s': {
+            'datapath': '/data/atlas/HighMassDrellYan/test_mc16a/single_top_s/*.root',
+            'cutfile': 'options/jesal_cutflow/cutfile_jesal.txt',
+            'TTree_name': 'nominal_Loose',
+            'is_slices': False,
+        },
+        'single_top_t': {
+            'datapath': '/data/atlas/HighMassDrellYan/test_mc16a/single_top_t/*.root',
+            'cutfile': 'options/jesal_cutflow/cutfile_jesal.txt',
+            'TTree_name': 'nominal_Loose',
+            'is_slices': False,
+        },
+        'ttbar': {
+            'datapath': '/data/atlas/HighMassDrellYan/test_mc16a/single_top_s/*.root',
+            'cutfile': 'options/jesal_cutflow/cutfile_jesal.txt',
+            'TTree_name': 'nominal_Loose',
+            'is_slices': False,
+        },
+        'wt_antitop': {
+            'datapath': '/data/atlas/HighMassDrellYan/test_mc16a/wt_antitop/*.root',
+            'cutfile': 'options/jesal_cutflow/cutfile_jesal.txt',
+            'TTree_name': 'nominal_Loose',
+            'is_slices': False,
+        },
+        'wt_top': {
+            'datapath': '/data/atlas/HighMassDrellYan/test_mc16a/wt_top/*.root',
+            'cutfile': 'options/jesal_cutflow/cutfile_jesal.txt',
+            'TTree_name': 'nominal_Loose',
+            'is_slices': False,
+        },
+        'wwplnumqq': {
+            'datapath': '/data/atlas/HighMassDrellYan/test_mc16a/wwplnumqq/*.root',
+            'cutfile': 'options/jesal_cutflow/cutfile_jesal.txt',
+            'TTree_name': 'nominal_Loose',
+            'is_slices': False,
+        },
+        'wwpqqmlnu': {
+            'datapath': '/data/atlas/HighMassDrellYan/test_mc16a/wwpqqmlnu/*.root',
+            'cutfile': 'options/jesal_cutflow/cutfile_jesal.txt',
+            'TTree_name': 'nominal_Loose',
+            'is_slices': False,
+        },
+        'wzlnull': {
+            'datapath': '/data/atlas/HighMassDrellYan/test_mc16a/wzlnull/*.root',
+            'cutfile': 'options/jesal_cutflow/cutfile_jesal.txt',
+            'TTree_name': 'nominal_Loose',
+            'is_slices': False,
+        },
+        'wzlnununu': {
+            'datapath': '/data/atlas/HighMassDrellYan/test_mc16a/wzlnununu/*.root',
+            'cutfile': 'options/jesal_cutflow/cutfile_jesal.txt',
+            'TTree_name': 'nominal_Loose',
+            'is_slices': False,
+        },
+        'wzlnuqq': {
+            'datapath': '/data/atlas/HighMassDrellYan/test_mc16a/wzlnuqq/*.root',
+            'cutfile': 'options/jesal_cutflow/cutfile_jesal.txt',
+            'TTree_name': 'nominal_Loose',
+            'is_slices': False,
+        },
+        'wzqqll': {
+            'datapath': '/data/atlas/HighMassDrellYan/test_mc16a/wzqqll/*.root',
+            'cutfile': 'options/jesal_cutflow/cutfile_jesal.txt',
+            'TTree_name': 'nominal_Loose',
+            'is_slices': False,
+        },
+        'zmunu_inclusive': {
+            'datapath': '/data/atlas/HighMassDrellYan/test_mc16a/zmunu/*.root',
+            'cutfile': 'options/jesal_cutflow/cutfile_jesal.txt',
+            'TTree_name': 'nominal_Loose',
+            'is_slices': False,
+        },
+        'zmunu_slices': {
+            'datapath': '/data/atlas/HighMassDrellYan/test_mc16a/zmunu_*/*.root',
+            'cutfile': 'options/jesal_cutflow/cutfile_jesal.txt',
+            'TTree_name': 'nominal_Loose',
+            'is_slices': True,
+        },
+        'ztautau': {
+            'datapath': '/data/atlas/HighMassDrellYan/test_mc16a/ztautau/*.root',
+            'cutfile': 'options/jesal_cutflow/cutfile_jesal.txt',
+            'TTree_name': 'nominal_Loose',
+            'is_slices': False,
+        },
+        'ztautau_slices': {
+            'datapath': '/data/atlas/HighMassDrellYan/test_mc16a/ztautau_*/*.root',
+            'cutfile': 'options/jesal_cutflow/cutfile_jesal.txt',
+            'TTree_name': 'nominal_Loose',
+            'is_slices': True,
+        },
+        'zzllll': {
+            'datapath': '/data/atlas/HighMassDrellYan/test_mc16a/zzllll/*.root',
+            'cutfile': 'options/jesal_cutflow/cutfile_jesal.txt',
+            'TTree_name': 'nominal_Loose',
+            'is_slices': False,
+        },
+        'zzllnunu': {
+            'datapath': '/data/atlas/HighMassDrellYan/test_mc16a/zzllnunu/*.root',
+            'cutfile': 'options/jesal_cutflow/cutfile_jesal.txt',
+            'TTree_name': 'nominal_Loose',
+            'is_slices': False,
+        },
+        'zzqqll': {
+            'datapath': '/data/atlas/HighMassDrellYan/test_mc16a/zzqqll/*.root',
+            'cutfile': 'options/jesal_cutflow/cutfile_jesal.txt',
+            'TTree_name': 'nominal_Loose',
+            'is_slices': False,
+        },
     }
 
     my_analysis = Analysis(datasets, analysis_label='jesal_cutflow', force_rebuild=False, log_level=10)
 
     # pipeline
-    my_analysis.plot_mass_slices(ds_name='wmintaunu_slices', xvar='mu_mt',
-                                 inclusive_dataset='wmintaunu_inclusive', logx=True, to_pkl=True)
-    my_analysis.plot_mass_slices(ds_name='wplustaunu_slices', xvar='mu_mt',
-                                 inclusive_dataset='wplustaunu_inclusive', logx=True, to_pkl=True)
-    my_analysis.plot_mass_slices(ds_name='wminmunu_slices', xvar='mu_mt',
-                                 inclusive_dataset='wminmunu_inclusive', logx=True, to_pkl=True)
-    my_analysis.plot_mass_slices(ds_name='wplusmunu_slices', xvar='mu_mt',
-                                 inclusive_dataset='wplusmunu_inclusive', logx=True, to_pkl=True)
-    my_analysis.convert_pkl_to_root(conv_all=True)
+    # my_analysis.plot_mass_slices(ds_name='wmintaunu_slices', xvar='MC_WZ_m',
+    #                              inclusive_dataset='wmintaunu_inclusive', logx=True, to_pkl=True)
+    # my_analysis.plot_mass_slices(ds_name='wplustaunu_slices', xvar='MC_WZ_m',
+    #                              inclusive_dataset='wplustaunu_inclusive', logx=True, to_pkl=True)
+    # my_analysis.plot_mass_slices(ds_name='wminmunu_slices', xvar='MC_WZ_m',
+    #                              inclusive_dataset='wminmunu_inclusive', logx=True, to_pkl=True)
+    # my_analysis.plot_mass_slices(ds_name='wplusmunu_slices', xvar='MC_WZ_m',
+    #                              inclusive_dataset='wplusmunu_inclusive', logx=True, to_pkl=True)
+    # my_analysis.convert_pkl_to_root()
 
     # my_analysis.gen_cutflow_hist(event=True)
     # my_analysis.plot_with_cuts(scaling='xs', to_pkl=False)

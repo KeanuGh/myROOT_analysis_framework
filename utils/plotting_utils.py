@@ -650,12 +650,13 @@ def plot_mass_slices(df: pd.DataFrame,
     xlabel, ylabel = get_axis_labels(xvar, lepton)
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
+    ax.set_xlim(130, 11000)
 
     name = f"{xvar}_mass_slices_full"
     if to_pkl:
         with open(config.paths['pkl_hist_dir'] + plot_label + '_' + name + '.pkl', 'wb') as f:
             pkl.dump(hists, f)
             logger.info(f"Saved pickle file to {f.name}")
-    path = config.paths['plot_dir'] + name + '.png'
+    path = config.paths['plot_dir'] + plot_label + '_' + name + '.png'
     fig.savefig(path, bbox_inches='tight')
     logger.info(f"Figure saved to {path}")

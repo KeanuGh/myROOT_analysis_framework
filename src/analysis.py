@@ -109,7 +109,7 @@ class Analysis:
     # ===============================
     # ========= FUNCTIONS ===========
     # ===============================
-    def convert_hists_to_root(**kwargs):
+    def convert_pkl_to_root(**kwargs):
         file_utils.convert_pkl_to_root(**kwargs)
 
 
