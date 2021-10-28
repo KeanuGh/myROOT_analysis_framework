@@ -632,7 +632,7 @@ def plot_mass_slices(df: pd.DataFrame,
         if to_pkl:
             hists[dsid] = hist
 
-    if inclusive_dataset:
+    if inclusive_dataset is not None:
         hist_inc = histplot_1d(var_x=inclusive_dataset[xvar], weights=inclusive_dataset[weight_col], bins=xbins, fig_axis=ax, yerr=None, is_logbins=logbins,
                                scaling='widths', color='k', linewidth=2, label='Inclusive')
     else:

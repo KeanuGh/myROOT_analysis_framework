@@ -688,3 +688,42 @@
 2021-10-27 16:52:19,601 INFO:Extracting {'met_phi', 'mu_pt', 'eventNumber', 'mu_eta', 'mu_isTight', 'weight_mc', 'met_met', 'mu_phi'} from /data/atlas/HighMassDrellYan/test_mc16a/wplusmunu/*.root...
 2021-10-27 16:52:21,368 DEBUG:Extracted 25515 events.
 2021-10-27 16:52:21,368 DEBUG:Extracting ['MC_WZ_m'] from TTree truth...
+2021-10-27 17:35:25,003 DEBUG:Extracted 39962000 events.
+2021-10-27 17:35:25,004 DEBUG:Merging with rest of dataframe...
+2021-10-27 17:35:36,565 INFO:time to build dataframe: 00:43:16s
+2021-10-27 17:35:36,565 INFO:Computing 'mu_mt' column from ['mu_pt', 'met_met', 'mu_phi', 'met_phi']...
+2021-10-27 17:35:36,994 DEBUG:dropping ['mu_phi', 'met_phi']
+2021-10-27 17:35:36,996 DEBUG:Rescaled columns ['mu_pt', 'MC_WZ_m', 'mu_mt'] to GeV.
+2021-10-27 17:35:37,015 INFO:Dataframe built and saved in outputs/jesal_cutflow/data/wplusmunu_inclusive_df.pkl
+2021-10-27 17:35:37,041 INFO:Number of events in dataset wplusmunu_inclusive: 25515
+2021-10-27 17:35:37,041 INFO:Creating weights for wplusmunu_inclusive...
+2021-10-27 17:35:37,047 DEBUG:INCLUSIVE SAMPLE METADATA:
+2021-10-27 17:35:37,047 DEBUG:--------------------------
+2021-10-27 17:35:37,047 DEBUG:n_events   sum_w         x-s fb        lumi fb-1
+2021-10-27 17:35:37,047 DEBUG:==========================================================
+2021-10-27 17:35:37,048 DEBUG:25515      2.903304e+08  1.137881e+04  3.117847e+02
+2021-10-27 17:35:37,048 INFO:Creating cuts for wplusmunu_inclusive...
+2021-10-27 17:35:37,050 INFO:
+2021-10-27 17:35:37,050 INFO:========== CUTS USED ============
+2021-10-27 17:35:37,050 INFO:Tight muon  : mu_isTight = 1.0
+2021-10-27 17:35:37,051 INFO:eta         :    |mu_eta| < 2.4
+2021-10-27 17:35:37,051 INFO:E_{T}^{MISS}:    met_met > 65.0
+2021-10-27 17:35:37,051 INFO:p_T         :      mu_pt > 65.0
+2021-10-27 17:35:37,051 INFO:M_T         :      mu_mt > 55.0
+2021-10-27 17:35:37,051 INFO:M_W         :    MC_WZ_m > 120.0
+2021-10-27 17:35:37,051 INFO:
+2021-10-27 17:35:37,058 INFO:=========== CUTFLOW =============
+2021-10-27 17:35:37,058 INFO:Option: Non-sequential
+2021-10-27 17:35:37,058 INFO:---------------------------------
+2021-10-27 17:35:37,058 INFO:Cut            Events Ratio
+2021-10-27 17:35:37,058 INFO:Inclusive      25515   -
+2021-10-27 17:35:37,058 INFO:tight muon cut 25515 1.000    
+2021-10-27 17:35:37,058 INFO:eta            25515 1.000    
+2021-10-27 17:35:37,058 INFO:met            25515 1.000    
+2021-10-27 17:35:37,058 INFO:mu pt          25515 1.000    
+2021-10-27 17:35:37,058 INFO:muon mt        25515 1.000    
+2021-10-27 17:35:37,058 INFO:W m            17359 0.680    
+2021-10-27 17:35:37,058 INFO:
+2021-10-27 17:35:37,058 INFO:========= DATASET 'wplusmunu_inclusive' INITIALISED =========
+2021-10-27 17:35:37,059 INFO:====================================
+2021-10-27 17:35:37,059 INFO:ANALYSIS 'jesal_cutflow' INITIALISED

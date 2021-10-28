@@ -5,6 +5,7 @@ from typing import Optional, Union
 from warnings import warn
 
 import pandas as pd
+import numpy as np
 
 import src.config as config
 import utils.dataframe_utils as df_utils
@@ -170,7 +171,7 @@ class Dataset:
                 logger.debug("--------------")
                 logger.debug("DSID       n_events   sum_w         x-s fb        lumi fb-1")
                 logger.debug("==========================================================")
-                for dsid in self.df['DSID'].unique().sort():
+                for dsid in np.sort(self.df['DSID'].unique()):
                     df_id = self.df[self.df['DSID'] == dsid]
                     logger.debug(f"{int(dsid):<10} "
                                 f"{len(df_id):<10} "

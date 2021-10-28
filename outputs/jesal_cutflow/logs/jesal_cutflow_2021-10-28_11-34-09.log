@@ -1,0 +1,540 @@
+2021-10-28 11:34:09,445 INFO: INITIALISING ANALYSIS 'jesal_cutflow'...
+2021-10-28 11:34:09,445 INFO: ========================================
+2021-10-28 11:34:09,445 INFO: 
+2021-10-28 11:34:09,445 INFO: ======== INITIALISING DATASET 'wmintaunu_slices' =========
+2021-10-28 11:34:09,454 DEBUG: DATASET INPUT OPTIONS: 
+2021-10-28 11:34:09,454 DEBUG: ----------------------------
+2021-10-28 11:34:09,454 DEBUG: Input file(s):  /data/atlas/HighMassDrellYan/test_mc16a/wmintaunu_*/*.root
+2021-10-28 11:34:09,454 DEBUG: TTree: nominal_Loose
+2021-10-28 11:34:09,454 DEBUG: Cutfile: options/jesal_cutflow/cutfile_jesal.txt
+2021-10-28 11:34:09,454 DEBUG: Slices: True
+2021-10-28 11:34:09,454 DEBUG: grouped cutflow: True
+2021-10-28 11:34:09,454 DEBUG: Forced dataset rebuild: False
+2021-10-28 11:34:09,455 DEBUG: ----------------------------
+2021-10-28 11:34:09,462 DEBUG: 
+2021-10-28 11:34:09,462 DEBUG: CUTFILE CONTENTS
+2021-10-28 11:34:09,463 DEBUG: ---------------------------
+2021-10-28 11:34:09,464 DEBUG: [CUTS]
+2021-10-28 11:34:09,464 DEBUG: # Name	Variable	</>	Cut (in GeV if applicable)	Group Symmetric
+2021-10-28 11:34:09,464 DEBUG: # !!REMEMBER DEFAULT ANALYSISTOP OUTPUT IS IN MeV NOT GeV!!
+2021-10-28 11:34:09,465 DEBUG: Tight muon	mu_isTight	=	1	tight muon cut	false
+2021-10-28 11:34:09,465 DEBUG: eta	mu_eta	<	2.4	eta	true
+2021-10-28 11:34:09,465 DEBUG: E_{T}^{MISS}	met_met	>	65	met	false
+2021-10-28 11:34:09,465 DEBUG: p_T	mu_pt	>	65	mu pt	false
+2021-10-28 11:34:09,465 DEBUG: M_T	mu_mt	>	55	muon mt	false
+2021-10-28 11:34:09,465 DEBUG: M_W	MC_WZ_m	>	120	W m	false	truth
+2021-10-28 11:34:09,466 DEBUG: 
+2021-10-28 11:34:09,466 DEBUG: [OUTPUTS]
+2021-10-28 11:34:09,466 DEBUG: # variables to process
+2021-10-28 11:34:09,466 DEBUG: mu_mt
+2021-10-28 11:34:09,466 DEBUG: mu_pt
+2021-10-28 11:34:09,466 DEBUG: mu_eta
+2021-10-28 11:34:09,466 DEBUG: 
+2021-10-28 11:34:09,466 DEBUG: [OPTIONS]
+2021-10-28 11:34:09,466 DEBUG: # case-insensitive
+2021-10-28 11:34:09,466 DEBUG: sequential	false
+2021-10-28 11:34:09,466 DEBUG: grouped cutflow	false
+2021-10-28 11:34:09,467 DEBUG: ---------------------------
+2021-10-28 11:34:09,467 INFO: Parsting cutfile for wmintaunu_slices...
+2021-10-28 11:34:09,471 DEBUG: Datafile found
+2021-10-28 11:34:09,471 INFO: Reading data for wmintaunu_slices dataframe from outputs/jesal_cutflow/data/wmintaunu_slices_df.pkl...
+2021-10-28 11:34:09,526 INFO: Number of events in dataset wmintaunu_slices: 726886
+2021-10-28 11:34:09,526 INFO: Creating weights for wmintaunu_slices...
+2021-10-28 11:34:09,540 DEBUG: PER-DSID INFO:
+2021-10-28 11:34:09,541 DEBUG: --------------
+2021-10-28 11:34:09,541 DEBUG: DSID       n_events   sum_w         x-s fb        lumi fb-1
+2021-10-28 11:34:09,541 DEBUG: ==========================================================
+2021-10-28 11:34:09,605 DEBUG: 301160     584        1.304203e+04  2.233225e+01  1.750007e-01
+2021-10-28 11:34:09,607 DEBUG: 301161     7814       2.572807e+04  3.292561e+00  4.385605e+00
+2021-10-28 11:34:09,609 DEBUG: 301162     19355      2.097866e+04  1.083888e+00  1.807713e+01
+2021-10-28 11:34:09,612 DEBUG: 301163     32203      5.649394e+03  1.754307e-01  4.508980e+01
+2021-10-28 11:34:09,615 DEBUG: 301164     36493      1.130532e+03  3.097943e-02  1.021794e+02
+2021-10-28 11:34:09,618 DEBUG: 301165     40197      3.330843e+02  8.286296e-03  1.125505e+02
+2021-10-28 11:34:09,621 DEBUG: 301166     38794      1.225665e+02  3.159418e-03  1.180722e+02
+2021-10-28 11:34:09,625 DEBUG: 301167     45957      4.608419e+01  1.002768e-03  1.286798e+02
+2021-10-28 11:34:09,628 DEBUG: 301168     46553      1.713763e+01  3.681316e-04  1.303474e+02
+2021-10-28 11:34:09,632 DEBUG: 301169     46357      6.928842e+00  1.494670e-04  1.298001e+02
+2021-10-28 11:34:09,635 DEBUG: 301170     48747      3.183652e+00  6.530970e-05  1.364905e+02
+2021-10-28 11:34:09,639 DEBUG: 301171     45132      1.361533e+00  3.016780e-05  1.263680e+02
+2021-10-28 11:34:09,642 DEBUG: 301172     48195      7.012044e-01  1.454932e-05  1.349483e+02
+2021-10-28 11:34:09,645 DEBUG: 301173     47837      3.472451e-01  7.258924e-06  1.339429e+02
+2021-10-28 11:34:09,649 DEBUG: 301174     46889      2.658246e-01  5.669233e-06  1.312917e+02
+2021-10-28 11:34:09,652 DEBUG: 301175     46518      7.430704e-02  1.597383e-06  1.302495e+02
+2021-10-28 11:34:09,655 DEBUG: 301176     44600      2.105576e-02  4.721023e-07  1.248797e+02
+2021-10-28 11:34:09,658 DEBUG: 301177     44286      6.324148e-03  1.428024e-07  1.240002e+02
+2021-10-28 11:34:09,661 DEBUG: 301178     40375      2.488081e-03  6.162430e-08  1.130493e+02
+2021-10-28 11:34:09,661 INFO: Creating cuts for wmintaunu_slices...
+2021-10-28 11:34:09,670 INFO: 
+2021-10-28 11:34:09,670 INFO: ========== CUTS USED ============
+2021-10-28 11:34:09,670 INFO: Tight muon  : mu_isTight = 1.0
+2021-10-28 11:34:09,670 INFO: eta         :    |mu_eta| < 2.4
+2021-10-28 11:34:09,670 INFO: E_{T}^{MISS}:    met_met > 65.0
+2021-10-28 11:34:09,670 INFO: p_T         :      mu_pt > 65.0
+2021-10-28 11:34:09,670 INFO: M_T         :      mu_mt > 55.0
+2021-10-28 11:34:09,670 INFO: M_W         :    MC_WZ_m > 120.0
+2021-10-28 11:34:09,670 INFO: 
+2021-10-28 11:34:09,770 INFO: =========== CUTFLOW =============
+2021-10-28 11:34:09,770 INFO: Option: Non-sequential
+2021-10-28 11:34:09,770 INFO: ---------------------------------
+2021-10-28 11:34:09,770 INFO: Cut            Events Ratio
+2021-10-28 11:34:09,770 INFO: Inclusive      726886   -
+2021-10-28 11:34:09,770 INFO: tight muon cut 726886 1.000    
+2021-10-28 11:34:09,770 INFO: eta            726886 1.000    
+2021-10-28 11:34:09,770 INFO: met            726886 1.000    
+2021-10-28 11:34:09,770 INFO: mu pt          726886 1.000    
+2021-10-28 11:34:09,770 INFO: muon mt        726886 1.000    
+2021-10-28 11:34:09,770 INFO: W m            726886 1.000    
+2021-10-28 11:34:09,770 INFO: 
+2021-10-28 11:34:09,770 INFO: ========= DATASET 'wmintaunu_slices' INITIALISED =========
+2021-10-28 11:34:09,770 INFO: 
+2021-10-28 11:34:09,770 INFO: ======== INITIALISING DATASET 'wmintaunu_inclusive' =========
+2021-10-28 11:34:09,771 DEBUG: DATASET INPUT OPTIONS: 
+2021-10-28 11:34:09,771 DEBUG: ----------------------------
+2021-10-28 11:34:09,771 DEBUG: Input file(s):  /data/atlas/HighMassDrellYan/test_mc16a/wmintaunu/*.root
+2021-10-28 11:34:09,771 DEBUG: TTree: nominal_Loose
+2021-10-28 11:34:09,771 DEBUG: Cutfile: options/jesal_cutflow/cutfile_jesal.txt
+2021-10-28 11:34:09,772 DEBUG: Slices: False
+2021-10-28 11:34:09,772 DEBUG: grouped cutflow: True
+2021-10-28 11:34:09,772 DEBUG: Forced dataset rebuild: False
+2021-10-28 11:34:09,772 DEBUG: ----------------------------
+2021-10-28 11:34:09,772 DEBUG: 
+2021-10-28 11:34:09,773 DEBUG: CUTFILE CONTENTS
+2021-10-28 11:34:09,773 DEBUG: ---------------------------
+2021-10-28 11:34:09,773 DEBUG: [CUTS]
+2021-10-28 11:34:09,773 DEBUG: # Name	Variable	</>	Cut (in GeV if applicable)	Group Symmetric
+2021-10-28 11:34:09,773 DEBUG: # !!REMEMBER DEFAULT ANALYSISTOP OUTPUT IS IN MeV NOT GeV!!
+2021-10-28 11:34:09,773 DEBUG: Tight muon	mu_isTight	=	1	tight muon cut	false
+2021-10-28 11:34:09,773 DEBUG: eta	mu_eta	<	2.4	eta	true
+2021-10-28 11:34:09,773 DEBUG: E_{T}^{MISS}	met_met	>	65	met	false
+2021-10-28 11:34:09,773 DEBUG: p_T	mu_pt	>	65	mu pt	false
+2021-10-28 11:34:09,773 DEBUG: M_T	mu_mt	>	55	muon mt	false
+2021-10-28 11:34:09,773 DEBUG: M_W	MC_WZ_m	>	120	W m	false	truth
+2021-10-28 11:34:09,773 DEBUG: 
+2021-10-28 11:34:09,773 DEBUG: [OUTPUTS]
+2021-10-28 11:34:09,773 DEBUG: # variables to process
+2021-10-28 11:34:09,773 DEBUG: mu_mt
+2021-10-28 11:34:09,773 DEBUG: mu_pt
+2021-10-28 11:34:09,773 DEBUG: mu_eta
+2021-10-28 11:34:09,774 DEBUG: 
+2021-10-28 11:34:09,774 DEBUG: [OPTIONS]
+2021-10-28 11:34:09,774 DEBUG: # case-insensitive
+2021-10-28 11:34:09,774 DEBUG: sequential	false
+2021-10-28 11:34:09,774 DEBUG: grouped cutflow	false
+2021-10-28 11:34:09,774 DEBUG: ---------------------------
+2021-10-28 11:34:09,774 INFO: Parsting cutfile for wmintaunu_inclusive...
+2021-10-28 11:34:09,775 DEBUG: Datafile found
+2021-10-28 11:34:09,775 INFO: Reading data for wmintaunu_inclusive dataframe from outputs/jesal_cutflow/data/wmintaunu_inclusive_df.pkl...
+2021-10-28 11:34:09,777 INFO: Number of events in dataset wmintaunu_inclusive: 118
+2021-10-28 11:34:09,777 INFO: Creating weights for wmintaunu_inclusive...
+2021-10-28 11:34:09,778 DEBUG: INCLUSIVE SAMPLE METADATA:
+2021-10-28 11:34:09,779 DEBUG: --------------------------
+2021-10-28 11:34:09,779 DEBUG: n_events   sum_w         x-s fb        lumi fb-1
+2021-10-28 11:34:09,779 DEBUG: ==========================================================
+2021-10-28 11:34:09,780 DEBUG: 118        9.953306e+05  8.435005e+03  1.958505e+00
+2021-10-28 11:34:09,780 INFO: Creating cuts for wmintaunu_inclusive...
+2021-10-28 11:34:09,784 INFO: 
+2021-10-28 11:34:09,784 INFO: ========== CUTS USED ============
+2021-10-28 11:34:09,784 INFO: Tight muon  : mu_isTight = 1.0
+2021-10-28 11:34:09,784 INFO: eta         :    |mu_eta| < 2.4
+2021-10-28 11:34:09,784 INFO: E_{T}^{MISS}:    met_met > 65.0
+2021-10-28 11:34:09,784 INFO: p_T         :      mu_pt > 65.0
+2021-10-28 11:34:09,784 INFO: M_T         :      mu_mt > 55.0
+2021-10-28 11:34:09,784 INFO: M_W         :    MC_WZ_m > 120.0
+2021-10-28 11:34:09,784 INFO: 
+2021-10-28 11:34:09,790 INFO: =========== CUTFLOW =============
+2021-10-28 11:34:09,790 INFO: Option: Non-sequential
+2021-10-28 11:34:09,790 INFO: ---------------------------------
+2021-10-28 11:34:09,790 INFO: Cut            Events Ratio
+2021-10-28 11:34:09,790 INFO: Inclusive      118   -
+2021-10-28 11:34:09,790 INFO: tight muon cut 118 1.000    
+2021-10-28 11:34:09,790 INFO: eta            118 1.000    
+2021-10-28 11:34:09,790 INFO: met            118 1.000    
+2021-10-28 11:34:09,790 INFO: mu pt          118 1.000    
+2021-10-28 11:34:09,791 INFO: muon mt        118 1.000    
+2021-10-28 11:34:09,792 INFO: W m            107 0.907    
+2021-10-28 11:34:09,792 INFO: 
+2021-10-28 11:34:09,792 INFO: ========= DATASET 'wmintaunu_inclusive' INITIALISED =========
+2021-10-28 11:34:09,792 INFO: 
+2021-10-28 11:34:09,792 INFO: ======== INITIALISING DATASET 'wplustaunu_slices' =========
+2021-10-28 11:34:09,799 DEBUG: DATASET INPUT OPTIONS: 
+2021-10-28 11:34:09,799 DEBUG: ----------------------------
+2021-10-28 11:34:09,799 DEBUG: Input file(s):  /data/atlas/HighMassDrellYan/test_mc16a/wplustaunu_*/*.root
+2021-10-28 11:34:09,799 DEBUG: TTree: nominal_Loose
+2021-10-28 11:34:09,799 DEBUG: Cutfile: options/jesal_cutflow/cutfile_jesal.txt
+2021-10-28 11:34:09,799 DEBUG: Slices: True
+2021-10-28 11:34:09,799 DEBUG: grouped cutflow: True
+2021-10-28 11:34:09,799 DEBUG: Forced dataset rebuild: False
+2021-10-28 11:34:09,799 DEBUG: ----------------------------
+2021-10-28 11:34:09,799 DEBUG: 
+2021-10-28 11:34:09,800 DEBUG: CUTFILE CONTENTS
+2021-10-28 11:34:09,800 DEBUG: ---------------------------
+2021-10-28 11:34:09,800 DEBUG: [CUTS]
+2021-10-28 11:34:09,802 DEBUG: # Name	Variable	</>	Cut (in GeV if applicable)	Group Symmetric
+2021-10-28 11:34:09,802 DEBUG: # !!REMEMBER DEFAULT ANALYSISTOP OUTPUT IS IN MeV NOT GeV!!
+2021-10-28 11:34:09,802 DEBUG: Tight muon	mu_isTight	=	1	tight muon cut	false
+2021-10-28 11:34:09,802 DEBUG: eta	mu_eta	<	2.4	eta	true
+2021-10-28 11:34:09,802 DEBUG: E_{T}^{MISS}	met_met	>	65	met	false
+2021-10-28 11:34:09,802 DEBUG: p_T	mu_pt	>	65	mu pt	false
+2021-10-28 11:34:09,802 DEBUG: M_T	mu_mt	>	55	muon mt	false
+2021-10-28 11:34:09,802 DEBUG: M_W	MC_WZ_m	>	120	W m	false	truth
+2021-10-28 11:34:09,802 DEBUG: 
+2021-10-28 11:34:09,802 DEBUG: [OUTPUTS]
+2021-10-28 11:34:09,802 DEBUG: # variables to process
+2021-10-28 11:34:09,802 DEBUG: mu_mt
+2021-10-28 11:34:09,802 DEBUG: mu_pt
+2021-10-28 11:34:09,802 DEBUG: mu_eta
+2021-10-28 11:34:09,802 DEBUG: 
+2021-10-28 11:34:09,802 DEBUG: [OPTIONS]
+2021-10-28 11:34:09,802 DEBUG: # case-insensitive
+2021-10-28 11:34:09,802 DEBUG: sequential	false
+2021-10-28 11:34:09,803 DEBUG: grouped cutflow	false
+2021-10-28 11:34:09,803 DEBUG: ---------------------------
+2021-10-28 11:34:09,803 INFO: Parsting cutfile for wplustaunu_slices...
+2021-10-28 11:34:09,804 DEBUG: Datafile found
+2021-10-28 11:34:09,805 INFO: Reading data for wplustaunu_slices dataframe from outputs/jesal_cutflow/data/wplustaunu_slices_df.pkl...
+2021-10-28 11:34:09,835 INFO: Number of events in dataset wplustaunu_slices: 772578
+2021-10-28 11:34:09,835 INFO: Creating weights for wplustaunu_slices...
+2021-10-28 11:34:09,844 DEBUG: PER-DSID INFO:
+2021-10-28 11:34:09,844 DEBUG: --------------
+2021-10-28 11:34:09,844 DEBUG: DSID       n_events   sum_w         x-s fb        lumi fb-1
+2021-10-28 11:34:09,844 DEBUG: ==========================================================
+2021-10-28 11:34:09,899 DEBUG: 301140     521        1.677207e+04  3.219208e+01  1.465126e-01
+2021-10-28 11:34:09,901 DEBUG: 301141     8113       4.065248e+04  5.010782e+00  4.550459e+00
+2021-10-28 11:34:09,903 DEBUG: 301142     21300      3.730728e+04  1.751515e+00  1.989156e+01
+2021-10-28 11:34:09,906 DEBUG: 301143     36357      1.135788e+04  3.123987e-01  5.090710e+01
+2021-10-28 11:34:09,909 DEBUG: 301144     37316      2.268519e+03  6.079211e-02  1.044842e+02
+2021-10-28 11:34:09,913 DEBUG: 301145     42047      7.428984e+02  1.766828e-02  1.177314e+02
+2021-10-28 11:34:09,916 DEBUG: 301146     47861      3.488693e+02  7.289219e-03  1.340092e+02
+2021-10-28 11:34:09,919 DEBUG: 301147     48678      1.220389e+02  2.507065e-03  1.363000e+02
+2021-10-28 11:34:09,922 DEBUG: 301148     49533      4.885402e+01  9.862924e-04  1.386951e+02
+2021-10-28 11:34:09,926 DEBUG: 301149     50141      2.128827e+01  4.245682e-04  1.403967e+02
+2021-10-28 11:34:09,929 DEBUG: 301150     49514      9.637255e+00  1.946370e-04  1.386388e+02
+2021-10-28 11:34:09,932 DEBUG: 301151     49229      4.595385e+00  9.334710e-05  1.378400e+02
+2021-10-28 11:34:09,935 DEBUG: 301152     49191      2.275536e+00  4.625919e-05  1.377341e+02
+2021-10-28 11:34:09,939 DEBUG: 301153     50388      1.182906e+00  2.347594e-05  1.410873e+02
+2021-10-28 11:34:09,942 DEBUG: 301154     49324      9.100242e-01  1.844993e-05  1.381123e+02
+2021-10-28 11:34:09,945 DEBUG: 301155     47861      2.439302e-01  5.096639e-06  1.340080e+02
+2021-10-28 11:34:09,948 DEBUG: 301156     47234      6.757697e-02  1.430685e-06  1.322577e+02
+2021-10-28 11:34:09,951 DEBUG: 301157     46569      1.868748e-02  4.012858e-07  1.303949e+02
+2021-10-28 11:34:09,954 DEBUG: 301158     41401      6.353437e-03  1.534610e-07  1.159238e+02
+2021-10-28 11:34:09,954 INFO: Creating cuts for wplustaunu_slices...
+2021-10-28 11:34:09,962 INFO: 
+2021-10-28 11:34:09,963 INFO: ========== CUTS USED ============
+2021-10-28 11:34:09,963 INFO: Tight muon  : mu_isTight = 1.0
+2021-10-28 11:34:09,963 INFO: eta         :    |mu_eta| < 2.4
+2021-10-28 11:34:09,963 INFO: E_{T}^{MISS}:    met_met > 65.0
+2021-10-28 11:34:09,963 INFO: p_T         :      mu_pt > 65.0
+2021-10-28 11:34:09,963 INFO: M_T         :      mu_mt > 55.0
+2021-10-28 11:34:09,963 INFO: M_W         :    MC_WZ_m > 120.0
+2021-10-28 11:34:09,964 INFO: 
+2021-10-28 11:34:10,057 INFO: =========== CUTFLOW =============
+2021-10-28 11:34:10,057 INFO: Option: Non-sequential
+2021-10-28 11:34:10,057 INFO: ---------------------------------
+2021-10-28 11:34:10,057 INFO: Cut            Events Ratio
+2021-10-28 11:34:10,057 INFO: Inclusive      772578   -
+2021-10-28 11:34:10,057 INFO: tight muon cut 772578 1.000    
+2021-10-28 11:34:10,057 INFO: eta            772578 1.000    
+2021-10-28 11:34:10,057 INFO: met            772578 1.000    
+2021-10-28 11:34:10,057 INFO: mu pt          772578 1.000    
+2021-10-28 11:34:10,057 INFO: muon mt        772578 1.000    
+2021-10-28 11:34:10,057 INFO: W m            772578 1.000    
+2021-10-28 11:34:10,057 INFO: 
+2021-10-28 11:34:10,057 INFO: ========= DATASET 'wplustaunu_slices' INITIALISED =========
+2021-10-28 11:34:10,057 INFO: 
+2021-10-28 11:34:10,057 INFO: ======== INITIALISING DATASET 'wplustaunu_inclusive' =========
+2021-10-28 11:34:10,058 DEBUG: DATASET INPUT OPTIONS: 
+2021-10-28 11:34:10,059 DEBUG: ----------------------------
+2021-10-28 11:34:10,059 DEBUG: Input file(s):  /data/atlas/HighMassDrellYan/test_mc16a/wplustaunu/*.root
+2021-10-28 11:34:10,059 DEBUG: TTree: nominal_Loose
+2021-10-28 11:34:10,059 DEBUG: Cutfile: options/jesal_cutflow/cutfile_jesal.txt
+2021-10-28 11:34:10,059 DEBUG: Slices: False
+2021-10-28 11:34:10,059 DEBUG: grouped cutflow: True
+2021-10-28 11:34:10,059 DEBUG: Forced dataset rebuild: False
+2021-10-28 11:34:10,059 DEBUG: ----------------------------
+2021-10-28 11:34:10,059 DEBUG: 
+2021-10-28 11:34:10,059 DEBUG: CUTFILE CONTENTS
+2021-10-28 11:34:10,059 DEBUG: ---------------------------
+2021-10-28 11:34:10,059 DEBUG: [CUTS]
+2021-10-28 11:34:10,059 DEBUG: # Name	Variable	</>	Cut (in GeV if applicable)	Group Symmetric
+2021-10-28 11:34:10,059 DEBUG: # !!REMEMBER DEFAULT ANALYSISTOP OUTPUT IS IN MeV NOT GeV!!
+2021-10-28 11:34:10,059 DEBUG: Tight muon	mu_isTight	=	1	tight muon cut	false
+2021-10-28 11:34:10,059 DEBUG: eta	mu_eta	<	2.4	eta	true
+2021-10-28 11:34:10,059 DEBUG: E_{T}^{MISS}	met_met	>	65	met	false
+2021-10-28 11:34:10,059 DEBUG: p_T	mu_pt	>	65	mu pt	false
+2021-10-28 11:34:10,060 DEBUG: M_T	mu_mt	>	55	muon mt	false
+2021-10-28 11:34:10,060 DEBUG: M_W	MC_WZ_m	>	120	W m	false	truth
+2021-10-28 11:34:10,061 DEBUG: 
+2021-10-28 11:34:10,061 DEBUG: [OUTPUTS]
+2021-10-28 11:34:10,061 DEBUG: # variables to process
+2021-10-28 11:34:10,062 DEBUG: mu_mt
+2021-10-28 11:34:10,062 DEBUG: mu_pt
+2021-10-28 11:34:10,062 DEBUG: mu_eta
+2021-10-28 11:34:10,062 DEBUG: 
+2021-10-28 11:34:10,062 DEBUG: [OPTIONS]
+2021-10-28 11:34:10,062 DEBUG: # case-insensitive
+2021-10-28 11:34:10,062 DEBUG: sequential	false
+2021-10-28 11:34:10,062 DEBUG: grouped cutflow	false
+2021-10-28 11:34:10,062 DEBUG: ---------------------------
+2021-10-28 11:34:10,062 INFO: Parsting cutfile for wplustaunu_inclusive...
+2021-10-28 11:34:10,063 DEBUG: Datafile found
+2021-10-28 11:34:10,063 INFO: Reading data for wplustaunu_inclusive dataframe from outputs/jesal_cutflow/data/wplustaunu_inclusive_df.pkl...
+2021-10-28 11:34:10,065 INFO: Number of events in dataset wplustaunu_inclusive: 226
+2021-10-28 11:34:10,065 INFO: Creating weights for wplustaunu_inclusive...
+2021-10-28 11:34:10,066 DEBUG: INCLUSIVE SAMPLE METADATA:
+2021-10-28 11:34:10,066 DEBUG: --------------------------
+2021-10-28 11:34:10,066 DEBUG: n_events   sum_w         x-s fb        lumi fb-1
+2021-10-28 11:34:10,066 DEBUG: ==========================================================
+2021-10-28 11:34:10,067 DEBUG: 226        2.566360e+06  1.135558e+04  2.761639e+00
+2021-10-28 11:34:10,067 INFO: Creating cuts for wplustaunu_inclusive...
+2021-10-28 11:34:10,070 INFO: 
+2021-10-28 11:34:10,070 INFO: ========== CUTS USED ============
+2021-10-28 11:34:10,070 INFO: Tight muon  : mu_isTight = 1.0
+2021-10-28 11:34:10,070 INFO: eta         :    |mu_eta| < 2.4
+2021-10-28 11:34:10,070 INFO: E_{T}^{MISS}:    met_met > 65.0
+2021-10-28 11:34:10,070 INFO: p_T         :      mu_pt > 65.0
+2021-10-28 11:34:10,070 INFO: M_T         :      mu_mt > 55.0
+2021-10-28 11:34:10,070 INFO: M_W         :    MC_WZ_m > 120.0
+2021-10-28 11:34:10,070 INFO: 
+2021-10-28 11:34:10,076 INFO: =========== CUTFLOW =============
+2021-10-28 11:34:10,076 INFO: Option: Non-sequential
+2021-10-28 11:34:10,076 INFO: ---------------------------------
+2021-10-28 11:34:10,076 INFO: Cut            Events Ratio
+2021-10-28 11:34:10,076 INFO: Inclusive      226   -
+2021-10-28 11:34:10,076 INFO: tight muon cut 226 1.000    
+2021-10-28 11:34:10,076 INFO: eta            226 1.000    
+2021-10-28 11:34:10,076 INFO: met            226 1.000    
+2021-10-28 11:34:10,076 INFO: mu pt          226 1.000    
+2021-10-28 11:34:10,076 INFO: muon mt        226 1.000    
+2021-10-28 11:34:10,076 INFO: W m            193 0.854    
+2021-10-28 11:34:10,076 INFO: 
+2021-10-28 11:34:10,076 INFO: ========= DATASET 'wplustaunu_inclusive' INITIALISED =========
+2021-10-28 11:34:10,076 INFO: 
+2021-10-28 11:34:10,077 INFO: ======== INITIALISING DATASET 'wminmunu_slices' =========
+2021-10-28 11:34:10,084 DEBUG: DATASET INPUT OPTIONS: 
+2021-10-28 11:34:10,084 DEBUG: ----------------------------
+2021-10-28 11:34:10,084 DEBUG: Input file(s):  /data/atlas/HighMassDrellYan/test_mc16a/wminmunu_*/*.root
+2021-10-28 11:34:10,084 DEBUG: TTree: nominal_Loose
+2021-10-28 11:34:10,084 DEBUG: Cutfile: options/jesal_cutflow/cutfile_jesal.txt
+2021-10-28 11:34:10,084 DEBUG: Slices: True
+2021-10-28 11:34:10,084 DEBUG: grouped cutflow: True
+2021-10-28 11:34:10,084 DEBUG: Forced dataset rebuild: False
+2021-10-28 11:34:10,084 DEBUG: ----------------------------
+2021-10-28 11:34:10,084 DEBUG: 
+2021-10-28 11:34:10,084 DEBUG: CUTFILE CONTENTS
+2021-10-28 11:34:10,084 DEBUG: ---------------------------
+2021-10-28 11:34:10,086 DEBUG: [CUTS]
+2021-10-28 11:34:10,086 DEBUG: # Name	Variable	</>	Cut (in GeV if applicable)	Group Symmetric
+2021-10-28 11:34:10,086 DEBUG: # !!REMEMBER DEFAULT ANALYSISTOP OUTPUT IS IN MeV NOT GeV!!
+2021-10-28 11:34:10,086 DEBUG: Tight muon	mu_isTight	=	1	tight muon cut	false
+2021-10-28 11:34:10,086 DEBUG: eta	mu_eta	<	2.4	eta	true
+2021-10-28 11:34:10,086 DEBUG: E_{T}^{MISS}	met_met	>	65	met	false
+2021-10-28 11:34:10,086 DEBUG: p_T	mu_pt	>	65	mu pt	false
+2021-10-28 11:34:10,086 DEBUG: M_T	mu_mt	>	55	muon mt	false
+2021-10-28 11:34:10,086 DEBUG: M_W	MC_WZ_m	>	120	W m	false	truth
+2021-10-28 11:34:10,086 DEBUG: 
+2021-10-28 11:34:10,086 DEBUG: [OUTPUTS]
+2021-10-28 11:34:10,086 DEBUG: # variables to process
+2021-10-28 11:34:10,086 DEBUG: mu_mt
+2021-10-28 11:34:10,086 DEBUG: mu_pt
+2021-10-28 11:34:10,087 DEBUG: mu_eta
+2021-10-28 11:34:10,087 DEBUG: 
+2021-10-28 11:34:10,087 DEBUG: [OPTIONS]
+2021-10-28 11:34:10,087 DEBUG: # case-insensitive
+2021-10-28 11:34:10,087 DEBUG: sequential	false
+2021-10-28 11:34:10,087 DEBUG: grouped cutflow	false
+2021-10-28 11:34:10,087 DEBUG: ---------------------------
+2021-10-28 11:34:10,087 INFO: Parsting cutfile for wminmunu_slices...
+2021-10-28 11:34:10,088 DEBUG: Datafile found
+2021-10-28 11:34:10,089 INFO: Reading data for wminmunu_slices dataframe from outputs/jesal_cutflow/data/wminmunu_slices_df.pkl...
+2021-10-28 11:34:10,533 INFO: Number of events in dataset wminmunu_slices: 10473533
+2021-10-28 11:34:10,533 INFO: Creating weights for wminmunu_slices...
+2021-10-28 11:34:10,732 DEBUG: PER-DSID INFO:
+2021-10-28 11:34:10,732 DEBUG: --------------
+2021-10-28 11:34:10,732 DEBUG: DSID       n_events   sum_w         x-s fb        lumi fb-1
+2021-10-28 11:34:10,732 DEBUG: ==========================================================
+2021-10-28 11:34:11,226 DEBUG: 301120     499915     1.110597e+07  2.221572e+01  1.408600e+01
+2021-10-28 11:34:11,320 DEBUG: 301121     944456     3.101657e+06  3.284067e+00  8.836211e+01
+2021-10-28 11:34:11,368 DEBUG: 301122     737165     7.982900e+05  1.082919e+00  1.738961e+02
+2021-10-28 11:34:11,401 DEBUG: 301123     549364     9.635911e+04  1.754012e-01  7.691939e+02
+2021-10-28 11:34:11,434 DEBUG: 301124     488699     1.513980e+04  3.097982e-02  1.368361e+03
+2021-10-28 11:34:11,483 DEBUG: 301125     507642     4.206513e+03  8.286377e-03  1.421397e+03
+2021-10-28 11:34:11,517 DEBUG: 301126     512753     1.619953e+03  3.159324e-03  1.435705e+03
+2021-10-28 11:34:11,552 DEBUG: 301127     522006     5.234484e+02  1.002763e-03  1.461614e+03
+2021-10-28 11:34:11,583 DEBUG: 301128     528485     1.945538e+02  3.681350e-04  1.479762e+03
+2021-10-28 11:34:11,614 DEBUG: 301129     523222     7.820444e+01  1.494670e-04  1.465028e+03
+2021-10-28 11:34:11,644 DEBUG: 301130     527231     3.443364e+01  6.531034e-05  1.476250e+03
+2021-10-28 11:34:11,675 DEBUG: 301131     526452     1.588209e+01  3.016817e-05  1.474065e+03
+2021-10-28 11:34:11,706 DEBUG: 301132     523697     7.619310e+00  1.454908e-05  1.466352e+03
+2021-10-28 11:34:11,737 DEBUG: 301133     523944     3.803304e+00  7.258989e-06  1.467048e+03
+2021-10-28 11:34:11,768 DEBUG: 301134     523849     2.969780e+00  5.669152e-06  1.466784e+03
+2021-10-28 11:34:11,799 DEBUG: 301135     519023     8.290851e-01  1.597396e-06  1.453265e+03
+2021-10-28 11:34:11,830 DEBUG: 301136     511632     2.415438e-01  4.721046e-07  1.432573e+03
+2021-10-28 11:34:11,860 DEBUG: 301137     505761     7.222451e-02  1.428036e-07  1.416137e+03
+2021-10-28 11:34:11,890 DEBUG: 301138     498237     3.070374e-02  6.162477e-08  1.395066e+03
+2021-10-28 11:34:11,890 INFO: Creating cuts for wminmunu_slices...
+2021-10-28 11:34:11,991 INFO: 
+2021-10-28 11:34:11,992 INFO: ========== CUTS USED ============
+2021-10-28 11:34:11,992 INFO: Tight muon  : mu_isTight = 1.0
+2021-10-28 11:34:11,992 INFO: eta         :    |mu_eta| < 2.4
+2021-10-28 11:34:11,992 INFO: E_{T}^{MISS}:    met_met > 65.0
+2021-10-28 11:34:11,992 INFO: p_T         :      mu_pt > 65.0
+2021-10-28 11:34:11,992 INFO: M_T         :      mu_mt > 55.0
+2021-10-28 11:34:11,992 INFO: M_W         :    MC_WZ_m > 120.0
+2021-10-28 11:34:11,992 INFO: 
+2021-10-28 11:34:14,516 INFO: =========== CUTFLOW =============
+2021-10-28 11:34:14,516 INFO: Option: Non-sequential
+2021-10-28 11:34:14,516 INFO: ---------------------------------
+2021-10-28 11:34:14,516 INFO: Cut            Events   Ratio
+2021-10-28 11:34:14,516 INFO: Inclusive      10473533   -
+2021-10-28 11:34:14,516 INFO: tight muon cut 10473533 1.000    
+2021-10-28 11:34:14,516 INFO: eta            10473533 1.000    
+2021-10-28 11:34:14,516 INFO: met            10473533 1.000    
+2021-10-28 11:34:14,516 INFO: mu pt          10473533 1.000    
+2021-10-28 11:34:14,516 INFO: muon mt        10473533 1.000    
+2021-10-28 11:34:14,516 INFO: W m            10473533 1.000    
+2021-10-28 11:34:14,516 INFO: 
+2021-10-28 11:34:14,520 INFO: ========= DATASET 'wminmunu_slices' INITIALISED =========
+2021-10-28 11:34:14,521 INFO: 
+2021-10-28 11:34:14,521 INFO: ======== INITIALISING DATASET 'wminmunu_inclusive' =========
+2021-10-28 11:34:14,521 DEBUG: DATASET INPUT OPTIONS: 
+2021-10-28 11:34:14,522 DEBUG: ----------------------------
+2021-10-28 11:34:14,522 DEBUG: Input file(s):  /data/atlas/HighMassDrellYan/test_mc16a/wminmunu/*.root
+2021-10-28 11:34:14,522 DEBUG: TTree: nominal_Loose
+2021-10-28 11:34:14,522 DEBUG: Cutfile: options/jesal_cutflow/cutfile_jesal.txt
+2021-10-28 11:34:14,522 DEBUG: Slices: False
+2021-10-28 11:34:14,522 DEBUG: grouped cutflow: True
+2021-10-28 11:34:14,522 DEBUG: Forced dataset rebuild: False
+2021-10-28 11:34:14,522 DEBUG: ----------------------------
+2021-10-28 11:34:14,522 DEBUG: 
+2021-10-28 11:34:14,522 DEBUG: CUTFILE CONTENTS
+2021-10-28 11:34:14,522 DEBUG: ---------------------------
+2021-10-28 11:34:14,523 DEBUG: [CUTS]
+2021-10-28 11:34:14,523 DEBUG: # Name	Variable	</>	Cut (in GeV if applicable)	Group Symmetric
+2021-10-28 11:34:14,523 DEBUG: # !!REMEMBER DEFAULT ANALYSISTOP OUTPUT IS IN MeV NOT GeV!!
+2021-10-28 11:34:14,523 DEBUG: Tight muon	mu_isTight	=	1	tight muon cut	false
+2021-10-28 11:34:14,524 DEBUG: eta	mu_eta	<	2.4	eta	true
+2021-10-28 11:34:14,524 DEBUG: E_{T}^{MISS}	met_met	>	65	met	false
+2021-10-28 11:34:14,524 DEBUG: p_T	mu_pt	>	65	mu pt	false
+2021-10-28 11:34:14,524 DEBUG: M_T	mu_mt	>	55	muon mt	false
+2021-10-28 11:34:14,524 DEBUG: M_W	MC_WZ_m	>	120	W m	false	truth
+2021-10-28 11:34:14,524 DEBUG: 
+2021-10-28 11:34:14,524 DEBUG: [OUTPUTS]
+2021-10-28 11:34:14,524 DEBUG: # variables to process
+2021-10-28 11:34:14,524 DEBUG: mu_mt
+2021-10-28 11:34:14,524 DEBUG: mu_pt
+2021-10-28 11:34:14,524 DEBUG: mu_eta
+2021-10-28 11:34:14,524 DEBUG: 
+2021-10-28 11:34:14,524 DEBUG: [OPTIONS]
+2021-10-28 11:34:14,525 DEBUG: # case-insensitive
+2021-10-28 11:34:14,525 DEBUG: sequential	false
+2021-10-28 11:34:14,525 DEBUG: grouped cutflow	false
+2021-10-28 11:34:14,525 DEBUG: ---------------------------
+2021-10-28 11:34:14,525 INFO: Parsting cutfile for wminmunu_inclusive...
+2021-10-28 11:34:14,526 DEBUG: Datafile found
+2021-10-28 11:34:14,526 INFO: Reading data for wminmunu_inclusive dataframe from outputs/jesal_cutflow/data/wminmunu_inclusive_df.pkl...
+2021-10-28 11:34:14,528 INFO: Number of events in dataset wminmunu_inclusive: 19384
+2021-10-28 11:34:14,528 INFO: Creating weights for wminmunu_inclusive...
+2021-10-28 11:34:14,533 DEBUG: INCLUSIVE SAMPLE METADATA:
+2021-10-28 11:34:14,534 DEBUG: --------------------------
+2021-10-28 11:34:14,534 DEBUG: n_events   sum_w         x-s fb        lumi fb-1
+2021-10-28 11:34:14,534 DEBUG: ==========================================================
+2021-10-28 11:34:14,534 DEBUG: 19384      1.617602e+08  8.345036e+03  3.217386e+02
+2021-10-28 11:34:14,535 INFO: Creating cuts for wminmunu_inclusive...
+2021-10-28 11:34:14,539 INFO: 
+2021-10-28 11:34:14,539 INFO: ========== CUTS USED ============
+2021-10-28 11:34:14,539 INFO: Tight muon  : mu_isTight = 1.0
+2021-10-28 11:34:14,539 INFO: eta         :    |mu_eta| < 2.4
+2021-10-28 11:34:14,539 INFO: E_{T}^{MISS}:    met_met > 65.0
+2021-10-28 11:34:14,539 INFO: p_T         :      mu_pt > 65.0
+2021-10-28 11:34:14,539 INFO: M_T         :      mu_mt > 55.0
+2021-10-28 11:34:14,539 INFO: M_W         :    MC_WZ_m > 120.0
+2021-10-28 11:34:14,539 INFO: 
+2021-10-28 11:34:14,547 INFO: =========== CUTFLOW =============
+2021-10-28 11:34:14,547 INFO: Option: Non-sequential
+2021-10-28 11:34:14,548 INFO: ---------------------------------
+2021-10-28 11:34:14,548 INFO: Cut            Events Ratio
+2021-10-28 11:34:14,548 INFO: Inclusive      19384   -
+2021-10-28 11:34:14,548 INFO: tight muon cut 19384 1.000    
+2021-10-28 11:34:14,548 INFO: eta            19384 1.000    
+2021-10-28 11:34:14,548 INFO: met            19384 1.000    
+2021-10-28 11:34:14,548 INFO: mu pt          19384 1.000    
+2021-10-28 11:34:14,548 INFO: muon mt        19384 1.000    
+2021-10-28 11:34:14,548 INFO: W m            12171 0.628    
+2021-10-28 11:34:14,549 INFO: 
+2021-10-28 11:34:14,549 INFO: ========= DATASET 'wminmunu_inclusive' INITIALISED =========
+2021-10-28 11:34:14,549 INFO: 
+2021-10-28 11:34:14,549 INFO: ======== INITIALISING DATASET 'wplusmunu_inclusive' =========
+2021-10-28 11:34:14,550 DEBUG: DATASET INPUT OPTIONS: 
+2021-10-28 11:34:14,550 DEBUG: ----------------------------
+2021-10-28 11:34:14,550 DEBUG: Input file(s):  /data/atlas/HighMassDrellYan/test_mc16a/wplusmunu/*.root
+2021-10-28 11:34:14,550 DEBUG: TTree: nominal_Loose
+2021-10-28 11:34:14,550 DEBUG: Cutfile: options/jesal_cutflow/cutfile_jesal.txt
+2021-10-28 11:34:14,550 DEBUG: Slices: False
+2021-10-28 11:34:14,550 DEBUG: grouped cutflow: True
+2021-10-28 11:34:14,550 DEBUG: Forced dataset rebuild: False
+2021-10-28 11:34:14,550 DEBUG: ----------------------------
+2021-10-28 11:34:14,550 DEBUG: 
+2021-10-28 11:34:14,551 DEBUG: CUTFILE CONTENTS
+2021-10-28 11:34:14,551 DEBUG: ---------------------------
+2021-10-28 11:34:14,551 DEBUG: [CUTS]
+2021-10-28 11:34:14,551 DEBUG: # Name	Variable	</>	Cut (in GeV if applicable)	Group Symmetric
+2021-10-28 11:34:14,551 DEBUG: # !!REMEMBER DEFAULT ANALYSISTOP OUTPUT IS IN MeV NOT GeV!!
+2021-10-28 11:34:14,551 DEBUG: Tight muon	mu_isTight	=	1	tight muon cut	false
+2021-10-28 11:34:14,551 DEBUG: eta	mu_eta	<	2.4	eta	true
+2021-10-28 11:34:14,551 DEBUG: E_{T}^{MISS}	met_met	>	65	met	false
+2021-10-28 11:34:14,551 DEBUG: p_T	mu_pt	>	65	mu pt	false
+2021-10-28 11:34:14,552 DEBUG: M_T	mu_mt	>	55	muon mt	false
+2021-10-28 11:34:14,552 DEBUG: M_W	MC_WZ_m	>	120	W m	false	truth
+2021-10-28 11:34:14,552 DEBUG: 
+2021-10-28 11:34:14,552 DEBUG: [OUTPUTS]
+2021-10-28 11:34:14,552 DEBUG: # variables to process
+2021-10-28 11:34:14,552 DEBUG: mu_mt
+2021-10-28 11:34:14,552 DEBUG: mu_pt
+2021-10-28 11:34:14,552 DEBUG: mu_eta
+2021-10-28 11:34:14,552 DEBUG: 
+2021-10-28 11:34:14,553 DEBUG: [OPTIONS]
+2021-10-28 11:34:14,553 DEBUG: # case-insensitive
+2021-10-28 11:34:14,553 DEBUG: sequential	false
+2021-10-28 11:34:14,553 DEBUG: grouped cutflow	false
+2021-10-28 11:34:14,553 DEBUG: ---------------------------
+2021-10-28 11:34:14,553 INFO: Parsting cutfile for wplusmunu_inclusive...
+2021-10-28 11:34:14,554 DEBUG: Datafile found
+2021-10-28 11:34:14,555 INFO: Reading data for wplusmunu_inclusive dataframe from outputs/jesal_cutflow/data/wplusmunu_inclusive_df.pkl...
+2021-10-28 11:34:14,557 INFO: Number of events in dataset wplusmunu_inclusive: 25515
+2021-10-28 11:34:14,557 INFO: Creating weights for wplusmunu_inclusive...
+2021-10-28 11:34:14,564 DEBUG: INCLUSIVE SAMPLE METADATA:
+2021-10-28 11:34:14,564 DEBUG: --------------------------
+2021-10-28 11:34:14,564 DEBUG: n_events   sum_w         x-s fb        lumi fb-1
+2021-10-28 11:34:14,564 DEBUG: ==========================================================
+2021-10-28 11:34:14,564 DEBUG: 25515      2.903304e+08  1.137881e+04  3.117847e+02
+2021-10-28 11:34:14,565 INFO: Creating cuts for wplusmunu_inclusive...
+2021-10-28 11:34:14,568 INFO: 
+2021-10-28 11:34:14,568 INFO: ========== CUTS USED ============
+2021-10-28 11:34:14,568 INFO: Tight muon  : mu_isTight = 1.0
+2021-10-28 11:34:14,568 INFO: eta         :    |mu_eta| < 2.4
+2021-10-28 11:34:14,568 INFO: E_{T}^{MISS}:    met_met > 65.0
+2021-10-28 11:34:14,568 INFO: p_T         :      mu_pt > 65.0
+2021-10-28 11:34:14,568 INFO: M_T         :      mu_mt > 55.0
+2021-10-28 11:34:14,568 INFO: M_W         :    MC_WZ_m > 120.0
+2021-10-28 11:34:14,568 INFO: 
+2021-10-28 11:34:14,577 INFO: =========== CUTFLOW =============
+2021-10-28 11:34:14,577 INFO: Option: Non-sequential
+2021-10-28 11:34:14,577 INFO: ---------------------------------
+2021-10-28 11:34:14,577 INFO: Cut            Events Ratio
+2021-10-28 11:34:14,577 INFO: Inclusive      25515   -
+2021-10-28 11:34:14,577 INFO: tight muon cut 25515 1.000    
+2021-10-28 11:34:14,577 INFO: eta            25515 1.000    
+2021-10-28 11:34:14,577 INFO: met            25515 1.000    
+2021-10-28 11:34:14,577 INFO: mu pt          25515 1.000    
+2021-10-28 11:34:14,577 INFO: muon mt        25515 1.000    
+2021-10-28 11:34:14,578 INFO: W m            17359 0.680    
+2021-10-28 11:34:14,578 INFO: 
+2021-10-28 11:34:14,578 INFO: ========= DATASET 'wplusmunu_inclusive' INITIALISED =========
+2021-10-28 11:34:14,579 INFO: ====================================
+2021-10-28 11:34:14,579 INFO: ANALYSIS 'jesal_cutflow' INITIALISED
+2021-10-28 11:34:15,179 INFO: Saved pickle file to outputs/jesal_cutflow/histograms/wmintaunu_slices_mu_mt_mass_slices_full.pkl
+2021-10-28 11:34:15,746 INFO: Figure saved to outputs/jesal_cutflow/plots/mu_mt_mass_slices_full.png
+2021-10-28 11:34:16,252 INFO: Saved pickle file to outputs/jesal_cutflow/histograms/wplustaunu_slices_mu_mt_mass_slices_full.pkl
+2021-10-28 11:34:16,556 INFO: Figure saved to outputs/jesal_cutflow/plots/mu_mt_mass_slices_full.png
+2021-10-28 11:34:18,263 INFO: Saved pickle file to outputs/jesal_cutflow/histograms/wminmunu_slices_mu_mt_mass_slices_full.pkl
+2021-10-28 11:34:18,551 INFO: Figure saved to outputs/jesal_cutflow/plots/mu_mt_mass_slices_full.png

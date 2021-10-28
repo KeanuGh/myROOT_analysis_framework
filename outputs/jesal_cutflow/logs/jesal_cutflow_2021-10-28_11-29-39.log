@@ -1,0 +1,46 @@
+2021-10-28 11:29:39,788 INFO: INITIALISING ANALYSIS 'jesal_cutflow'...
+2021-10-28 11:29:39,788 INFO: ========================================
+2021-10-28 11:29:39,788 INFO: 
+2021-10-28 11:29:39,788 INFO: ======== INITIALISING DATASET 'wmintaunu_slices' =========
+2021-10-28 11:29:39,799 DEBUG: DATASET INPUT OPTIONS: 
+2021-10-28 11:29:39,799 DEBUG: ----------------------------
+2021-10-28 11:29:39,799 DEBUG: Input file(s):  /data/atlas/HighMassDrellYan/test_mc16a/wmintaunu_*/*.root
+2021-10-28 11:29:39,799 DEBUG: TTree: nominal_Loose
+2021-10-28 11:29:39,799 DEBUG: Cutfile: options/jesal_cutflow/cutfile_jesal.txt
+2021-10-28 11:29:39,800 DEBUG: Slices: True
+2021-10-28 11:29:39,801 DEBUG: grouped cutflow: True
+2021-10-28 11:29:39,801 DEBUG: Forced dataset rebuild: False
+2021-10-28 11:29:39,801 DEBUG: ----------------------------
+2021-10-28 11:29:39,801 DEBUG: 
+2021-10-28 11:29:39,801 DEBUG: CUTFILE CONTENTS
+2021-10-28 11:29:39,801 DEBUG: ---------------------------
+2021-10-28 11:29:39,802 DEBUG: [CUTS]
+2021-10-28 11:29:39,802 DEBUG: # Name	Variable	</>	Cut (in GeV if applicable)	Group Symmetric
+2021-10-28 11:29:39,802 DEBUG: # !!REMEMBER DEFAULT ANALYSISTOP OUTPUT IS IN MeV NOT GeV!!
+2021-10-28 11:29:39,802 DEBUG: Tight muon	mu_isTight	=	1	tight muon cut	false
+2021-10-28 11:29:39,803 DEBUG: eta	mu_eta	<	2.4	eta	true
+2021-10-28 11:29:39,803 DEBUG: E_{T}^{MISS}	met_met	>	65	met	false
+2021-10-28 11:29:39,803 DEBUG: p_T	mu_pt	>	65	mu pt	false
+2021-10-28 11:29:39,804 DEBUG: M_T	mu_mt	>	55	muon mt	false
+2021-10-28 11:29:39,804 DEBUG: M_W	MC_WZ_m	>	120	W m	false	truth
+2021-10-28 11:29:39,804 DEBUG: 
+2021-10-28 11:29:39,804 DEBUG: [OUTPUTS]
+2021-10-28 11:29:39,804 DEBUG: # variables to process
+2021-10-28 11:29:39,804 DEBUG: mu_mt
+2021-10-28 11:29:39,804 DEBUG: mu_pt
+2021-10-28 11:29:39,804 DEBUG: mu_eta
+2021-10-28 11:29:39,805 DEBUG: 
+2021-10-28 11:29:39,805 DEBUG: [OPTIONS]
+2021-10-28 11:29:39,805 DEBUG: # case-insensitive
+2021-10-28 11:29:39,805 DEBUG: sequential	false
+2021-10-28 11:29:39,805 DEBUG: grouped cutflow	false
+2021-10-28 11:29:39,805 DEBUG: ---------------------------
+2021-10-28 11:29:39,805 INFO: Parsting cutfile for wmintaunu_slices...
+2021-10-28 11:29:39,808 DEBUG: Datafile found
+2021-10-28 11:29:39,809 INFO: Reading data for wmintaunu_slices dataframe from outputs/jesal_cutflow/data/wmintaunu_slices_df.pkl...
+2021-10-28 11:29:39,865 INFO: Number of events in dataset wmintaunu_slices: 726886
+2021-10-28 11:29:39,865 INFO: Creating weights for wmintaunu_slices...
+2021-10-28 11:29:39,879 DEBUG: PER-DSID INFO:
+2021-10-28 11:29:39,879 DEBUG: --------------
+2021-10-28 11:29:39,879 DEBUG: DSID       n_events   sum_w         x-s fb        lumi fb-1
+2021-10-28 11:29:39,879 DEBUG: ==========================================================

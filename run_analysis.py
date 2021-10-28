@@ -46,7 +46,7 @@ if __name__ == '__main__':
             'is_slices': False,
             'lepton': 'muon'
         },
-        'wplusmunu_inclusive': {
+        'wplusmunu_slices': {
             'datapath': '/data/atlas/HighMassDrellYan/test_mc16a/wplusmunu_*/*.root',
             'cutfile': 'options/jesal_cutflow/cutfile_jesal.txt',
             'TTree_name': 'nominal_Loose',
@@ -65,13 +65,13 @@ if __name__ == '__main__':
     my_analysis = Analysis(datasets, analysis_label='jesal_cutflow', force_rebuild=False, log_level=10)
 
     # pipeline
-    my_analysis.plot_mass_slices(ds_name='wmintaunu_nominal', xvar='mu_mt',
+    my_analysis.plot_mass_slices(ds_name='wmintaunu_slices', xvar='mu_mt',
                                  inclusive_dataset='wmintaunu_inclusive', logx=True, to_pkl=True)
-    my_analysis.plot_mass_slices(ds_name='wplustaunu_nominal', xvar='mu_mt',
+    my_analysis.plot_mass_slices(ds_name='wplustaunu_slices', xvar='mu_mt',
                                  inclusive_dataset='wplustaunu_inclusive', logx=True, to_pkl=True)
-    my_analysis.plot_mass_slices(ds_name='wminmunu_nominal', xvar='mu_mt',
+    my_analysis.plot_mass_slices(ds_name='wminmunu_slices', xvar='mu_mt',
                                  inclusive_dataset='wminmunu_inclusive', logx=True, to_pkl=True)
-    my_analysis.plot_mass_slices(ds_name='wplusmunu_nominal', xvar='mu_mt',
+    my_analysis.plot_mass_slices(ds_name='wplusmunu_slices', xvar='mu_mt',
                                  inclusive_dataset='wplusmunu_inclusive', logx=True, to_pkl=True)
     my_analysis.convert_pkl_to_root(conv_all=True)
 
