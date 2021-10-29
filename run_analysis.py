@@ -1,9 +1,41 @@
+#!/common/users/keanu/miniconda3/envs/root_env/bin/python
+
 from src.analysis import Analysis
 
 if __name__ == '__main__':
 
     # dataset inputs
     datasets = {
+        'single_antitop_s': {
+            'datapath': '/data/atlas/HighMassDrellYan/test_mc16a/single_antitop_s/*.root',
+            'cutfile': 'options/jesal_cutflow/cutfile_jesal.txt',
+            'TTree_name': 'nominal_Loose',
+            'is_slices': False,
+        },
+        'single_antitop_t': {
+            'datapath': '/data/atlas/HighMassDrellYan/test_mc16a/single_antitop_t/*.root',
+            'cutfile': 'options/jesal_cutflow/cutfile_jesal.txt',
+            'TTree_name': 'nominal_Loose',
+            'is_slices': False,
+        },
+        'single_top_s': {
+            'datapath': '/data/atlas/HighMassDrellYan/test_mc16a/single_top_s/*.root',
+            'cutfile': 'options/jesal_cutflow/cutfile_jesal.txt',
+            'TTree_name': 'nominal_Loose',
+            'is_slices': False,
+        },
+        'single_top_t': {
+            'datapath': '/data/atlas/HighMassDrellYan/test_mc16a/single_top_t/*.root',
+            'cutfile': 'options/jesal_cutflow/cutfile_jesal.txt',
+            'TTree_name': 'nominal_Loose',
+            'is_slices': False,
+        },
+        'ttbar': {
+            'datapath': '/data/atlas/HighMassDrellYan/test_mc16a/single_top_s/*.root',
+            'cutfile': 'options/jesal_cutflow/cutfile_jesal.txt',
+            'TTree_name': 'nominal_Loose',
+            'is_slices': False,
+        },
         'wmintaunu_slices': {
             'datapath': '/data/atlas/HighMassDrellYan/test_mc16a/wmintaunu_*/*.root',
             'cutfile': 'options/jesal_cutflow/cutfile_jesal.txt',
@@ -60,36 +92,6 @@ if __name__ == '__main__':
             'is_slices': False,
             'lepton': 'muon'
         },
-        'single_antitop_s': {
-            'datapath': '/data/atlas/HighMassDrellYan/test_mc16a/single_antitop_s/*.root',
-            'cutfile': 'options/jesal_cutflow/cutfile_jesal.txt',
-            'TTree_name': 'nominal_Loose',
-            'is_slices': False,
-        },
-        'single_antitop_t': {
-            'datapath': '/data/atlas/HighMassDrellYan/test_mc16a/single_antitop_t/*.root',
-            'cutfile': 'options/jesal_cutflow/cutfile_jesal.txt',
-            'TTree_name': 'nominal_Loose',
-            'is_slices': False,
-        },
-        'single_top_s': {
-            'datapath': '/data/atlas/HighMassDrellYan/test_mc16a/single_top_s/*.root',
-            'cutfile': 'options/jesal_cutflow/cutfile_jesal.txt',
-            'TTree_name': 'nominal_Loose',
-            'is_slices': False,
-        },
-        'single_top_t': {
-            'datapath': '/data/atlas/HighMassDrellYan/test_mc16a/single_top_t/*.root',
-            'cutfile': 'options/jesal_cutflow/cutfile_jesal.txt',
-            'TTree_name': 'nominal_Loose',
-            'is_slices': False,
-        },
-        'ttbar': {
-            'datapath': '/data/atlas/HighMassDrellYan/test_mc16a/single_top_s/*.root',
-            'cutfile': 'options/jesal_cutflow/cutfile_jesal.txt',
-            'TTree_name': 'nominal_Loose',
-            'is_slices': False,
-        },
         'wt_antitop': {
             'datapath': '/data/atlas/HighMassDrellYan/test_mc16a/wt_antitop/*.root',
             'cutfile': 'options/jesal_cutflow/cutfile_jesal.txt',
@@ -138,14 +140,14 @@ if __name__ == '__main__':
             'TTree_name': 'nominal_Loose',
             'is_slices': False,
         },
-        'zmunu_inclusive': {
-            'datapath': '/data/atlas/HighMassDrellYan/test_mc16a/zmunu/*.root',
+        'zmumu_inclusive': {
+            'datapath': '/data/atlas/HighMassDrellYan/test_mc16a/zmumu/*.root',
             'cutfile': 'options/jesal_cutflow/cutfile_jesal.txt',
             'TTree_name': 'nominal_Loose',
             'is_slices': False,
         },
-        'zmunu_slices': {
-            'datapath': '/data/atlas/HighMassDrellYan/test_mc16a/zmunu_*/*.root',
+        'zmumu_slices': {
+            'datapath': '/data/atlas/HighMassDrellYan/test_mc16a/zmumu_*/*.root',
             'cutfile': 'options/jesal_cutflow/cutfile_jesal.txt',
             'TTree_name': 'nominal_Loose',
             'is_slices': True,
@@ -182,18 +184,18 @@ if __name__ == '__main__':
         },
     }
 
-    my_analysis = Analysis(datasets, analysis_label='jesal_cutflow', force_rebuild=False, log_level=10)
+    my_analysis = Analysis(datasets, analysis_label='jesal_cutflow', force_rebuild=True, log_level=10)
 
     # pipeline
-    # my_analysis.plot_mass_slices(ds_name='wmintaunu_slices', xvar='MC_WZ_m',
-    #                              inclusive_dataset='wmintaunu_inclusive', logx=True, to_pkl=True)
-    # my_analysis.plot_mass_slices(ds_name='wplustaunu_slices', xvar='MC_WZ_m',
-    #                              inclusive_dataset='wplustaunu_inclusive', logx=True, to_pkl=True)
-    # my_analysis.plot_mass_slices(ds_name='wminmunu_slices', xvar='MC_WZ_m',
-    #                              inclusive_dataset='wminmunu_inclusive', logx=True, to_pkl=True)
-    # my_analysis.plot_mass_slices(ds_name='wplusmunu_slices', xvar='MC_WZ_m',
-    #                              inclusive_dataset='wplusmunu_inclusive', logx=True, to_pkl=True)
-    # my_analysis.convert_pkl_to_root()
+    my_analysis.plot_mass_slices(ds_name='wmintaunu_slices', xvar='MC_WZ_m',
+                                 inclusive_dataset='wmintaunu_inclusive', logx=True, to_pkl=True)
+    my_analysis.plot_mass_slices(ds_name='wplustaunu_slices', xvar='MC_WZ_m',
+                                 inclusive_dataset='wplustaunu_inclusive', logx=True, to_pkl=True)
+    my_analysis.plot_mass_slices(ds_name='wminmunu_slices', xvar='MC_WZ_m',
+                                 inclusive_dataset='wminmunu_inclusive', logx=True, to_pkl=True)
+    my_analysis.plot_mass_slices(ds_name='wplusmunu_slices', xvar='MC_WZ_m',
+                                 inclusive_dataset='wplusmunu_inclusive', logx=True, to_pkl=True)
+    my_analysis.convert_pkl_to_root()
 
     # my_analysis.gen_cutflow_hist(event=True)
     # my_analysis.plot_with_cuts(scaling='xs', to_pkl=False)

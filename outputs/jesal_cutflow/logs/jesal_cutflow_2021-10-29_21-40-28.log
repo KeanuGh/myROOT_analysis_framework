@@ -1,0 +1,101 @@
+2021-10-29 21:40:28,790 INFO: INITIALISING ANALYSIS 'jesal_cutflow'...
+2021-10-29 21:40:28,790 INFO: ========================================
+2021-10-29 21:40:28,790 INFO: 
+2021-10-29 21:40:28,790 INFO: =====================================================
+2021-10-29 21:40:28,790 INFO: ======== INITIALISING DATASET 'single_antitop_s' =========
+2021-10-29 21:40:28,790 INFO: =====================================================
+2021-10-29 21:40:28,792 DEBUG: DATASET INPUT OPTIONS: 
+2021-10-29 21:40:28,792 DEBUG: ----------------------------
+2021-10-29 21:40:28,792 DEBUG: Input file(s):  /data/atlas/HighMassDrellYan/test_mc16a/single_antitop_s/*.root
+2021-10-29 21:40:28,792 DEBUG: TTree: nominal_Loose
+2021-10-29 21:40:28,793 DEBUG: Cutfile: options/jesal_cutflow/cutfile_jesal.txt
+2021-10-29 21:40:28,793 DEBUG: Slices: False
+2021-10-29 21:40:28,793 DEBUG: grouped cutflow: True
+2021-10-29 21:40:28,793 DEBUG: Forced dataset rebuild: True
+2021-10-29 21:40:28,793 DEBUG: ----------------------------
+2021-10-29 21:40:28,793 DEBUG: 
+2021-10-29 21:40:28,793 DEBUG: CUTFILE CONTENTS
+2021-10-29 21:40:28,795 DEBUG: ---------------------------
+2021-10-29 21:40:28,796 DEBUG: [CUTS]
+2021-10-29 21:40:28,796 DEBUG: # Name	Variable	</>	Cut (in GeV if applicable)	Group Symmetric
+2021-10-29 21:40:28,796 DEBUG: # !!REMEMBER DEFAULT ANALYSISTOP OUTPUT IS IN MeV NOT GeV!!
+2021-10-29 21:40:28,796 DEBUG: Tight muon	mu_isTight	=	1	tight muon cut	false
+2021-10-29 21:40:28,796 DEBUG: eta	mu_eta	<	2.4	eta	true
+2021-10-29 21:40:28,796 DEBUG: E_{T}^{MISS}	met_met	>	65	met	false
+2021-10-29 21:40:28,797 DEBUG: p_T	mu_pt	>	65	mu pt	false
+2021-10-29 21:40:28,797 DEBUG: M_T	mu_mt	>	55	muon mt	false
+2021-10-29 21:40:28,797 DEBUG: M_W	MC_WZ_m	>	120	W m	false	truth
+2021-10-29 21:40:28,797 DEBUG: 
+2021-10-29 21:40:28,797 DEBUG: [OUTPUTS]
+2021-10-29 21:40:28,797 DEBUG: # variables to process
+2021-10-29 21:40:28,797 DEBUG: mu_mt
+2021-10-29 21:40:28,797 DEBUG: mu_pt
+2021-10-29 21:40:28,798 DEBUG: mu_eta
+2021-10-29 21:40:28,798 DEBUG: 
+2021-10-29 21:40:28,798 DEBUG: [OPTIONS]
+2021-10-29 21:40:28,799 DEBUG: # case-insensitive
+2021-10-29 21:40:28,799 DEBUG: sequential	false
+2021-10-29 21:40:28,800 DEBUG: grouped cutflow	false
+2021-10-29 21:40:28,800 DEBUG: ---------------------------
+2021-10-29 21:40:28,800 INFO: Parsting cutfile for single_antitop_s...
+2021-10-29 21:40:28,803 DEBUG: Datafile found
+2021-10-29 21:40:28,803 INFO: Building single_antitop_s dataframe from /data/atlas/HighMassDrellYan/test_mc16a/single_antitop_s/*.root...
+2021-10-29 21:40:28,803 DEBUG: Variables to extract from nominal_Loose tree: 
+2021-10-29 21:40:28,803 DEBUG:   - mu_pt
+2021-10-29 21:40:28,803 DEBUG:   - mu_eta
+2021-10-29 21:40:28,803 DEBUG:   - eventNumber
+2021-10-29 21:40:28,804 DEBUG:   - weight_mc
+2021-10-29 21:40:28,804 DEBUG:   - mu_isTight
+2021-10-29 21:40:28,804 DEBUG:   - met_phi
+2021-10-29 21:40:28,804 DEBUG:   - met_met
+2021-10-29 21:40:28,804 DEBUG:   - mu_phi
+2021-10-29 21:40:28,804 DEBUG: Variables to extract from truth tree: 
+2021-10-29 21:40:28,804 DEBUG:   - MC_WZ_m
+2021-10-29 21:40:28,804 DEBUG: Variables to calculate: 
+2021-10-29 21:40:28,804 DEBUG:   - mu_mt
+2021-10-29 21:40:28,804 DEBUG: Checking TTree and TBranch values in file(s) '/data/atlas/HighMassDrellYan/test_mc16a/single_antitop_s/*.root'...
+2021-10-29 21:40:28,999 DEBUG: All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/single_antitop_s/user.jmandali.24799780._000001.prelim_mc16a_bckg.root...
+2021-10-29 21:40:29,114 DEBUG: All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/single_antitop_s/user.jmandali.24799780._000002.prelim_mc16a_bckg.root...
+2021-10-29 21:40:29,114 DEBUG: All required TTrees variables found.
+2021-10-29 21:40:29,114 WARNING: Variable(s) ['mu_isTight'] not contained in labels dictionary. Some unexpected behaviour may occur.
+2021-10-29 21:40:29,114 INFO: Extracting {'mu_pt', 'mu_eta', 'eventNumber', 'weight_mc', 'mu_isTight', 'met_phi', 'met_met', 'mu_phi'} from /data/atlas/HighMassDrellYan/test_mc16a/single_antitop_s/*.root...
+2021-10-29 21:40:29,378 DEBUG: Extracted 1814 events.
+2021-10-29 21:40:29,378 DEBUG: Extracting ['MC_WZ_m'] from TTree truth...
+2021-10-29 21:40:29,923 DEBUG: Extracted 1101722 events.
+2021-10-29 21:40:29,923 DEBUG: Merging with rest of dataframe...
+2021-10-29 21:40:30,068 INFO: time to build dataframe: 00:00:00
+2021-10-29 21:40:30,068 INFO: Computing 'mu_mt' column from ['mu_pt', 'met_met', 'mu_phi', 'met_phi']...
+2021-10-29 21:40:30,113 DEBUG: Rescaled columns ['mu_pt', 'MC_WZ_m', 'mu_mt'] to GeV.
+2021-10-29 21:40:30,117 INFO: Dataframe built and saved in outputs/jesal_cutflow/data/single_antitop_s_df.pkl
+2021-10-29 21:40:30,118 INFO: Number of events in dataset single_antitop_s: 1814
+2021-10-29 21:40:30,118 INFO: Creating weights for single_antitop_s...
+2021-10-29 21:40:30,119 DEBUG: INCLUSIVE SAMPLE METADATA:
+2021-10-29 21:40:30,119 DEBUG: --------------------------
+2021-10-29 21:40:30,119 DEBUG: n_events   sum_w         x-s fb        lumi fb-1
+2021-10-29 21:40:30,119 DEBUG: ==========================================================
+2021-10-29 21:40:30,120 DEBUG: 1814       2.298502e+03  1.267090e+00  2.002067e+05
+2021-10-29 21:40:30,120 INFO: Creating cuts for single_antitop_s...
+2021-10-29 21:40:30,123 INFO: 
+2021-10-29 21:40:30,123 INFO: ========== CUTS USED ============
+2021-10-29 21:40:30,123 INFO: Tight muon  : mu_isTight = 1.0
+2021-10-29 21:40:30,123 INFO: eta         :    |mu_eta| < 2.4
+2021-10-29 21:40:30,123 INFO: E_{T}^{MISS}:    met_met > 65.0
+2021-10-29 21:40:30,123 INFO: p_T         :      mu_pt > 65.0
+2021-10-29 21:40:30,124 INFO: M_T         :      mu_mt > 55.0
+2021-10-29 21:40:30,124 INFO: M_W         :    MC_WZ_m > 120.0
+2021-10-29 21:40:30,124 INFO: 
+2021-10-29 21:40:30,130 INFO: =========== CUTFLOW =============
+2021-10-29 21:40:30,130 INFO: Option: Non-sequential
+2021-10-29 21:40:30,130 INFO: ---------------------------------
+2021-10-29 21:40:30,130 INFO: Cut            Events Ratio
+2021-10-29 21:40:30,130 INFO: Inclusive      1814   -
+2021-10-29 21:40:30,130 INFO: tight muon cut 1814 1.000    
+2021-10-29 21:40:30,130 INFO: eta            1814 1.000    
+2021-10-29 21:40:30,130 INFO: met            1814 1.000    
+2021-10-29 21:40:30,130 INFO: mu pt          1814 1.000    
+2021-10-29 21:40:30,130 INFO: muon mt        1814 1.000    
+2021-10-29 21:40:30,130 INFO: W m            68   0.037    
+2021-10-29 21:40:30,130 INFO: 
+2021-10-29 21:40:30,130 INFO: =====================================================
+2021-10-29 21:40:30,130 INFO: ========= DATASET 'single_antitop_s' INITIALISED =========
+2021-10-29 21:40:30,130 INFO: =====================================================

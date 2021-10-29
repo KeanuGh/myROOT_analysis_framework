@@ -1160,3 +1160,768 @@
 2021-10-28 23:17:26,280 DEBUG: All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wt_antitop/user.jmandali.24799784._000001.prelim_mc16a_bckg.root...
 2021-10-28 23:17:28,407 DEBUG: All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wt_antitop/user.jmandali.24799784._000002.prelim_mc16a_bckg.root...
 2021-10-28 23:17:30,392 DEBUG: All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wt_antitop/user.jmandali.24799784._000004.prelim_mc16a_bckg.root...
+2021-10-28 23:17:33,326 DEBUG: All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wt_antitop/user.jmandali.24799784._000005.prelim_mc16a_bckg.root...
+2021-10-28 23:17:35,343 DEBUG: All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wt_antitop/user.jmandali.24799784._000006.prelim_mc16a_bckg.root...
+2021-10-28 23:17:37,613 DEBUG: All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wt_antitop/user.jmandali.24799784._000007.prelim_mc16a_bckg.root...
+2021-10-28 23:17:39,623 DEBUG: All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wt_antitop/user.jmandali.24799784._000008.prelim_mc16a_bckg.root...
+2021-10-28 23:17:39,623 DEBUG: All required TTrees variables found.
+2021-10-28 23:17:39,623 WARNING: Variable(s) ['mu_isTight'] not contained in labels dictionary. Some unexpected behaviour may occur.
+2021-10-28 23:17:39,623 INFO: Extracting {'eventNumber', 'mu_isTight', 'met_met', 'met_phi', 'mu_eta', 'mu_pt', 'mu_phi', 'weight_mc'} from /data/atlas/HighMassDrellYan/test_mc16a/wt_antitop/*.root...
+2021-10-28 23:17:42,991 DEBUG: Extracted 36880 events.
+2021-10-28 23:17:42,991 DEBUG: Extracting ['MC_WZ_m'] from TTree truth...
+2021-10-28 23:18:10,976 DEBUG: Extracted 4033437 events.
+2021-10-28 23:18:10,976 DEBUG: Merging with rest of dataframe...
+2021-10-28 23:18:11,891 INFO: time to build dataframe: 00:00:32
+2021-10-28 23:18:11,891 INFO: Computing 'mu_mt' column from ['mu_pt', 'met_met', 'mu_phi', 'met_phi']...
+2021-10-28 23:18:12,535 DEBUG: Rescaled columns ['mu_pt', 'MC_WZ_m', 'mu_mt'] to GeV.
+2021-10-28 23:18:12,560 INFO: Dataframe built and saved in outputs/jesal_cutflow/data/wt_antitop_df.pkl
+2021-10-28 23:18:12,561 INFO: Number of events in dataset wt_antitop: 36880
+2021-10-28 23:18:12,562 INFO: Creating weights for wt_antitop...
+2021-10-28 23:18:12,569 DEBUG: INCLUSIVE SAMPLE METADATA:
+2021-10-28 23:18:12,570 DEBUG: --------------------------
+2021-10-28 23:18:12,570 DEBUG: n_events   sum_w         x-s fb        lumi fb-1
+2021-10-28 23:18:12,570 DEBUG: ==========================================================
+2021-10-28 23:18:12,570 DEBUG: 36880      1.393819e+06  3.779335e+01  1.355127e+05
+2021-10-28 23:18:12,571 INFO: Creating cuts for wt_antitop...
+2021-10-28 23:18:12,574 INFO: 
+2021-10-28 23:18:12,574 INFO: ========== CUTS USED ============
+2021-10-28 23:18:12,574 INFO: Tight muon  : mu_isTight = 1.0
+2021-10-28 23:18:12,574 INFO: eta         :    |mu_eta| < 2.4
+2021-10-28 23:18:12,574 INFO: E_{T}^{MISS}:    met_met > 65.0
+2021-10-28 23:18:12,574 INFO: p_T         :      mu_pt > 65.0
+2021-10-28 23:18:12,574 INFO: M_T         :      mu_mt > 55.0
+2021-10-28 23:18:12,574 INFO: M_W         :    MC_WZ_m > 120.0
+2021-10-28 23:18:12,574 INFO: 
+2021-10-28 23:18:12,583 INFO: =========== CUTFLOW =============
+2021-10-28 23:18:12,583 INFO: Option: Non-sequential
+2021-10-28 23:18:12,583 INFO: ---------------------------------
+2021-10-28 23:18:12,583 INFO: Cut            Events Ratio
+2021-10-28 23:18:12,583 INFO: Inclusive      36880   -
+2021-10-28 23:18:12,583 INFO: tight muon cut 36880 1.000    
+2021-10-28 23:18:12,583 INFO: eta            36880 1.000    
+2021-10-28 23:18:12,583 INFO: met            36880 1.000    
+2021-10-28 23:18:12,583 INFO: mu pt          36880 1.000    
+2021-10-28 23:18:12,583 INFO: muon mt        36880 1.000    
+2021-10-28 23:18:12,584 INFO: W m            11    0.000    
+2021-10-28 23:18:12,584 INFO: 
+2021-10-28 23:18:12,584 INFO: ========= DATASET 'wt_antitop' INITIALISED =========
+2021-10-28 23:18:12,584 INFO: 
+2021-10-28 23:18:12,584 INFO: ======== INITIALISING DATASET 'wt_top' =========
+2021-10-28 23:18:12,585 DEBUG: DATASET INPUT OPTIONS: 
+2021-10-28 23:18:12,585 DEBUG: ----------------------------
+2021-10-28 23:18:12,585 DEBUG: Input file(s):  /data/atlas/HighMassDrellYan/test_mc16a/wt_top/*.root
+2021-10-28 23:18:12,585 DEBUG: TTree: nominal_Loose
+2021-10-28 23:18:12,585 DEBUG: Cutfile: options/jesal_cutflow/cutfile_jesal.txt
+2021-10-28 23:18:12,585 DEBUG: Slices: False
+2021-10-28 23:18:12,585 DEBUG: grouped cutflow: True
+2021-10-28 23:18:12,585 DEBUG: Forced dataset rebuild: False
+2021-10-28 23:18:12,585 DEBUG: ----------------------------
+2021-10-28 23:18:12,585 DEBUG: 
+2021-10-28 23:18:12,585 DEBUG: CUTFILE CONTENTS
+2021-10-28 23:18:12,585 DEBUG: ---------------------------
+2021-10-28 23:18:12,586 DEBUG: [CUTS]
+2021-10-28 23:18:12,586 DEBUG: # Name	Variable	</>	Cut (in GeV if applicable)	Group Symmetric
+2021-10-28 23:18:12,586 DEBUG: # !!REMEMBER DEFAULT ANALYSISTOP OUTPUT IS IN MeV NOT GeV!!
+2021-10-28 23:18:12,586 DEBUG: Tight muon	mu_isTight	=	1	tight muon cut	false
+2021-10-28 23:18:12,586 DEBUG: eta	mu_eta	<	2.4	eta	true
+2021-10-28 23:18:12,586 DEBUG: E_{T}^{MISS}	met_met	>	65	met	false
+2021-10-28 23:18:12,586 DEBUG: p_T	mu_pt	>	65	mu pt	false
+2021-10-28 23:18:12,586 DEBUG: M_T	mu_mt	>	55	muon mt	false
+2021-10-28 23:18:12,586 DEBUG: M_W	MC_WZ_m	>	120	W m	false	truth
+2021-10-28 23:18:12,586 DEBUG: 
+2021-10-28 23:18:12,586 DEBUG: [OUTPUTS]
+2021-10-28 23:18:12,586 DEBUG: # variables to process
+2021-10-28 23:18:12,586 DEBUG: mu_mt
+2021-10-28 23:18:12,586 DEBUG: mu_pt
+2021-10-28 23:18:12,586 DEBUG: mu_eta
+2021-10-28 23:18:12,586 DEBUG: 
+2021-10-28 23:18:12,586 DEBUG: [OPTIONS]
+2021-10-28 23:18:12,586 DEBUG: # case-insensitive
+2021-10-28 23:18:12,586 DEBUG: sequential	false
+2021-10-28 23:18:12,586 DEBUG: grouped cutflow	false
+2021-10-28 23:18:12,586 DEBUG: ---------------------------
+2021-10-28 23:18:12,587 INFO: Parsting cutfile for wt_top...
+2021-10-28 23:18:12,588 INFO: Building wt_top dataframe from /data/atlas/HighMassDrellYan/test_mc16a/wt_top/*.root...
+2021-10-28 23:18:12,589 DEBUG: Variables to extract from nominal_Loose tree: 
+2021-10-28 23:18:12,589 DEBUG:   - eventNumber
+2021-10-28 23:18:12,589 DEBUG:   - mu_isTight
+2021-10-28 23:18:12,589 DEBUG:   - met_met
+2021-10-28 23:18:12,589 DEBUG:   - met_phi
+2021-10-28 23:18:12,589 DEBUG:   - mu_eta
+2021-10-28 23:18:12,589 DEBUG:   - mu_pt
+2021-10-28 23:18:12,589 DEBUG:   - mu_phi
+2021-10-28 23:18:12,589 DEBUG:   - weight_mc
+2021-10-28 23:18:12,589 DEBUG: Variables to extract from truth tree: 
+2021-10-28 23:18:12,589 DEBUG:   - MC_WZ_m
+2021-10-28 23:18:12,589 DEBUG: Variables to calculate: 
+2021-10-28 23:18:12,589 DEBUG:   - mu_mt
+2021-10-28 23:18:12,589 DEBUG: Checking TTree and TBranch values in file(s) '/data/atlas/HighMassDrellYan/test_mc16a/wt_top/*.root'...
+2021-10-28 23:18:14,164 DEBUG: All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wt_top/user.jmandali.24799782._000001.prelim_mc16a_bckg.root...
+2021-10-28 23:18:16,270 DEBUG: All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wt_top/user.jmandali.24799782._000002.prelim_mc16a_bckg.root...
+2021-10-28 23:18:18,257 DEBUG: All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wt_top/user.jmandali.24799782._000003.prelim_mc16a_bckg.root...
+2021-10-28 23:18:21,232 DEBUG: All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wt_top/user.jmandali.24799782._000004.prelim_mc16a_bckg.root...
+2021-10-28 23:18:23,448 DEBUG: All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wt_top/user.jmandali.24799782._000005.prelim_mc16a_bckg.root...
+2021-10-28 23:18:25,521 DEBUG: All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wt_top/user.jmandali.24799782._000006.prelim_mc16a_bckg.root...
+2021-10-28 23:18:27,426 DEBUG: All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wt_top/user.jmandali.24799782._000007.prelim_mc16a_bckg.root...
+2021-10-28 23:18:27,426 DEBUG: All required TTrees variables found.
+2021-10-28 23:18:27,427 WARNING: Variable(s) ['mu_isTight'] not contained in labels dictionary. Some unexpected behaviour may occur.
+2021-10-28 23:18:27,427 INFO: Extracting {'eventNumber', 'mu_isTight', 'met_met', 'met_phi', 'mu_eta', 'mu_pt', 'mu_phi', 'weight_mc'} from /data/atlas/HighMassDrellYan/test_mc16a/wt_top/*.root...
+2021-10-28 23:18:29,805 DEBUG: Extracted 36325 events.
+2021-10-28 23:18:29,805 DEBUG: Extracting ['MC_WZ_m'] from TTree truth...
+2021-10-28 23:19:00,071 DEBUG: Extracted 4027250 events.
+2021-10-28 23:19:00,072 DEBUG: Merging with rest of dataframe...
+2021-10-28 23:19:01,363 INFO: time to build dataframe: 00:00:33
+2021-10-28 23:19:01,363 INFO: Computing 'mu_mt' column from ['mu_pt', 'met_met', 'mu_phi', 'met_phi']...
+2021-10-28 23:19:01,994 DEBUG: Rescaled columns ['mu_pt', 'MC_WZ_m', 'mu_mt'] to GeV.
+2021-10-28 23:19:02,018 INFO: Dataframe built and saved in outputs/jesal_cutflow/data/wt_top_df.pkl
+2021-10-28 23:19:02,020 INFO: Number of events in dataset wt_top: 36325
+2021-10-28 23:19:02,021 INFO: Creating weights for wt_top...
+2021-10-28 23:19:02,029 DEBUG: INCLUSIVE SAMPLE METADATA:
+2021-10-28 23:19:02,029 DEBUG: --------------------------
+2021-10-28 23:19:02,029 DEBUG: n_events   sum_w         x-s fb        lumi fb-1
+2021-10-28 23:19:02,030 DEBUG: ==========================================================
+2021-10-28 23:19:02,030 DEBUG: 36325      1.373813e+06  3.782004e+01  1.333626e+05
+2021-10-28 23:19:02,031 INFO: Creating cuts for wt_top...
+2021-10-28 23:19:02,034 INFO: 
+2021-10-28 23:19:02,034 INFO: ========== CUTS USED ============
+2021-10-28 23:19:02,034 INFO: Tight muon  : mu_isTight = 1.0
+2021-10-28 23:19:02,034 INFO: eta         :    |mu_eta| < 2.4
+2021-10-28 23:19:02,034 INFO: E_{T}^{MISS}:    met_met > 65.0
+2021-10-28 23:19:02,034 INFO: p_T         :      mu_pt > 65.0
+2021-10-28 23:19:02,034 INFO: M_T         :      mu_mt > 55.0
+2021-10-28 23:19:02,034 INFO: M_W         :    MC_WZ_m > 120.0
+2021-10-28 23:19:02,034 INFO: 
+2021-10-28 23:19:02,043 INFO: =========== CUTFLOW =============
+2021-10-28 23:19:02,043 INFO: Option: Non-sequential
+2021-10-28 23:19:02,043 INFO: ---------------------------------
+2021-10-28 23:19:02,043 INFO: Cut            Events Ratio
+2021-10-28 23:19:02,044 INFO: Inclusive      36325   -
+2021-10-28 23:19:02,044 INFO: tight muon cut 36325 1.000    
+2021-10-28 23:19:02,044 INFO: eta            36325 1.000    
+2021-10-28 23:19:02,044 INFO: met            36325 1.000    
+2021-10-28 23:19:02,044 INFO: mu pt          36325 1.000    
+2021-10-28 23:19:02,044 INFO: muon mt        36325 1.000    
+2021-10-28 23:19:02,045 INFO: W m            19    0.001    
+2021-10-28 23:19:02,045 INFO: 
+2021-10-28 23:19:02,045 INFO: ========= DATASET 'wt_top' INITIALISED =========
+2021-10-28 23:19:02,045 INFO: 
+2021-10-28 23:19:02,045 INFO: ======== INITIALISING DATASET 'wwplnumqq' =========
+2021-10-28 23:19:02,046 DEBUG: DATASET INPUT OPTIONS: 
+2021-10-28 23:19:02,046 DEBUG: ----------------------------
+2021-10-28 23:19:02,046 DEBUG: Input file(s):  /data/atlas/HighMassDrellYan/test_mc16a/wwplnumqq/*.root
+2021-10-28 23:19:02,046 DEBUG: TTree: nominal_Loose
+2021-10-28 23:19:02,046 DEBUG: Cutfile: options/jesal_cutflow/cutfile_jesal.txt
+2021-10-28 23:19:02,046 DEBUG: Slices: False
+2021-10-28 23:19:02,046 DEBUG: grouped cutflow: True
+2021-10-28 23:19:02,046 DEBUG: Forced dataset rebuild: False
+2021-10-28 23:19:02,046 DEBUG: ----------------------------
+2021-10-28 23:19:02,046 DEBUG: 
+2021-10-28 23:19:02,046 DEBUG: CUTFILE CONTENTS
+2021-10-28 23:19:02,046 DEBUG: ---------------------------
+2021-10-28 23:19:02,047 DEBUG: [CUTS]
+2021-10-28 23:19:02,047 DEBUG: # Name	Variable	</>	Cut (in GeV if applicable)	Group Symmetric
+2021-10-28 23:19:02,047 DEBUG: # !!REMEMBER DEFAULT ANALYSISTOP OUTPUT IS IN MeV NOT GeV!!
+2021-10-28 23:19:02,047 DEBUG: Tight muon	mu_isTight	=	1	tight muon cut	false
+2021-10-28 23:19:02,047 DEBUG: eta	mu_eta	<	2.4	eta	true
+2021-10-28 23:19:02,047 DEBUG: E_{T}^{MISS}	met_met	>	65	met	false
+2021-10-28 23:19:02,047 DEBUG: p_T	mu_pt	>	65	mu pt	false
+2021-10-28 23:19:02,047 DEBUG: M_T	mu_mt	>	55	muon mt	false
+2021-10-28 23:19:02,048 DEBUG: M_W	MC_WZ_m	>	120	W m	false	truth
+2021-10-28 23:19:02,048 DEBUG: 
+2021-10-28 23:19:02,048 DEBUG: [OUTPUTS]
+2021-10-28 23:19:02,048 DEBUG: # variables to process
+2021-10-28 23:19:02,048 DEBUG: mu_mt
+2021-10-28 23:19:02,048 DEBUG: mu_pt
+2021-10-28 23:19:02,048 DEBUG: mu_eta
+2021-10-28 23:19:02,048 DEBUG: 
+2021-10-28 23:19:02,048 DEBUG: [OPTIONS]
+2021-10-28 23:19:02,048 DEBUG: # case-insensitive
+2021-10-28 23:19:02,048 DEBUG: sequential	false
+2021-10-28 23:19:02,048 DEBUG: grouped cutflow	false
+2021-10-28 23:19:02,048 DEBUG: ---------------------------
+2021-10-28 23:19:02,048 INFO: Parsting cutfile for wwplnumqq...
+2021-10-28 23:19:02,050 INFO: Building wwplnumqq dataframe from /data/atlas/HighMassDrellYan/test_mc16a/wwplnumqq/*.root...
+2021-10-28 23:19:02,051 DEBUG: Variables to extract from nominal_Loose tree: 
+2021-10-28 23:19:02,051 DEBUG:   - eventNumber
+2021-10-28 23:19:02,051 DEBUG:   - mu_isTight
+2021-10-28 23:19:02,051 DEBUG:   - met_met
+2021-10-28 23:19:02,051 DEBUG:   - met_phi
+2021-10-28 23:19:02,051 DEBUG:   - mu_eta
+2021-10-28 23:19:02,051 DEBUG:   - mu_pt
+2021-10-28 23:19:02,051 DEBUG:   - mu_phi
+2021-10-28 23:19:02,051 DEBUG:   - weight_mc
+2021-10-28 23:19:02,051 DEBUG: Variables to extract from truth tree: 
+2021-10-28 23:19:02,051 DEBUG:   - MC_WZ_m
+2021-10-28 23:19:02,051 DEBUG: Variables to calculate: 
+2021-10-28 23:19:02,051 DEBUG:   - mu_mt
+2021-10-28 23:19:02,051 DEBUG: Checking TTree and TBranch values in file(s) '/data/atlas/HighMassDrellYan/test_mc16a/wwplnumqq/*.root'...
+2021-10-28 23:19:04,275 DEBUG: All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wwplnumqq/user.jmandali.25460350._000001.prelim_mc16a_bckg.root...
+2021-10-28 23:19:06,454 DEBUG: All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wwplnumqq/user.jmandali.25460350._000002.prelim_mc16a_bckg.root...
+2021-10-28 23:19:07,783 DEBUG: All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wwplnumqq/user.jmandali.25460350._000003.prelim_mc16a_bckg.root...
+2021-10-28 23:19:09,837 DEBUG: All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wwplnumqq/user.jmandali.25460350._000004.prelim_mc16a_bckg.root...
+2021-10-28 23:19:10,812 DEBUG: All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wwplnumqq/user.jmandali.25460350._000005.prelim_mc16a_bckg.root...
+2021-10-28 23:19:10,812 DEBUG: All required TTrees variables found.
+2021-10-28 23:19:10,812 WARNING: Variable(s) ['mu_isTight'] not contained in labels dictionary. Some unexpected behaviour may occur.
+2021-10-28 23:19:10,812 INFO: Extracting {'eventNumber', 'mu_isTight', 'met_met', 'met_phi', 'mu_eta', 'mu_pt', 'mu_phi', 'weight_mc'} from /data/atlas/HighMassDrellYan/test_mc16a/wwplnumqq/*.root...
+2021-10-28 23:19:11,558 DEBUG: Extracted 5911 events.
+2021-10-28 23:19:11,558 DEBUG: Extracting ['MC_WZ_m'] from TTree truth...
+2021-10-28 23:19:28,965 DEBUG: Extracted 3566667 events.
+2021-10-28 23:19:28,966 DEBUG: Merging with rest of dataframe...
+2021-10-28 23:19:29,983 INFO: time to build dataframe: 00:00:19
+2021-10-28 23:19:29,983 INFO: Computing 'mu_mt' column from ['mu_pt', 'met_met', 'mu_phi', 'met_phi']...
+2021-10-28 23:19:30,098 DEBUG: Rescaled columns ['mu_pt', 'MC_WZ_m', 'mu_mt'] to GeV.
+2021-10-28 23:19:30,104 INFO: Dataframe built and saved in outputs/jesal_cutflow/data/wwplnumqq_df.pkl
+2021-10-28 23:19:30,108 INFO: Number of events in dataset wwplnumqq: 5911
+2021-10-28 23:19:30,108 INFO: Creating weights for wwplnumqq...
+2021-10-28 23:19:30,110 DEBUG: INCLUSIVE SAMPLE METADATA:
+2021-10-28 23:19:30,110 DEBUG: --------------------------
+2021-10-28 23:19:30,110 DEBUG: n_events   sum_w         x-s fb        lumi fb-1
+2021-10-28 23:19:30,110 DEBUG: ==========================================================
+2021-10-28 23:19:30,111 DEBUG: 5911       1.020806e+03  1.726960e-01  3.356998e+06
+2021-10-28 23:19:30,111 INFO: Creating cuts for wwplnumqq...
+2021-10-28 23:19:30,114 INFO: 
+2021-10-28 23:19:30,114 INFO: ========== CUTS USED ============
+2021-10-28 23:19:30,114 INFO: Tight muon  : mu_isTight = 1.0
+2021-10-28 23:19:30,114 INFO: eta         :    |mu_eta| < 2.4
+2021-10-28 23:19:30,114 INFO: E_{T}^{MISS}:    met_met > 65.0
+2021-10-28 23:19:30,114 INFO: p_T         :      mu_pt > 65.0
+2021-10-28 23:19:30,115 INFO: M_T         :      mu_mt > 55.0
+2021-10-28 23:19:30,115 INFO: M_W         :    MC_WZ_m > 120.0
+2021-10-28 23:19:30,115 INFO: 
+2021-10-28 23:19:30,120 INFO: =========== CUTFLOW =============
+2021-10-28 23:19:30,120 INFO: Option: Non-sequential
+2021-10-28 23:19:30,120 INFO: ---------------------------------
+2021-10-28 23:19:30,121 INFO: Cut            Events Ratio
+2021-10-28 23:19:30,121 INFO: Inclusive      5911   -
+2021-10-28 23:19:30,121 INFO: tight muon cut 5911 1.000    
+2021-10-28 23:19:30,121 INFO: eta            5911 1.000    
+2021-10-28 23:19:30,121 INFO: met            5911 1.000    
+2021-10-28 23:19:30,121 INFO: mu pt          5911 1.000    
+2021-10-28 23:19:30,121 INFO: muon mt        5911 1.000    
+2021-10-28 23:19:30,121 INFO: W m            995  0.168    
+2021-10-28 23:19:30,122 INFO: 
+2021-10-28 23:19:30,123 INFO: ========= DATASET 'wwplnumqq' INITIALISED =========
+2021-10-28 23:19:30,123 INFO: 
+2021-10-28 23:19:30,123 INFO: ======== INITIALISING DATASET 'wwpqqmlnu' =========
+2021-10-28 23:19:30,123 DEBUG: DATASET INPUT OPTIONS: 
+2021-10-28 23:19:30,123 DEBUG: ----------------------------
+2021-10-28 23:19:30,123 DEBUG: Input file(s):  /data/atlas/HighMassDrellYan/test_mc16a/wwpqqmlnu/*.root
+2021-10-28 23:19:30,123 DEBUG: TTree: nominal_Loose
+2021-10-28 23:19:30,124 DEBUG: Cutfile: options/jesal_cutflow/cutfile_jesal.txt
+2021-10-28 23:19:30,124 DEBUG: Slices: False
+2021-10-28 23:19:30,124 DEBUG: grouped cutflow: True
+2021-10-28 23:19:30,124 DEBUG: Forced dataset rebuild: False
+2021-10-28 23:19:30,124 DEBUG: ----------------------------
+2021-10-28 23:19:30,124 DEBUG: 
+2021-10-28 23:19:30,124 DEBUG: CUTFILE CONTENTS
+2021-10-28 23:19:30,124 DEBUG: ---------------------------
+2021-10-28 23:19:30,124 DEBUG: [CUTS]
+2021-10-28 23:19:30,124 DEBUG: # Name	Variable	</>	Cut (in GeV if applicable)	Group Symmetric
+2021-10-28 23:19:30,124 DEBUG: # !!REMEMBER DEFAULT ANALYSISTOP OUTPUT IS IN MeV NOT GeV!!
+2021-10-28 23:19:30,124 DEBUG: Tight muon	mu_isTight	=	1	tight muon cut	false
+2021-10-28 23:19:30,124 DEBUG: eta	mu_eta	<	2.4	eta	true
+2021-10-28 23:19:30,124 DEBUG: E_{T}^{MISS}	met_met	>	65	met	false
+2021-10-28 23:19:30,124 DEBUG: p_T	mu_pt	>	65	mu pt	false
+2021-10-28 23:19:30,125 DEBUG: M_T	mu_mt	>	55	muon mt	false
+2021-10-28 23:19:30,125 DEBUG: M_W	MC_WZ_m	>	120	W m	false	truth
+2021-10-28 23:19:30,125 DEBUG: 
+2021-10-28 23:19:30,125 DEBUG: [OUTPUTS]
+2021-10-28 23:19:30,126 DEBUG: # variables to process
+2021-10-28 23:19:30,126 DEBUG: mu_mt
+2021-10-28 23:19:30,126 DEBUG: mu_pt
+2021-10-28 23:19:30,126 DEBUG: mu_eta
+2021-10-28 23:19:30,126 DEBUG: 
+2021-10-28 23:19:30,126 DEBUG: [OPTIONS]
+2021-10-28 23:19:30,126 DEBUG: # case-insensitive
+2021-10-28 23:19:30,126 DEBUG: sequential	false
+2021-10-28 23:19:30,126 DEBUG: grouped cutflow	false
+2021-10-28 23:19:30,126 DEBUG: ---------------------------
+2021-10-28 23:19:30,126 INFO: Parsting cutfile for wwpqqmlnu...
+2021-10-28 23:19:30,128 INFO: Building wwpqqmlnu dataframe from /data/atlas/HighMassDrellYan/test_mc16a/wwpqqmlnu/*.root...
+2021-10-28 23:19:30,128 DEBUG: Variables to extract from nominal_Loose tree: 
+2021-10-28 23:19:30,129 DEBUG:   - eventNumber
+2021-10-28 23:19:30,129 DEBUG:   - mu_isTight
+2021-10-28 23:19:30,129 DEBUG:   - met_met
+2021-10-28 23:19:30,129 DEBUG:   - met_phi
+2021-10-28 23:19:30,129 DEBUG:   - mu_eta
+2021-10-28 23:19:30,129 DEBUG:   - mu_pt
+2021-10-28 23:19:30,129 DEBUG:   - mu_phi
+2021-10-28 23:19:30,129 DEBUG:   - weight_mc
+2021-10-28 23:19:30,129 DEBUG: Variables to extract from truth tree: 
+2021-10-28 23:19:30,129 DEBUG:   - MC_WZ_m
+2021-10-28 23:19:30,129 DEBUG: Variables to calculate: 
+2021-10-28 23:19:30,130 DEBUG:   - mu_mt
+2021-10-28 23:19:30,130 DEBUG: Checking TTree and TBranch values in file(s) '/data/atlas/HighMassDrellYan/test_mc16a/wwpqqmlnu/*.root'...
+2021-10-28 23:19:32,138 DEBUG: All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wwpqqmlnu/user.jmandali.25460344._000004.prelim_mc16a_bckg.root...
+2021-10-28 23:19:33,078 DEBUG: All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wwpqqmlnu/user.jmandali.25460344._000006.prelim_mc16a_bckg.root...
+2021-10-28 23:19:36,973 DEBUG: All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wwpqqmlnu/user.jmandali.25460344._000007.prelim_mc16a_bckg.root...
+2021-10-28 23:19:39,995 DEBUG: All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wwpqqmlnu/user.jmandali.25460344._000008.prelim_mc16a_bckg.root...
+2021-10-28 23:19:42,824 DEBUG: All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wwpqqmlnu/user.jmandali.25460344._000009.prelim_mc16a_bckg.root...
+2021-10-28 23:19:45,135 DEBUG: All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wwpqqmlnu/user.jmandali.25460344._000010.prelim_mc16a_bckg.root...
+2021-10-28 23:19:48,053 DEBUG: All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wwpqqmlnu/user.jmandali.25460344._000011.prelim_mc16a_bckg.root...
+2021-10-28 23:19:50,078 DEBUG: All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wwpqqmlnu/user.jmandali.25460344._000012.prelim_mc16a_bckg.root...
+2021-10-28 23:19:50,078 DEBUG: All required TTrees variables found.
+2021-10-28 23:19:50,078 WARNING: Variable(s) ['mu_isTight'] not contained in labels dictionary. Some unexpected behaviour may occur.
+2021-10-28 23:19:50,078 INFO: Extracting {'eventNumber', 'mu_isTight', 'met_met', 'met_phi', 'mu_eta', 'mu_pt', 'mu_phi', 'weight_mc'} from /data/atlas/HighMassDrellYan/test_mc16a/wwpqqmlnu/*.root...
+2021-10-28 23:19:51,167 DEBUG: Extracted 5699 events.
+2021-10-28 23:19:51,167 DEBUG: Extracting ['MC_WZ_m'] from TTree truth...
+2021-10-28 23:20:00,525 DEBUG: Extracted 3555912 events.
+2021-10-28 23:20:00,525 DEBUG: Merging with rest of dataframe...
+2021-10-28 23:20:01,532 INFO: time to build dataframe: 00:00:11
+2021-10-28 23:20:01,532 INFO: Computing 'mu_mt' column from ['mu_pt', 'met_met', 'mu_phi', 'met_phi']...
+2021-10-28 23:20:01,643 DEBUG: Rescaled columns ['mu_pt', 'MC_WZ_m', 'mu_mt'] to GeV.
+2021-10-28 23:20:01,650 INFO: Dataframe built and saved in outputs/jesal_cutflow/data/wwpqqmlnu_df.pkl
+2021-10-28 23:20:01,654 INFO: Number of events in dataset wwpqqmlnu: 5699
+2021-10-28 23:20:01,654 INFO: Creating weights for wwpqqmlnu...
+2021-10-28 23:20:01,656 DEBUG: INCLUSIVE SAMPLE METADATA:
+2021-10-28 23:20:01,656 DEBUG: --------------------------
+2021-10-28 23:20:01,656 DEBUG: n_events   sum_w         x-s fb        lumi fb-1
+2021-10-28 23:20:01,657 DEBUG: ==========================================================
+2021-10-28 23:20:01,658 DEBUG: 5699       9.163310e+02  1.607880e-01  3.354852e+06
+2021-10-28 23:20:01,658 INFO: Creating cuts for wwpqqmlnu...
+2021-10-28 23:20:01,661 INFO: 
+2021-10-28 23:20:01,661 INFO: ========== CUTS USED ============
+2021-10-28 23:20:01,661 INFO: Tight muon  : mu_isTight = 1.0
+2021-10-28 23:20:01,661 INFO: eta         :    |mu_eta| < 2.4
+2021-10-28 23:20:01,661 INFO: E_{T}^{MISS}:    met_met > 65.0
+2021-10-28 23:20:01,661 INFO: p_T         :      mu_pt > 65.0
+2021-10-28 23:20:01,661 INFO: M_T         :      mu_mt > 55.0
+2021-10-28 23:20:01,661 INFO: M_W         :    MC_WZ_m > 120.0
+2021-10-28 23:20:01,661 INFO: 
+2021-10-28 23:20:01,667 INFO: =========== CUTFLOW =============
+2021-10-28 23:20:01,667 INFO: Option: Non-sequential
+2021-10-28 23:20:01,667 INFO: ---------------------------------
+2021-10-28 23:20:01,667 INFO: Cut            Events Ratio
+2021-10-28 23:20:01,667 INFO: Inclusive      5699   -
+2021-10-28 23:20:01,667 INFO: tight muon cut 5699 1.000    
+2021-10-28 23:20:01,667 INFO: eta            5699 1.000    
+2021-10-28 23:20:01,667 INFO: met            5699 1.000    
+2021-10-28 23:20:01,667 INFO: mu pt          5699 1.000    
+2021-10-28 23:20:01,667 INFO: muon mt        5699 1.000    
+2021-10-28 23:20:01,667 INFO: W m            20   0.004    
+2021-10-28 23:20:01,667 INFO: 
+2021-10-28 23:20:01,667 INFO: ========= DATASET 'wwpqqmlnu' INITIALISED =========
+2021-10-28 23:20:01,667 INFO: 
+2021-10-28 23:20:01,667 INFO: ======== INITIALISING DATASET 'wzlnull' =========
+2021-10-28 23:20:01,668 DEBUG: DATASET INPUT OPTIONS: 
+2021-10-28 23:20:01,668 DEBUG: ----------------------------
+2021-10-28 23:20:01,668 DEBUG: Input file(s):  /data/atlas/HighMassDrellYan/test_mc16a/wzlnull/*.root
+2021-10-28 23:20:01,668 DEBUG: TTree: nominal_Loose
+2021-10-28 23:20:01,669 DEBUG: Cutfile: options/jesal_cutflow/cutfile_jesal.txt
+2021-10-28 23:20:01,670 DEBUG: Slices: False
+2021-10-28 23:20:01,670 DEBUG: grouped cutflow: True
+2021-10-28 23:20:01,670 DEBUG: Forced dataset rebuild: False
+2021-10-28 23:20:01,670 DEBUG: ----------------------------
+2021-10-28 23:20:01,670 DEBUG: 
+2021-10-28 23:20:01,670 DEBUG: CUTFILE CONTENTS
+2021-10-28 23:20:01,670 DEBUG: ---------------------------
+2021-10-28 23:20:01,670 DEBUG: [CUTS]
+2021-10-28 23:20:01,670 DEBUG: # Name	Variable	</>	Cut (in GeV if applicable)	Group Symmetric
+2021-10-28 23:20:01,670 DEBUG: # !!REMEMBER DEFAULT ANALYSISTOP OUTPUT IS IN MeV NOT GeV!!
+2021-10-28 23:20:01,670 DEBUG: Tight muon	mu_isTight	=	1	tight muon cut	false
+2021-10-28 23:20:01,670 DEBUG: eta	mu_eta	<	2.4	eta	true
+2021-10-28 23:20:01,670 DEBUG: E_{T}^{MISS}	met_met	>	65	met	false
+2021-10-28 23:20:01,670 DEBUG: p_T	mu_pt	>	65	mu pt	false
+2021-10-28 23:20:01,670 DEBUG: M_T	mu_mt	>	55	muon mt	false
+2021-10-28 23:20:01,670 DEBUG: M_W	MC_WZ_m	>	120	W m	false	truth
+2021-10-28 23:20:01,671 DEBUG: 
+2021-10-28 23:20:01,671 DEBUG: [OUTPUTS]
+2021-10-28 23:20:01,671 DEBUG: # variables to process
+2021-10-28 23:20:01,671 DEBUG: mu_mt
+2021-10-28 23:20:01,671 DEBUG: mu_pt
+2021-10-28 23:20:01,671 DEBUG: mu_eta
+2021-10-28 23:20:01,671 DEBUG: 
+2021-10-28 23:20:01,671 DEBUG: [OPTIONS]
+2021-10-28 23:20:01,671 DEBUG: # case-insensitive
+2021-10-28 23:20:01,671 DEBUG: sequential	false
+2021-10-28 23:20:01,671 DEBUG: grouped cutflow	false
+2021-10-28 23:20:01,671 DEBUG: ---------------------------
+2021-10-28 23:20:01,671 INFO: Parsting cutfile for wzlnull...
+2021-10-28 23:20:01,673 INFO: Building wzlnull dataframe from /data/atlas/HighMassDrellYan/test_mc16a/wzlnull/*.root...
+2021-10-28 23:20:01,673 DEBUG: Variables to extract from nominal_Loose tree: 
+2021-10-28 23:20:01,673 DEBUG:   - eventNumber
+2021-10-28 23:20:01,673 DEBUG:   - mu_isTight
+2021-10-28 23:20:01,673 DEBUG:   - met_met
+2021-10-28 23:20:01,673 DEBUG:   - met_phi
+2021-10-28 23:20:01,673 DEBUG:   - mu_eta
+2021-10-28 23:20:01,673 DEBUG:   - mu_pt
+2021-10-28 23:20:01,673 DEBUG:   - mu_phi
+2021-10-28 23:20:01,673 DEBUG:   - weight_mc
+2021-10-28 23:20:01,673 DEBUG: Variables to extract from truth tree: 
+2021-10-28 23:20:01,673 DEBUG:   - MC_WZ_m
+2021-10-28 23:20:01,673 DEBUG: Variables to calculate: 
+2021-10-28 23:20:01,673 DEBUG:   - mu_mt
+2021-10-28 23:20:01,673 DEBUG: Checking TTree and TBranch values in file(s) '/data/atlas/HighMassDrellYan/test_mc16a/wzlnull/*.root'...
+2021-10-28 23:20:03,197 DEBUG: All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wzlnull/user.jmandali.25460334._000002.prelim_mc16a_bckg.root...
+2021-10-28 23:20:05,478 DEBUG: All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wzlnull/user.jmandali.25460334._000003.prelim_mc16a_bckg.root...
+2021-10-28 23:20:06,520 DEBUG: All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wzlnull/user.jmandali.25460334._000004.prelim_mc16a_bckg.root...
+2021-10-28 23:20:07,468 DEBUG: All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wzlnull/user.jmandali.25460334._000005.prelim_mc16a_bckg.root...
+2021-10-28 23:20:07,794 DEBUG: All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wzlnull/user.jmandali.25460334._000006.prelim_mc16a_bckg.root...
+2021-10-28 23:20:08,779 DEBUG: All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wzlnull/user.jmandali.25460334._000007.prelim_mc16a_bckg.root...
+2021-10-28 23:20:09,753 DEBUG: All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wzlnull/user.jmandali.25460334._000008.prelim_mc16a_bckg.root...
+2021-10-28 23:20:10,757 DEBUG: All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wzlnull/user.jmandali.25460334._000009.prelim_mc16a_bckg.root...
+2021-10-28 23:20:11,708 DEBUG: All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wzlnull/user.jmandali.25460334._000010.prelim_mc16a_bckg.root...
+2021-10-28 23:20:12,908 DEBUG: All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wzlnull/user.jmandali.25460334._000011.prelim_mc16a_bckg.root...
+2021-10-28 23:20:13,901 DEBUG: All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wzlnull/user.jmandali.25460334._000012.prelim_mc16a_bckg.root...
+2021-10-28 23:20:15,078 DEBUG: All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wzlnull/user.jmandali.25460334._000013.prelim_mc16a_bckg.root...
+2021-10-28 23:20:15,999 DEBUG: All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wzlnull/user.jmandali.25460334._000014.prelim_mc16a_bckg.root...
+2021-10-28 23:20:17,977 DEBUG: All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wzlnull/user.jmandali.25460334._000015.prelim_mc16a_bckg.root...
+2021-10-28 23:20:19,202 DEBUG: All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wzlnull/user.jmandali.25460334._000016.prelim_mc16a_bckg.root...
+2021-10-28 23:20:20,237 DEBUG: All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wzlnull/user.jmandali.25460334._000017.prelim_mc16a_bckg.root...
+2021-10-28 23:20:21,467 DEBUG: All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wzlnull/user.jmandali.25460334._000018.prelim_mc16a_bckg.root...
+2021-10-28 23:20:22,505 DEBUG: All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wzlnull/user.jmandali.25460334._000019.prelim_mc16a_bckg.root...
+2021-10-28 23:20:23,636 DEBUG: All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wzlnull/user.jmandali.25460334._000020.prelim_mc16a_bckg.root...
+2021-10-28 23:20:24,671 DEBUG: All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wzlnull/user.jmandali.25460334._000021.prelim_mc16a_bckg.root...
+2021-10-28 23:20:25,712 DEBUG: All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wzlnull/user.jmandali.25460334._000022.prelim_mc16a_bckg.root...
+2021-10-28 23:20:26,682 DEBUG: All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wzlnull/user.jmandali.25460334._000023.prelim_mc16a_bckg.root...
+2021-10-28 23:20:27,871 DEBUG: All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wzlnull/user.jmandali.25460334._000024.prelim_mc16a_bckg.root...
+2021-10-28 23:20:28,760 DEBUG: All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wzlnull/user.jmandali.25460334._000025.prelim_mc16a_bckg.root...
+2021-10-28 23:20:29,752 DEBUG: All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wzlnull/user.jmandali.25460334._000026.prelim_mc16a_bckg.root...
+2021-10-28 23:20:30,687 DEBUG: All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wzlnull/user.jmandali.25460334._000027.prelim_mc16a_bckg.root...
+2021-10-28 23:20:31,729 DEBUG: All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wzlnull/user.jmandali.25460334._000028.prelim_mc16a_bckg.root...
+2021-10-28 23:20:32,727 DEBUG: All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wzlnull/user.jmandali.25460334._000029.prelim_mc16a_bckg.root...
+2021-10-28 23:20:33,663 DEBUG: All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wzlnull/user.jmandali.25460334._000030.prelim_mc16a_bckg.root...
+2021-10-28 23:20:34,655 DEBUG: All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wzlnull/user.jmandali.25460334._000031.prelim_mc16a_bckg.root...
+2021-10-28 23:20:35,690 DEBUG: All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wzlnull/user.jmandali.25460334._000032.prelim_mc16a_bckg.root...
+2021-10-28 23:20:36,601 DEBUG: All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wzlnull/user.jmandali.25460334._000033.prelim_mc16a_bckg.root...
+2021-10-28 23:20:37,902 DEBUG: All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wzlnull/user.jmandali.25460334._000034.prelim_mc16a_bckg.root...
+2021-10-28 23:20:38,318 DEBUG: All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wzlnull/user.jmandali.25460334._000035.prelim_mc16a_bckg.root...
+2021-10-28 23:20:38,318 DEBUG: All required TTrees variables found.
+2021-10-28 23:20:38,318 WARNING: Variable(s) ['mu_isTight'] not contained in labels dictionary. Some unexpected behaviour may occur.
+2021-10-28 23:20:38,318 INFO: Extracting {'eventNumber', 'mu_isTight', 'met_met', 'met_phi', 'mu_eta', 'mu_pt', 'mu_phi', 'weight_mc'} from /data/atlas/HighMassDrellYan/test_mc16a/wzlnull/*.root...
+2021-10-28 23:20:44,850 DEBUG: Extracted 95217 events.
+2021-10-28 23:20:44,850 DEBUG: Extracting ['MC_WZ_m'] from TTree truth...
+2021-10-28 23:20:49,777 DEBUG: Extracted 10110987 events.
+2021-10-28 23:20:49,778 DEBUG: Merging with rest of dataframe...
+2021-10-28 23:20:52,754 INFO: time to build dataframe: 00:00:14
+2021-10-28 23:20:52,754 INFO: Computing 'mu_mt' column from ['mu_pt', 'met_met', 'mu_phi', 'met_phi']...
+2021-10-28 23:20:54,385 DEBUG: Rescaled columns ['mu_pt', 'MC_WZ_m', 'mu_mt'] to GeV.
+2021-10-28 23:20:54,435 INFO: Dataframe built and saved in outputs/jesal_cutflow/data/wzlnull_df.pkl
+2021-10-28 23:20:54,441 INFO: Number of events in dataset wzlnull: 95217
+2021-10-28 23:20:54,441 INFO: Creating weights for wzlnull...
+2021-10-28 23:20:54,461 DEBUG: INCLUSIVE SAMPLE METADATA:
+2021-10-28 23:20:54,461 DEBUG: --------------------------
+2021-10-28 23:20:54,461 DEBUG: n_events   sum_w         x-s fb        lumi fb-1
+2021-10-28 23:20:54,461 DEBUG: ==========================================================
+2021-10-28 23:20:54,462 DEBUG: 95217      2.434450e+04  2.556739e-01  4.471861e+07
+2021-10-28 23:20:54,474 INFO: Creating cuts for wzlnull...
+2021-10-28 23:20:54,478 INFO: 
+2021-10-28 23:20:54,478 INFO: ========== CUTS USED ============
+2021-10-28 23:20:54,478 INFO: Tight muon  : mu_isTight = 1.0
+2021-10-28 23:20:54,478 INFO: eta         :    |mu_eta| < 2.4
+2021-10-28 23:20:54,478 INFO: E_{T}^{MISS}:    met_met > 65.0
+2021-10-28 23:20:54,479 INFO: p_T         :      mu_pt > 65.0
+2021-10-28 23:20:54,479 INFO: M_T         :      mu_mt > 55.0
+2021-10-28 23:20:54,479 INFO: M_W         :    MC_WZ_m > 120.0
+2021-10-28 23:20:54,479 INFO: 
+2021-10-28 23:20:54,492 INFO: =========== CUTFLOW =============
+2021-10-28 23:20:54,492 INFO: Option: Non-sequential
+2021-10-28 23:20:54,492 INFO: ---------------------------------
+2021-10-28 23:20:54,492 INFO: Cut            Events Ratio
+2021-10-28 23:20:54,492 INFO: Inclusive      95217   -
+2021-10-28 23:20:54,492 INFO: tight muon cut 95217 1.000    
+2021-10-28 23:20:54,492 INFO: eta            95217 1.000    
+2021-10-28 23:20:54,492 INFO: met            95217 1.000    
+2021-10-28 23:20:54,492 INFO: mu pt          95217 1.000    
+2021-10-28 23:20:54,493 INFO: muon mt        95217 1.000    
+2021-10-28 23:20:54,494 INFO: W m            0     0.000    
+2021-10-28 23:20:54,494 INFO: 
+2021-10-28 23:20:54,494 INFO: ========= DATASET 'wzlnull' INITIALISED =========
+2021-10-28 23:20:54,494 INFO: 
+2021-10-28 23:20:54,494 INFO: ======== INITIALISING DATASET 'wzlnununu' =========
+2021-10-28 23:20:54,495 DEBUG: DATASET INPUT OPTIONS: 
+2021-10-28 23:20:54,495 DEBUG: ----------------------------
+2021-10-28 23:20:54,495 DEBUG: Input file(s):  /data/atlas/HighMassDrellYan/test_mc16a/wzlnununu/*.root
+2021-10-28 23:20:54,495 DEBUG: TTree: nominal_Loose
+2021-10-28 23:20:54,495 DEBUG: Cutfile: options/jesal_cutflow/cutfile_jesal.txt
+2021-10-28 23:20:54,495 DEBUG: Slices: False
+2021-10-28 23:20:54,495 DEBUG: grouped cutflow: True
+2021-10-28 23:20:54,496 DEBUG: Forced dataset rebuild: False
+2021-10-28 23:20:54,496 DEBUG: ----------------------------
+2021-10-28 23:20:54,496 DEBUG: 
+2021-10-28 23:20:54,496 DEBUG: CUTFILE CONTENTS
+2021-10-28 23:20:54,496 DEBUG: ---------------------------
+2021-10-28 23:20:54,497 DEBUG: [CUTS]
+2021-10-28 23:20:54,497 DEBUG: # Name	Variable	</>	Cut (in GeV if applicable)	Group Symmetric
+2021-10-28 23:20:54,497 DEBUG: # !!REMEMBER DEFAULT ANALYSISTOP OUTPUT IS IN MeV NOT GeV!!
+2021-10-28 23:20:54,497 DEBUG: Tight muon	mu_isTight	=	1	tight muon cut	false
+2021-10-28 23:20:54,497 DEBUG: eta	mu_eta	<	2.4	eta	true
+2021-10-28 23:20:54,497 DEBUG: E_{T}^{MISS}	met_met	>	65	met	false
+2021-10-28 23:20:54,497 DEBUG: p_T	mu_pt	>	65	mu pt	false
+2021-10-28 23:20:54,497 DEBUG: M_T	mu_mt	>	55	muon mt	false
+2021-10-28 23:20:54,497 DEBUG: M_W	MC_WZ_m	>	120	W m	false	truth
+2021-10-28 23:20:54,497 DEBUG: 
+2021-10-28 23:20:54,497 DEBUG: [OUTPUTS]
+2021-10-28 23:20:54,498 DEBUG: # variables to process
+2021-10-28 23:20:54,498 DEBUG: mu_mt
+2021-10-28 23:20:54,498 DEBUG: mu_pt
+2021-10-28 23:20:54,498 DEBUG: mu_eta
+2021-10-28 23:20:54,498 DEBUG: 
+2021-10-28 23:20:54,498 DEBUG: [OPTIONS]
+2021-10-28 23:20:54,498 DEBUG: # case-insensitive
+2021-10-28 23:20:54,498 DEBUG: sequential	false
+2021-10-28 23:20:54,498 DEBUG: grouped cutflow	false
+2021-10-28 23:20:54,498 DEBUG: ---------------------------
+2021-10-28 23:20:54,498 INFO: Parsting cutfile for wzlnununu...
+2021-10-28 23:20:54,500 INFO: Building wzlnununu dataframe from /data/atlas/HighMassDrellYan/test_mc16a/wzlnununu/*.root...
+2021-10-28 23:20:54,500 DEBUG: Variables to extract from nominal_Loose tree: 
+2021-10-28 23:20:54,500 DEBUG:   - eventNumber
+2021-10-28 23:20:54,500 DEBUG:   - mu_isTight
+2021-10-28 23:20:54,501 DEBUG:   - met_met
+2021-10-28 23:20:54,501 DEBUG:   - met_phi
+2021-10-28 23:20:54,501 DEBUG:   - mu_eta
+2021-10-28 23:20:54,501 DEBUG:   - mu_pt
+2021-10-28 23:20:54,501 DEBUG:   - mu_phi
+2021-10-28 23:20:54,501 DEBUG:   - weight_mc
+2021-10-28 23:20:54,501 DEBUG: Variables to extract from truth tree: 
+2021-10-28 23:20:54,501 DEBUG:   - MC_WZ_m
+2021-10-28 23:20:54,501 DEBUG: Variables to calculate: 
+2021-10-28 23:20:54,501 DEBUG:   - mu_mt
+2021-10-28 23:20:54,501 DEBUG: Checking TTree and TBranch values in file(s) '/data/atlas/HighMassDrellYan/test_mc16a/wzlnununu/*.root'...
+2021-10-28 23:20:57,668 DEBUG: All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wzlnununu/user.jmandali.25460341._000007.prelim_mc16a_bckg.root...
+2021-10-28 23:20:58,712 DEBUG: All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wzlnununu/user.jmandali.25460341._000008.prelim_mc16a_bckg.root...
+2021-10-28 23:20:58,712 DEBUG: All required TTrees variables found.
+2021-10-28 23:20:58,712 WARNING: Variable(s) ['mu_isTight'] not contained in labels dictionary. Some unexpected behaviour may occur.
+2021-10-28 23:20:58,712 INFO: Extracting {'eventNumber', 'mu_isTight', 'met_met', 'met_phi', 'mu_eta', 'mu_pt', 'mu_phi', 'weight_mc'} from /data/atlas/HighMassDrellYan/test_mc16a/wzlnununu/*.root...
+2021-10-28 23:21:12,490 DEBUG: Extracted 147699 events.
+2021-10-28 23:21:12,490 DEBUG: Extracting ['MC_WZ_m'] from TTree truth...
+2021-10-28 23:21:15,858 DEBUG: Extracted 3213336 events.
+2021-10-28 23:21:15,858 DEBUG: Merging with rest of dataframe...
+2021-10-28 23:21:16,451 INFO: time to build dataframe: 00:00:17
+2021-10-28 23:21:16,451 INFO: Computing 'mu_mt' column from ['mu_pt', 'met_met', 'mu_phi', 'met_phi']...
+2021-10-28 23:21:19,014 DEBUG: Rescaled columns ['mu_pt', 'MC_WZ_m', 'mu_mt'] to GeV.
+2021-10-28 23:21:19,105 INFO: Dataframe built and saved in outputs/jesal_cutflow/data/wzlnununu_df.pkl
+2021-10-28 23:21:19,106 INFO: Number of events in dataset wzlnununu: 147699
+2021-10-28 23:21:19,106 INFO: Creating weights for wzlnununu...
+2021-10-28 23:21:19,136 DEBUG: INCLUSIVE SAMPLE METADATA:
+2021-10-28 23:21:19,136 DEBUG: --------------------------
+2021-10-28 23:21:19,137 DEBUG: n_events   sum_w         x-s fb        lumi fb-1
+2021-10-28 23:21:19,137 DEBUG: ==========================================================
+2021-10-28 23:21:19,138 DEBUG: 147699     3.762499e+04  2.547410e-01  6.962217e+07
+2021-10-28 23:21:19,138 INFO: Creating cuts for wzlnununu...
+2021-10-28 23:21:19,142 INFO: 
+2021-10-28 23:21:19,142 INFO: ========== CUTS USED ============
+2021-10-28 23:21:19,142 INFO: Tight muon  : mu_isTight = 1.0
+2021-10-28 23:21:19,142 INFO: eta         :    |mu_eta| < 2.4
+2021-10-28 23:21:19,142 INFO: E_{T}^{MISS}:    met_met > 65.0
+2021-10-28 23:21:19,142 INFO: p_T         :      mu_pt > 65.0
+2021-10-28 23:21:19,142 INFO: M_T         :      mu_mt > 55.0
+2021-10-28 23:21:19,142 INFO: M_W         :    MC_WZ_m > 120.0
+2021-10-28 23:21:19,142 INFO: 
+2021-10-28 23:21:19,161 INFO: =========== CUTFLOW =============
+2021-10-28 23:21:19,161 INFO: Option: Non-sequential
+2021-10-28 23:21:19,161 INFO: ---------------------------------
+2021-10-28 23:21:19,161 INFO: Cut            Events Ratio
+2021-10-28 23:21:19,161 INFO: Inclusive      147699   -
+2021-10-28 23:21:19,161 INFO: tight muon cut 147699 1.000    
+2021-10-28 23:21:19,161 INFO: eta            147699 1.000    
+2021-10-28 23:21:19,161 INFO: met            147699 1.000    
+2021-10-28 23:21:19,161 INFO: mu pt          147699 1.000    
+2021-10-28 23:21:19,161 INFO: muon mt        147699 1.000    
+2021-10-28 23:21:19,161 INFO: W m            0      0.000    
+2021-10-28 23:21:19,161 INFO: 
+2021-10-28 23:21:19,162 INFO: ========= DATASET 'wzlnununu' INITIALISED =========
+2021-10-28 23:21:19,162 INFO: 
+2021-10-28 23:21:19,162 INFO: ======== INITIALISING DATASET 'wzlnuqq' =========
+2021-10-28 23:21:19,163 DEBUG: DATASET INPUT OPTIONS: 
+2021-10-28 23:21:19,164 DEBUG: ----------------------------
+2021-10-28 23:21:19,164 DEBUG: Input file(s):  /data/atlas/HighMassDrellYan/test_mc16a/wzlnuqq/*.root
+2021-10-28 23:21:19,164 DEBUG: TTree: nominal_Loose
+2021-10-28 23:21:19,164 DEBUG: Cutfile: options/jesal_cutflow/cutfile_jesal.txt
+2021-10-28 23:21:19,164 DEBUG: Slices: False
+2021-10-28 23:21:19,164 DEBUG: grouped cutflow: True
+2021-10-28 23:21:19,164 DEBUG: Forced dataset rebuild: False
+2021-10-28 23:21:19,164 DEBUG: ----------------------------
+2021-10-28 23:21:19,164 DEBUG: 
+2021-10-28 23:21:19,164 DEBUG: CUTFILE CONTENTS
+2021-10-28 23:21:19,164 DEBUG: ---------------------------
+2021-10-28 23:21:19,164 DEBUG: [CUTS]
+2021-10-28 23:21:19,164 DEBUG: # Name	Variable	</>	Cut (in GeV if applicable)	Group Symmetric
+2021-10-28 23:21:19,164 DEBUG: # !!REMEMBER DEFAULT ANALYSISTOP OUTPUT IS IN MeV NOT GeV!!
+2021-10-28 23:21:19,165 DEBUG: Tight muon	mu_isTight	=	1	tight muon cut	false
+2021-10-28 23:21:19,165 DEBUG: eta	mu_eta	<	2.4	eta	true
+2021-10-28 23:21:19,165 DEBUG: E_{T}^{MISS}	met_met	>	65	met	false
+2021-10-28 23:21:19,165 DEBUG: p_T	mu_pt	>	65	mu pt	false
+2021-10-28 23:21:19,165 DEBUG: M_T	mu_mt	>	55	muon mt	false
+2021-10-28 23:21:19,165 DEBUG: M_W	MC_WZ_m	>	120	W m	false	truth
+2021-10-28 23:21:19,165 DEBUG: 
+2021-10-28 23:21:19,165 DEBUG: [OUTPUTS]
+2021-10-28 23:21:19,165 DEBUG: # variables to process
+2021-10-28 23:21:19,165 DEBUG: mu_mt
+2021-10-28 23:21:19,165 DEBUG: mu_pt
+2021-10-28 23:21:19,165 DEBUG: mu_eta
+2021-10-28 23:21:19,165 DEBUG: 
+2021-10-28 23:21:19,165 DEBUG: [OPTIONS]
+2021-10-28 23:21:19,165 DEBUG: # case-insensitive
+2021-10-28 23:21:19,165 DEBUG: sequential	false
+2021-10-28 23:21:19,165 DEBUG: grouped cutflow	false
+2021-10-28 23:21:19,165 DEBUG: ---------------------------
+2021-10-28 23:21:19,165 INFO: Parsting cutfile for wzlnuqq...
+2021-10-28 23:21:19,167 INFO: Building wzlnuqq dataframe from /data/atlas/HighMassDrellYan/test_mc16a/wzlnuqq/*.root...
+2021-10-28 23:21:19,167 DEBUG: Variables to extract from nominal_Loose tree: 
+2021-10-28 23:21:19,167 DEBUG:   - eventNumber
+2021-10-28 23:21:19,167 DEBUG:   - mu_isTight
+2021-10-28 23:21:19,167 DEBUG:   - met_met
+2021-10-28 23:21:19,167 DEBUG:   - met_phi
+2021-10-28 23:21:19,167 DEBUG:   - mu_eta
+2021-10-28 23:21:19,167 DEBUG:   - mu_pt
+2021-10-28 23:21:19,167 DEBUG:   - mu_phi
+2021-10-28 23:21:19,167 DEBUG:   - weight_mc
+2021-10-28 23:21:19,167 DEBUG: Variables to extract from truth tree: 
+2021-10-28 23:21:19,167 DEBUG:   - MC_WZ_m
+2021-10-28 23:21:19,168 DEBUG: Variables to calculate: 
+2021-10-28 23:21:19,169 DEBUG:   - mu_mt
+2021-10-28 23:21:19,169 DEBUG: Checking TTree and TBranch values in file(s) '/data/atlas/HighMassDrellYan/test_mc16a/wzlnuqq/*.root'...
+2021-10-28 23:21:20,385 DEBUG: All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wzlnuqq/user.jmandali.25460363._000002.prelim_mc16a_bckg.root...
+2021-10-28 23:21:21,674 DEBUG: All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wzlnuqq/user.jmandali.25460363._000003.prelim_mc16a_bckg.root...
+2021-10-28 23:21:22,733 DEBUG: All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wzlnuqq/user.jmandali.25460363._000004.prelim_mc16a_bckg.root...
+2021-10-28 23:21:23,776 DEBUG: All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wzlnuqq/user.jmandali.25460363._000005.prelim_mc16a_bckg.root...
+2021-10-28 23:21:25,699 DEBUG: All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wzlnuqq/user.jmandali.25460363._000006.prelim_mc16a_bckg.root...
+2021-10-28 23:21:26,955 DEBUG: All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wzlnuqq/user.jmandali.25460363._000007.prelim_mc16a_bckg.root...
+2021-10-28 23:21:28,064 DEBUG: All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wzlnuqq/user.jmandali.25460363._000008.prelim_mc16a_bckg.root...
+2021-10-28 23:21:30,059 DEBUG: All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wzlnuqq/user.jmandali.25460363._000009.prelim_mc16a_bckg.root...
+2021-10-28 23:21:32,321 DEBUG: All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wzlnuqq/user.jmandali.25460363._000010.prelim_mc16a_bckg.root...
+2021-10-28 23:21:34,356 DEBUG: All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wzlnuqq/user.jmandali.25460363._000011.prelim_mc16a_bckg.root...
+2021-10-28 23:21:36,678 DEBUG: All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wzlnuqq/user.jmandali.25460363._000012.prelim_mc16a_bckg.root...
+2021-10-28 23:21:36,678 DEBUG: All required TTrees variables found.
+2021-10-28 23:21:36,678 WARNING: Variable(s) ['mu_isTight'] not contained in labels dictionary. Some unexpected behaviour may occur.
+2021-10-28 23:21:36,678 INFO: Extracting {'eventNumber', 'mu_isTight', 'met_met', 'met_phi', 'mu_eta', 'mu_pt', 'mu_phi', 'weight_mc'} from /data/atlas/HighMassDrellYan/test_mc16a/wzlnuqq/*.root...
+2021-10-28 23:21:38,103 DEBUG: Extracted 7477 events.
+2021-10-28 23:21:38,103 DEBUG: Extracting ['MC_WZ_m'] from TTree truth...
+2021-10-28 23:21:47,249 DEBUG: Extracted 3617404 events.
+2021-10-28 23:21:47,250 DEBUG: Merging with rest of dataframe...
+2021-10-28 23:21:48,103 INFO: time to build dataframe: 00:00:11
+2021-10-28 23:21:48,103 INFO: Computing 'mu_mt' column from ['mu_pt', 'met_met', 'mu_phi', 'met_phi']...
+2021-10-28 23:21:48,244 DEBUG: Rescaled columns ['mu_pt', 'MC_WZ_m', 'mu_mt'] to GeV.
+2021-10-28 23:21:48,253 INFO: Dataframe built and saved in outputs/jesal_cutflow/data/wzlnuqq_df.pkl
+2021-10-28 23:21:48,255 INFO: Number of events in dataset wzlnuqq: 7477
+2021-10-28 23:21:48,256 INFO: Creating weights for wzlnuqq...
+2021-10-28 23:21:48,258 DEBUG: INCLUSIVE SAMPLE METADATA:
+2021-10-28 23:21:48,258 DEBUG: --------------------------
+2021-10-28 23:21:48,258 DEBUG: n_events   sum_w         x-s fb        lumi fb-1
+2021-10-28 23:21:48,258 DEBUG: ==========================================================
+2021-10-28 23:21:48,259 DEBUG: 7477       1.339974e+03  1.792128e-01  4.041117e+06
+2021-10-28 23:21:48,259 INFO: Creating cuts for wzlnuqq...
+2021-10-28 23:21:48,262 INFO: 
+2021-10-28 23:21:48,262 INFO: ========== CUTS USED ============
+2021-10-28 23:21:48,263 INFO: Tight muon  : mu_isTight = 1.0
+2021-10-28 23:21:48,264 INFO: eta         :    |mu_eta| < 2.4
+2021-10-28 23:21:48,264 INFO: E_{T}^{MISS}:    met_met > 65.0
+2021-10-28 23:21:48,264 INFO: p_T         :      mu_pt > 65.0
+2021-10-28 23:21:48,264 INFO: M_T         :      mu_mt > 55.0
+2021-10-28 23:21:48,264 INFO: M_W         :    MC_WZ_m > 120.0
+2021-10-28 23:21:48,264 INFO: 
+2021-10-28 23:21:48,270 INFO: =========== CUTFLOW =============
+2021-10-28 23:21:48,270 INFO: Option: Non-sequential
+2021-10-28 23:21:48,270 INFO: ---------------------------------
+2021-10-28 23:21:48,270 INFO: Cut            Events Ratio
+2021-10-28 23:21:48,270 INFO: Inclusive      7477   -
+2021-10-28 23:21:48,270 INFO: tight muon cut 7477 1.000    
+2021-10-28 23:21:48,270 INFO: eta            7477 1.000    
+2021-10-28 23:21:48,271 INFO: met            7477 1.000    
+2021-10-28 23:21:48,271 INFO: mu pt          7477 1.000    
+2021-10-28 23:21:48,272 INFO: muon mt        7477 1.000    
+2021-10-28 23:21:48,272 INFO: W m            1361 0.182    
+2021-10-28 23:21:48,272 INFO: 
+2021-10-28 23:21:48,272 INFO: ========= DATASET 'wzlnuqq' INITIALISED =========
+2021-10-28 23:21:48,272 INFO: 
+2021-10-28 23:21:48,272 INFO: ======== INITIALISING DATASET 'wzqqll' =========
+2021-10-28 23:21:48,273 DEBUG: DATASET INPUT OPTIONS: 
+2021-10-28 23:21:48,273 DEBUG: ----------------------------
+2021-10-28 23:21:48,273 DEBUG: Input file(s):  /data/atlas/HighMassDrellYan/test_mc16a/wzqqll/*.root
+2021-10-28 23:21:48,273 DEBUG: TTree: nominal_Loose
+2021-10-28 23:21:48,273 DEBUG: Cutfile: options/jesal_cutflow/cutfile_jesal.txt
+2021-10-28 23:21:48,273 DEBUG: Slices: False
+2021-10-28 23:21:48,273 DEBUG: grouped cutflow: True
+2021-10-28 23:21:48,273 DEBUG: Forced dataset rebuild: False
+2021-10-28 23:21:48,273 DEBUG: ----------------------------
+2021-10-28 23:21:48,273 DEBUG: 
+2021-10-28 23:21:48,273 DEBUG: CUTFILE CONTENTS
+2021-10-28 23:21:48,273 DEBUG: ---------------------------
+2021-10-28 23:21:48,274 DEBUG: [CUTS]
+2021-10-28 23:21:48,274 DEBUG: # Name	Variable	</>	Cut (in GeV if applicable)	Group Symmetric
+2021-10-28 23:21:48,274 DEBUG: # !!REMEMBER DEFAULT ANALYSISTOP OUTPUT IS IN MeV NOT GeV!!
+2021-10-28 23:21:48,274 DEBUG: Tight muon	mu_isTight	=	1	tight muon cut	false
+2021-10-28 23:21:48,274 DEBUG: eta	mu_eta	<	2.4	eta	true
+2021-10-28 23:21:48,274 DEBUG: E_{T}^{MISS}	met_met	>	65	met	false
+2021-10-28 23:21:48,274 DEBUG: p_T	mu_pt	>	65	mu pt	false
+2021-10-28 23:21:48,274 DEBUG: M_T	mu_mt	>	55	muon mt	false
+2021-10-28 23:21:48,274 DEBUG: M_W	MC_WZ_m	>	120	W m	false	truth
+2021-10-28 23:21:48,274 DEBUG: 
+2021-10-28 23:21:48,274 DEBUG: [OUTPUTS]
+2021-10-28 23:21:48,274 DEBUG: # variables to process
+2021-10-28 23:21:48,274 DEBUG: mu_mt
+2021-10-28 23:21:48,274 DEBUG: mu_pt
+2021-10-28 23:21:48,274 DEBUG: mu_eta
+2021-10-28 23:21:48,274 DEBUG: 
+2021-10-28 23:21:48,274 DEBUG: [OPTIONS]
+2021-10-28 23:21:48,274 DEBUG: # case-insensitive
+2021-10-28 23:21:48,274 DEBUG: sequential	false
+2021-10-28 23:21:48,274 DEBUG: grouped cutflow	false
+2021-10-28 23:21:48,274 DEBUG: ---------------------------
+2021-10-28 23:21:48,275 INFO: Parsting cutfile for wzqqll...
+2021-10-28 23:21:48,276 INFO: Building wzqqll dataframe from /data/atlas/HighMassDrellYan/test_mc16a/wzqqll/*.root...
+2021-10-28 23:21:48,277 DEBUG: Variables to extract from nominal_Loose tree: 
+2021-10-28 23:21:48,277 DEBUG:   - eventNumber
+2021-10-28 23:21:48,277 DEBUG:   - mu_isTight
+2021-10-28 23:21:48,277 DEBUG:   - met_met
+2021-10-28 23:21:48,277 DEBUG:   - met_phi
+2021-10-28 23:21:48,277 DEBUG:   - mu_eta
+2021-10-28 23:21:48,277 DEBUG:   - mu_pt
+2021-10-28 23:21:48,277 DEBUG:   - mu_phi
+2021-10-28 23:21:48,277 DEBUG:   - weight_mc
+2021-10-28 23:21:48,277 DEBUG: Variables to extract from truth tree: 
+2021-10-28 23:21:48,277 DEBUG:   - MC_WZ_m
+2021-10-28 23:21:48,277 DEBUG: Variables to calculate: 
+2021-10-28 23:21:48,277 DEBUG:   - mu_mt
+2021-10-28 23:21:48,277 DEBUG: Checking TTree and TBranch values in file(s) '/data/atlas/HighMassDrellYan/test_mc16a/wzqqll/*.root'...
+2021-10-28 23:21:51,203 DEBUG: All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wzqqll/user.jmandali.25866615._000001.prelim_mc16a_bckg.root...
+2021-10-28 23:21:53,402 DEBUG: All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wzqqll/user.jmandali.25866615._000002.prelim_mc16a_bckg.root...
+2021-10-28 23:21:55,607 DEBUG: All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wzqqll/user.jmandali.25866615._000003.prelim_mc16a_bckg.root...
+2021-10-28 23:21:57,588 DEBUG: All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wzqqll/user.jmandali.25866615._000004.prelim_mc16a_bckg.root...
+2021-10-28 23:21:59,772 DEBUG: All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wzqqll/user.jmandali.25866615._000005.prelim_mc16a_bckg.root...
+2021-10-28 23:22:01,986 DEBUG: All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wzqqll/user.jmandali.25866615._000007.prelim_mc16a_bckg.root...
+2021-10-28 23:22:04,929 DEBUG: All TTrees and variables found in /data/atlas/HighMassDrellYan/test_mc16a/wzqqll/user.jmandali.25866615._000008.prelim_mc16a_bckg.root...
+2021-10-28 23:22:04,929 DEBUG: All required TTrees variables found.
+2021-10-28 23:22:04,929 WARNING: Variable(s) ['mu_isTight'] not contained in labels dictionary. Some unexpected behaviour may occur.
+2021-10-28 23:22:04,929 INFO: Extracting {'eventNumber', 'mu_isTight', 'met_met', 'met_phi', 'mu_eta', 'mu_pt', 'mu_phi', 'weight_mc'} from /data/atlas/HighMassDrellYan/test_mc16a/wzqqll/*.root...
+2021-10-28 23:22:05,805 DEBUG: Extracted 3653 events.
+2021-10-28 23:22:05,806 DEBUG: Extracting ['MC_WZ_m'] from TTree truth...
+2021-10-28 23:22:17,122 DEBUG: Extracted 3546893 events.
+2021-10-28 23:22:17,122 DEBUG: Merging with rest of dataframe...
+2021-10-28 23:22:18,156 INFO: time to build dataframe: 00:00:13
+2021-10-28 23:22:18,156 INFO: Computing 'mu_mt' column from ['mu_pt', 'met_met', 'mu_phi', 'met_phi']...
+2021-10-28 23:22:18,224 DEBUG: Rescaled columns ['mu_pt', 'MC_WZ_m', 'mu_mt'] to GeV.
+2021-10-28 23:22:18,235 INFO: Dataframe built and saved in outputs/jesal_cutflow/data/wzqqll_df.pkl
+2021-10-28 23:22:18,239 INFO: Number of events in dataset wzqqll: 3653
+2021-10-28 23:22:18,239 INFO: Creating weights for wzqqll...
+2021-10-28 23:22:18,241 DEBUG: INCLUSIVE SAMPLE METADATA:
+2021-10-28 23:22:18,241 DEBUG: --------------------------
+2021-10-28 23:22:18,241 DEBUG: n_events   sum_w         x-s fb        lumi fb-1
+2021-10-28 23:22:18,241 DEBUG: ==========================================================
+2021-10-28 23:22:18,241 DEBUG: 3653       2.063256e+02  5.648114e-02  6.585915e+06
+2021-10-28 23:22:18,241 INFO: Creating cuts for wzqqll...
+2021-10-28 23:22:18,244 INFO: 
+2021-10-28 23:22:18,244 INFO: ========== CUTS USED ============
+2021-10-28 23:22:18,244 INFO: Tight muon  : mu_isTight = 1.0
+2021-10-28 23:22:18,244 INFO: eta         :    |mu_eta| < 2.4
+2021-10-28 23:22:18,244 INFO: E_{T}^{MISS}:    met_met > 65.0
+2021-10-28 23:22:18,244 INFO: p_T         :      mu_pt > 65.0
+2021-10-28 23:22:18,244 INFO: M_T         :      mu_mt > 55.0
+2021-10-28 23:22:18,244 INFO: M_W         :    MC_WZ_m > 120.0
+2021-10-28 23:22:18,244 INFO: 
+2021-10-28 23:22:18,251 INFO: =========== CUTFLOW =============
+2021-10-28 23:22:18,251 INFO: Option: Non-sequential
+2021-10-28 23:22:18,251 INFO: ---------------------------------
+2021-10-28 23:22:18,251 INFO: Cut            Events Ratio
+2021-10-28 23:22:18,251 INFO: Inclusive      3653   -
+2021-10-28 23:22:18,251 INFO: tight muon cut 3653 1.000    
+2021-10-28 23:22:18,251 INFO: eta            3653 1.000    
+2021-10-28 23:22:18,251 INFO: met            3653 1.000    
+2021-10-28 23:22:18,251 INFO: mu pt          3653 1.000    
+2021-10-28 23:22:18,251 INFO: muon mt        3653 1.000    
+2021-10-28 23:22:18,251 INFO: W m            15   0.004    
+2021-10-28 23:22:18,251 INFO: 
+2021-10-28 23:22:18,251 INFO: ========= DATASET 'wzqqll' INITIALISED =========
+2021-10-28 23:22:18,251 INFO: 
+2021-10-28 23:22:18,251 INFO: ======== INITIALISING DATASET 'zmunu_inclusive' =========

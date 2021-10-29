@@ -43,7 +43,9 @@ class Dataset:
     def __post_init__(self):
         """Dataset generation pipeline"""
         logger.info("")
+        logger.info("=" * (42 + len(self.name)))
         logger.info(f"======== INITIALISING DATASET '{self.name}' =========")
+        logger.info("=" * (42 + len(self.name)))
         if not file_utils.file_exists(self.datapath):
             raise FileExistsError(f"File {self.datapath} not found.")
 
@@ -83,7 +85,10 @@ class Dataset:
         # GENERATE CUTFLOW
         # ========================
         self.__gen_cutflow()
+        logger.info("=" * (42 + len(self.name)))
         logger.info(f"========= DATASET '{self.name}' INITIALISED =========")
+        logger.info("=" * (42 + len(self.name)))
+        logger.info("")
 
     # Builtins
     # ===================

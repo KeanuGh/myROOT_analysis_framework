@@ -10,7 +10,9 @@ import numpy as np
 # ================================
 def calc_mt(l1_pt: float, l2_pt: float, l1_phi: float, l2_phi: float) -> float:
     """Calculate transverse mass of vector boson in Drell-Yan process"""
-    return np.sqrt(2. * l1_pt * l2_pt * (1 - np.cos(l1_phi - l2_phi)))
+    dphi = abs(l2_phi - l1_phi)
+    if (dphi > np.pi): dphi = 2*np.pi - dphi
+    return np.sqrt(2. * l1_pt * l2_pt * (1 - np.cos(dphi)))
 
 
 def calc_vy(x1: float, x2: float) -> float:
