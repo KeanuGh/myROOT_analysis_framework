@@ -117,6 +117,16 @@ class Analysis:
     # =========== PLOTS =============
     # ===============================
     @decorators.check_single_datafile
+    def plot_1d(self, ds_name: Optional[str], **kwargs) -> None:
+        """
+        Plots variable in specific Dataset. Simple plotter.
+
+        :param ds_name: name of Dataset class to plot
+        :param kwargs: keyword arguments to pass to method in dataset
+        """
+        self.dataset[ds_name].plot_1d(**kwargs)
+
+    @decorators.check_single_datafile
     def plot_with_cuts(self, ds_name: Optional[str], **kwargs) -> None:
         """
         Plots each variable in specific Dataset to cut from cutfile with each cutgroup applied

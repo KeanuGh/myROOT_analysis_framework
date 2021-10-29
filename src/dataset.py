@@ -1,7 +1,7 @@
 import logging
 from dataclasses import dataclass, field
 from itertools import combinations
-from typing import Optional, Union
+from typing import Optional, Union, List
 from warnings import warn
 
 import pandas as pd
@@ -229,7 +229,25 @@ class Dataset:
     # ===============================
     # =========== PLOTS =============
     # ===============================
-    # TODO: single plot function
+    def plot_1d(self,
+                x: Union[str, List[str]],
+                **kwargs
+                ) -> None:
+        """
+        Plots single variable x or list of variables x_i
+
+        :param bins: tuple of bins in x (n_bins, start, stop) or list of bin edges
+        :param scaling: either 'xs':     cross section scaling,
+                               'widths': divided by bin widths,
+                               None:     No scaling
+                        y-axis labels set accordingly
+        :param kwargs: keyword arguments to pass to plotting_utils.plot_1d_hist()
+        """
+        logger.info(f"Generating histogram for {x} in {self.name}...")
+        plt_utils.plot_1d_hist(
+            x=self.df[x],
+            **kwargs
+        )
 
     def plot_with_cuts(self,
                        scaling: Optional[str] = None,
@@ -247,7 +265,7 @@ class Dataset:
         :param kwargs: keyword arguments to pass to plotting_utils.plot_1d_overlay_and_acceptance_cutgroups()
         """
         for var_to_plot in self._vars_to_cut:
-            logger.info(f"Generating histogram for {var_to_plot}...")
+            logger.info(f"Generating histogram with cuts for {var_to_plot} in {self.name}...")
             plt_utils.plot_1d_overlay_and_acceptance_cutgroups(
                 df=self.df,
                 lepton=self.lepton,
@@ -277,7 +295,7 @@ class Dataset:
                 xbins = bins
             if not ybins:
                 ybins = bins
-            logger.info(f"Generating 2d histogram for {x_var}-{y_var}...")
+            logger.info(f"Generating 2d histogram for {x_var}-{y_var} in {self.name}...")
             plt_utils.plot_2d_cutgroups(self.df,
                                         lepton=self.lepton,
                                         x_var=x_var, y_var=y_var,

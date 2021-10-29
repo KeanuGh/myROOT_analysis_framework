@@ -311,7 +311,7 @@ def histplot_2d(var_x: pd.Series, var_y: pd.Series,
 # ===== PLOTTING FUNCTIONS ======
 # ===============================
 def plot_1d_hist(
-        x: Union[pd.Series, List[pd.Series]],
+        x: Union[pd.Series, pd.DataFrame],
         bins: Union[tuple, list],
         title: str = None,
         filename: str = None,
@@ -328,13 +328,25 @@ def plot_1d_hist(
         # to_pkl: bool = False,
 ) -> plt.figure:
     """Simple plotting function"""
+
+    # check if variable needs to be specially binned
+    is_logbins, alt_bins = getbins(x)
+    if alt_bins:
+        bins = alt_bins
+
+
     fig, ax = plt.subplots()
 
-    if isinstance(x, list):
+    if isinstance(x, pd.DataFrame):
         if legend and not legend_label:
             raise ValueError("Legend labels required for making legend with multiple variables.")
 
-        for i, s in enumerate(x):
+        for i, s in enumerate(x.columns):
+            s = x[s]
+            is_logbins, alt_bins = getbins(s)
+            if alt_bins:
+                bins = alt_bins
+
             label = legend_label[i] if legend else None
 
             histplot_1d(var_x=s, weights=weights,
@@ -345,6 +357,10 @@ def plot_1d_hist(
                         is_logbins=is_logbins,
                         linewidth=2)
     elif isinstance(x, pd.Series):
+        is_logbins, alt_bins = getbins(x)
+        if alt_bins:
+            bins = alt_bins
+
         histplot_1d(var_x=x, weights=weights,
                     bins=bins, fig_axis=ax,
                     yerr=yerr,
@@ -353,7 +369,7 @@ def plot_1d_hist(
                     is_logbins=is_logbins,
                     color='k', linewidth=2)
     else:
-        raise ValueError("Plotting value should be a Series or a list of Series")
+        raise ValueError("Plotting value should be a Series or DataFrame")
 
     if isinstance(legend_label, list):
         var_name = x[0].name
