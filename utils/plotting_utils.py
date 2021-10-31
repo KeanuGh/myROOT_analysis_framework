@@ -52,7 +52,7 @@ def scale_by_bin_widths(hist: bh.Histogram) -> bh.Histogram:
 
 
 def scale_hist(scaling: str, hist: bh.Histogram,
-               lumi: Optional = None, df: Optional[pd.DataFrame] = None) -> bh.Histogram:
+               lumi: Optional[float] = None, df: Optional[pd.DataFrame] = None) -> bh.Histogram:
     """Scales histogram by option either 'xs': cross-section, 'widths': by bin-width, or None"""
     if scaling == 'xs':
         if not lumi and not df:
@@ -311,19 +311,21 @@ def histplot_2d(var_x: pd.Series, var_y: pd.Series,
 # ===== PLOTTING FUNCTIONS ======
 # ===============================
 def plot_1d_hist(
-        x: Union[pd.Series, pd.DataFrame],
+        df: pd.DataFrame,
+        x: Union[str, List[str]],
         bins: Union[tuple, list],
         title: str = None,
         filename: str = None,
         x_label: str = None,
         y_label: str = None,
         yerr: Union[str, Iterable] = None,
-        weights: pd.Series = None,
+        scaling: str = None,
         is_logbins: bool = False,
         log_x: bool = False,
         log_y: bool = False,
-        to_file: bool = False,
+        to_file: bool = True,
         legend_label: Union[str, List[str]] = None,
+        weight_col: str = 'weight_mc',
         legend: bool = False,
         # to_pkl: bool = False,
 ) -> plt.figure:
@@ -337,46 +339,49 @@ def plot_1d_hist(
 
     fig, ax = plt.subplots()
 
-    if isinstance(x, pd.DataFrame):
-        if legend and not legend_label:
-            raise ValueError("Legend labels required for making legend with multiple variables.")
+    if legend and not legend_label:
+        raise ValueError("Legend labels required for making legend with multiple variables.")
 
-        for i, s in enumerate(x.columns):
-            s = x[s]
+    if isinstance(x, list):
+        for i, s in enumerate(x):
             is_logbins, alt_bins = getbins(s)
             if alt_bins:
                 bins = alt_bins
-
             label = legend_label[i] if legend else None
+            lumi = get_luminosity(df) if scaling else None
 
-            histplot_1d(var_x=s, weights=weights,
+            histplot_1d(var_x=df[s], weights=df[weight_col],
                         bins=bins, fig_axis=ax,
                         yerr=yerr,
-                        scaling=None,
+                        scaling=scaling,
                         label=label,
+                        lumi=lumi,
                         is_logbins=is_logbins,
                         linewidth=2)
-    elif isinstance(x, pd.Series):
+    elif isinstance(x, str):
         is_logbins, alt_bins = getbins(x)
         if alt_bins:
             bins = alt_bins
+        lumi = get_luminosity(df) if scaling else None
 
-        histplot_1d(var_x=x, weights=weights,
+        histplot_1d(var_x=df[x], weights=df[weight_col],
                     bins=bins, fig_axis=ax,
                     yerr=yerr,
-                    scaling=None,
+                    scaling=scaling,
+                    lumi=lumi,
                     label=legend_label,
                     is_logbins=is_logbins,
                     color='k', linewidth=2)
     else:
-        raise ValueError("Plotting value should be a Series or DataFrame")
+        raise ValueError("Plotting value should be a string or list of strings")
 
-    if isinstance(legend_label, list):
-        var_name = x[0].name
+
+    if isinstance(legend_label, list) and isinstance(x, list):
+        var_name = x[0]
     else:
-        var_name = x.name
+        var_name = x
     ax = set_fig_1d_axis_options(axis=ax, var_name=var_name, bins=bins,
-                                 scaling=None, is_logbins=is_logbins,
+                                 scaling=scaling, is_logbins=is_logbins,
                                  logy=log_y, logx=log_x)
     if y_label: ax.set_ylabel(y_label)
     if x_label: ax.set_xlabel(x_label)

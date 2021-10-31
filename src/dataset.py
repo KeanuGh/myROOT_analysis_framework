@@ -85,6 +85,7 @@ class Dataset:
         # GENERATE CUTFLOW
         # ========================
         self.__gen_cutflow()
+        
         logger.info("=" * (42 + len(self.name)))
         logger.info(f"========= DATASET '{self.name}' INITIALISED =========")
         logger.info("=" * (42 + len(self.name)))
@@ -237,15 +238,13 @@ class Dataset:
         Plots single variable x or list of variables x_i
 
         :param bins: tuple of bins in x (n_bins, start, stop) or list of bin edges
-        :param scaling: either 'xs':     cross section scaling,
-                               'widths': divided by bin widths,
-                               None:     No scaling
-                        y-axis labels set accordingly
         :param kwargs: keyword arguments to pass to plotting_utils.plot_1d_hist()
         """
         logger.info(f"Generating histogram for {x} in {self.name}...")
+
         plt_utils.plot_1d_hist(
-            x=self.df[x],
+            df=self.df,
+            x=x,
             **kwargs
         )
 
