@@ -16,7 +16,8 @@ class Analysis:
                  global_lumi: Optional[float] = None,
                  phibins: Optional[Union[tuple, list]] = None,
                  etabins: Optional[Union[tuple, list]] = None,
-                 log_level=logging.INFO
+                 log_level: int = logging.INFO,
+                 log_out: str = 'both',
                  ):
         """
         Analysis class acts as a container for the src.dataset.Dataset class. Contains methods to apply either to
@@ -32,6 +33,7 @@ class Analysis:
         :param phibins: bins for plotting phi
         :param etabins: bins for plotting eta
         :param log_level: logging level. See https://docs.python.org/3/library/logging.html#logging-levels
+        :param log_out: where to set log output: 'FILE', 'CONSOLE' or 'BOTH'. (case insensitive)
         """
 
         # SET OUTPUT DIRECTORIES
@@ -45,10 +47,11 @@ class Analysis:
         # ============================
         logger = logging.getLogger('analysis')
         logger.setLevel(log_level)
-        filehandler = logging.FileHandler(f"{config.paths['log_dir']}/{analysis_label}_{time.strftime('%Y-%m-%d_%H-%M-%S')}.log")
-        filehandler.setFormatter(logging.Formatter('%(asctime)s %(levelname)s: %(message)s'))
-        logger.addHandler(filehandler)
-        if logger.level == logging.DEBUG:  # print to stdout as well as log file
+        if log_out.lower() in ('file', 'both'):
+            filehandler = logging.FileHandler(f"{config.paths['log_dir']}/{analysis_label}_{time.strftime('%Y-%m-%d_%H-%M-%S')}.log")
+            filehandler.setFormatter(logging.Formatter('%(asctime)s %(levelname)s: %(message)s'))
+            logger.addHandler(filehandler)
+        if log_out.lower() in ('console', 'both'):
             logger.addHandler(logging.StreamHandler(sys.stdout))
         
         logger.info(f"INITIALISING ANALYSIS '{analysis_label}'...")
@@ -105,13 +108,6 @@ class Analysis:
     # can iterate over datasets
     def __iter__(self):
         yield from self.datasets.values()
-    
-    # ===============================
-    # ========= FUNCTIONS ===========
-    # ===============================
-    def convert_pkl_to_root(**kwargs):
-        file_utils.convert_pkl_to_root(**kwargs)
-
 
     # ===============================
     # =========== PLOTS =============

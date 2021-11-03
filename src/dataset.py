@@ -4,8 +4,10 @@ from itertools import combinations
 from typing import Optional, Union, List
 from warnings import warn
 
-import pandas as pd
+import matplotlib.pyplot as plt
+import mplhep as hep
 import numpy as np
+import pandas as pd
 
 import src.config as config
 import utils.dataframe_utils as df_utils
@@ -46,8 +48,8 @@ class Dataset:
         logger.info("=" * (42 + len(self.name)))
         logger.info(f"======== INITIALISING DATASET '{self.name}' =========")
         logger.info("=" * (42 + len(self.name)))
-        if not file_utils.file_exists(self.datapath):
-            raise FileExistsError(f"File {self.datapath} not found.")
+        # if not file_utils.file_exists(self.datapath):
+        #     raise FileExistsError(f"File {self.datapath} not found.")
 
         if not self.pkl_path:
             # initialise pickle filepath with given name
@@ -85,7 +87,7 @@ class Dataset:
         # GENERATE CUTFLOW
         # ========================
         self.__gen_cutflow()
-        
+
         logger.info("=" * (42 + len(self.name)))
         logger.info(f"========= DATASET '{self.name}' INITIALISED =========")
         logger.info("=" * (42 + len(self.name)))
@@ -180,19 +182,19 @@ class Dataset:
                 for dsid in np.sort(self.df['DSID'].unique()):
                     df_id = self.df[self.df['DSID'] == dsid]
                     logger.debug(f"{int(dsid):<10} "
-                                f"{len(df_id):<10} "
-                                f"{df_id['weight_mc'].sum():<10.6e}  "
-                                f"{df_utils.get_cross_section(df_id):<10.6e}  "
-                                f"{df_utils.get_luminosity(df_id):<10.6e}")
+                                 f"{len(df_id):<10} "
+                                 f"{df_id['weight_mc'].sum():<10.6e}  "
+                                 f"{df_utils.get_cross_section(df_id):<10.6e}  "
+                                 f"{df_utils.get_luminosity(df_id):<10.6e}")
             else:
                 logger.debug("INCLUSIVE SAMPLE METADATA:")
                 logger.debug("--------------------------")
                 logger.debug("n_events   sum_w         x-s fb        lumi fb-1")
                 logger.debug("==========================================================")
                 logger.debug(f"{len(self.df):<10} "
-                                f"{self.df['weight_mc'].sum():<10.6e}  "
-                                f"{df_utils.get_cross_section(self.df):<10.6e}  "
-                                f"{df_utils.get_luminosity(self.df):.<10.6e}")
+                             f"{self.df['weight_mc'].sum():<10.6e}  "
+                             f"{df_utils.get_cross_section(self.df):<10.6e}  "
+                             f"{df_utils.get_luminosity(self.df):.<10.6e}")
 
         # apply cuts to generate cut columns
         logger.info(f"Creating cuts for {self.name}...")
@@ -232,21 +234,40 @@ class Dataset:
     # ===============================
     def plot_1d(self,
                 x: Union[str, List[str]],
+                bins: Union[tuple, list],
+                title: str = '',
+                to_file: bool = True,
+                filename: str = '',
+                scaling: str = None,
                 **kwargs
-                ) -> None:
+                ) -> plt.figure:
         """
-        Plots single variable x or list of variables x_i
+        Generate 1D plots of given variables in dataframe. Returns figure object of list of figure objects
 
-        :param bins: tuple of bins in x (n_bins, start, stop) or list of bin edges
-        :param kwargs: keyword arguments to pass to plotting_utils.plot_1d_hist()
+        :param x: variable name in dataframe to plot
+        :param bins: binnings for x
+        :param title: plot title
+        :param to_file: bool: to save to file or not
+        :param filename: filename to give to output figure
+        :param scaling: scaling to apply to plot. Either 'xs' for cross-section or 'widths' for divisiion by bin widths
+        :param kwargs: keyword arguments to pass to plotting function
+        :return: Figure
         """
-        logger.info(f"Generating histogram for {x} in {self.name}...")
+        logger.debug(f"Generating histogram {title} for {x} in {self.name}...")
 
-        plt_utils.plot_1d_hist(
-            df=self.df,
-            x=x,
-            **kwargs
-        )
+        fig, ax = plt.subplots()
+        fig = plt_utils.plot_1d_hist(df=self.df, x=x, bins=bins, fig=fig, ax=ax, scaling=scaling, **kwargs)
+        fig.tight_layout()
+
+        if to_file:
+            if not filename:
+                filename = self.name + '_' + x
+            out_png_file = config.paths['plot_dir'] + filename + '.png'
+            hep.atlas.label(llabel="Internal", loc=0, ax=ax, rlabel=title)
+            fig.savefig(out_png_file, bbox_inches='tight')
+            logger.info(f"Figure saved to {out_png_file}")
+
+        return fig
 
     def plot_with_cuts(self,
                        scaling: Optional[str] = None,

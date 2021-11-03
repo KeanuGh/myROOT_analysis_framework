@@ -312,91 +312,48 @@ def histplot_2d(var_x: pd.Series, var_y: pd.Series,
 # ===============================
 def plot_1d_hist(
         df: pd.DataFrame,
-        x: Union[str, List[str]],
+        x: str,
         bins: Union[tuple, list],
-        title: str = None,
-        filename: str = None,
+        fig: plt.Figure,
+        ax: plt.Axes,
         x_label: str = None,
         y_label: str = None,
+        title: str = None,
         yerr: Union[str, Iterable] = None,
         scaling: str = None,
-        is_logbins: bool = False,
+        is_logbins: bool = None,
         log_x: bool = False,
         log_y: bool = False,
-        to_file: bool = True,
-        legend_label: Union[str, List[str]] = None,
+        legend_label: str = None,
         weight_col: str = 'weight_mc',
-        legend: bool = False,
-        # to_pkl: bool = False,
 ) -> plt.figure:
     """Simple plotting function"""
 
     # check if variable needs to be specially binned
-    is_logbins, alt_bins = getbins(x)
+    if is_logbins is not None:
+        _, alt_bins = getbins(x)
+    else:
+        is_logbins, alt_bins = getbins(x)
     if alt_bins:
         bins = alt_bins
 
+    lumi = get_luminosity(df) if scaling else None
 
-    fig, ax = plt.subplots()
+    histplot_1d(var_x=df[x], weights=df[weight_col],
+                bins=bins, fig_axis=ax,
+                yerr=yerr,
+                scaling=scaling,
+                lumi=lumi,
+                label=legend_label,
+                is_logbins=is_logbins,
+                color='k', linewidth=2)
 
-    if legend and not legend_label:
-        raise ValueError("Legend labels required for making legend with multiple variables.")
-
-    if isinstance(x, list):
-        for i, s in enumerate(x):
-            is_logbins, alt_bins = getbins(s)
-            if alt_bins:
-                bins = alt_bins
-            label = legend_label[i] if legend else None
-            lumi = get_luminosity(df) if scaling else None
-
-            histplot_1d(var_x=df[s], weights=df[weight_col],
-                        bins=bins, fig_axis=ax,
-                        yerr=yerr,
-                        scaling=scaling,
-                        label=label,
-                        lumi=lumi,
-                        is_logbins=is_logbins,
-                        linewidth=2)
-    elif isinstance(x, str):
-        is_logbins, alt_bins = getbins(x)
-        if alt_bins:
-            bins = alt_bins
-        lumi = get_luminosity(df) if scaling else None
-
-        histplot_1d(var_x=df[x], weights=df[weight_col],
-                    bins=bins, fig_axis=ax,
-                    yerr=yerr,
-                    scaling=scaling,
-                    lumi=lumi,
-                    label=legend_label,
-                    is_logbins=is_logbins,
-                    color='k', linewidth=2)
-    else:
-        raise ValueError("Plotting value should be a string or list of strings")
-
-
-    if isinstance(legend_label, list) and isinstance(x, list):
-        var_name = x[0]
-    else:
-        var_name = x
-    ax = set_fig_1d_axis_options(axis=ax, var_name=var_name, bins=bins,
+    ax = set_fig_1d_axis_options(axis=ax, var_name=x, bins=bins,
                                  scaling=scaling, is_logbins=is_logbins,
                                  logy=log_y, logx=log_x)
     if y_label: ax.set_ylabel(y_label)
     if x_label: ax.set_xlabel(x_label)
-    fig.tight_layout()
-    if legend:
-        plt.legend()
 
-    # save figure
-    if to_file:
-        if not title and not filename:
-            raise ValueError("Must provide either a title or a filename")
-        hep.atlas.label(llabel="Internal", loc=0, ax=ax, rlabel=title)
-        out_png_file = config.paths['plot_dir'] + f"{filename if filename else title}.png"
-        fig.savefig(out_png_file, bbox_inches='tight')
-        logger.info(f"Figure saved to {out_png_file}")
     return fig
 
 
@@ -435,6 +392,7 @@ def ratio_plot_1d(
     ax.set_xlabel(x_label)
     if y_lim:
         ax.set_ylim(y_lim)
+    hep.atlas.label(llabel="Internal", loc=0, ax=ax, rlabel=title)
 
     if to_file:
         hep.atlas.label(llabel="Internal", loc=0, ax=ax, rlabel=title)
