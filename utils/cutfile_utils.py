@@ -24,7 +24,7 @@ def parse_cutline(cutline: str, sep='\t') -> dict:
         raise SyntaxError(f"Check cutfile. Line {cutline} is badly formatted. Got {cutline_split}.")
     for v in cutline_split:
         if len(v) == 0:
-            raise SyntaxError(f"Check cutfile. Blank value given in line {cutline}. Got {cutline_split}")
+            raise SyntaxError(f"Check cutfile. Blank value given in line {cutline}. Got {cutline_split}.")
         if v[0] == ' ' or v[-1] == ' ':
             logger.warning(f"Found trailing space in option cutfile line {cutline}: Variable '{v}'.")
 
@@ -34,7 +34,7 @@ def parse_cutline(cutline: str, sep='\t') -> dict:
     try:
         cut_val = float(cutline_split[3])
     except ValueError:  # make sure the cut value is actually a number
-        raise SyntaxError(f"Check 'cut_val' argument in line {cutline}. Got {cutline_split[3]}.")
+        raise SyntaxError(f"Check 'cut_val' argument in line {cutline}. Got '{cutline_split[3]}'.")
     group = cutline_split[4]
     is_symmetric = bool(strtobool(cutline_split[5].lower()))  # converts string to boolean
     try:

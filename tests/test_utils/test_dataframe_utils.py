@@ -5,16 +5,20 @@ from utils.dataframe_utils import *
 
 
 class TestBuildAnalysisDataframe(object):
-    test_cut_dicts = [{'name': 'cut 1', 'cut_var': 'testvar1', 'relation': '<=', 'cut_val': 100, 'group': 'var1cut',
-                       'is_symmetric': True},
-                      {'name': 'cut 2', 'cut_var': 'testvar1', 'relation': '>', 'cut_val': 1, 'group': 'var1cut',
-                       'is_symmetric': False}
-                      ]
+    # TODO: test on derived variables
+    test_cut_dicts = [
+        {'name': 'cut 1', 'cut_var': 'testvar1', 'relation': '<=', 'cut_val': 100, 'group': 'var1cut',
+         'is_symmetric': True},
+        {'name': 'cut 2', 'cut_var': 'testvar1', 'relation': '>', 'cut_val': 1, 'group': 'var1cut',
+         'is_symmetric': False}
+    ]
     test_vars_to_cut = ['testvar1', 'testvar3']
-    expected_output = pd.DataFrame({'testvar1': np.arange(1000),
-                                    'testvar3': np.arange(1000) * 3,
-                                    'weight_mc': np.append(np.ones(990), -1 * np.ones(10)),
-                                    })
+    expected_output = pd.DataFrame({
+        'testvar1': np.arange(1000),
+        'testvar3': np.arange(1000) * 3,
+        'weight_mc': np.append(np.ones(990), -1 * np.ones(10)),
+        'eventNumber': np.arange(1000),
+    })
     default_TTree = 'tree1'
 
     @pytest.mark.filterwarnings("ignore::UserWarning")
@@ -37,17 +41,17 @@ class TestBuildAnalysisDataframe(object):
                                          cut_list_dicts=self.test_cut_dicts,
                                          vars_to_cut=self.test_vars_to_cut
                                          )
-            assert e.match(f"TTree 'missing' not found in file {tmp_root_datafile}")
+        assert str(e.value) == f"TTree(s) 'missing' not found in file {tmp_root_datafile}"
 
     def test_missing_branch(self, tmp_root_datafile):
+        missing_branches = ['missing1', 'missing2']
         with pytest.raises(ValueError) as e:
-            missing_branches = ['missing1', 'missing2']
             _ = build_analysis_dataframe(tmp_root_datafile,
                                          TTree_name=self.default_TTree,
                                          cut_list_dicts=self.test_cut_dicts,
                                          vars_to_cut=missing_branches
                                          )
-            assert e.match(f"Missing TBranch(es) {missing_branches} in TTree 'tree1' of file '{tmp_root_datafile}'.'")
+        assert e.match(r"Missing TBranch\(es\) .* in TTree 'tree1' of file .*")
 
     @pytest.mark.filterwarnings("ignore::UserWarning")
     def test_multifile(self, tmp_root_datafiles):
@@ -60,6 +64,9 @@ class TestBuildAnalysisDataframe(object):
                                         'weight_mc': np.concatenate((np.append(np.ones(2970), -1 * np.ones(30)),
                                                                      np.append(np.ones(1980), -1 * np.ones(20)),
                                                                      np.append(np.ones(990), -1 * np.ones(10)),)),
+                                        'eventNumber': np.concatenate((np.arange(3000, 6000),
+                                                                       np.arange(1000, 3000),
+                                                                       np.arange(1000)))
                                         })
         output = build_analysis_dataframe(tmp_root_datafiles,
                                           TTree_name=self.default_TTree,
@@ -87,6 +94,9 @@ class TestBuildAnalysisDataframe(object):
                                         'weight_mc': np.concatenate((np.append(np.ones(2970), -1 * np.ones(30)),
                                                                      np.append(np.ones(1980), -1 * np.ones(20)),
                                                                      np.append(np.ones(990), -1 * np.ones(10)),)),
+                                        'eventNumber': np.concatenate((np.arange(3000, 6000),
+                                                                       np.arange(1000, 3000),
+                                                                       np.arange(1000))),
                                         # dataset IDs
                                         'DSID': np.concatenate((np.full(3000, 3),
                                                                 np.full(2000, 2),
@@ -124,7 +134,7 @@ class TestBuildAnalysisDataframe(object):
             'is_symmetric': False,
             'tree': 'tree2'
         }
-        list_of_dicts = self.test_cut_dicts
+        list_of_dicts = self.test_cut_dicts.copy()
         list_of_dicts += [newcut]
         expected_output = self.expected_output.copy()
         expected_output['testvar4'] = np.arange(1000) * -1
@@ -142,7 +152,36 @@ class TestBuildAnalysisDataframe(object):
                 f"Expected: \n{expected_output[col]},\n" \
                 f"Got: \n{output[col]}"
 
-    # TODO: test on derived variables
+    @pytest.mark.filterwarnings("ignore::UserWarning")
+    def test_duplicate_events_no_alt_tree(self, tmp_root_datafile_duplicate_events):
+        with pytest.raises(ValueError) as e:
+            _ = build_analysis_dataframe(tmp_root_datafile_duplicate_events,
+                                         TTree_name=self.default_TTree,
+                                         cut_list_dicts=self.test_cut_dicts,
+                                         vars_to_cut=self.test_vars_to_cut,
+                                         is_slices=False)
+        assert str(e.value) == f"Found 1000 duplicate events in datafile {tmp_root_datafile_duplicate_events}."
+
+    @pytest.mark.filterwarnings("ignore::UserWarning")
+    def test_duplicate_events_alt_tree(self, tmp_root_datafile_duplicate_events):
+        with pytest.raises(ValueError) as e:
+            newcut = {
+                'name': 'cut 3',
+                'cut_var': 'testvar4',
+                'relation': '<',
+                'cut_val': -10,
+                'group': 'var4cut',
+                'is_symmetric': False,
+                'tree': 'tree2'
+            }
+            newlist = self.test_cut_dicts.copy()
+            newlist += [newcut]
+            _ = build_analysis_dataframe(tmp_root_datafile_duplicate_events,
+                                         TTree_name=self.default_TTree,
+                                         cut_list_dicts=newlist,
+                                         vars_to_cut=self.test_vars_to_cut,
+                                         is_slices=False)
+        assert str(e.value) == "Merge keys are not unique in either left or right dataset; not a one-to-one merge"
 
 
 class TestCreateCutColumns(object):

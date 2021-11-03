@@ -326,7 +326,7 @@ def plot_1d_hist(
         log_y: bool = False,
         legend_label: str = None,
         weight_col: str = 'weight_mc',
-) -> plt.figure:
+        ) -> plt.figure:
     """Simple plotting function"""
 
     # check if variable needs to be specially binned
@@ -371,7 +371,7 @@ def ratio_plot_1d(
         to_file: bool = True,
         y_lim: tuple = None,
         **kwargs
-) -> plt.figure:
+        ) -> plt.figure:
     """Plot of bin-wise ratio between two variables"""
 
     ax_transform = bh.axis.transform.log if is_logbins else None
@@ -417,7 +417,7 @@ def plot_1d_overlay_and_acceptance_cutgroups(
         plot_width=7,
         plot_height=7,
         plot_label: Optional[str] = None,
-) -> None:
+        ) -> None:
     """Plots overlay of cutgroups and acceptance (ratio) plots"""
     # TODO: write docs for this function
     fig, (fig_ax, accept_ax) = plt.subplots(2, 1,

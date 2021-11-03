@@ -45,6 +45,8 @@ class Analysis:
 
         # LOGGING
         # ============================
+        if log_out not in ('file', 'both', 'console', None):
+            raise ValueError("Accaptable values for 'log_out' parameter: 'file', 'both', 'console', None.")
         logger = logging.getLogger('analysis')
         logger.setLevel(log_level)
         if log_out.lower() in ('file', 'both'):

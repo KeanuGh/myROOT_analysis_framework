@@ -21,7 +21,6 @@ def build_analysis_dataframe(datapath: str,
                              vars_to_cut: List[str],
                              is_slices: bool = False,
                              pkl_path: str = None,
-                             event_n_col: str = 'eventNumber'
                              ) -> pd.DataFrame:
     """
     Builds a dataframe from cutfile inputs
@@ -31,7 +30,6 @@ def build_analysis_dataframe(datapath: str,
     :param vars_to_cut: list of strings of variables in file to cut on
     :param is_slices: whether or not data is in mass slices
     :param pkl_path: path to output pickle file (optional)
-    :param event_n_col: name of event number variable in root file for merging across TTrees if necessary
     :return: output dataframe containing columns corresponding to necessary variables
     """
     chunksize = 1024
@@ -39,6 +37,7 @@ def build_analysis_dataframe(datapath: str,
     # create list of all necessary values extract
     default_tree_vars = extract_cut_variables(cut_list_dicts, vars_to_cut)
     default_tree_vars.add('weight_mc')
+    default_tree_vars.add('eventNumber')
 
     # get any variables that need to be calculated rather than extracted from ROOT file
     vars_to_calc = {calc_var for calc_var in default_tree_vars if calc_var in derived_vars}
@@ -46,9 +45,7 @@ def build_analysis_dataframe(datapath: str,
 
     # get any variables in trees outside the default tree (TTree_name)
     alt_trees = gen_alt_tree_dict(cut_list_dicts)
-    if alt_trees:
-        default_tree_vars.add(event_n_col)  # need event number to merge across
-        # remove alt tree variables from variables to extract from default tree
+    if alt_trees:  # remove alt tree variables from variables to extract from default tree
         default_tree_vars -= {var for varlist in alt_trees.values() for var in varlist}
 
     if logger.level == logging.DEBUG:
@@ -71,7 +68,7 @@ def build_analysis_dataframe(datapath: str,
         with uproot.open(filepath) as file:
             tree_list = [tree.split(';')[0] for tree in file.keys()]  # TTrees are labelled '<name>;<cycle number>'
             if missing_trees := [t for t in [a_t for a_t in alt_trees] + [TTree_name] if t not in tree_list]:
-                raise ValueError(f"TTree(s) {', '.join(missing_trees)} not found in file {filepath}")
+                raise ValueError(f"TTree(s) '{', '.join(missing_trees)}' not found in file {filepath}")
             else:
                 if missing_branches := [branch for branch in default_tree_vars
                                         if branch not in file[TTree_name].keys()]:
@@ -96,11 +93,18 @@ def build_analysis_dataframe(datapath: str,
         if alt_trees:
             for tree in alt_trees:
                 logger.debug(f"Extracting {alt_trees[tree]} from TTree {tree}...")
-                alt_df = uproot.concatenate(datapath + ":" + tree, alt_trees[tree] + [event_n_col],
+                alt_df = uproot.concatenate(datapath + ":" + tree, alt_trees[tree] + ['eventNumber'],
                                             library='pd', num_workers=config.n_threads, begin_chunk_size=chunksize)
                 logger.debug(f"Extracted {len(alt_df)} events.")
                 logger.debug("Merging with rest of dataframe...")
-                df = pd.merge(df, alt_df, how='left', on=event_n_col, sort=False)
+                df = pd.merge(df, alt_df, how='left', on='eventNumber', sort=False, copy=False, validate='1:1')
+        else:
+            # pandas merge checks for duplicates, this the only branch with no merge function
+            logger.debug("Checking for duplicate events...")
+            if (duplicates := df.duplicated(subset='eventNumber')).any():
+                raise ValueError(f"Found {len(duplicates)} duplicate events in datafile {datapath}.")
+            logger.debug("No duplicates found.")
+
 
     else:  # if importing mass slices
         logger.info(f"Extracting mass slices from {datapath}...")
@@ -117,17 +121,17 @@ def build_analysis_dataframe(datapath: str,
 
         logger.debug(f"Calculating sum of weights and merging...")
         sumw = sumw.groupby('dsid').sum()
-        df = pd.merge(df, sumw, left_on='mcChannelNumber', right_on='dsid', sort=False)
+        df = pd.merge(df, sumw, left_on='mcChannelNumber', right_on='dsid', sort=False, copy=False)
         df.rename(columns={'mcChannelNumber': 'DSID'}, inplace=True)  # rename mcChannelNumber to DSID (why are they different)
 
         if alt_trees:
             for tree in alt_trees:
                 logger.debug(f"Extracting {alt_trees[tree]} from {tree} tree...")
-                alt_df = uproot.concatenate(datapath + ":" + tree, alt_trees[tree] + [event_n_col],
+                alt_df = uproot.concatenate(datapath + ":" + tree, alt_trees[tree] + ['eventNumber'],
                                             library='pd', num_workers=config.n_threads, begin_chunk_size=chunksize)
                 logger.debug(f"Extracted {len(alt_df)} events.")
                 logger.debug("Merging with rest of dataframe...")
-                df = pd.merge(df, alt_df, how='left', on=event_n_col, sort=False)
+                df = pd.merge(df, alt_df, how='left', on='eventNumber', sort=False, copy=False, validate='1:1')
 
         if logger.level == logging.DEBUG:
             # sanity check to make sure totalEventsWeighted really is what it says it is
@@ -150,8 +154,6 @@ def build_analysis_dataframe(datapath: str,
 
         default_tree_vars.remove('mcChannelNumber')
         default_tree_vars.add('DSID')
-    t2 = time.time()
-    logger.info(f"time to build dataframe: {time.strftime('%H:%M:%S', time.gmtime(t2 - t1))}")
 
     # calculate and combine special derived variables
     if vars_to_calc:
@@ -173,7 +175,10 @@ def build_analysis_dataframe(datapath: str,
             # to_drop = [var for var in temp_cols if var not in og_vars]
             # logger.debug(f"dropping {to_drop}")
             # df.drop(columns=to_drop, inplace=True)
-    
+
+    t2 = time.time()
+    logger.info(f"time to build dataframe: {time.strftime('%H:%M:%S', time.gmtime(t2 - t1))}")
+
     # properly scale GeV columns
     df = rescale_to_gev(df)
 
