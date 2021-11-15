@@ -164,7 +164,7 @@ class TestBuildAnalysisDataframe(object):
 
     @pytest.mark.filterwarnings("ignore::UserWarning")
     def test_duplicate_events_alt_tree(self, tmp_root_datafile_duplicate_events):
-        with pytest.raises(ValueError) as e:
+        with pytest.raises(Exception) as e:
             newcut = {
                 'name': 'cut 3',
                 'cut_var': 'testvar4',
@@ -181,7 +181,7 @@ class TestBuildAnalysisDataframe(object):
                                          cut_list_dicts=newlist,
                                          vars_to_cut=self.test_vars_to_cut,
                                          is_slices=False)
-        assert str(e.value) == "Merge keys are not unique in either left or right dataset; not a one-to-one merge"
+        assert str(e.value) == "Duplicated events in both 'tree1' and 'tree2' TTrees"
 
 
 class TestCreateCutColumns(object):

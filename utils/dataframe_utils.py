@@ -97,7 +97,18 @@ def build_analysis_dataframe(datapath: str,
                                             library='pd', num_workers=config.n_threads, begin_chunk_size=chunksize)
                 logger.debug(f"Extracted {len(alt_df)} events.")
                 logger.debug("Merging with rest of dataframe...")
-                df = pd.merge(df, alt_df, how='left', on='eventNumber', sort=False, copy=False, validate='1:1')
+                try:
+                    df = pd.merge(df, alt_df, how='left', on='eventNumber', sort=False, copy=False, validate='1:1')
+                except pd.errors.MergeError as e:
+                    err = str(e)
+                    if err == 'Merge keys are not unique in either left or right dataset; not a one-to-one merge':
+                        raise Exception(f"Duplicated events in both '{TTree_name}' and '{tree}' TTrees")
+                    elif err == 'Merge keys are not unique in left dataset; not a one-to-one merge':
+                        raise Exception(f"Duplicated events in '{TTree_name}' TTree")
+                    elif err == 'Merge keys are not unique in right dataset; not a one-to-one merge':
+                        raise Exception(f"Duplicated events in '{tree}' TTree")
+                    else:
+                        raise e
         else:
             # pandas merge checks for duplicates, this the only branch with no merge function
             logger.debug("Checking for duplicate events...")
@@ -131,7 +142,18 @@ def build_analysis_dataframe(datapath: str,
                                             library='pd', num_workers=config.n_threads, begin_chunk_size=chunksize)
                 logger.debug(f"Extracted {len(alt_df)} events.")
                 logger.debug("Merging with rest of dataframe...")
-                df = pd.merge(df, alt_df, how='left', on='eventNumber', sort=False, copy=False, validate='1:1')
+                try:
+                    df = pd.merge(df, alt_df, how='left', on='eventNumber', sort=False, copy=False, validate='1:1')
+                except pd.errors.MergeError as e:
+                    err = str(e)
+                    if err == 'Merge keys are not unique in either left or right dataset; not a one-to-one merge':
+                        raise Exception(f"Duplicated events in both '{TTree_name}' and '{tree}' TTrees")
+                    elif err == 'Merge keys are not unique in left dataset; not a one-to-one merge':
+                        raise Exception(f"Duplicated events in '{TTree_name}' TTree")
+                    elif err == 'Merge keys are not unique in right dataset; not a one-to-one merge':
+                        raise Exception(f"Duplicated events in '{tree}' TTree")
+                    else:
+                        raise e
 
         if logger.level == logging.DEBUG:
             # sanity check to make sure totalEventsWeighted really is what it says it is
