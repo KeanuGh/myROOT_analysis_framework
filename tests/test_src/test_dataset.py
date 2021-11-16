@@ -1,10 +1,12 @@
 import numpy as np
+import pandas as pd
 import pytest
 
-from utils.dataframe_utils import *
+import src.config as config
+from src.dataset import Dataset
 
 
-class TestBuildAnalysisDataframe(object):
+class TestBuildDataframe(object):
     # TODO: test on derived variables
     test_cut_dicts = [
         {'name': 'cut 1', 'cut_var': 'testvar1', 'relation': '<=', 'cut_val': 100, 'group': 'var1cut',
@@ -23,7 +25,7 @@ class TestBuildAnalysisDataframe(object):
 
     @pytest.mark.filterwarnings("ignore::UserWarning")
     def test_normal_input(self, tmp_root_datafile):
-        output = build_analysis_dataframe(tmp_root_datafile,
+        output = Dataset._build_dataframe(tmp_root_datafile,
                                           TTree_name=self.default_TTree,
                                           cut_list_dicts=self.test_cut_dicts,
                                           vars_to_cut=self.test_vars_to_cut
@@ -36,7 +38,7 @@ class TestBuildAnalysisDataframe(object):
 
     def test_missing_tree(self, tmp_root_datafile):
         with pytest.raises(ValueError) as e:
-            _ = build_analysis_dataframe(tmp_root_datafile,
+            _ = Dataset._build_dataframe(tmp_root_datafile,
                                          TTree_name='missing',
                                          cut_list_dicts=self.test_cut_dicts,
                                          vars_to_cut=self.test_vars_to_cut
@@ -46,7 +48,7 @@ class TestBuildAnalysisDataframe(object):
     def test_missing_branch(self, tmp_root_datafile):
         missing_branches = ['missing1', 'missing2']
         with pytest.raises(ValueError) as e:
-            _ = build_analysis_dataframe(tmp_root_datafile,
+            _ = Dataset._build_dataframe(tmp_root_datafile,
                                          TTree_name=self.default_TTree,
                                          cut_list_dicts=self.test_cut_dicts,
                                          vars_to_cut=missing_branches
@@ -68,7 +70,7 @@ class TestBuildAnalysisDataframe(object):
                                                                        np.arange(1000, 3000),
                                                                        np.arange(1000)))
                                         })
-        output = build_analysis_dataframe(tmp_root_datafiles,
+        output = Dataset._build_dataframe(tmp_root_datafiles,
                                           TTree_name=self.default_TTree,
                                           cut_list_dicts=self.test_cut_dicts,
                                           vars_to_cut=self.test_vars_to_cut
@@ -107,7 +109,7 @@ class TestBuildAnalysisDataframe(object):
                                                                                np.full(2000, 1960),
                                                                                np.full(1000, 980)))
                                         })
-        output = build_analysis_dataframe(tmp_root_datafiles,
+        output = Dataset._build_dataframe(tmp_root_datafiles,
                                           TTree_name=self.default_TTree,
                                           cut_list_dicts=self.test_cut_dicts,
                                           vars_to_cut=self.test_vars_to_cut,
@@ -139,7 +141,7 @@ class TestBuildAnalysisDataframe(object):
         expected_output = self.expected_output.copy()
         expected_output['testvar4'] = np.arange(1000) * -1
         expected_output['eventNumber'] = np.arange(1000)
-        output = build_analysis_dataframe(tmp_root_datafile,
+        output = Dataset._build_dataframe(tmp_root_datafile,
                                           TTree_name=self.default_TTree,
                                           cut_list_dicts=list_of_dicts,
                                           vars_to_cut=self.test_vars_to_cut,
@@ -155,7 +157,7 @@ class TestBuildAnalysisDataframe(object):
     @pytest.mark.filterwarnings("ignore::UserWarning")
     def test_duplicate_events_no_alt_tree(self, tmp_root_datafile_duplicate_events):
         with pytest.raises(ValueError) as e:
-            _ = build_analysis_dataframe(tmp_root_datafile_duplicate_events,
+            _ = Dataset._build_dataframe(tmp_root_datafile_duplicate_events,
                                          TTree_name=self.default_TTree,
                                          cut_list_dicts=self.test_cut_dicts,
                                          vars_to_cut=self.test_vars_to_cut,
@@ -176,7 +178,7 @@ class TestBuildAnalysisDataframe(object):
             }
             newlist = self.test_cut_dicts.copy()
             newlist += [newcut]
-            _ = build_analysis_dataframe(tmp_root_datafile_duplicate_events,
+            _ = Dataset._build_dataframe(tmp_root_datafile_duplicate_events,
                                          TTree_name=self.default_TTree,
                                          cut_list_dicts=newlist,
                                          vars_to_cut=self.test_vars_to_cut,
@@ -197,7 +199,7 @@ class TestCreateCutColumns(object):
                           ]
         cut_label = config.cut_label
 
-        create_cut_columns(test_df, test_cut_dicts)
+        Dataset._create_cut_columns(test_df, test_cut_dicts)
         out_column1 = pd.Series(data=[True, True, True, False, True, True, True, False, True, True],
                                 name='cut 1' + cut_label)
         out_column2 = pd.Series(data=[False, False, True, True, True, True, False, False, False, True],
@@ -220,7 +222,7 @@ class TestCreateCutColumns(object):
                           ]
         cut_label = config.cut_label
 
-        create_cut_columns(test_df, test_cut_dicts)
+        Dataset._create_cut_columns(test_df, test_cut_dicts)
         out_column1 = pd.Series(data=[True, False, True, False, False, False, True, True, True, False],
                                 name='cut 1' + cut_label)
         out_column2 = pd.Series(data=[False, True, False, True, True, True, False, False, False, True],

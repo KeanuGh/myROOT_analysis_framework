@@ -11,8 +11,9 @@ import pandas as pd
 from matplotlib.colors import LogNorm
 
 import src.config as config
+from dataset import Dataset
 from utils.axis_labels import labels_xs
-from utils.dataframe_utils import get_luminosity, cut_on_cutgroup
+from utils.phys_vars import get_luminosity
 
 logger = logging.getLogger('analysis')
 
@@ -448,7 +449,7 @@ def plot_1d_overlay_and_acceptance_cutgroups(
     # ================
     for cutgroup in cutgroups.keys():
         logger.info(f"    - generating cutgroup '{cutgroup}'")
-        cut_df = cut_on_cutgroup(df, cutgroups, cutgroup)
+        cut_df = Dataset._cut_on_cutgroup(df, cutgroups, cutgroup)
         weight_cut = cut_df[weight_col]
         var_cut = cut_df[var_to_plot]
 
@@ -494,6 +495,7 @@ def plot_1d_overlay_and_acceptance_cutgroups(
     fig.clf()  # clear for next plot
 
 
+# TODO: Move to dataset method
 def plot_2d_cutgroups(df: pd.DataFrame,
                       lepton: str,
                       x_var: str, y_var: str,
@@ -553,7 +555,7 @@ def plot_2d_cutgroups(df: pd.DataFrame,
         logger.info(f"    - generating cutgroup '{cutgroup}'")
         fig, ax = plt.subplots(figsize=(7, 7))
 
-        cut_df = cut_on_cutgroup(df, cutgroups, cutgroup)
+        cut_df = Dataset._cut_on_cutgroup(df, cutgroups, cutgroup)
         weight_cut = cut_df['weight']
         x_vars = cut_df[x_var]
         y_vars = cut_df[y_var]
