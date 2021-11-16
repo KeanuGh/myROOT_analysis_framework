@@ -23,6 +23,7 @@ venv.bak/
 *.root
 *.pkl
 /data/mc16a_wmintaunu_SLICES/prelim_mc16a_highmass_wmintaunu.txt
+*_email.txt
 
 # or the .gitignore
 .gitignore
