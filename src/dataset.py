@@ -1,5 +1,6 @@
 import logging
 import operator as op
+import pickle as pkl
 import time
 from dataclasses import dataclass, field
 from glob import glob
@@ -16,18 +17,9 @@ import uproot
 import src.config as config
 import utils.file_utils as file_utils
 import utils.plotting_utils as plt_utils
+from src.cutfile import Cutfile
 from src.cutflow import Cutflow
 from utils.axis_labels import labels_xs
-from utils.cutfile_utils import (
-    parse_cutfile,
-    gen_cutgroups,
-    if_build_dataframe,
-    if_make_cutfile_backup,
-    backup_cutfile,
-    extract_cut_variables,
-    # all_vars,
-    gen_alt_tree_dict
-)
 from utils.var_helpers import derived_vars
 
 logger = logging.getLogger('analysis')
@@ -50,7 +42,8 @@ class Dataset:
     is_slices: bool = False  # whether input data is in mass slices
     lepton: str = 'lepton'  # name of charged DY lepton channel in dataset (if applicable)
     grouped_cutflow: bool = True  # whether cutflow should apply cuts in cutgroups or separately TODO: in cutfile
-    chunksize: int = 1024
+    chunksize: int = 1024  # chunksize for uproot ROOT file import
+    _weight_column = 'weight'  # name of weight column in dataframe
 
     def __post_init__(self):
         """Dataset generation pipeline"""
@@ -90,23 +83,8 @@ class Dataset:
         # ========================
         """Define the pipeline for parsing cutfile"""
         logger.info(f"Parsting cutfile for {self.name}...")
-
-        self._cut_dicts, self._vars_to_cut, self._cutflow_options = parse_cutfile(self.cutfile_path)
-
-        # extract cutgroups
-        self._cutgroups = gen_cutgroups(self._cut_dicts)
-
-        # check if a backup of the input cutfile should be made
-        self._make_backup = if_make_cutfile_backup(self.cutfile_path, config.paths['backup_cutfiles_dir'])
-
-        # if new cutfile, save backup
-        if self._make_backup:
-            backup_cutfile(config.paths['backup_cutfiles_dir'] + self.name + '_', self.cutfile_path)
-
-        self._rebuild = if_build_dataframe(self.cutfile_path,
-                                           self._make_backup,
-                                           config.paths['backup_cutfiles_dir'],
-                                           self.pkl_path)
+        self.cutfile = Cutfile(self.cutfile_path)
+        self._rebuild = self.cutfile.if_build_dataframe(self.pkl_path)
 
         # GENERATE DATAFRAME
         # ========================
@@ -116,8 +94,8 @@ class Dataset:
             logger.info(f"Building {self.name} dataframe from {self.data_path}...")
             self.df = self._build_dataframe(datapath=self.data_path,
                                             TTree_name=self.TTree_name,
-                                            cut_list_dicts=self._cut_dicts,
-                                            vars_to_cut=self._vars_to_cut,
+                                            cut_list_dicts=self.cutfile.cut_dicts,
+                                            vars_to_cut=self.cutfile.vars_to_cut,
                                             is_slices=self.is_slices)
 
             # print into pickle file for easier read/write
@@ -133,9 +111,9 @@ class Dataset:
         # map appropriate weights
         logger.info(f"Creating weights for {self.name}...")
         if self.is_slices:
-            self.df['weight'] = self.__gen_weight_column_slices(self.df)
+            self.df[self._weight_column] = self.__gen_weight_column_slices(self.df)
         else:
-            self.df['weight'] = self.__gen_weight_column(self.df)
+            self.df[self._weight_column] = self.__gen_weight_column(self.df)
 
         # print some dataset ID metadata
         # TODO: avg event weight
@@ -164,13 +142,13 @@ class Dataset:
 
         # apply cuts to generate cut columns
         logger.info(f"Creating cuts for {self.name}...")
-        self.__create_cut_columns(self.df, cut_dicts=self._cut_dicts)
+        self._create_cut_columns(self.df, cut_dicts=self.cutfile.cut_dicts)
 
         # GENERATE CUTFLOW
         # ========================
-        self.cutflow = Cutflow(self.df, self._cut_dicts,
-                               self._cutgroups if self.grouped_cutflow else None,
-                               self._cutflow_options['sequential'])
+        self.cutflow = Cutflow(self.df, self.cutfile.cut_dicts,
+                               self.cutfile.cutgroups if self.grouped_cutflow else None,
+                               self.cutfile.cutflow_options['sequential'])
 
         logger.info("=" * (42 + len(self.name)))
         logger.info(f"========= DATASET '{self.name}' INITIALISED =========")
@@ -215,17 +193,16 @@ class Dataset:
         return df[weight_mc_col].sum() / n_events
 
     @classmethod
-    def _get_luminosity(cls, df: pd.DataFrame, xs=None, weight_col: str = 'weight'):
+    def _get_luminosity(cls, df: pd.DataFrame, xs=None):
         """
         Calculates luminosity from dataframe
         :param df: input dataframe
         :param xs: cross-section. If not given, will calculate
-        :param weight_col: column of dataframe containing the weights
         :return: luminosity
         """
         if not xs:
             xs = cls._get_cross_section(df)
-        return df[weight_col].sum() / xs
+        return df[cls._weight_column].sum() / xs
 
     # ===============================
     # ========= PRINTOUTS ===========
@@ -256,9 +233,9 @@ class Dataset:
         else:
             self.cutflow.print_latex_table(config.paths['latex_table_dir'], self.name)
 
-    # ===============================
-    # =========== PLOTS =============
-    # ===============================
+    # ===========================================
+    # =========== PLOTING FUNCTIONS =============
+    # ===========================================
     def plot_1d(self,
                 x: Union[str, List[str]],
                 bins: Union[tuple, list],
@@ -296,28 +273,25 @@ class Dataset:
 
         return fig
 
-    def plot_with_cuts(self,
-                       scaling: Optional[str] = None,
-                       bins: Union[tuple, list] = (30, 1, 500),
-                       **kwargs
-                       ) -> None:
+    def plot_all_with_cuts(self,
+                           bins: Union[tuple, list] = (30, 1, 500),
+                           scaling: Optional[str] = None,
+                           **kwargs
+                           ) -> None:
         """
-        Plots each variable in specific Dataset to cut from cutfile with each cutgroup applied
+        Plots all variables in Dataset to cut from cutfile with each cutgroup applied
 
         :param bins: tuple of bins in x (n_bins, start, stop) or list of bin edges
         :param scaling: either 'xs':     cross section scaling,
                                'widths': divided by bin widths,
                                None:     No scaling
                         y-axis labels set accordingly
-        :param kwargs: keyword arguments to pass to plotting_utils.plot_1d_overlay_and_acceptance_cutgroups()
+        :param kwargs: keyword arguments to pass to plot_1d_overlay_and_acceptance_cutgroups()
         """
-        for var_to_plot in self._vars_to_cut:
+        for var_to_plot in self.cutfile.vars_to_cut:
             logger.info(f"Generating histogram with cuts for {var_to_plot} in {self.name}...")
-            plt_utils.plot_1d_overlay_and_acceptance_cutgroups(
-                df=self.df,
-                lepton=self.lepton,
-                var_to_plot=var_to_plot,
-                cutgroups=self._cutgroups,
+            self.plot_1d_overlay_and_acceptance_cutgroups(
+                var=var_to_plot,
                 lumi=self.luminosity,
                 scaling=scaling,
                 bins=bins,
@@ -331,10 +305,10 @@ class Dataset:
         :param bins: bin edges or tuple of (n_bins, start, stop)
         :param kwargs: keyword arguments to pass to plot_utils.plot_2d_cutgroups
         """
-        if len(self._vars_to_cut) < 2:
+        if len(self.cutfile.vars_to_cut) < 2:
             raise Exception("Need at least two plotting variables to make 2D plot")
 
-        for x_var, y_var in combinations(self._vars_to_cut, 2):
+        for x_var, y_var in combinations(self.cutfile.vars_to_cut, 2):
             # binning
             _, xbins = plt_utils.getbins(x_var)
             _, ybins = plt_utils.getbins(y_var)
@@ -343,13 +317,183 @@ class Dataset:
             if not ybins:
                 ybins = bins
             logger.info(f"Generating 2d histogram for {x_var}-{y_var} in {self.name}...")
-            plt_utils.plot_2d_cutgroups(self.df,
-                                        lepton=self.lepton,
-                                        x_var=x_var, y_var=y_var,
-                                        xbins=xbins, ybins=ybins,
-                                        cutgroups=self._cutgroups,
-                                        plot_label=self.name,
-                                        **kwargs)
+            self.plot_2d_cutgroups(x_var=x_var, y_var=y_var,
+                                   xbins=xbins, ybins=ybins,
+                                   plot_label=self.name,
+                                   **kwargs)
+
+    def plot_1d_overlay_and_acceptance_cutgroups(self,
+                                                 var: str,
+                                                 bins: Union[tuple, list],
+                                                 lumi: Optional[float] = None,
+                                                 scaling: Optional[str] = None,
+                                                 log_x: bool = False,
+                                                 to_pkl: bool = False,
+                                                 plot_width=7,
+                                                 plot_height=7,
+                                                 plot_label: Optional[str] = None,
+                                                 ) -> None:
+        """Plots overlay of cutgroups and acceptance (ratio) plots"""
+        # TODO: write docs for this function
+        fig, (fig_ax, accept_ax) = plt.subplots(2, 1,
+                                                figsize=(plot_width * 1.2, plot_height),
+                                                gridspec_kw={'height_ratios': [3, 1]})
+        hists = dict()
+
+        # check if variable needs to be specially binned
+        is_logbins, alt_bins = plt_utils.getbins(var)
+        if alt_bins:
+            bins = alt_bins
+
+        # INCLUSIVE PLOT
+        # ================
+        h_inclusive = plt_utils.histplot_1d(var_x=self.df[var],
+                                            weights=self.df[self._weight_column],
+                                            bins=bins, fig_axis=fig_ax,
+                                            yerr='sumw2',
+                                            lumi=lumi, scaling=scaling,
+                                            label='Inclusive',
+                                            is_logbins=is_logbins,
+                                            color='k', linewidth=2)
+        if to_pkl:
+            hists['inclusive'] = h_inclusive
+
+        # PLOT CUTS
+        # ================
+        for cutgroup in self.cutfile.cutgroups.keys():
+            logger.info(f"    - generating cutgroup '{cutgroup}'")
+            cut_df = Dataset._cut_on_cutgroup(self.df, self.cutfile.cutgroups, cutgroup)
+            weight_cut = cut_df[self._weight_column]
+            var_cut = cut_df[var]
+
+            h_cut = plt_utils.histplot_1d(var_x=var_cut, weights=weight_cut,
+                                          bins=bins, fig_axis=fig_ax,
+                                          lumi=lumi, scaling=scaling,
+                                          label=cutgroup,
+                                          is_logbins=is_logbins)
+            if to_pkl:
+                hists[cutgroup] = h_cut
+
+            # RATIO PLOT
+            # ================
+            hep.histplot(h_cut.view().value / h_inclusive.view().value,
+                         bins=h_cut.axes[0].edges, ax=accept_ax, label=cutgroup,
+                         color=fig_ax.get_lines()[-1].get_color())
+
+        # AXIS FORMATTING
+        # ==================
+        fig.tight_layout()
+        fig.subplots_adjust(hspace=0, wspace=0)
+
+        # figure plot
+        fig_ax = plt_utils.set_fig_1d_axis_options(axis=fig_ax, var_name=var, bins=bins,
+                                                   scaling=scaling, is_logbins=is_logbins,
+                                                   logy=True, logx=log_x, lepton=self.lepton)
+        fig_ax.legend()
+        fig_ax.axes.xaxis.set_visible(False)
+
+        # ratio plot
+        plt_utils.set_fig_1d_axis_options(axis=accept_ax, var_name=var,
+                                          bins=bins, is_logbins=is_logbins, lepton=self.lepton)
+        accept_ax.set_ylabel("Acceptance")
+
+        # save figure
+        if to_pkl:
+            with open(config.paths['pkl_hist_dir'] + plot_label + '_' + var + '_1d_cutgroups_ratios.pkl',
+                      'wb') as f:
+                pkl.dump(hists, f)
+                logger.info(f"Saved pickle file to {f.name}")
+        hep.atlas.label(llabel="Internal", loc=0, ax=fig_ax, rlabel=plot_label)
+        out_png_file = config.paths['plot_dir'] + f"{var}_{str(scaling)}.png"
+        fig.savefig(out_png_file, bbox_inches='tight')
+        logger.info(f"Figure saved to {out_png_file}")
+        fig.clf()  # clear for next plot
+
+    def plot_2d_cutgroups(self,
+                          x_var: str, y_var: str,
+                          xbins: Union[tuple, list], ybins: Union[tuple, list],
+                          plot_label: str = '',
+                          is_logz: bool = True,
+                          to_pkl: bool = False,
+                          ) -> None:
+        """
+        Runs over cutgroups in dictrionary and plots 2d histogram for each group
+
+        :param x_var: column in dataframe to plot on x axis
+        :param y_var: column in dataframe to plot on y axis
+        :param xbins: binning in x
+        :param ybins: binning in y
+        :param plot_label: plot title
+        :param is_logz: whether display z-axis logarithmically
+        :param to_pkl: whether to save histograms as pickle file
+        """
+        hists = dict()
+
+        # INCLUSIVE
+        fig, ax = plt.subplots(figsize=(7, 7))
+        weight_cut = self.df[self._weight_column]
+        x_vars = self.df[x_var]
+        y_vars = self.df[y_var]
+
+        out_path = config.paths['plot_dir'] + f"2d_{x_var}-{y_var}_inclusive.png"
+        hist = plt_utils.histplot_2d(
+            var_x=x_vars, var_y=y_vars,
+            xbins=xbins, ybins=ybins,
+            ax=ax, fig=fig,
+            weights=weight_cut,
+            is_z_log=is_logz,
+        )
+        if to_pkl:
+            hists['inclusive'] = hist
+
+        # get axis labels
+        xlabel, _ = plt_utils.get_axis_labels(str(x_var), self.lepton)
+        ylabel, _ = plt_utils.get_axis_labels(str(y_var), self.lepton)
+
+        hep.atlas.label(italic=(True, True), ax=ax, llabel='Internal', rlabel=plot_label + ' - inclusive', loc=0)
+        ax.set_xlabel(xlabel)
+        ax.set_ylabel(ylabel)
+
+        fig.savefig(out_path, bbox_inches='tight')
+        logger.info(f"printed 2d histogram to {out_path}")
+        plt.close(fig)
+
+        for cutgroup in self.cutfile.cutgroups:
+            logger.info(f"    - generating cutgroup '{cutgroup}'")
+            fig, ax = plt.subplots(figsize=(7, 7))
+
+            cut_df = Dataset._cut_on_cutgroup(self.df, self.cutfile.cutgroups, cutgroup)
+            weight_cut = cut_df[self._weight_column]
+            x_vars = cut_df[x_var]
+            y_vars = cut_df[y_var]
+
+            out_path = config.paths['plot_dir'] + f"2d_{x_var}-{y_var}_{cutgroup}.png"
+            hist = plt_utils.histplot_2d(
+                var_x=x_vars, var_y=y_vars,
+                xbins=xbins, ybins=ybins,
+                ax=ax, fig=fig,
+                weights=weight_cut,
+                is_z_log=is_logz,
+            )
+            if to_pkl:
+                hists[cutgroup] = hist
+
+            # get axis labels
+            xlabel, _ = plt_utils.get_axis_labels(str(x_var), self.lepton)
+            ylabel, _ = plt_utils.get_axis_labels(str(y_var), self.lepton)
+
+            hep.atlas.label(italic=(True, True), ax=ax, llabel='Internal', rlabel=plot_label + ' - ' + cutgroup, loc=0)
+            ax.set_xlabel(xlabel)
+            ax.set_ylabel(ylabel)
+
+            fig.savefig(out_path, bbox_inches='tight')
+            logger.info(f"printed 2d histogram to {out_path}")
+            plt.close(fig)
+
+        if to_pkl:
+            with open(config.paths['pkl_hist_dir'] + plot_label + f"_{x_var}-{y_var}_2d.pkl", 'wb') as f:
+                pkl.dump(hists, f)
+                logger.info(f"Saved pickle file to {f.name}")
 
     def plot_mass_slices(self, **kwargs) -> None:
         """
@@ -388,12 +532,12 @@ class Dataset:
         if ratio:
             self.cutflow.print_histogram('ratio')
         if cummulative:
-            if self._cutflow_options['sequential']:
+            if self.cutfile.cutflow_options['sequential']:
                 self.cutflow.print_histogram('cummulative')
             else:
                 warn("Sequential cuts cannot generate a cummulative cutflow")
         if a_ratio:
-            if self._cutflow_options['sequential']:
+            if self.cutfile.cutflow_options['sequential']:
                 self.cutflow.print_histogram('a_ratio')
             else:
                 warn("Sequential cuts can't generate cummulative cutflow. "
@@ -424,7 +568,7 @@ class Dataset:
         """
 
         # create list of all necessary values extract
-        default_tree_vars = extract_cut_variables(cut_list_dicts, vars_to_cut)
+        default_tree_vars = Cutfile.extract_cut_variables(cut_list_dicts, vars_to_cut)
         default_tree_vars.add('weight_mc')
         default_tree_vars.add('eventNumber')
 
@@ -433,7 +577,7 @@ class Dataset:
         default_tree_vars -= vars_to_calc
 
         # get any variables in trees outside the default tree (TTree_name)
-        alt_trees = gen_alt_tree_dict(cut_list_dicts)
+        alt_trees = Cutfile.gen_alt_tree_dict(cut_list_dicts)
         if alt_trees:  # remove alt tree variables from variables to extract from default tree
             default_tree_vars -= {var for varlist in alt_trees.values() for var in varlist}
 
@@ -560,7 +704,7 @@ class Dataset:
         logger.info(f"time to build dataframe: {time.strftime('%H:%M:%S', time.gmtime(t2 - t1))}")
 
         # properly scale GeV columns
-        df = cls.__rescale_to_gev(df)
+        cls.__rescale_to_gev(df)
 
         return df
 
@@ -662,16 +806,14 @@ class Dataset:
         return global_scale * (df[mc_weight_col] * df[mc_weight_col].abs()) / df[tot_weighted_events_col]
 
     @staticmethod
-    def __rescale_to_gev(df: pd.DataFrame) -> pd.DataFrame:
+    def __rescale_to_gev(df: pd.DataFrame) -> None:
         """rescales to GeV because athena's default output is in MeV for some reason"""
-        GeV_columns = [column for column in df.columns
-                       if (column in labels_xs) and ('[GeV]' in labels_xs[column]['xlabel'])]
-        df[GeV_columns] /= 1000
-        if GeV_columns:
+        if GeV_columns := [column for column in df.columns
+                           if (column in labels_xs) and ('[GeV]' in labels_xs[column]['xlabel'])]:
+            df[GeV_columns] /= 1000
             logger.debug(f"Rescaled columns {GeV_columns} to GeV.")
         else:
             logger.debug(f"No columns rescaled to GeV.")
-        return df
 
     @staticmethod
     def _cut_on_cutgroup(df: pd.DataFrame,

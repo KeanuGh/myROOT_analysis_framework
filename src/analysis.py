@@ -55,6 +55,7 @@ class Analysis:
             logger.addHandler(filehandler)
         if log_out.lower() in ('console', 'both'):
             logger.addHandler(logging.StreamHandler(sys.stdout))
+        logging.captureWarnings(True)
         
         logger.info(f"INITIALISING ANALYSIS '{analysis_label}'...")
         logger.info("="*(len(analysis_label)+27))
@@ -78,7 +79,7 @@ class Analysis:
         
         # BUILD DATASETS
         # ============================
-        self.datasets = {name: Dataset(name, **ds) for name, ds in data_dict.items()}
+        self.datasets: Dict[str, Dataset] = {name: Dataset(name, **ds) for name, ds in data_dict.items()}
 
         logger.info("="*(len(analysis_label)+23))
         logger.info(f"ANALYSIS '{analysis_label}' INITIALISED")
@@ -132,7 +133,7 @@ class Analysis:
         :param ds_name: name of Dataset class to plot
         :param kwargs: keyword arguments to pass to method in dataset
         """
-        self.datasets[ds_name].plot_with_cuts(**kwargs)
+        self.datasets[ds_name].plot_all_with_cuts(**kwargs)
 
     @decorators.check_single_datafile
     def gen_cutflow_hist(self, ds_name: Optional[str], **kwargs) -> None:

@@ -32,8 +32,11 @@ special_binning = {
 
 # FILEPATHS
 # ====================
+# root in the directory above this one
+root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
 # {} for formatting with name of analysis
-out_dir = 'outputs/'  # where outputs go
+out_dir = root_dir + '/outputs/'  # where outputs go
 paths = {
     'plot_dir': out_dir + '{}/plots/',  # where plots go
     'pkl_df_filepath': out_dir + '{}/data/',  # pickle file containing extracted data, format to used dataset

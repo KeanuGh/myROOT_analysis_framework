@@ -1,6 +1,6 @@
 import logging
 import pickle as pkl
-from typing import Tuple, Optional, List, OrderedDict, Union, Iterable
+from typing import Tuple, Optional, Union, Iterable
 from warnings import warn
 
 import boost_histogram as bh
@@ -11,7 +11,6 @@ import pandas as pd
 from matplotlib.colors import LogNorm
 
 import src.config as config
-from dataset import Dataset
 from utils.axis_labels import labels_xs
 from utils.phys_vars import get_luminosity
 
@@ -319,10 +318,10 @@ def plot_1d_hist(
         ax: plt.Axes,
         x_label: str = None,
         y_label: str = None,
-        title: str = None,
         yerr: Union[str, Iterable] = None,
         scaling: str = None,
         is_logbins: bool = None,
+        lepton: str = None,
         log_x: bool = False,
         log_y: bool = False,
         legend_label: str = None,
@@ -351,7 +350,7 @@ def plot_1d_hist(
 
     ax = set_fig_1d_axis_options(axis=ax, var_name=x, bins=bins,
                                  scaling=scaling, is_logbins=is_logbins,
-                                 logy=log_y, logx=log_x)
+                                 logy=log_y, logx=log_x, lepton=lepton)
     if y_label: ax.set_ylabel(y_label)
     if x_label: ax.set_xlabel(x_label)
 
@@ -404,191 +403,6 @@ def ratio_plot_1d(
     return fig
 
 
-def plot_1d_overlay_and_acceptance_cutgroups(
-        df: pd.DataFrame,
-        lepton: str,
-        var_to_plot: str,
-        cutgroups: OrderedDict[str, List[str]],
-        bins: Union[tuple, list],
-        weight_col: str = 'weight',
-        lumi: Optional[float] = None,
-        scaling: Optional[str] = None,
-        log_x: bool = False,
-        to_pkl: bool = False,
-        plot_width=7,
-        plot_height=7,
-        plot_label: Optional[str] = None,
-        ) -> None:
-    """Plots overlay of cutgroups and acceptance (ratio) plots"""
-    # TODO: write docs for this function
-    fig, (fig_ax, accept_ax) = plt.subplots(2, 1,
-                                            figsize=(plot_width * 1.2, plot_height),
-                                            gridspec_kw={'height_ratios': [3, 1]})
-
-    if to_pkl:
-        hists = dict()
-
-    # check if variable needs to be specially binned
-    is_logbins, alt_bins = getbins(var_to_plot)
-    if alt_bins:
-        bins = alt_bins
-
-    # INCLUSIVE PLOT
-    # ================
-    h_inclusive = histplot_1d(var_x=df[var_to_plot], weights=df[weight_col],
-                              bins=bins, fig_axis=fig_ax,
-                              yerr='sumw2',
-                              lumi=lumi, scaling=scaling,
-                              label='Inclusive',
-                              is_logbins=is_logbins,
-                              color='k', linewidth=2)
-    if to_pkl:
-        hists['inclusive'] = h_inclusive
-
-    # PLOT CUTS
-    # ================
-    for cutgroup in cutgroups.keys():
-        logger.info(f"    - generating cutgroup '{cutgroup}'")
-        cut_df = Dataset._cut_on_cutgroup(df, cutgroups, cutgroup)
-        weight_cut = cut_df[weight_col]
-        var_cut = cut_df[var_to_plot]
-
-        h_cut = histplot_1d(var_x=var_cut, weights=weight_cut,
-                            bins=bins, fig_axis=fig_ax,
-                            lumi=lumi, scaling=scaling,
-                            label=cutgroup,
-                            is_logbins=is_logbins)
-        if to_pkl:
-            hists[cutgroup] = h_cut
-
-        # RATIO PLOT
-        # ================
-        hep.histplot(h_cut.view().value / h_inclusive.view().value,
-                     bins=h_cut.axes[0].edges, ax=accept_ax, label=cutgroup,
-                     color=fig_ax.get_lines()[-1].get_color())
-
-    # AXIS FORMATTING
-    # ==================
-    fig.tight_layout()
-    fig.subplots_adjust(hspace=0, wspace=0)
-
-    # figure plot
-    fig_ax = set_fig_1d_axis_options(axis=fig_ax, var_name=var_to_plot, bins=bins,
-                                     scaling=scaling, is_logbins=is_logbins,
-                                     logy=True, logx=log_x, lepton=lepton)
-    fig_ax.legend()
-    fig_ax.axes.xaxis.set_visible(False)
-
-    # ratio plot
-    set_fig_1d_axis_options(axis=accept_ax, var_name=var_to_plot, bins=bins, is_logbins=is_logbins, lepton=lepton)
-    accept_ax.set_ylabel("Acceptance")
-
-    # save figure
-    if to_pkl:
-        with open(config.paths['pkl_hist_dir'] + plot_label + '_' + var_to_plot + '_1d_cutgroups_ratios.pkl', 'wb') as f:
-            pkl.dump(hists, f)
-            logger.info(f"Saved pickle file to {f.name}")
-    hep.atlas.label(llabel="Internal", loc=0, ax=fig_ax, rlabel=plot_label)
-    out_png_file = config.paths['plot_dir'] + f"{var_to_plot}_{str(scaling)}.png"
-    fig.savefig(out_png_file, bbox_inches='tight')
-    logger.info(f"Figure saved to {out_png_file}")
-    fig.clf()  # clear for next plot
-
-
-# TODO: Move to dataset method
-def plot_2d_cutgroups(df: pd.DataFrame,
-                      lepton: str,
-                      x_var: str, y_var: str,
-                      xbins: Union[tuple, list], ybins: Union[tuple, list],
-                      cutgroups: OrderedDict[str, List[str]],
-                      plot_label: str = '',
-                      is_logz: bool = True,
-                      to_pkl: bool = False,
-                      ) -> None:
-    """
-    Runs over cutgroups in dictrionary and plots 2d histogram for each group
-
-    :param df: Input dataframe
-    :param lepton: name of lepton for axis labels
-    :param x_var: column in dataframe to plot on x axis
-    :param y_var: column in dataframe to plot on y axis
-    :param xbins: binning in x
-    :param ybins: binning in y
-    :param cutgroups: ordered dictionary of cutgroups
-    :param plot_label: plot title
-    :param is_logz: whether display z-axis logarithmically
-    :param to_pkl: whether to save histograms as pickle file
-    """
-    if to_pkl:
-        hists = dict()
-
-    # INCLUSIVE
-    fig, ax = plt.subplots(figsize=(7, 7))
-    weight_cut = df['weight']
-    x_vars = df[x_var]
-    y_vars = df[y_var]
-
-    out_path = config.paths['plot_dir'] + f"2d_{x_var}-{y_var}_inclusive.png"
-    hist = histplot_2d(
-        var_x=x_vars, var_y=y_vars,
-        xbins=xbins, ybins=ybins,
-        ax=ax, fig=fig,
-        weights=weight_cut,
-        is_z_log=is_logz,
-    )
-    if to_pkl:
-        hists['inclusive'] = hist
-
-    # get axis labels
-    xlabel, _ = get_axis_labels(str(x_var), lepton)
-    ylabel, _ = get_axis_labels(str(y_var), lepton)
-
-    hep.atlas.label(italic=(True, True), ax=ax, llabel='Internal', rlabel=plot_label + ' - inclusive', loc=0)
-    ax.set_xlabel(xlabel)
-    ax.set_ylabel(ylabel)
-
-    fig.savefig(out_path, bbox_inches='tight')
-    logger.info(f"printed 2d histogram to {out_path}")
-    plt.close(fig)
-
-    for cutgroup in cutgroups:
-        logger.info(f"    - generating cutgroup '{cutgroup}'")
-        fig, ax = plt.subplots(figsize=(7, 7))
-
-        cut_df = Dataset._cut_on_cutgroup(df, cutgroups, cutgroup)
-        weight_cut = cut_df['weight']
-        x_vars = cut_df[x_var]
-        y_vars = cut_df[y_var]
-
-        out_path = config.paths['plot_dir'] + f"2d_{x_var}-{y_var}_{cutgroup}.png"
-        hist = histplot_2d(
-            var_x=x_vars, var_y=y_vars,
-            xbins=xbins, ybins=ybins,
-            ax=ax, fig=fig,
-            weights=weight_cut,
-            is_z_log=is_logz,
-        )
-        if to_pkl:
-            hists[cutgroup] = hist
-
-        # get axis labels
-        xlabel, _ = get_axis_labels(str(x_var), lepton)
-        ylabel, _ = get_axis_labels(str(y_var), lepton)
-
-        hep.atlas.label(italic=(True, True), ax=ax, llabel='Internal', rlabel=plot_label + ' - ' + cutgroup, loc=0)
-        ax.set_xlabel(xlabel)
-        ax.set_ylabel(ylabel)
-
-        fig.savefig(out_path, bbox_inches='tight')
-        logger.info(f"printed 2d histogram to {out_path}")
-        plt.close(fig)
-
-    if to_pkl:
-        with open(config.paths['pkl_hist_dir'] + plot_label + f"_{x_var}-{y_var}_2d.pkl", 'wb') as f:
-            pkl.dump(hists, f)
-            logger.info(f"Saved pickle file to {f.name}")
-
-
 def plot_mass_slices(df: pd.DataFrame,
                      lepton: str,
                      xvar: str,
@@ -604,21 +418,23 @@ def plot_mass_slices(df: pd.DataFrame,
     """Plots all mass slices as well as inclusive sample (in this case just all given slices together)"""
     fig, ax = plt.subplots()
 
-    if to_pkl:
-        hists = dict()  # dictionary to hold mass slice histograms
+    hists = dict()  # dictionary to hold mass slice histograms
 
     for dsid, mass_slice in df.groupby(id_col):
-        hist = histplot_1d(var_x=mass_slice[xvar], weights=mass_slice[weight_col], bins=xbins, yerr=None, fig_axis=ax, label=str(dsid),
+        hist = histplot_1d(var_x=mass_slice[xvar], weights=mass_slice[weight_col],
+                           bins=xbins, yerr=None, fig_axis=ax, label=str(dsid),
                            is_logbins=logbins, scaling='widths')
         if to_pkl:
             hists[dsid] = hist
 
     if inclusive_dataset is not None:
-        hist_inc = histplot_1d(var_x=inclusive_dataset[xvar], weights=inclusive_dataset[weight_col], bins=xbins, fig_axis=ax, yerr=None, is_logbins=logbins,
+        hist_inc = histplot_1d(var_x=inclusive_dataset[xvar], weights=inclusive_dataset[weight_col],
+                               bins=xbins, fig_axis=ax, yerr=None, is_logbins=logbins,
                                scaling='widths', color='k', linewidth=2, label='Inclusive')
     else:
-        hist_inc = histplot_1d(var_x=df[xvar], weights=df[weight_col], bins=xbins, fig_axis=ax, yerr=None, is_logbins=logbins, scaling='widths',
-                               color='k', linewidth=2, label='Inclusive')
+        hist_inc = histplot_1d(var_x=df[xvar], weights=df[weight_col],
+                               bins=xbins, fig_axis=ax, yerr=None, is_logbins=logbins,
+                               scaling='widths', color='k', linewidth=2, label='Inclusive')
     if to_pkl:
         hists['inclusive'] = hist_inc
 

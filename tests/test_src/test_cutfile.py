@@ -2,7 +2,7 @@ from collections import OrderedDict
 
 import pytest
 
-from utils.cutfile_utils import *
+from src.cutfile import Cutfile
 
 # test list of dicts
 test_cut_list_of_dicts = [
@@ -45,7 +45,7 @@ test_options_dict = {
 class TestExtractCutVariables(object):
     def test_cutvars_input(self):
         expected_output = {'testvar1', 'testvar3', 'testvar4'}
-        actual_output = extract_cut_variables(test_cut_list_of_dicts, test_output_list)
+        actual_output = Cutfile.extract_cut_variables(test_cut_list_of_dicts, test_output_list)
         assert expected_output == actual_output, \
             f"Expected: {expected_output}. Actual: {actual_output}"
 
@@ -57,7 +57,7 @@ class TestGenCutroups(object):
             ('var1cut', ['cut 1', 'cut 2']),
             ('var4cut', ['cut 3']),
         ])
-        actual_output = gen_cutgroups(test_cut_list_of_dicts)
+        actual_output = Cutfile.gen_cutgroups(test_cut_list_of_dicts)
 
         assert expected_output == actual_output, \
             f"Expected: {expected_output}. Actual: {actual_output}"
@@ -68,7 +68,7 @@ class TestGenCutroups(object):
 class TestParseCutfile(object):
     @pytest.fixture(scope='session')
     def output(self, tmp_cutfile):
-        output = parse_cutfile(tmp_cutfile)
+        output = Cutfile.parse_cutfile(tmp_cutfile)
         yield output
 
     def test_list_of_cut_dicts(self, output):
@@ -98,7 +98,7 @@ class TestParseCutline(object):
                            'cut_val': 100,
                            'group': 'var1cut',
                            'is_symmetric': True}
-        actual_output = parse_cutline(line)
+        actual_output = Cutfile.parse_cutline(line)
         assert expected_output == actual_output
 
     def test_tree(self):
@@ -110,62 +110,62 @@ class TestParseCutline(object):
                            'group': 'var1cut',
                            'is_symmetric': True,
                            'tree': 'tree2'}
-        actual_output = parse_cutline(line)
+        actual_output = Cutfile.parse_cutline(line)
         assert expected_output == actual_output
 
     def test_missing_value(self):
         line = 'cut 1{0}testvar1{0}<={0}100{0}true'.format(self.sep)
         with pytest.raises(SyntaxError) as e:
-            _ = parse_cutline(line)
+            _ = Cutfile.parse_cutline(line)
         assert str(e.value) == f"Check cutfile. Line {line} is badly formatted. Got {line.split(self.sep)}."
 
     def test_extra_value(self):
         line = 'cut 1{0}testvar1{0}<={0}100{0}var1cut{0}true{0}tree2{0}woah'.format(self.sep)
         with pytest.raises(SyntaxError) as e:
-            _ = parse_cutline(line)
+            _ = Cutfile.parse_cutline(line)
         assert str(e.value) == f"Check cutfile. Line {line} is badly formatted. Got {line.split(self.sep)}."
 
     def test_incorrect_cutval(self):
         line = 'cut 1{0}testvar1{0}<={0}woops{0}var1cut{0}true{0}tree2'.format(self.sep)
         with pytest.raises(SyntaxError) as e:
-            _ = parse_cutline(line)
+            _ = Cutfile.parse_cutline(line)
         assert str(e.value) == f"Check 'cut_val' argument in line {line}. Got 'woops'."
 
     def test_blank_value(self):
         line = 'cut 1{0}{0}<={0}100{0}var1cut{0}true{0}tree2{0}woah'.format(self.sep)
         with pytest.raises(SyntaxError) as e:
-            _ = parse_cutline(line)
+            _ = Cutfile.parse_cutline(line)
         assert str(e.value) == f"Check cutfile. Line {line} is badly formatted. Got {line.split(self.sep)}."
 
     def test_trailing_separator_with_tree(self):
         line = 'cut 1{0}testvar1{0}<={0}100{0}var1cut{0}true{0}tree2{0}'.format(self.sep)
         with pytest.raises(SyntaxError) as e:
-            _ = parse_cutline(line)
+            _ = Cutfile.parse_cutline(line)
         assert str(e.value) == f"Check cutfile. Line {line} is badly formatted. Got {line.split(self.sep)}."
 
     def test_trailing_separator_without_tree(self):
         line = 'cut 1{0}testvar1{0}<={0}100{0}var1cut{0}true{0}'.format(self.sep)
         with pytest.raises(SyntaxError) as e:
-            _ = parse_cutline(line)
+            _ = Cutfile.parse_cutline(line)
         assert str(e.value) == f"Check cutfile. Blank value given in line {line}. Got {line.split(self.sep)}."
 
     def test_trailing_space(self, caplog):
         line = 'cut 1{0}testvar1 {0}<={0}100{0}var1cut{0}true'.format(self.sep)
-        _ = parse_cutline(line)
+        _ = Cutfile.parse_cutline(line)
         for record in caplog.records:
             assert record.levelname == 'WARNING'
-        assert caplog.text == f"WARNING  analysis:cutfile_utils.py:29 Found trailing space in option cutfile line {line}: Variable 'testvar1 '.\n"
+        assert f"Found trailing space in option cutfile line {line}: Variable 'testvar1 '.\n" in caplog.text
 
 
 class TestGenAltTreeDict(object):
     def test_default_input(self):
         expected = {'tree2': ['testvar4']}
-        actual = gen_alt_tree_dict(test_cut_list_of_dicts)
+        actual = Cutfile.gen_alt_tree_dict(test_cut_list_of_dicts)
         assert actual == expected
 
     def test_no_alt_trees(self):
         expected = dict()
-        actual = gen_alt_tree_dict(test_cut_list_of_dicts[:2])
+        actual = Cutfile.gen_alt_tree_dict(test_cut_list_of_dicts[:2])
         assert actual == expected
 
     def test_multiple_alt_trees(self):
@@ -191,5 +191,5 @@ class TestGenAltTreeDict(object):
             }
         ]
         new_cutlist = test_cut_list_of_dicts + new_cuts
-        actual = gen_alt_tree_dict(new_cutlist)
+        actual = Cutfile.gen_alt_tree_dict(new_cutlist)
         assert actual == expected
