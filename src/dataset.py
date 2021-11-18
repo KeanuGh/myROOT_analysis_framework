@@ -20,7 +20,7 @@ import utils.plotting_utils as plt_utils
 from src.cutfile import Cutfile
 from src.cutflow import Cutflow
 from utils.axis_labels import labels_xs
-from utils.var_helpers import derived_vars
+from utils.var_helpers import derived_vars, OtherVar
 
 logger = logging.getLogger('analysis')
 
@@ -72,6 +72,8 @@ class Dataset:
         logger.info(f"Parsting cutfile for {self.name}...")
         self.cutfile = Cutfile(self.cutfile_path)
         self._rebuild = self.cutfile.if_build_dataframe(self.pkl_path)
+        if self.cutfile.if_make_cutfile_backup():
+            self.cutfile.backup_cutfile(self.name)
 
         # some debug information
         logger.debug("DATASET INPUT OPTIONS: ")
@@ -244,6 +246,7 @@ class Dataset:
                          vars_to_cut: Set[str],
                          is_slices: bool = False,
                          chunksize: int = 1024,
+                         calc_vars_dict: Dict[str, OtherVar] = None
                          ) -> pd.DataFrame:
         """
         Builds a dataframe from cutfile inputs
@@ -253,22 +256,27 @@ class Dataset:
         :param vars_to_cut: list of strings of variables in file to cut on
         :param is_slices: whether or not data is in mass slices
         :param chunksize: chunksize for uproot concat method
+        :param calc_vars_dict: list of possible calculated variables (see utils.var_helpers)
         :return: output dataframe containing columns corresponding to necessary variables
         """
 
         # get variables to extract from dataframe and their TTrees
-        tree_dict, vars_to_calc = Cutfile.extract_cut_variables(cut_list_dicts, derived_vars)
+        if calc_vars_dict is None:
+            calc_vars_dict = derived_vars
+        tree_dict, vars_to_calc = Cutfile.extract_cut_variables(cut_list_dicts, vars_to_cut, calc_vars_dict)
 
-        print(tree_dict)
+        print("tree_dict: ", tree_dict)
+        print("vars_to_calc: ", vars_to_calc)
 
         # get default tree variables
         default_tree_vars = tree_dict.pop('na')
         default_tree_vars |= tree_dict.pop(TTree_name, set())
         default_tree_vars |= vars_to_cut
+        default_tree_vars -= vars_to_calc
         default_tree_vars.add('weight_mc')
         default_tree_vars.add('eventNumber')
 
-        print(default_tree_vars)
+        print("default_tree_vars: ", default_tree_vars)
 
         if logger.level == logging.DEBUG:
             logger.debug(f"Variables to extract from {TTree_name} tree: ")
@@ -373,14 +381,14 @@ class Dataset:
 
             def row_calc(deriv_var: str, row: pd.Series) -> pd.Series:
                 """Helper for applying derived variable calculation function to a dataframe row"""
-                row_args = [row[v] for v in derived_vars[deriv_var]['var_args']]
-                return derived_vars[deriv_var]['func'](*row_args)
+                row_args = [row[v] for v in calc_vars_dict[deriv_var]['var_args']]
+                return calc_vars_dict[deriv_var]['func'](*row_args)
 
             # save which variables are actually necessary in order to drop extras (keep all columns for now)
             # og_vars = all_vars(cut_list_dicts, vars_to_cut)
             for var in vars_to_calc:
                 # compute new column
-                temp_cols = derived_vars[var]['var_args']
+                temp_cols = calc_vars_dict[var]['var_args']
                 logger.info(f"Computing '{var}' column from {temp_cols}...")
                 df[var] = df.apply(lambda row: row_calc(var, row), axis=1)
 
@@ -517,6 +525,7 @@ class Dataset:
     # ===========================================
     # =========== PLOTING FUNCTIONS =============
     # ===========================================
+    # TODO: strip special characters from filepaths
     def plot_1d(self,
                 x: Union[str, List[str]],
                 bins: Union[tuple, list],

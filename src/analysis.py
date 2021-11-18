@@ -51,7 +51,7 @@ class Analysis:
         logger.setLevel(log_level)
         if log_out.lower() in ('file', 'both'):
             filehandler = logging.FileHandler(f"{config.paths['log_dir']}/{analysis_label}_{time.strftime('%Y-%m-%d_%H-%M-%S')}.log")
-            filehandler.setFormatter(logging.Formatter('%(asctime)s %(levelname)s: %(message)s'))
+            filehandler.setFormatter(logging.Formatter('%(asctime)s %(levelname)s-10s %(message)s'))
             logger.addHandler(filehandler)
         if log_out.lower() in ('console', 'both'):
             logger.addHandler(logging.StreamHandler(sys.stdout))

@@ -11,6 +11,7 @@ MC_WZ_dilep_m_born
 MC_WZ_dilep_m_bare
 MC_WZ_dilep_m_dres
 MC_WZ_pt
+mt
 
 [OPTIONS]
 # case-insensitive

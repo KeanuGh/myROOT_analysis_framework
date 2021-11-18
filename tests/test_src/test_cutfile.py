@@ -32,7 +32,7 @@ test_cut_list_of_dicts = [
         'tree': 'tree2'
     }
 ]
-test_output_set = {
+test_uncut_set = {
     'testvar1',
     'testvar3',
 }
@@ -45,9 +45,45 @@ test_options_dict = {
 class TestExtractCutVariables(object):
     def test_cutvars_input(self):
         expected_output = {'testvar1', 'testvar3', 'testvar4'}
-        actual_output = Cutfile.all_vars(test_cut_list_of_dicts, test_output_set)
+        actual_output = Cutfile.all_vars(test_cut_list_of_dicts, test_uncut_set)
         assert expected_output == actual_output, \
             f"Expected: {expected_output}. Actual: {actual_output}"
+
+    def test_calculated_variables(self):
+        derived_vars = {
+            'dev_var1': {
+                'var_args': ['testvar1', 'testvar2'],
+                'tree': 'tree1',
+                'func': lambda x, y: x + y
+            },
+            'dev_var2': {
+                'var_args': ['testvar4'],
+                'tree': 'tree2',
+                'func': lambda x: 2 * x
+            }
+        }
+        new_cut_list = test_cut_list_of_dicts.copy()
+        new_cut_list.append(
+            {
+                'name': 'cut 4',
+                'cut_var': 'dev_var1',
+                'relation': '>',
+                'cut_val': 2,
+                'group': 'devcut',
+                'is_symmetric': False,
+            }
+        )
+        new_uncut_set = test_uncut_set.copy()
+        new_uncut_set.add('dev_var2')
+        exp_tree_dict = {'na': {'testvar1'}, 'tree1': {'testvar1', 'testvar2'}, 'tree2': {'testvar4'}}
+        exp_calc_vars = {'dev_var1', 'dev_var2'}
+        act_tree_dict, act_calc_vars = Cutfile.extract_cut_variables(new_cut_list,
+                                                                     new_uncut_set,
+                                                                     derived_vars)
+        assert exp_tree_dict == act_tree_dict, \
+            f"Expected: {exp_tree_dict}, Actual: {act_tree_dict}"
+        assert exp_calc_vars == act_calc_vars, \
+            f"Expected: {exp_calc_vars}, Actual: {act_calc_vars}"
 
 
 class TestGenCutroups(object):
@@ -79,8 +115,8 @@ class TestParseCutfile(object):
                 f"Got: \n{output[0][i]}"
 
     def test_output_vars(self, output):
-        assert output[1] == test_output_set, \
-            f"Cutfile parser failed outputs. Expected: {test_output_set}. Got: {self.output[1]}"
+        assert output[1] == test_uncut_set, \
+            f"Cutfile parser failed outputs. Expected: {test_uncut_set}. Got: {self.output[1]}"
 
     def test_option_dict(self, output):
         assert output[2] == test_options_dict, \
@@ -159,17 +195,17 @@ class TestParseCutline(object):
 
 class TestGenAltTreeDict(object):
     def test_default_input(self):
-        expected = {'tree2': {'testvar4'}}
-        actual = Cutfile.gen_alt_tree_dict(test_cut_list_of_dicts)
+        expected = {'tree2': {'testvar4'}, 'na': {'testvar1'}}
+        actual = Cutfile.gen_tree_dict(test_cut_list_of_dicts)
         assert actual == expected
 
     def test_no_alt_trees(self):
-        expected = dict()
-        actual = Cutfile.gen_alt_tree_dict(test_cut_list_of_dicts[:2])
+        expected = {'na': {'testvar1'}}
+        actual = Cutfile.gen_tree_dict(test_cut_list_of_dicts[:2])
         assert actual == expected
 
     def test_multiple_alt_trees(self):
-        expected = {'tree2': {'testvar4', 'testvar5'}, 'tree3': {'testvar6'}}
+        expected = {'tree2': {'testvar4', 'testvar5'}, 'tree3': {'testvar6'}, 'na': {'testvar1'}}
         new_cuts = [
             {
                 'name': 'cut 4',
@@ -191,5 +227,5 @@ class TestGenAltTreeDict(object):
             }
         ]
         new_cutlist = test_cut_list_of_dicts + new_cuts
-        actual = Cutfile.gen_alt_tree_dict(new_cutlist)
+        actual = Cutfile.gen_tree_dict(new_cutlist)
         assert actual == expected

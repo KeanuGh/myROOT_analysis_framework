@@ -1,11 +1,12 @@
 import collections
 import logging
 import os
-import sys
 import time
 from distutils.util import strtobool
 from shutil import copyfile
 from typing import Tuple, List, OrderedDict, Dict, Set
+
+import pandas as pd
 
 import src.config as config
 from utils.file_utils import identical_to_backup, get_last_backup, is_dir_empty, get_filename
@@ -23,12 +24,7 @@ class Cutfile:
         self._backup_path = config.paths['backup_cutfiles_dir']
         self.cut_dicts, self.vars_to_cut, self.options = self.parse_cutfile(file_path)
         self.cutgroups = self.gen_cutgroups(self.cut_dicts)
-        self.alt_trees = self.gen_alt_tree_dict(self.cut_dicts)
-        if self.if_make_cutfile_backup():
-            self._make_backup = True
-            self.backup_cutfile(self._backup_path + name + '_')
-        else:
-            self._make_backup = False
+        self.alt_trees = self.gen_tree_dict(self.cut_dicts)
 
     @classmethod
     def parse_cutline(cls, cutline: str, sep='\t') -> dict:
@@ -143,16 +139,20 @@ class Cutfile:
         return cuts_list_of_dicts, output_vars_list, options_dict
 
     @classmethod
-    def extract_cut_variables(cls, cut_dicts: List[dict],
-                              derived_vars: Dict[str, OtherVar]) -> Tuple[Dict[str, set[str]], Set[str]]:
+    def extract_cut_variables(cls,
+                              cut_dicts: List[dict],
+                              uncut_vars: Set[str],
+                              derived_vars: Dict[str, OtherVar]
+                              ) -> Tuple[Dict[str, set[str]], Set[str]]:
         """
         Get which variables are needed to extract from root file based on cutfile parser output
         uses outputs from parse_cutfile()
 
         :return Tuple[{Dictionary of trees and its variables to extract}, {set of variables to calculate}]
         """
-        tree_dict = cls.gen_alt_tree_dict(cut_dicts)
+        tree_dict = cls.gen_tree_dict(cut_dicts)
         calc_vars = {var for var in {cut_dict['cut_var'] for cut_dict in cut_dicts} if var in derived_vars}
+        calc_vars |= {var for var in uncut_vars if var in derived_vars}
 
         # for variables in the 'default' tree (when tree not specified)
         tree_dict['na'] = {cut_dict['cut_var'] for cut_dict in cut_dicts if 'tree' not in cut_dict} - calc_vars
@@ -169,8 +169,7 @@ class Cutfile:
     @classmethod
     def all_vars(cls, cut_dicts: List[dict], vars_list: Set[str]) -> Set[str]:
         """Return all variables mentioned in cutfile"""
-        extract_vars = {cut_dict['cut_var'] for cut_dict in cut_dicts}
-        return extract_vars | {variable for variable in vars_list if variable not in extract_vars}
+        return {cut_dict['cut_var'] for cut_dict in cut_dicts} | vars_list
 
     @classmethod
     def gen_cutgroups(cls, cut_list_of_dicts: List[dict]) -> OrderedDict[str, List[str]]:
@@ -192,15 +191,20 @@ class Cutfile:
         return collections.OrderedDict(cutgroups)
 
     @classmethod
-    def gen_alt_tree_dict(cls, list_of_cut_dicts: List[dict]) -> Dict[str, set[str]]:
-        """generate dictionary like {'tree': {'var', ...}, ...} in order to extract variables from other trees in root file"""
-        out = dict()
+    def gen_tree_dict(cls, list_of_cut_dicts: List[dict]) -> Dict[str, set[str]]:
+        """
+        generate dictionary like {'tree': {'var', ...}, ...} in order to extract variables from other trees in root file
+        'na' when tree not given (this is the default tree given in dataset)
+        """
+        out = {'na': set()}
         for cut_dict in list_of_cut_dicts:
             if 'tree' in cut_dict:
                 if cut_dict['tree'] not in out:
                     out[cut_dict['tree']]: set = {cut_dict['cut_var']}
                 else:
                     out[cut_dict['tree']].add(cut_dict['cut_var'])
+            else:
+                out['na'].add(cut_dict['cut_var'])
         return out
 
     def if_make_cutfile_backup(self) -> bool:
@@ -212,73 +216,62 @@ class Cutfile:
 
     def if_build_dataframe(self, pkl_filepath: str) -> bool:
         """
-        compares current cutfile to backups and decides whether to rebuild dataframe and save new backup cutfile
+        compares current cutfile and dataframe to backups and decides whether to rebuild dataframe
+        cutfile
         :param pkl_filepath: pickle file containing data in pandas dataframe
-        :return: tuple of bools: (whether to rebuild dataframe, whether to save cutfile backup)
+        :return: whether to build new dataframe
         """
         is_pkl_file = os.path.isfile(pkl_filepath)
         if is_pkl_file:
-            logger.debug("Datafile found")
+            logger.debug(f"Previous datafile found in {pkl_filepath}.")
+        else:
+            return True
 
-        # default behaviour: don't build if you don't need to (it's slow and painful)
-        build_dataframe = False
-
-        # check if backup exists
+        # if cutfile backup exists, check for new variables
         if not is_dir_empty(self._backup_path):
-            # if cutfiles are different, check if dataframe variables need an update
-            if self._make_backup:
-                logger.debug("New cutfile, will save backup.")
-                latest_backup = get_last_backup(self._backup_path)
+            latest_backup = get_last_backup(self._backup_path)
+            logger.debug(f"Found backup cutfile in {latest_backup}")
 
-                # check if variables to extract from root file are the same as before. If yes, use previous pkl file.
-                # if not, extract again from root file.
-                BACKUP_cutfile_dicts, BACKUP_cutfile_outputs, _ = self.parse_cutfile(latest_backup)
+            BACKUP_cutfile_dicts, BACKUP_cutfile_outputs, _ = self.parse_cutfile(latest_backup)
+            current_variables = self.all_vars(self.cut_dicts, self.vars_to_cut)
+            backup_variables = self.all_vars(BACKUP_cutfile_dicts, BACKUP_cutfile_outputs)
 
-                current_variables = self.all_vars(self.cut_dicts, self.vars_to_cut)
-                backup_variables = self.all_vars(BACKUP_cutfile_dicts, BACKUP_cutfile_outputs)
-
-                # if cutfile contains different variables extract necessary variables from root file and put into pickle
-                if not set(current_variables) == set(backup_variables):
-                    logger.debug(f"New variables found; dataframe will be rebuilt.")
-                    logger.debug(f" Current cutfile variables: {current_variables}. Previous: {backup_variables}")
-                    build_dataframe = True
+            # check whether variables in current cutfile are in previous cutfile
+            if not current_variables <= backup_variables:
+                logger.debug(f"New variables found; dataframe will be rebuilt")
+                logger.debug(f" Current cutfile variables: {current_variables}. Previous: {backup_variables}")
+                return True
+            else:
+                logger.debug(f"All needed variables already contained in previous cutfile")
+                logger.debug(f"previous cutfile variables: {backup_variables}")
+                logger.debug(f"current cutfile variables: {current_variables}")
 
         # if backup doesn't exit, make backup and check if there is already a pickle file
         else:
             # if pickle file already exists
+            logger.debug(f"No cutfile backup found in {self._backup_path}")
             if is_pkl_file:
-                if self.yes_or_no(f"No cutfile backups found in {self._backup_path}. "
-                                  f"Continue with current pickle file?"):
-                    logger.info(f"Using dataframe {pkl_filepath}")
+                old_df = pd.load_pickle(pkl_filepath)
+                old_cols = set(old_df.columns)
+                current_variables = self.all_vars(self.cut_dicts, self.vars_to_cut)
+                if current_variables <= old_cols:
+                    logger.debug("All variables found in old pickle file.")
+                    return False
                 else:
-                    if self.yes_or_no("Rebuild dataframe?"):
-                        build_dataframe = True
-                    else:
-                        sys.exit("Exiting")
+                    logger.info("New variables found in cutfile. Will rebuild dataframe")
+                    new_vars = {v for v in current_variables if v not in old_cols}
+                    logger.debug(f"New cutfile variable(s): {new_vars}")
+                    return True
+
             # if no backup or pickle file, rebuild
             else:
-                logger.info("No picke file found. Will rebuild dataframe.")
-                build_dataframe = True
+                logger.info("No pickle file found. Will rebuild dataframe.")
+                return True
 
-        # check pickle file is actually there before trying to read from it
-        if not build_dataframe and not is_pkl_file:
-            build_dataframe = True
+        return False
 
-        return build_dataframe
-
-    def backup_cutfile(self, path: str) -> None:
+    def backup_cutfile(self, name: str) -> None:
         curr_filename = get_filename(self._path)
-        cutfile_backup_filepath = path + curr_filename + '_' + time.strftime("%Y-%m-%d_%H-%M-%S") + ".txt"
+        cutfile_backup_filepath = self._backup_path + curr_filename + '_' + name + '_' + time.strftime("%Y-%m-%d_%H-%M-%S") + ".txt"
         copyfile(self._path, cutfile_backup_filepath)
         logger.info(f"Backup cutfile saved in {cutfile_backup_filepath}")
-
-    @staticmethod
-    def yes_or_no(qu: str) -> bool:
-        yn = input(qu + " (y/n) ")
-        while True:
-            if yn.lower in ('yes', 'y'):
-                return True
-            elif yn.lower in ('no', 'n'):
-                return False
-            else:
-                input("yes or no ")

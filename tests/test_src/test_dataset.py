@@ -184,14 +184,37 @@ class TestBuildDataframe(object):
                                          is_slices=False)
         assert str(e.value) == "Duplicated events in both 'tree1' and 'tree2' TTrees"
 
+    @pytest.mark.filterwarnings("ignore::UserWarning")
     def test_derived_variable(self, tmp_root_datafile):
         derived_vars = {
             'dev_var1': {
                 'var_args': ['testvar1', 'testvar2'],
+                'tree': 'tree1',
                 'func': lambda x, y: x + y
+            },
+            'dev_var2': {
+                'var_args': ['testvar4'],
+                'tree': 'tree2',
+                'func': lambda x: 2*x
             }
         }
-        # TODO
+        vars_to_cut = self.test_vars_to_cut.copy() | {'dev_var1', 'dev_var2'}
+        expected_output = self.expected_output.copy()
+        expected_output['testvar2'] = np.arange(1000) * 1.1
+        expected_output['testvar4'] = np.arange(1000) * -1
+        expected_output['dev_var1'] = expected_output['testvar1'] + expected_output['testvar2']
+        expected_output['dev_var2'] = 2*expected_output['testvar4']
+        output = Dataset._build_dataframe(tmp_root_datafile,
+                                          TTree_name=self.default_TTree,
+                                          cut_list_dicts=self.test_cut_dicts,
+                                          vars_to_cut=vars_to_cut,
+                                          calc_vars_dict=derived_vars,
+                                          is_slices=False)
+        # test column names are the same
+        assert set(output.columns) == set(expected_output.columns)
+        # test contents are the same
+        for col in output.columns:
+            assert np.array_equal(output[col], expected_output[col])
 
 
 class TestCreateCutColumns(object):

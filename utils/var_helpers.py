@@ -33,7 +33,7 @@ class OtherVar(TypedDict):
 # this dictionary of special variables aren't in the usual root ntuples
 # var_args is a list of the ntuple variables needed to calculate, to be passed to the 'calc' function
 derived_vars: Dict[str, OtherVar] = {
-    'lepton_mt': {  # boson pt from electron decay
+    'mt': {  # boson mt
         # 'var_args': ['e_pt', 'met_met', 'e_phi', 'met_phi'],
         'var_args': ['MC_WZmu_el_pt_born', 'MC_WZneutrino_pt_born', 'MC_WZmu_el_phi_born', 'MC_WZneutrino_phi_born'],
         'tree': 'truth',
