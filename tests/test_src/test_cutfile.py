@@ -32,10 +32,10 @@ test_cut_list_of_dicts = [
         'tree': 'tree2'
     }
 ]
-test_output_list = [
+test_output_set = {
     'testvar1',
     'testvar3',
-]
+}
 test_options_dict = {
     'sequential': False,
     'grouped cutflow': False,
@@ -45,7 +45,7 @@ test_options_dict = {
 class TestExtractCutVariables(object):
     def test_cutvars_input(self):
         expected_output = {'testvar1', 'testvar3', 'testvar4'}
-        actual_output = Cutfile.extract_cut_variables(test_cut_list_of_dicts, test_output_list)
+        actual_output = Cutfile.all_vars(test_cut_list_of_dicts, test_output_set)
         assert expected_output == actual_output, \
             f"Expected: {expected_output}. Actual: {actual_output}"
 
@@ -79,8 +79,8 @@ class TestParseCutfile(object):
                 f"Got: \n{output[0][i]}"
 
     def test_output_vars(self, output):
-        assert output[1] == test_output_list, \
-            f"Cutfile parser failed outputs. Expected: {test_output_list}. Got: {self.output[1]}"
+        assert output[1] == test_output_set, \
+            f"Cutfile parser failed outputs. Expected: {test_output_set}. Got: {self.output[1]}"
 
     def test_option_dict(self, output):
         assert output[2] == test_options_dict, \
@@ -159,7 +159,7 @@ class TestParseCutline(object):
 
 class TestGenAltTreeDict(object):
     def test_default_input(self):
-        expected = {'tree2': ['testvar4']}
+        expected = {'tree2': {'testvar4'}}
         actual = Cutfile.gen_alt_tree_dict(test_cut_list_of_dicts)
         assert actual == expected
 
@@ -169,7 +169,7 @@ class TestGenAltTreeDict(object):
         assert actual == expected
 
     def test_multiple_alt_trees(self):
-        expected = {'tree2': ['testvar4', 'testvar5'], 'tree3': ['testvar6']}
+        expected = {'tree2': {'testvar4', 'testvar5'}, 'tree3': {'testvar6'}}
         new_cuts = [
             {
                 'name': 'cut 4',

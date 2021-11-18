@@ -7,14 +7,13 @@ from src.dataset import Dataset
 
 
 class TestBuildDataframe(object):
-    # TODO: test on derived variables
     test_cut_dicts = [
         {'name': 'cut 1', 'cut_var': 'testvar1', 'relation': '<=', 'cut_val': 100, 'group': 'var1cut',
          'is_symmetric': True},
         {'name': 'cut 2', 'cut_var': 'testvar1', 'relation': '>', 'cut_val': 1, 'group': 'var1cut',
          'is_symmetric': False}
     ]
-    test_vars_to_cut = ['testvar1', 'testvar3']
+    test_vars_to_cut = {'testvar1', 'testvar3'}
     expected_output = pd.DataFrame({
         'testvar1': np.arange(1000),
         'testvar3': np.arange(1000) * 3,
@@ -46,7 +45,7 @@ class TestBuildDataframe(object):
         assert str(e.value) == f"TTree(s) 'missing' not found in file {tmp_root_datafile}"
 
     def test_missing_branch(self, tmp_root_datafile):
-        missing_branches = ['missing1', 'missing2']
+        missing_branches = {'missing1', 'missing2'}
         with pytest.raises(ValueError) as e:
             _ = Dataset._build_dataframe(tmp_root_datafile,
                                          TTree_name=self.default_TTree,
@@ -184,6 +183,15 @@ class TestBuildDataframe(object):
                                          vars_to_cut=self.test_vars_to_cut,
                                          is_slices=False)
         assert str(e.value) == "Duplicated events in both 'tree1' and 'tree2' TTrees"
+
+    def test_derived_variable(self, tmp_root_datafile):
+        derived_vars = {
+            'dev_var1': {
+                'var_args': ['testvar1', 'testvar2'],
+                'func': lambda x, y: x + y
+            }
+        }
+        # TODO
 
 
 class TestCreateCutColumns(object):

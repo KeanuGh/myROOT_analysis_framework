@@ -5,7 +5,7 @@ import time
 from dataclasses import dataclass, field
 from glob import glob
 from itertools import combinations
-from typing import Optional, Union, List, Dict, OrderedDict
+from typing import Optional, Union, List, Dict, Set, OrderedDict
 from warnings import warn
 
 import matplotlib.pyplot as plt
@@ -41,7 +41,6 @@ class Dataset:
     pkl_path: str = None  # where the dataframe pickle file will be stored
     is_slices: bool = False  # whether input data is in mass slices
     lepton: str = 'lepton'  # name of charged DY lepton channel in dataset (if applicable)
-    grouped_cutflow: bool = True  # whether cutflow should apply cuts in cutgroups or separately TODO: in cutfile
     chunksize: int = 1024  # chunksize for uproot ROOT file import
     _weight_column = 'weight'  # name of weight column in dataframe
 
@@ -58,18 +57,6 @@ class Dataset:
             # initialise pickle filepath with given name
             self.pkl_path = config.paths['pkl_df_filepath'] + self.name + '_df.pkl'
 
-        # some debug information
-        logger.debug("DATASET INPUT OPTIONS: ")
-        logger.debug("----------------------------")
-        logger.debug(f"Input file(s):  {self.data_path}")
-        logger.debug(f"TTree: {self.TTree_name}")
-        logger.debug(f"Cutfile: {self.cutfile_path}")
-        logger.debug(f"Slices: {self.is_slices}")
-        logger.debug(f"grouped cutflow: {self.grouped_cutflow}")
-        logger.debug(f"Forced dataset rebuild: {config.force_rebuild}")
-        logger.debug("----------------------------")
-        logger.debug("")
-
         if logger.level == logging.DEBUG:
             # log contents of cutfile
             logger.debug("CUTFILE CONTENTS")
@@ -85,6 +72,19 @@ class Dataset:
         logger.info(f"Parsting cutfile for {self.name}...")
         self.cutfile = Cutfile(self.cutfile_path)
         self._rebuild = self.cutfile.if_build_dataframe(self.pkl_path)
+
+        # some debug information
+        logger.debug("DATASET INPUT OPTIONS: ")
+        logger.debug("----------------------------")
+        logger.debug(f"Input file(s):  {self.data_path}")
+        logger.debug(f"TTree: {self.TTree_name}")
+        logger.debug(f"Cutfile: {self.cutfile_path}")
+        logger.debug(f"Slices: {self.is_slices}")
+        logger.debug(f"grouped cutflow: {self.cutfile.options['grouped cutflow']}")
+        logger.debug(f"sequential cutflow: {self.cutfile.options['sequential']}")
+        logger.debug(f"Forced dataset rebuild: {config.force_rebuild}")
+        logger.debug("----------------------------")
+        logger.debug("")
 
         # GENERATE DATAFRAME
         # ========================
@@ -147,8 +147,8 @@ class Dataset:
         # GENERATE CUTFLOW
         # ========================
         self.cutflow = Cutflow(self.df, self.cutfile.cut_dicts,
-                               self.cutfile.cutgroups if self.grouped_cutflow else None,
-                               self.cutfile.cutflow_options['sequential'])
+                               self.cutfile.cutgroups if self.cutfile.options['grouped cutflow'] else None,
+                               self.cutfile.options['sequential'])
 
         logger.info("=" * (42 + len(self.name)))
         logger.info(f"========= DATASET '{self.name}' INITIALISED =========")
@@ -177,7 +177,7 @@ class Dataset:
     @property
     def luminosity(self) -> float:
         """Calculate dataset luminosity"""
-        return self._get_luminosity(self.df, xs=self.cross_section)
+        return self._get_luminosity(self.df, xs=self.cross_section, weight_col=self._weight_column)
 
     @classmethod
     def _get_cross_section(cls, df: pd.DataFrame, n_events=None, weight_mc_col: str = 'weight_mc'):
@@ -193,7 +193,7 @@ class Dataset:
         return df[weight_mc_col].sum() / n_events
 
     @classmethod
-    def _get_luminosity(cls, df: pd.DataFrame, xs=None):
+    def _get_luminosity(cls, df: pd.DataFrame, xs=None, weight_col: str = 'weight'):
         """
         Calculates luminosity from dataframe
         :param df: input dataframe
@@ -202,7 +202,7 @@ class Dataset:
         """
         if not xs:
             xs = cls._get_cross_section(df)
-        return df[cls._weight_column].sum() / xs
+        return df[weight_col].sum() / xs
 
     # ===============================
     # ========= PRINTOUTS ===========
@@ -232,6 +232,287 @@ class Dataset:
                 file_utils.delete_file(latex_file)
         else:
             self.cutflow.print_latex_table(config.paths['latex_table_dir'], self.name)
+
+    # ===============================
+    # ====== DATAFRAME BUILDER ======
+    # ===============================
+    @classmethod
+    def _build_dataframe(cls,
+                         datapath: str,
+                         TTree_name: str,
+                         cut_list_dicts: List[dict],
+                         vars_to_cut: Set[str],
+                         is_slices: bool = False,
+                         chunksize: int = 1024,
+                         ) -> pd.DataFrame:
+        """
+        Builds a dataframe from cutfile inputs
+        :param datapath: path to root file
+        :param TTree_name: name of TTree to extract
+        :param cut_list_dicts: list of cut dictionaries
+        :param vars_to_cut: list of strings of variables in file to cut on
+        :param is_slices: whether or not data is in mass slices
+        :param chunksize: chunksize for uproot concat method
+        :return: output dataframe containing columns corresponding to necessary variables
+        """
+
+        # get variables to extract from dataframe and their TTrees
+        tree_dict, vars_to_calc = Cutfile.extract_cut_variables(cut_list_dicts, derived_vars)
+
+        print(tree_dict)
+
+        # get default tree variables
+        default_tree_vars = tree_dict.pop('na')
+        default_tree_vars |= tree_dict.pop(TTree_name, set())
+        default_tree_vars |= vars_to_cut
+        default_tree_vars.add('weight_mc')
+        default_tree_vars.add('eventNumber')
+
+        print(default_tree_vars)
+
+        if logger.level == logging.DEBUG:
+            logger.debug(f"Variables to extract from {TTree_name} tree: ")
+            for var in default_tree_vars:
+                logger.debug(f"  - {var}")
+            if tree_dict:
+                for tree in tree_dict:
+                    logger.debug(f"Variables to extract from {tree} tree: ")
+                    for var in tree_dict[tree]:
+                        logger.debug(f"  - {var}")
+            if vars_to_calc:
+                logger.debug("Variables to calculate: ")
+                for var in vars_to_calc:
+                    logger.debug(f"  - {var}")
+
+        # check that TTree(s) and variables exist in file(s)
+        logger.debug(f"Checking TTree and TBranch values in file(s) '{datapath}'...")
+        for filepath in glob(datapath):
+            with uproot.open(filepath) as file:
+                tree_list = [tree.split(';')[0] for tree in file.keys()]  # TTrees are labelled '<name>;<cycle number>'
+                if missing_trees := [t for t in [a_t for a_t in tree_dict] + [TTree_name] if t not in tree_list]:
+                    raise ValueError(f"TTree(s) '{', '.join(missing_trees)}' not found in file {filepath}")
+                else:
+                    if missing_branches := [branch for branch in default_tree_vars
+                                            if branch not in file[TTree_name].keys()]:
+                        raise ValueError(
+                            f"Missing TBranch(es) {missing_branches} in TTree '{TTree_name}' of file '{datapath}'.")
+            logger.debug(f"All TTrees and variables found in {filepath}...")
+        logger.debug("All required TTrees variables found.")
+
+        # check if vars are contained in label dictionary
+        if unexpected_vars := [unexpected_var for unexpected_var in default_tree_vars
+                               if unexpected_var not in labels_xs]:
+            logger.warning(f"Variable(s) {unexpected_vars} not contained in labels dictionary. "
+                           "Some unexpected behaviour may occur.")
+
+        t1 = time.time()
+        # extract pandas dataframe from root file with necessary variables
+        if not is_slices:  # If importing inclusive sample
+            logger.info(f"Extracting {default_tree_vars} from {datapath}...")
+            df = uproot.concatenate(datapath + ':' + TTree_name, default_tree_vars,
+                                    library='pd', num_workers=config.n_threads, begin_chunk_size=chunksize)
+            logger.debug(f"Extracted {len(df)} events.")
+
+            if tree_dict:
+                df = cls.__merge_TTrees(df, tree_dict, datapath, TTree_name, chunksize)
+            else:
+                # pandas merge checks for duplicates, this the only branch with no merge function
+                logger.debug("Checking for duplicate events...")
+                if (duplicates := df.duplicated(subset='eventNumber')).any():
+                    raise ValueError(f"Found {len(duplicates)} duplicate events in datafile {datapath}.")
+                logger.debug("No duplicates found.")
+
+        else:  # if importing mass slices
+            logger.info(f"Extracting mass slices from {datapath}...")
+            default_tree_vars.add('mcChannelNumber')  # to keep track of dataset IDs (DSIDs)
+
+            logger.debug(f"Extracting {default_tree_vars} from {TTree_name} tree...")
+            df = uproot.concatenate(datapath + ':' + TTree_name, default_tree_vars, library='pd',
+                                    num_workers=config.n_threads, begin_chunk_size=chunksize)
+            logger.debug(f"Extracted {len(df)} events.")
+
+            logger.debug(f"Extracting ['total_EventsWeighted', 'dsid'] from 'sumWeights' tree...")
+            sumw = uproot.concatenate(datapath + ':sumWeights', ['totalEventsWeighted', 'dsid'],
+                                      library='pd', num_workers=config.n_threads, begin_chunk_size=chunksize)
+
+            logger.debug(f"Calculating sum of weights and merging...")
+            sumw = sumw.groupby('dsid').sum()
+            df = pd.merge(df, sumw, left_on='mcChannelNumber', right_on='dsid', sort=False, copy=False)
+            df.rename(columns={'mcChannelNumber': 'DSID'},
+                      inplace=True)  # rename mcChannelNumber to DSID (why are they different)
+
+            if tree_dict:
+                df = cls.__merge_TTrees(df, tree_dict, datapath, TTree_name, chunksize)
+
+            if logger.level == logging.DEBUG:
+                # sanity check to make sure totalEventsWeighted really is what it says it is
+                # also output DSID metadata
+                dsids = df['DSID'].unique()
+                logger.debug(f"Found {len(dsids)} unique dsid(s).")
+                df_id_sub = df[['weight_mc', 'DSID']].groupby('DSID', as_index=False).sum()
+                for dsid in dsids:
+                    df_id = df[df['DSID'] == dsid]
+                    unique_totalEventsWeighted = df_id['totalEventsWeighted'].unique()
+                    if len(unique_totalEventsWeighted) != 1:
+                        logger.warning("totalEventsWeighted should only have one value per DSID. "
+                                       f"Got {len(unique_totalEventsWeighted)}, of values {unique_totalEventsWeighted} for DSID {dsid}")
+
+                    dsid_weight = df_id_sub[df_id_sub['DSID'] == dsid]['weight_mc'].values[
+                        0]  # just checked there's only one value here
+                    totalEventsWeighted = df_id['totalEventsWeighted'].values[0]
+                    if dsid_weight != totalEventsWeighted:
+                        logger.warning(
+                            f"Value of 'totalEventsWeighted' ({totalEventsWeighted}) is not the same as the total summed values of "
+                            f"'weight_mc' ({dsid_weight}) for DISD {dsid}. Ratio = {totalEventsWeighted / dsid_weight:.2g}")
+
+            default_tree_vars.remove('mcChannelNumber')
+            default_tree_vars.add('DSID')
+
+        # calculate and combine special derived variables
+        if vars_to_calc:
+
+            def row_calc(deriv_var: str, row: pd.Series) -> pd.Series:
+                """Helper for applying derived variable calculation function to a dataframe row"""
+                row_args = [row[v] for v in derived_vars[deriv_var]['var_args']]
+                return derived_vars[deriv_var]['func'](*row_args)
+
+            # save which variables are actually necessary in order to drop extras (keep all columns for now)
+            # og_vars = all_vars(cut_list_dicts, vars_to_cut)
+            for var in vars_to_calc:
+                # compute new column
+                temp_cols = derived_vars[var]['var_args']
+                logger.info(f"Computing '{var}' column from {temp_cols}...")
+                df[var] = df.apply(lambda row: row_calc(var, row), axis=1)
+
+                # # drop unnecessary columns extracted just for calculations
+                # to_drop = [var for var in temp_cols if var not in og_vars]
+                # logger.debug(f"dropping {to_drop}")
+                # df.drop(columns=to_drop, inplace=True)
+
+        t2 = time.time()
+        logger.info(f"time to build dataframe: {time.strftime('%H:%M:%S', time.gmtime(t2 - t1))}")
+
+        # properly scale GeV columns
+        cls.__rescale_to_gev(df)
+
+        return df
+
+    @classmethod
+    def __merge_TTrees(cls,
+                       df: pd.DataFrame,
+                       alt_trees: Dict[str, Set[str]],
+                       datapath: str,
+                       TTree_name: str,
+                       chunksize: int = 1024
+                       ) -> pd.DataFrame:
+        """Merge TTrees across event number"""
+        for tree in alt_trees:
+            logger.debug(f"Extracting {alt_trees[tree]} from {tree} tree...")
+            alt_df = uproot.concatenate(datapath + ":" + tree, alt_trees[tree].add('eventNumber'),
+                                        library='pd', num_workers=config.n_threads, begin_chunk_size=chunksize)
+            logger.debug(f"Extracted {len(alt_df)} events.")
+            logger.debug("Merging with rest of dataframe...")
+            try:
+                df = pd.merge(df, alt_df, how='left', on='eventNumber', sort=False, copy=False, validate='1:1')
+            except pd.errors.MergeError as e:
+                err = str(e)
+                if err == 'Merge keys are not unique in either left or right dataset; not a one-to-one merge':
+                    raise Exception(f"Duplicated events in both '{TTree_name}' and '{tree}' TTrees")
+                elif err == 'Merge keys are not unique in left dataset; not a one-to-one merge':
+                    raise Exception(f"Duplicated events in '{TTree_name}' TTree")
+                elif err == 'Merge keys are not unique in right dataset; not a one-to-one merge':
+                    raise Exception(f"Duplicated events in '{tree}' TTree")
+                else:
+                    raise e
+        return df
+
+    @staticmethod
+    def _create_cut_columns(df: pd.DataFrame, cut_dicts: List[dict]) -> None:
+        """
+        Creates boolean columns in dataframe corresponding to each cut
+        :param df: input dataframe
+        :param cut_dicts: list of dictionaries for each cut to apply
+        :return: None, this function applies inplace.
+        """
+        cut_label = config.cut_label  # get cut label from config
+
+        # use functions of compariton operators in dictionary to make life easier
+        # (but maybe a bit harder to read)
+        op_dict = {
+            '<': op.lt,
+            '<=': op.le,
+            '=': op.eq,
+            '!=': op.ne,
+            '>': op.gt,
+            '>=': op.ge,
+        }
+
+        for cut in cut_dicts:
+            if cut['relation'] not in op_dict:
+                raise ValueError(f"Unexpected comparison operator: {cut['relation']}.")
+            if not cut['is_symmetric']:
+                df[cut['name'] + cut_label] = op_dict[cut['relation']](df[cut['cut_var']], cut['cut_val'])
+            else:  # take absolute value instead
+                df[cut['name'] + cut_label] = op_dict[cut['relation']](df[cut['cut_var']].abs(), cut['cut_val'])
+
+        # print cutflow output
+        name_len = max([len(cut['name']) for cut in cut_dicts])
+        var_len = max([len(cut['cut_var']) for cut in cut_dicts])
+        logger.info('')
+        logger.info("========== CUTS USED ============")
+        for cut in cut_dicts:
+            if not cut['is_symmetric']:
+                logger.info(
+                    f"{cut['name']:<{name_len}}: {cut['cut_var']:>{var_len}} {cut['relation']} {cut['cut_val']}")
+            else:
+                logger.info(
+                    f"{cut['name']:<{name_len}}: {'|' + cut['cut_var']:>{var_len}}| {cut['relation']} {cut['cut_val']}")
+        logger.info('')
+
+    @staticmethod
+    def __gen_weight_column(df: pd.DataFrame,
+                            weight_mc_col: str = 'weight_mc',
+                            global_scale: float = config.lumi
+                            ) -> pd.Series:
+        """Returns series of weights based off weight_mc column"""
+        if weight_mc_col not in df.columns:
+            raise KeyError(f"'{weight_mc_col}' column does not exist.")
+        return df[weight_mc_col].map(lambda w: global_scale if w > 0 else -1 * global_scale)
+
+    @staticmethod
+    def __gen_weight_column_slices(df: pd.DataFrame,
+                                   mc_weight_col: str = 'weight_mc',
+                                   tot_weighted_events_col: str = 'totalEventsWeighted',
+                                   global_scale: float = config.lumi,
+                                   ) -> pd.Series:
+        """Returns series of weights for mass slices based off weight_mc column and total events weighed"""
+        # TODO?: For efficiency, perform batchwise across DSID
+        if mc_weight_col not in df.columns:
+            raise KeyError(f"'{mc_weight_col}' column not in dataframe.")
+        if tot_weighted_events_col not in df.columns:
+            raise KeyError(f"'{tot_weighted_events_col}' column not in dataframe.")
+
+        return global_scale * (df[mc_weight_col] * df[mc_weight_col].abs()) / df[tot_weighted_events_col]
+
+    @staticmethod
+    def __rescale_to_gev(df: pd.DataFrame) -> None:
+        """rescales to GeV because athena's default output is in MeV for some reason"""
+        if GeV_columns := [column for column in df.columns
+                           if (column in labels_xs) and ('[GeV]' in labels_xs[column]['xlabel'])]:
+            df[GeV_columns] /= 1000
+            logger.debug(f"Rescaled columns {GeV_columns} to GeV.")
+        else:
+            logger.debug(f"No columns rescaled to GeV.")
+
+    @staticmethod
+    def _cut_on_cutgroup(df: pd.DataFrame,
+                         cutgroups: OrderedDict[str, List[str]],
+                         group: str,
+                         ) -> pd.DataFrame:
+        """Cuts on cutgroup on input dataframe or series"""
+        cut_cols = [cut_name + config.cut_label for cut_name in cutgroups[group]]
+        cut_data = df[df[cut_cols].all(1)]
+        return cut_data
 
     # ===========================================
     # =========== PLOTING FUNCTIONS =============
@@ -532,295 +813,14 @@ class Dataset:
         if ratio:
             self.cutflow.print_histogram('ratio')
         if cummulative:
-            if self.cutfile.cutflow_options['sequential']:
+            if self.cutfile.options['sequential']:
                 self.cutflow.print_histogram('cummulative')
             else:
                 warn("Sequential cuts cannot generate a cummulative cutflow")
         if a_ratio:
-            if self.cutfile.cutflow_options['sequential']:
+            if self.cutfile.options['sequential']:
                 self.cutflow.print_histogram('a_ratio')
             else:
                 warn("Sequential cuts can't generate cummulative cutflow. "
                      "Ratio of cuts to acceptance will be generated instead.")
                 self.cutflow.print_histogram('ratio')
-
-    # ===============================
-    # ====== DATAFRAME BUILDER ======
-    # ===============================
-    @classmethod
-    def _build_dataframe(cls,
-                         datapath: str,
-                         TTree_name: str,
-                         cut_list_dicts: List[dict],
-                         vars_to_cut: List[str],
-                         is_slices: bool = False,
-                         chunksize: int = 1024,
-                         ) -> pd.DataFrame:
-        """
-        Builds a dataframe from cutfile inputs
-        :param datapath: path to root file
-        :param TTree_name: name of TTree to extract
-        :param cut_list_dicts: list of cut dictionaries
-        :param vars_to_cut: list of strings of variables in file to cut on
-        :param is_slices: whether or not data is in mass slices
-        :param chunksize: chunksize for uproot concat method
-        :return: output dataframe containing columns corresponding to necessary variables
-        """
-
-        # create list of all necessary values extract
-        default_tree_vars = Cutfile.extract_cut_variables(cut_list_dicts, vars_to_cut)
-        default_tree_vars.add('weight_mc')
-        default_tree_vars.add('eventNumber')
-
-        # get any variables that need to be calculated rather than extracted from ROOT file
-        vars_to_calc = {calc_var for calc_var in default_tree_vars if calc_var in derived_vars}
-        default_tree_vars -= vars_to_calc
-
-        # get any variables in trees outside the default tree (TTree_name)
-        alt_trees = Cutfile.gen_alt_tree_dict(cut_list_dicts)
-        if alt_trees:  # remove alt tree variables from variables to extract from default tree
-            default_tree_vars -= {var for varlist in alt_trees.values() for var in varlist}
-
-        if logger.level == logging.DEBUG:
-            logger.debug(f"Variables to extract from {TTree_name} tree: ")
-            for var in default_tree_vars:
-                logger.debug(f"  - {var}")
-            if alt_trees:
-                for tree in alt_trees:
-                    logger.debug(f"Variables to extract from {tree} tree: ")
-                    for var in alt_trees[tree]:
-                        logger.debug(f"  - {var}")
-            if vars_to_calc:
-                logger.debug("Variables to calculate: ")
-                for var in vars_to_calc:
-                    logger.debug(f"  - {var}")
-
-        # check that TTree(s) and variables exist in file(s)
-        logger.debug(f"Checking TTree and TBranch values in file(s) '{datapath}'...")
-        for filepath in glob(datapath):
-            with uproot.open(filepath) as file:
-                tree_list = [tree.split(';')[0] for tree in file.keys()]  # TTrees are labelled '<name>;<cycle number>'
-                if missing_trees := [t for t in [a_t for a_t in alt_trees] + [TTree_name] if t not in tree_list]:
-                    raise ValueError(f"TTree(s) '{', '.join(missing_trees)}' not found in file {filepath}")
-                else:
-                    if missing_branches := [branch for branch in default_tree_vars
-                                            if branch not in file[TTree_name].keys()]:
-                        raise ValueError(
-                            f"Missing TBranch(es) {missing_branches} in TTree '{TTree_name}' of file '{datapath}'.")
-            logger.debug(f"All TTrees and variables found in {filepath}...")
-        logger.debug("All required TTrees variables found.")
-
-        # check if vars are contained in label dictionary
-        if unexpected_vars := [unexpected_var for unexpected_var in default_tree_vars
-                               if unexpected_var not in labels_xs]:
-            logger.warning(f"Variable(s) {unexpected_vars} not contained in labels dictionary. "
-                           "Some unexpected behaviour may occur.")
-
-        t1 = time.time()
-        # extract pandas dataframe from root file with necessary variables
-        if not is_slices:  # If importing inclusive sample
-            logger.info(f"Extracting {default_tree_vars} from {datapath}...")
-            df = uproot.concatenate(datapath + ':' + TTree_name, default_tree_vars,
-                                    library='pd', num_workers=config.n_threads, begin_chunk_size=chunksize)
-            logger.debug(f"Extracted {len(df)} events.")
-
-            if alt_trees:
-                df = cls.__merge_TTrees(df, alt_trees, datapath, TTree_name, chunksize)
-            else:
-                # pandas merge checks for duplicates, this the only branch with no merge function
-                logger.debug("Checking for duplicate events...")
-                if (duplicates := df.duplicated(subset='eventNumber')).any():
-                    raise ValueError(f"Found {len(duplicates)} duplicate events in datafile {datapath}.")
-                logger.debug("No duplicates found.")
-
-        else:  # if importing mass slices
-            logger.info(f"Extracting mass slices from {datapath}...")
-            default_tree_vars.add('mcChannelNumber')  # to keep track of dataset IDs (DSIDs)
-
-            logger.debug(f"Extracting {default_tree_vars} from {TTree_name} tree...")
-            df = uproot.concatenate(datapath + ':' + TTree_name, default_tree_vars, library='pd',
-                                    num_workers=config.n_threads, begin_chunk_size=chunksize)
-            logger.debug(f"Extracted {len(df)} events.")
-
-            logger.debug(f"Extracting ['total_EventsWeighted', 'dsid'] from 'sumWeights' tree...")
-            sumw = uproot.concatenate(datapath + ':sumWeights', ['totalEventsWeighted', 'dsid'],
-                                      library='pd', num_workers=config.n_threads, begin_chunk_size=chunksize)
-
-            logger.debug(f"Calculating sum of weights and merging...")
-            sumw = sumw.groupby('dsid').sum()
-            df = pd.merge(df, sumw, left_on='mcChannelNumber', right_on='dsid', sort=False, copy=False)
-            df.rename(columns={'mcChannelNumber': 'DSID'},
-                      inplace=True)  # rename mcChannelNumber to DSID (why are they different)
-
-            if alt_trees:
-                df = cls.__merge_TTrees(df, alt_trees, datapath, TTree_name, chunksize)
-
-            if logger.level == logging.DEBUG:
-                # sanity check to make sure totalEventsWeighted really is what it says it is
-                # also output DSID metadata
-                dsids = df['DSID'].unique()
-                logger.debug(f"Found {len(dsids)} unique dsid(s).")
-                df_id_sub = df[['weight_mc', 'DSID']].groupby('DSID', as_index=False).sum()
-                for dsid in dsids:
-                    df_id = df[df['DSID'] == dsid]
-                    unique_totalEventsWeighted = df_id['totalEventsWeighted'].unique()
-                    if len(unique_totalEventsWeighted) != 1:
-                        logger.warning("totalEventsWeighted should only have one value per DSID. "
-                                       f"Got {len(unique_totalEventsWeighted)}, of values {unique_totalEventsWeighted} for DSID {dsid}")
-
-                    dsid_weight = df_id_sub[df_id_sub['DSID'] == dsid]['weight_mc'].values[
-                        0]  # just checked there's only one value here
-                    totalEventsWeighted = df_id['totalEventsWeighted'].values[0]
-                    if dsid_weight != totalEventsWeighted:
-                        logger.warning(
-                            f"Value of 'totalEventsWeighted' ({totalEventsWeighted}) is not the same as the total summed values of "
-                            f"'weight_mc' ({dsid_weight}) for DISD {dsid}. Ratio = {totalEventsWeighted / dsid_weight:.2g}")
-
-            default_tree_vars.remove('mcChannelNumber')
-            default_tree_vars.add('DSID')
-
-        # calculate and combine special derived variables
-        if vars_to_calc:
-
-            def row_calc(deriv_var: str, row: pd.Series) -> pd.Series:
-                """Helper for applying derived variable calculation function to a dataframe row"""
-                row_args = [row[v] for v in derived_vars[deriv_var]['var_args']]
-                return derived_vars[deriv_var]['func'](*row_args)
-
-            # save which variables are actually necessary in order to drop extras (keep all columns for now)
-            # og_vars = all_vars(cut_list_dicts, vars_to_cut)
-            for var in vars_to_calc:
-                # compute new column
-                temp_cols = derived_vars[var]['var_args']
-                logger.info(f"Computing '{var}' column from {temp_cols}...")
-                df[var] = df.apply(lambda row: row_calc(var, row), axis=1)
-
-                # # drop unnecessary columns extracted just for calculations
-                # to_drop = [var for var in temp_cols if var not in og_vars]
-                # logger.debug(f"dropping {to_drop}")
-                # df.drop(columns=to_drop, inplace=True)
-
-        t2 = time.time()
-        logger.info(f"time to build dataframe: {time.strftime('%H:%M:%S', time.gmtime(t2 - t1))}")
-
-        # properly scale GeV columns
-        cls.__rescale_to_gev(df)
-
-        return df
-
-    @classmethod
-    def __merge_TTrees(cls,
-                       df: pd.DataFrame,
-                       alt_trees: Dict[str, List[str]],
-                       datapath: str,
-                       TTree_name: str,
-                       chunksize: int = 1024
-                       ) -> pd.DataFrame:
-        """Merge TTrees across event number"""
-        for tree in alt_trees:
-            logger.debug(f"Extracting {alt_trees[tree]} from {tree} tree...")
-            alt_df = uproot.concatenate(datapath + ":" + tree, alt_trees[tree] + ['eventNumber'],
-                                        library='pd', num_workers=config.n_threads, begin_chunk_size=chunksize)
-            logger.debug(f"Extracted {len(alt_df)} events.")
-            logger.debug("Merging with rest of dataframe...")
-            try:
-                df = pd.merge(df, alt_df, how='left', on='eventNumber', sort=False, copy=False, validate='1:1')
-            except pd.errors.MergeError as e:
-                err = str(e)
-                if err == 'Merge keys are not unique in either left or right dataset; not a one-to-one merge':
-                    raise Exception(f"Duplicated events in both '{TTree_name}' and '{tree}' TTrees")
-                elif err == 'Merge keys are not unique in left dataset; not a one-to-one merge':
-                    raise Exception(f"Duplicated events in '{TTree_name}' TTree")
-                elif err == 'Merge keys are not unique in right dataset; not a one-to-one merge':
-                    raise Exception(f"Duplicated events in '{tree}' TTree")
-                else:
-                    raise e
-        return df
-
-    @staticmethod
-    def _create_cut_columns(df: pd.DataFrame, cut_dicts: List[dict]) -> None:
-        """
-        Creates boolean columns in dataframe corresponding to each cut
-        :param df: input dataframe
-        :param cut_dicts: list of dictionaries for each cut to apply
-        :return: None, this function applies inplace.
-        """
-        cut_label = config.cut_label  # get cut label from config
-
-        # use functions of compariton operators in dictionary to make life easier
-        # (but maybe a bit harder to read)
-        op_dict = {
-            '<': op.lt,
-            '<=': op.le,
-            '=': op.eq,
-            '!=': op.ne,
-            '>': op.gt,
-            '>=': op.ge,
-        }
-
-        for cut in cut_dicts:
-            if cut['relation'] not in op_dict:
-                raise ValueError(f"Unexpected comparison operator: {cut['relation']}.")
-            if not cut['is_symmetric']:
-                df[cut['name'] + cut_label] = op_dict[cut['relation']](df[cut['cut_var']], cut['cut_val'])
-            else:  # take absolute value instead
-                df[cut['name'] + cut_label] = op_dict[cut['relation']](df[cut['cut_var']].abs(), cut['cut_val'])
-
-        # print cutflow output
-        name_len = max([len(cut['name']) for cut in cut_dicts])
-        var_len = max([len(cut['cut_var']) for cut in cut_dicts])
-        logger.info('')
-        logger.info("========== CUTS USED ============")
-        for cut in cut_dicts:
-            if not cut['is_symmetric']:
-                logger.info(
-                    f"{cut['name']:<{name_len}}: {cut['cut_var']:>{var_len}} {cut['relation']} {cut['cut_val']}")
-            else:
-                logger.info(
-                    f"{cut['name']:<{name_len}}: {'|' + cut['cut_var']:>{var_len}}| {cut['relation']} {cut['cut_val']}")
-        logger.info('')
-
-    @staticmethod
-    def __gen_weight_column(df: pd.DataFrame,
-                            weight_mc_col: str = 'weight_mc',
-                            global_scale: float = config.lumi
-                            ) -> pd.Series:
-        """Returns series of weights based off weight_mc column"""
-        if weight_mc_col not in df.columns:
-            raise KeyError(f"'{weight_mc_col}' column does not exist.")
-        return df[weight_mc_col].map(lambda w: global_scale if w > 0 else -1 * global_scale)
-
-    @staticmethod
-    def __gen_weight_column_slices(df: pd.DataFrame,
-                                   mc_weight_col: str = 'weight_mc',
-                                   tot_weighted_events_col: str = 'totalEventsWeighted',
-                                   global_scale: float = config.lumi,
-                                   ) -> pd.Series:
-        """Returns series of weights for mass slices based off weight_mc column and total events weighed"""
-        # TODO?: For efficiency, perform batchwise across DSID
-        if mc_weight_col not in df.columns:
-            raise KeyError(f"'{mc_weight_col}' column not in dataframe.")
-        if tot_weighted_events_col not in df.columns:
-            raise KeyError(f"'{tot_weighted_events_col}' column not in dataframe.")
-
-        return global_scale * (df[mc_weight_col] * df[mc_weight_col].abs()) / df[tot_weighted_events_col]
-
-    @staticmethod
-    def __rescale_to_gev(df: pd.DataFrame) -> None:
-        """rescales to GeV because athena's default output is in MeV for some reason"""
-        if GeV_columns := [column for column in df.columns
-                           if (column in labels_xs) and ('[GeV]' in labels_xs[column]['xlabel'])]:
-            df[GeV_columns] /= 1000
-            logger.debug(f"Rescaled columns {GeV_columns} to GeV.")
-        else:
-            logger.debug(f"No columns rescaled to GeV.")
-
-    @staticmethod
-    def _cut_on_cutgroup(df: pd.DataFrame,
-                         cutgroups: OrderedDict[str, List[str]],
-                         group: str,
-                         ) -> pd.DataFrame:
-        """Cuts on cutgroup on input dataframe or series"""
-        cut_cols = [cut_name + config.cut_label for cut_name in cutgroups[group]]
-        cut_data = df[df[cut_cols].all(1)]
-        return cut_data
