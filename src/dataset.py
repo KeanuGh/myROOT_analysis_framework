@@ -50,8 +50,8 @@ class Dataset:
         logger.info("=" * (42 + len(self.name)))
         logger.info(f"======== INITIALISING DATASET '{self.name}' =========")
         logger.info("=" * (42 + len(self.name)))
-        # if not file_utils.file_exists(self.datapath):
-        #     raise FileExistsError(f"File {self.datapath} not found.")
+        if not file_utils.file_exists(self.data_path):
+            raise FileExistsError(f"File {self.data_path} not found.")
 
         if not self.pkl_path:
             # initialise pickle filepath with given name
@@ -68,7 +68,6 @@ class Dataset:
 
         # READ AND GET OPTIONS FROM CUTFILE
         # ========================
-        """Define the pipeline for parsing cutfile"""
         logger.info(f"Parsting cutfile for {self.name}...")
         self.cutfile = Cutfile(self.cutfile_path)
         self._rebuild = self.cutfile.if_build_dataframe(self.pkl_path)
@@ -265,9 +264,6 @@ class Dataset:
             calc_vars_dict = derived_vars
         tree_dict, vars_to_calc = Cutfile.extract_cut_variables(cut_list_dicts, vars_to_cut, calc_vars_dict)
 
-        print("tree_dict: ", tree_dict)
-        print("vars_to_calc: ", vars_to_calc)
-
         # get default tree variables
         default_tree_vars = tree_dict.pop('na')
         default_tree_vars |= tree_dict.pop(TTree_name, set())
@@ -275,8 +271,6 @@ class Dataset:
         default_tree_vars -= vars_to_calc
         default_tree_vars.add('weight_mc')
         default_tree_vars.add('eventNumber')
-
-        print("default_tree_vars: ", default_tree_vars)
 
         if logger.level == logging.DEBUG:
             logger.debug(f"Variables to extract from {TTree_name} tree: ")
