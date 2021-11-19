@@ -20,6 +20,7 @@ import utils.plotting_utils as plt_utils
 from src.cutfile import Cutfile
 from src.cutflow import Cutflow
 from utils.axis_labels import labels_xs
+from utils.phys_vars import lumi_year
 from utils.var_helpers import derived_vars, OtherVar
 
 logger = logging.getLogger('analysis')
@@ -36,6 +37,8 @@ class Dataset:
     data_path: str  # path to root file(s)
     TTree_name: str  # name of TTree to extract
     cutfile_path: str  # path to cutfile
+    year: str  # data year '2015', '2017', '2018' or '2015+2016'
+    lumi: float = field(init=False)  # generated from year
     df: pd.DataFrame = field(init=False, repr=False)  # stores the actual data in a dataframe
     cutflow: Cutflow = field(init=False)
     pkl_path: str = None  # where the dataframe pickle file will be stored
@@ -52,6 +55,10 @@ class Dataset:
         logger.info("=" * (42 + len(self.name)))
         if not file_utils.file_exists(self.data_path):
             raise FileExistsError(f"File {self.data_path} not found.")
+
+        self.lumi = lumi_year[self.year]
+        logger.info(f"Year: {self.year}")
+        logger.info(f"Data luminosity: {self.lumi}")
 
         if not self.pkl_path:
             # initialise pickle filepath with given name
@@ -269,8 +276,13 @@ class Dataset:
         default_tree_vars |= tree_dict.pop(TTree_name, set())
         default_tree_vars |= vars_to_cut
         default_tree_vars -= vars_to_calc
-        default_tree_vars.add('weight_mc')
-        default_tree_vars.add('eventNumber')
+
+        # required variables for weighting and merging
+        default_tree_vars |= {'weight_mc', 'weight_pileup', 'eventNumber'}
+        if 'nominal' in TTree_name.lower():
+            default_tree_vars |= {'weight_leptonSF', 'weight_KFactor'}
+        elif 'truth' in TTree_name.lower():
+            default_tree_vars.add('KFactor_weight_truth')
 
         if logger.level == logging.DEBUG:
             logger.debug(f"Variables to extract from {TTree_name} tree: ")
@@ -296,8 +308,8 @@ class Dataset:
                 else:
                     if missing_branches := [branch for branch in default_tree_vars
                                             if branch not in file[TTree_name].keys()]:
-                        raise ValueError(
-                            f"Missing TBranch(es) {missing_branches} in TTree '{TTree_name}' of file '{datapath}'.")
+                        raise ValueError(f"Missing TBranch(es) {missing_branches} in TTree "
+                                         f"'{TTree_name}' of file '{datapath}'.")
             logger.debug(f"All TTrees and variables found in {filepath}...")
         logger.debug("All required TTrees variables found.")
 
@@ -413,6 +425,7 @@ class Dataset:
             alt_df = uproot.concatenate(datapath + ":" + tree, alt_trees[tree].add('eventNumber'),
                                         library='pd', num_workers=config.n_threads, begin_chunk_size=chunksize)
             logger.debug(f"Extracted {len(alt_df)} events.")
+
             logger.debug("Merging with rest of dataframe...")
             try:
                 df = pd.merge(df, alt_df, how='left', on='eventNumber', sort=False, copy=False, validate='1:1')
@@ -426,6 +439,13 @@ class Dataset:
                     raise Exception(f"Duplicated events in '{tree}' TTree")
                 else:
                     raise e
+
+            # test for missing events
+            if n_missing := len(df[~df['eventNumber'].isin(alt_df['eventNumber'])]):
+                raise Exception(f"Found {n_missing} events in '{TTree_name}' tree not found in '{tree}' tree")
+            else:
+                logger.debug(f"All events in {TTree_name} tree found in {tree} tree")
+
         return df
 
     @staticmethod

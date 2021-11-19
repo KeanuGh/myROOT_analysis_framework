@@ -38,7 +38,8 @@ def tmp_root_datafile(tmp_path_factory):
             'testvar3': np.arange(1000) * 3,
             'weight_mc': np.append(np.ones(990), -1 * np.ones(10)),
             'mcChannelNumber': np.append(np.ones(500), np.full(500, 2)),
-            'eventNumber': np.arange(1000)
+            'eventNumber': np.arange(1000),
+            'weight_pileup': np.ones(1000)
         }
         test_file['tree2'] = {
             'testvar4': np.arange(1500) * -1,
@@ -66,7 +67,8 @@ def tmp_root_datafiles(tmp_path_factory):
                 'testvar3': np.arange(1000 * i) * i,
                 'weight_mc': np.append(np.ones(990 * i), -1 * np.ones(10 * i)),
                 'mcChannelNumber': np.full(1000 * i, i),
-                'eventNumber': np.arange(1000 * a_n, 1000 * (a_n := a_n + i))  # a_{n+1}=a_n+n+1, a_0=0
+                'eventNumber': np.arange(1000 * a_n, 1000 * (a_n := a_n + i)),  # a_{n+1}=a_n+n+1, a_0=0
+                'weight_pileup': np.ones(1000 * i)
             }
             test_file['tree2'] = {
                 'testvar4': np.arange(1500 * i) * -1,
@@ -90,11 +92,37 @@ def tmp_root_datafile_duplicate_events(tmp_path_factory):
             'testvar3': np.arange(1000) * 3,
             'weight_mc': np.append(np.ones(990), -1 * np.ones(10)),
             'mcChannelNumber': np.append(np.ones(500), np.full(500, 2)),
-            'eventNumber': np.append(np.array([12, 112, 500]), np.arange(3, 1000))
+            'eventNumber': np.append(np.array([12, 112, 500]), np.arange(3, 1000)),
+            'weight_pileup': np.ones(1000)
         }
         test_file['tree2'] = {
             'testvar4': np.arange(1500) * -1,
             'eventNumber': np.append(np.array([6, 7, 8, 9, 9]), np.arange(5, 1500))
+        }
+        test_file['sumWeights'] = {
+            'totalEventsWeighted': np.array([980]),
+            'dsid': np.array([1])
+        }
+    yield str(datapath)
+
+
+@pytest.fixture(scope='function')
+def tmp_root_datafile_missing_events(tmp_path_factory):
+    """Generate test root file with missing events to read in"""
+    datapath = tmp_path_factory.mktemp('data') / 'test_data_duplicated_events.root'
+    with uproot.recreate(datapath) as test_file:
+        test_file['tree1'] = {
+            'testvar1': np.arange(1000),
+            'testvar2': np.arange(1000) * 1.1,
+            'testvar3': np.arange(1000) * 3,
+            'weight_mc': np.append(np.ones(990), -1 * np.ones(10)),
+            'mcChannelNumber': np.append(np.ones(500), np.full(500, 2)),
+            'eventNumber': np.arange(1000),
+            'weight_pileup': np.ones(1000)
+        }
+        test_file['tree2'] = {
+            'testvar4': np.arange(5, 1500) * -1,
+            'eventNumber': np.arange(5, 1500)
         }
         test_file['sumWeights'] = {
             'totalEventsWeighted': np.array([980]),

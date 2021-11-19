@@ -19,6 +19,7 @@ class TestBuildDataframe(object):
         'testvar3': np.arange(1000) * 3,
         'weight_mc': np.append(np.ones(990), -1 * np.ones(10)),
         'eventNumber': np.arange(1000),
+        'weight_pileup': np.ones(1000)
     })
     default_TTree = 'tree1'
 
@@ -35,6 +36,7 @@ class TestBuildDataframe(object):
         for col in output.columns:
             assert np.array_equal(output[col], self.expected_output[col])
 
+    @pytest.mark.filterwarnings("ignore::UserWarning")
     def test_missing_tree(self, tmp_root_datafile):
         with pytest.raises(ValueError) as e:
             _ = Dataset._build_dataframe(tmp_root_datafile,
@@ -44,6 +46,7 @@ class TestBuildDataframe(object):
                                          )
         assert str(e.value) == f"TTree(s) 'missing' not found in file {tmp_root_datafile}"
 
+    @pytest.mark.filterwarnings("ignore::UserWarning")
     def test_missing_branch(self, tmp_root_datafile):
         missing_branches = {'missing1', 'missing2'}
         with pytest.raises(ValueError) as e:
@@ -67,7 +70,8 @@ class TestBuildDataframe(object):
                                                                      np.append(np.ones(990), -1 * np.ones(10)),)),
                                         'eventNumber': np.concatenate((np.arange(3000, 6000),
                                                                        np.arange(1000, 3000),
-                                                                       np.arange(1000)))
+                                                                       np.arange(1000))),
+                                        'weight_pileup': np.ones(6000),
                                         })
         output = Dataset._build_dataframe(tmp_root_datafiles,
                                           TTree_name=self.default_TTree,
@@ -98,6 +102,7 @@ class TestBuildDataframe(object):
                                         'eventNumber': np.concatenate((np.arange(3000, 6000),
                                                                        np.arange(1000, 3000),
                                                                        np.arange(1000))),
+                                        'weight_pileup': np.ones(6000),
                                         # dataset IDs
                                         'DSID': np.concatenate((np.full(3000, 3),
                                                                 np.full(2000, 2),
@@ -175,14 +180,35 @@ class TestBuildDataframe(object):
                 'is_symmetric': False,
                 'tree': 'tree2'
             }
-            newlist = self.test_cut_dicts.copy()
-            newlist += [newcut]
+            newduplist = self.test_cut_dicts.copy()
+            newduplist += [newcut]
             _ = Dataset._build_dataframe(tmp_root_datafile_duplicate_events,
                                          TTree_name=self.default_TTree,
-                                         cut_list_dicts=newlist,
+                                         cut_list_dicts=newduplist,
                                          vars_to_cut=self.test_vars_to_cut,
                                          is_slices=False)
         assert str(e.value) == "Duplicated events in both 'tree1' and 'tree2' TTrees"
+
+    @pytest.mark.filterwarnings("ignore::UserWarning")
+    def test_missing_events_alt_tree(self, tmp_root_datafile_missing_events):
+        with pytest.raises(Exception) as e:
+            newcut = {
+                'name': 'cut 3',
+                'cut_var': 'testvar4',
+                'relation': '<',
+                'cut_val': -10,
+                'group': 'var4cut',
+                'is_symmetric': False,
+                'tree': 'tree2'
+            }
+            newmisslist = self.test_cut_dicts.copy()
+            newmisslist += [newcut]
+            _ = Dataset._build_dataframe(tmp_root_datafile_missing_events,
+                                         TTree_name=self.default_TTree,
+                                         cut_list_dicts=newmisslist,
+                                         vars_to_cut=self.test_vars_to_cut,
+                                         is_slices=False)
+        assert str(e.value) == "Found 5 events in 'tree1' tree not found in 'tree2' tree"
 
     @pytest.mark.filterwarnings("ignore::UserWarning")
     def test_derived_variable(self, tmp_root_datafile):
@@ -243,9 +269,7 @@ class TestCreateCutColumns(object):
 
     def test_equals_nequals(self):
         """Test (not) equals cuts"""
-        test_df = pd.DataFrame({
-            'testvar1': [1, 0, 1, 0, 0, 0, 1, 1, 1, 0],
-        })
+        test_df = pd.DataFrame({'testvar1': [1, 0, 1, 0, 0, 0, 1, 1, 1, 0]})
         test_cut_dicts = [{'name': 'cut 1', 'cut_var': 'testvar1', 'relation': '=', 'cut_val': 1, 'group': 'var1cut',
                            'is_symmetric': True},
                           {'name': 'cut 2', 'cut_var': 'testvar1', 'relation': '!=', 'cut_val': 1, 'group': 'var1cut',
