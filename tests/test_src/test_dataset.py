@@ -187,7 +187,7 @@ class TestBuildDataframe(object):
                                          cut_list_dicts=newduplist,
                                          vars_to_cut=self.test_vars_to_cut,
                                          is_slices=False)
-        assert str(e.value) == "Duplicated events in both 'tree1' and 'tree2' TTrees"
+        assert str(e.value) == "Duplicated events in 'tree1' TTree"
 
     @pytest.mark.filterwarnings("ignore::UserWarning")
     def test_missing_events_alt_tree(self, tmp_root_datafile_missing_events):

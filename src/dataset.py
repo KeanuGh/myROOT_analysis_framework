@@ -426,6 +426,12 @@ class Dataset:
                                         library='pd', num_workers=config.n_threads, begin_chunk_size=chunksize)
             logger.debug(f"Extracted {len(alt_df)} events.")
 
+            # test for missing events
+            if n_missing := len(df[~df['eventNumber'].isin(alt_df['eventNumber'])]):
+                raise Exception(f"Found {n_missing} events in '{TTree_name}' tree not found in '{tree}' tree")
+            else:
+                logger.debug(f"All events in {TTree_name} tree found in {tree} tree")
+
             logger.debug("Merging with rest of dataframe...")
             try:
                 df = pd.merge(df, alt_df, how='left', on='eventNumber', sort=False, copy=False, validate='1:1')
@@ -439,12 +445,6 @@ class Dataset:
                     raise Exception(f"Duplicated events in '{tree}' TTree")
                 else:
                     raise e
-
-            # test for missing events
-            if n_missing := len(df[~df['eventNumber'].isin(alt_df['eventNumber'])]):
-                raise Exception(f"Found {n_missing} events in '{TTree_name}' tree not found in '{tree}' tree")
-            else:
-                logger.debug(f"All events in {TTree_name} tree found in {tree} tree")
 
         return df
 

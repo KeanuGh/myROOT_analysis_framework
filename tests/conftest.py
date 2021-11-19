@@ -97,7 +97,7 @@ def tmp_root_datafile_duplicate_events(tmp_path_factory):
         }
         test_file['tree2'] = {
             'testvar4': np.arange(1500) * -1,
-            'eventNumber': np.append(np.array([6, 7, 8, 9, 9]), np.arange(5, 1500))
+            'eventNumber': np.arange(1500)
         }
         test_file['sumWeights'] = {
             'totalEventsWeighted': np.array([980]),
