@@ -20,6 +20,7 @@ class Cutfile:
     Handles importing cutfiles and extracting variables
     """
     def __init__(self, file_path: str, name: str = ''):
+        self.name = get_filename(file_path)
         self._path = file_path
         self._backup_path = config.paths['backup_cutfiles_dir']
         self.cut_dicts, self.vars_to_cut, self.options = self.parse_cutfile(file_path)
@@ -210,7 +211,7 @@ class Cutfile:
     def if_make_cutfile_backup(self) -> bool:
         """Decides if a backup cutfile should be made"""
         if not is_dir_empty(self._backup_path):
-            return not identical_to_backup(self._path, backup_dir=self._backup_path)
+            return not identical_to_backup(self._path, backup_dir=self._backup_path, name=self.name)
         else:
             return True
 
@@ -229,7 +230,7 @@ class Cutfile:
 
         # if cutfile backup exists, check for new variables
         if not is_dir_empty(self._backup_path):
-            latest_backup = get_last_backup(self._backup_path)
+            latest_backup = get_last_backup(self._backup_path, self.name)
             logger.debug(f"Found backup cutfile in {latest_backup}")
 
             BACKUP_cutfile_dicts, BACKUP_cutfile_outputs, _ = self.parse_cutfile(latest_backup)
@@ -271,7 +272,6 @@ class Cutfile:
         return False
 
     def backup_cutfile(self, name: str) -> None:
-        curr_filename = get_filename(self._path)
-        cutfile_backup_filepath = self._backup_path + curr_filename + '_' + name + '_' + time.strftime("%Y-%m-%d_%H-%M-%S") + ".txt"
+        cutfile_backup_filepath = self._backup_path + self.name + '_' + name + '_' + time.strftime("%Y-%m-%d_%H-%M-%S") + ".txt"
         copyfile(self._path, cutfile_backup_filepath)
         logger.info(f"Backup cutfile saved in {cutfile_backup_filepath}")

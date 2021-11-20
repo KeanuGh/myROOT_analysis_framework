@@ -4,7 +4,6 @@ from filecmp import cmp
 from glob import glob
 from pathlib import Path
 from typing import Optional, Union, List
-from warnings import warn
 
 import src.config as config
 from utils import ROOT_utils
@@ -12,14 +11,18 @@ from utils import ROOT_utils
 logger = logging.getLogger('analysis')
 
 
-def get_last_backup(backup_dir: str) -> Optional[str]:
+def get_last_backup(backup_dir: str, name: str = '') -> Optional[str]:
     if is_dir_empty(backup_dir):
         return None
     else:
-        return max(glob(backup_dir + '*'), key=os.path.getctime)
+        return max(glob(backup_dir + name + '*'), key=os.path.getctime)
 
 
-def identical_to_backup(file: str, backup_dir: Optional[str] = None, backup_file: Optional[str] = None) -> bool:
+def identical_to_backup(file: str,
+                        backup_dir: Optional[str] = None,
+                        backup_file: Optional[str] = None,
+                        name: str = '',
+                        ) -> bool:
     """
     checks whether current file is the same as the last backup file.
     input either backup directory or backup file.
@@ -31,7 +34,7 @@ def identical_to_backup(file: str, backup_dir: Optional[str] = None, backup_file
         logging.warning("Backup directory is empty")
         return False
     elif backup_dir:
-        backup_file = get_last_backup(backup_dir)
+        backup_file = get_last_backup(backup_dir, name)
     return cmp(file, backup_file)
 
 
