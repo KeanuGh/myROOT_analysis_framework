@@ -62,7 +62,6 @@ class Analysis:
 
         # SET OTHER GLOBAL OPTIONS
         # ============================
-        config.force_rebuild = force_rebuild  # TODO: do this per dataset
         if global_lumi:
             config.lumi = global_lumi
 
@@ -155,7 +154,7 @@ class Analysis:
         self.datasets[ds_name].make_all_cutgroup_2dplots(**kwargs)
 
     @decorators.check_single_datafile
-    def plot_mass_slices(self, ds_name: Optional[str], xvar: str, inclusive_dataset: str, **kwargs) -> None:
+    def plot_mass_slices(self, ds_name: Optional[str], xvar: str, inclusive_dataset: str = None, **kwargs) -> None:
         """
         Plots mass slices for input variable xvar if dataset is_slices
 

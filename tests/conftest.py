@@ -37,6 +37,7 @@ def tmp_root_datafile(tmp_path_factory):
             'testvar2': np.arange(1000) * 1.1,
             'testvar3': np.arange(1000) * 3,
             'weight_mc': np.append(np.ones(990), -1 * np.ones(10)),
+            # FIXME
             'mcChannelNumber': np.append(np.ones(500), np.full(500, 2)),
             'eventNumber': np.arange(1000),
             'weight_pileup': np.ones(1000)
@@ -46,8 +47,8 @@ def tmp_root_datafile(tmp_path_factory):
             'eventNumber': np.arange(1500)
         }
         test_file['sumWeights'] = {
-            'totalEventsWeighted': np.array([980]),
-            'dsid': np.array([1])
+            'totalEventsWeighted': np.array([500, 480]),
+            'dsid': np.array([1, 2])
         }
     yield str(datapath)
 

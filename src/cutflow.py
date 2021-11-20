@@ -33,6 +33,7 @@ class Cutflow:
         self._n_events_tot = len(df.index)
 
         # if cutgroups are supplied, apply cutflow over groups rather than individual cuts
+        # FIXME: Remove cutgroups
         self._cutgroups = cutgroups
 
         # set input fields

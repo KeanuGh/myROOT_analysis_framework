@@ -25,11 +25,3 @@ def get_luminosity(df: pd.DataFrame, xs=None, weight_col: str = 'weight'):
     if not xs:
         xs = get_cross_section(df)
     return df[weight_col].sum() / xs
-
-
-lumi_year = {
-    '2015': 3219.56,
-    '2017': 44307.4,
-    '2018': 58450.1,
-    '2015+2016': 32988.1 + 3219.56
-}

@@ -19,7 +19,9 @@ class TestBuildDataframe(object):
         'testvar3': np.arange(1000) * 3,
         'weight_mc': np.append(np.ones(990), -1 * np.ones(10)),
         'eventNumber': np.arange(1000),
-        'weight_pileup': np.ones(1000)
+        'weight_pileup': np.ones(1000),
+        'totalEventsWeighted': np.append(np.full(500, 500), np.full(500, 480)),
+        'DSID': np.append(np.ones(500), np.full(500, 2))
     })
     default_TTree = 'tree1'
 
@@ -34,7 +36,8 @@ class TestBuildDataframe(object):
         assert set(output.columns) == set(self.expected_output.columns)
         # test contents are the same
         for col in output.columns:
-            assert np.array_equal(output[col], self.expected_output[col])
+            assert np.array_equal(output[col], self.expected_output[col]), \
+                f"In column {col}\n Expected: \n{self.expected_output[col]}\n Got: \n{output[col]}"
 
     @pytest.mark.filterwarnings("ignore::UserWarning")
     def test_missing_tree(self, tmp_root_datafile):
@@ -71,6 +74,10 @@ class TestBuildDataframe(object):
                                         'eventNumber': np.concatenate((np.arange(3000, 6000),
                                                                        np.arange(1000, 3000),
                                                                        np.arange(1000))),
+                                        'totalEventsWeighted': np.concatenate((np.full(3000, sum(np.append(np.ones(2970), -1 * np.ones(30)))),
+                                                                               np.full(2000, sum(np.append(np.ones(1980), -1 * np.ones(20)))),
+                                                                               np.full(1000, sum(np.append(np.ones(990), -1 * np.ones(10)))))),
+                                        'DSID': np.concatenate((np.full(3000, 1), np.full(2000, 2), np.full(1000, 1))),
                                         'weight_pileup': np.ones(6000),
                                         })
         output = Dataset._build_dataframe(tmp_root_datafiles,
@@ -82,6 +89,7 @@ class TestBuildDataframe(object):
         assert set(output.columns) == set(expected_output.columns)
         # test contents are the same
         for col in output.columns:
+            print(expected_output[col].unique(), col)
             assert np.array_equal(output[col], expected_output[col]), \
                 f"Dataframe builder failed in column {col};\n" \
                 f"Expected: \n{expected_output[col]},\n" \
@@ -116,9 +124,7 @@ class TestBuildDataframe(object):
         output = Dataset._build_dataframe(tmp_root_datafiles,
                                           TTree_name=self.default_TTree,
                                           cut_list_dicts=self.test_cut_dicts,
-                                          vars_to_cut=self.test_vars_to_cut,
-                                          is_slices=True,
-                                          )
+                                          vars_to_cut=self.test_vars_to_cut)
         # test column names are the same
         assert set(output.columns) == set(expected_output.columns)
         # test contents are the same
@@ -148,8 +154,7 @@ class TestBuildDataframe(object):
         output = Dataset._build_dataframe(tmp_root_datafile,
                                           TTree_name=self.default_TTree,
                                           cut_list_dicts=list_of_dicts,
-                                          vars_to_cut=self.test_vars_to_cut,
-                                          is_slices=False)
+                                          vars_to_cut=self.test_vars_to_cut)
         assert set(output.columns) == set(expected_output.columns)
         # test contents are the same
         for col in output.columns:
@@ -160,12 +165,11 @@ class TestBuildDataframe(object):
 
     @pytest.mark.filterwarnings("ignore::UserWarning")
     def test_duplicate_events_no_alt_tree(self, tmp_root_datafile_duplicate_events):
-        with pytest.raises(ValueError) as e:
+        with pytest.raises(Exception) as e:
             _ = Dataset._build_dataframe(tmp_root_datafile_duplicate_events,
                                          TTree_name=self.default_TTree,
                                          cut_list_dicts=self.test_cut_dicts,
-                                         vars_to_cut=self.test_vars_to_cut,
-                                         is_slices=False)
+                                         vars_to_cut=self.test_vars_to_cut)
         assert str(e.value) == f"Found 1000 duplicate events in datafile {tmp_root_datafile_duplicate_events}."
 
     @pytest.mark.filterwarnings("ignore::UserWarning")
@@ -185,8 +189,7 @@ class TestBuildDataframe(object):
             _ = Dataset._build_dataframe(tmp_root_datafile_duplicate_events,
                                          TTree_name=self.default_TTree,
                                          cut_list_dicts=newduplist,
-                                         vars_to_cut=self.test_vars_to_cut,
-                                         is_slices=False)
+                                         vars_to_cut=self.test_vars_to_cut)
         assert str(e.value) == "Duplicated events in 'tree1' TTree"
 
     @pytest.mark.filterwarnings("ignore::UserWarning")
@@ -206,8 +209,7 @@ class TestBuildDataframe(object):
             _ = Dataset._build_dataframe(tmp_root_datafile_missing_events,
                                          TTree_name=self.default_TTree,
                                          cut_list_dicts=newmisslist,
-                                         vars_to_cut=self.test_vars_to_cut,
-                                         is_slices=False)
+                                         vars_to_cut=self.test_vars_to_cut)
         assert str(e.value) == "Found 5 events in 'tree1' tree not found in 'tree2' tree"
 
     @pytest.mark.filterwarnings("ignore::UserWarning")
@@ -234,8 +236,7 @@ class TestBuildDataframe(object):
                                           TTree_name=self.default_TTree,
                                           cut_list_dicts=self.test_cut_dicts,
                                           vars_to_cut=vars_to_cut,
-                                          calc_vars_dict=derived_vars,
-                                          is_slices=False)
+                                          calc_vars_dict=derived_vars)
         # test column names are the same
         assert set(output.columns) == set(expected_output.columns)
         # test contents are the same

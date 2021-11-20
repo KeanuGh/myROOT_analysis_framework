@@ -410,7 +410,7 @@ def plot_mass_slices(df: pd.DataFrame,
                      logbins: bool = True,
                      logx: bool = False,
                      id_col: str = 'DSID',
-                     weight_col: str = 'weight',
+                     weight_col: str = 'total_event_weight',
                      plot_label: str = '',
                      inclusive_dataset: pd.DataFrame = None,
                      to_pkl: bool = False

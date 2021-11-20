@@ -7,10 +7,9 @@ Missing $E_{T}$	met_met	>	25	lepton $p_{T}$ cut	false
 
 [OUTPUTS]
 # variables to process
-mu_mt
-w_y
+mt
 
 [OPTIONS]
 # case-insensitive
 sequential	true
-grouped cutflow	false
+grouped cutflow	true
