@@ -5,14 +5,16 @@ import time
 from dataclasses import dataclass, field
 from glob import glob
 from itertools import combinations
-from typing import Optional, Union, List, Dict, Set, OrderedDict
+from typing import Optional, Union, List, Dict, OrderedDict, Tuple
 from warnings import warn
 
+import boost_histogram as bh
 import matplotlib.pyplot as plt
 import mplhep as hep
 import numpy as np
 import pandas as pd
 import uproot
+from awkward import to_pandas
 
 import src.config as config
 import utils.file_utils as file_utils
@@ -37,23 +39,26 @@ lumi_year = {
 class Dataset:
     """
     Dataset class. Contains/will contain all the variables needed for a singular analysis dataset.
-    Perhaps put all methods that act only on one dataset into here
     TODO: Save histograms as dataset attributes? Ability to perform operations across hisograms? Custom histogram class?
+    TODO: check branch types and perform dataframe merge in batches
     """
     name: str
     data_path: str  # path to root file(s)
     TTree_name: str  # name of TTree to extract
     cutfile_path: str  # path to cutfile
     year: str  # data year '2015', '2017', '2018' or '2015+2016'
+
     lumi: float = field(init=False)  # generated from year
     df: pd.DataFrame = field(init=False, repr=False)  # stores the actual data in a dataframe
     cutflow: Cutflow = field(init=False)
+
     pkl_path: str = None  # where the dataframe pickle file will be stored
     lepton: str = 'lepton'  # name of charged DY lepton channel in dataset (if applicable)
     chunksize: int = 1024  # chunksize for uproot ROOT file import
     force_rebuild: bool = False  # whether to force rebuild dataset
     validate_missing_events: bool = True  # whether to check for missing events
     validate_duplicated_events: bool = True  # whether to check for duplicated events
+    validate_sumofweights: bool = True  # whether to whether to check sumofweights is sum of weight_mc for DSID
     _weight_column = 'weight'  # name of weight column in dataframe
 
     def __post_init__(self):
@@ -86,7 +91,10 @@ class Dataset:
         # ========================
         logger.info(f"Parsting cutfile for {self.name}...")
         self.cutfile = Cutfile(self.cutfile_path)
-        self._rebuild = self.cutfile.if_build_dataframe(self.pkl_path)
+        if self.force_rebuild:
+            self._rebuild = True
+        else:
+            self._rebuild = self.cutfile.if_build_dataframe(self.pkl_path)
         if self.cutfile.if_make_cutfile_backup():
             self.cutfile.backup_cutfile(self.name)
 
@@ -109,14 +117,12 @@ class Dataset:
         # ========================
         """Define pipeline for building dataset dataframe"""
         # extract and clean data
-        if self._rebuild or self.force_rebuild:
+        if self._rebuild:
             logger.info(f"Building {self.name} dataframe from {self.data_path}...")
-            self.df = self._build_dataframe(datapath=self.data_path,
-                                            TTree_name=self.TTree_name,
-                                            cut_list_dicts=self.cutfile.cut_dicts,
-                                            vars_to_cut=self.cutfile.vars_to_cut,
+            self.df = self._build_dataframe(calc_vars_dict=derived_vars,
                                             validate_missing_events=self.validate_missing_events,
-                                            validate_duplicated_events=self.validate_duplicated_events)
+                                            validate_duplicated_events=self.validate_duplicated_events,
+                                            validate_sumofweights=self.validate_sumofweights)
 
             # print into pickle file for easier read/write
             if self.pkl_path:
@@ -172,6 +178,12 @@ class Dataset:
 
     def __setitem__(self, col, item):
         self.df[col] = item
+
+    def __repr__(self):
+        return f'Dataset("{self.name}",TTree:"{self.TTree_name},Events:{self.__len__}'
+
+    def __str__(self):
+        return f'{self.name},TTree:"{self.TTree_name}",Events:{self.__len__}'
 
     # Variable setting
     # ===================
@@ -242,37 +254,29 @@ class Dataset:
     # ===============================
     # ====== DATAFRAME BUILDER ======
     # ===============================
-    @classmethod
-    def _build_dataframe(cls,
-                         datapath: str,
-                         TTree_name: str,
-                         cut_list_dicts: List[dict],
-                         vars_to_cut: Set[str],
+    def _build_dataframe(self,
+                         calc_vars_dict: Dict[str, OtherVar],
                          chunksize: int = 1024,
-                         calc_vars_dict: Dict[str, OtherVar] = None,
                          validate_missing_events: bool = True,
                          validate_duplicated_events: bool = True,
+                         validate_sumofweights: bool = True,
                          ) -> pd.DataFrame:
         """
         Builds a dataframe from cutfile inputs
-        :param datapath: path to root file
-        :param TTree_name: name of TTree to extract
-        :param cut_list_dicts: list of cut dictionaries
-        :param vars_to_cut: list of strings of variables in file to cut on
-        :param chunksize: chunksize for uproot concat method
         :param calc_vars_dict: list of possible calculated variables (see utils.var_helpers)
+        :param chunksize: chunksize for uproot concat method
+        :param validate_missing_events: whether to check for missing events
+        :param validate_duplicated_events: whether to check for duplicated events
+        :param validate_sumofweights: whether to check sum of weights against weight_mc
         :return: output dataframe containing columns corresponding to necessary variables
         """
 
         # get variables to extract from dataframe and their TTrees
-        if calc_vars_dict is None:
-            calc_vars_dict = derived_vars
-        tree_dict, vars_to_calc = Cutfile.extract_cut_variables(cut_list_dicts, vars_to_cut, calc_vars_dict)
+        tree_dict, vars_to_calc = self.cutfile.extract_variables(calc_vars_dict)
 
         # get default tree variables
         default_tree_vars = tree_dict.pop('na')
-        default_tree_vars |= tree_dict.pop(TTree_name, set())
-        default_tree_vars |= vars_to_cut
+        default_tree_vars |= tree_dict.pop(self.TTree_name, set())
         default_tree_vars -= vars_to_calc
 
         # pull eventNumber from other trees
@@ -281,17 +285,18 @@ class Dataset:
 
         # required variables for weighting and merging
         default_tree_vars |= {'weight_mc', 'weight_pileup', 'eventNumber'}
-        if 'nominal' in TTree_name.lower():
+        # TODO: Perhaps not the best way of doing this?
+        if 'nominal' in self.TTree_name.lower():
             logger.debug("Detected reco dataset, will pull 'weight_leptonSF' and 'weight_KFactor'")
             default_tree_vars |= {'weight_leptonSF', 'weight_KFactor'}
-        elif 'truth' in TTree_name.lower():
+        elif 'truth' in self.TTree_name.lower():
             logger.debug("Detected truth dataset, will pull 'KFactor_weight_truth'")
             default_tree_vars.add('KFactor_weight_truth')
         else:
             logger.info("Neither truth nor reco dataset detected.")
 
         if logger.level == logging.DEBUG:
-            logger.debug(f"Variables to extract from {TTree_name} tree: ")
+            logger.debug(f"Variables to extract from {self.TTree_name} tree: ")
             for var in default_tree_vars:
                 logger.debug(f"  - {var}")
             if tree_dict:
@@ -305,17 +310,17 @@ class Dataset:
                     logger.debug(f"  - {var}")
 
         # check that TTree(s) and variables exist in file(s)
-        logger.debug(f"Checking TTree and TBranch values in file(s) '{datapath}'...")
-        for filepath in glob(datapath):
+        logger.debug(f"Checking TTree and TBranch values in file(s) '{self.data_path}'...")
+        for filepath in glob(self.data_path):
             with uproot.open(filepath) as file:
                 tree_list = [tree.split(';')[0] for tree in file.keys()]  # TTrees are labelled '<name>;<cycle number>'
-                if missing_trees := [t for t in [a_t for a_t in tree_dict] + [TTree_name] if t not in tree_list]:
+                if missing_trees := [t for t in [a_t for a_t in tree_dict] + [self.TTree_name] if t not in tree_list]:
                     raise ValueError(f"TTree(s) '{', '.join(missing_trees)}' not found in file {filepath}")
                 else:
                     if missing_branches := [branch for branch in default_tree_vars
-                                            if branch not in file[TTree_name].keys()]:
+                                            if branch not in file[self.TTree_name].keys()]:
                         raise ValueError(f"Missing TBranch(es) {missing_branches} in TTree "
-                                         f"'{TTree_name}' of file '{datapath}'.")
+                                         f"'{self.TTree_name}' of file '{self.data_path}'.")
             logger.debug(f"All TTrees and variables found in {filepath}...")
         logger.debug("All required TTrees variables found.")
 
@@ -326,37 +331,48 @@ class Dataset:
                            "Some unexpected behaviour may occur.")
 
         t1 = time.time()
-        logger.info(f"Extracting mass slices from {datapath}...")
+        logger.info(f"Extracting mass slices from {self.data_path}...")
         default_tree_vars.add('mcChannelNumber')  # to keep track of dataset IDs (DSIDs)
 
-        logger.debug(f"Extracting {default_tree_vars} from {TTree_name} tree...")
-        df = uproot.concatenate(datapath + ':' + TTree_name, default_tree_vars, library='pd',
-                                num_workers=config.n_threads, begin_chunk_size=chunksize)
+        logger.debug(f"Extracting {default_tree_vars} from {self.TTree_name} tree...")
+        df = to_pandas(uproot.concatenate(self.data_path + ':' + self.TTree_name, default_tree_vars,
+                                          num_workers=config.n_threads, begin_chunk_size=chunksize))
         logger.debug(f"Extracted {len(df)} events.")
 
         logger.debug(f"Extracting ['total_EventsWeighted', 'dsid'] from 'sumWeights' tree...")
-        sumw = uproot.concatenate(datapath + ':sumWeights', ['totalEventsWeighted', 'dsid'],
-                                  library='pd', num_workers=config.n_threads, begin_chunk_size=chunksize)
+        sumw = to_pandas(uproot.concatenate(self.data_path + ':sumWeights', ['totalEventsWeighted', 'dsid'],
+                                            num_workers=config.n_threads, begin_chunk_size=chunksize))
 
         logger.debug(f"Calculating sum of weights and merging...")
         sumw = sumw.groupby('dsid').sum()
         df = pd.merge(df, sumw, left_on='mcChannelNumber', right_on='dsid', sort=False, copy=False)
         df.rename(columns={'mcChannelNumber': 'DSID'}, inplace=True)  # rename mcChannelNumber to DSID
 
+        # TODO: Drop duplicated events, set event number as index?
+
         # merge TTrees
-        validation = '1:1' if validate_duplicated_events else 'm:m'
+        if validate_duplicated_events:
+            validation = '1:1'
+            logger.info("Validating duplicated events")
+        else:
+            validation = 'm:m'
+            logger.info("Skipping dulpacted events validation")
+
         for tree in tree_dict:
             logger.debug(f"Extracting {tree_dict[tree]} from {tree} tree...")
-            alt_df = uproot.concatenate(datapath + ":" + tree, tree_dict[tree],
-                                        library='pd', num_workers=config.n_threads, begin_chunk_size=chunksize)
+            alt_df = to_pandas(uproot.concatenate(self.data_path + ":" + tree, tree_dict[tree],
+                                                  num_workers=config.n_threads, begin_chunk_size=chunksize))
             logger.debug(f"Extracted {len(alt_df)} events.")
 
             if validate_missing_events:
+                logger.info("Checking for missing events..")
                 # test for missing events
                 if n_missing := len(df[~df['eventNumber'].isin(alt_df['eventNumber'])]):
-                    raise Exception(f"Found {n_missing} events in '{TTree_name}' tree not found in '{tree}' tree")
+                    raise Exception(f"Found {n_missing} events in '{self.TTree_name}' tree not found in '{tree}' tree")
                 else:
-                    logger.debug(f"All events in {TTree_name} tree found in {tree} tree")
+                    logger.debug(f"All events in {self.TTree_name} tree found in {tree} tree")
+            else:
+                logger.info("Skipping missing events check")
 
             logger.debug("Merging with rest of dataframe...")
             try:
@@ -371,30 +387,29 @@ class Dataset:
 
                 err = str(e)
                 if err == 'Merge keys are not unique in either left or right dataset; not a one-to-one merge':
-                    raise Exception(f"{n_l} duplicated events in '{TTree_name}' TTree. Events: {evnt_l}, "
+                    raise Exception(f"{n_l} duplicated events in '{self.TTree_name}' TTree. Events: {evnt_l}, "
                                     f"and {n_r} in '{tree}' TTree. Events: {evnt_r}")
                 elif err == 'Merge keys are not unique in left dataset; not a one-to-one merge':
-                    raise Exception(f"{n_l} duplicated events in '{TTree_name}' TTree. Events: {evnt_l}")
+                    raise Exception(f"{n_l} duplicated events in '{self.TTree_name}' TTree. Events: {evnt_l}")
                 elif err == 'Merge keys are not unique in right dataset; not a one-to-one merge':
                     raise Exception(f"{n_r} duplicated events in '{tree}' TTree. Events: {evnt_r}")
                 else:
                     raise e
 
-        if logger.level == logging.DEBUG:
+        if validate_sumofweights:
             # sanity check to make sure totalEventsWeighted really is what it says it is
             # also output DSID metadata
             dsids = df['DSID'].unique()
-            logger.debug(f"Found {len(dsids)} unique dsid(s).")
+            logger.info(f"Found {len(dsids)} unique dsid(s).")
             df_id_sub = df[['weight_mc', 'DSID']].groupby('DSID', as_index=False).sum()
             for dsid in dsids:
-                df_id = df[df['DSID'] == dsid]
+                df_id = df.loc[df['DSID'] == dsid]
                 unique_totalEventsWeighted = df_id['totalEventsWeighted'].unique()
                 if len(unique_totalEventsWeighted) != 1:
                     logger.warning("totalEventsWeighted should only have one value per DSID. "
                                    f"Got {len(unique_totalEventsWeighted)}, of values {unique_totalEventsWeighted} for DSID {dsid}")
 
-                dsid_weight = df_id_sub[df_id_sub['DSID'] == dsid]['weight_mc'].values[
-                    0]  # just checked there's only one value here
+                dsid_weight = df_id_sub.loc[df_id_sub['DSID'] == dsid]['weight_mc'].values[0]  # just take first value
                 totalEventsWeighted = df_id['totalEventsWeighted'].values[0]
                 if dsid_weight != totalEventsWeighted:
                     logger.warning(
@@ -403,22 +418,21 @@ class Dataset:
 
             default_tree_vars.remove('mcChannelNumber')
             default_tree_vars.add('DSID')
+        else:
+            logger.info("Skipping sum of weights validation")
 
         # calculate and combine special derived variables
         if vars_to_calc:
-
-            def row_calc(deriv_var: str, row: pd.Series) -> pd.Series:
-                """Helper for applying derived variable calculation function to a dataframe row"""
-                row_args = [row[v] for v in calc_vars_dict[deriv_var]['var_args']]
-                return calc_vars_dict[deriv_var]['func'](*row_args)
 
             # save which variables are actually necessary in order to drop extras (keep all columns for now)
             # og_vars = all_vars(cut_list_dicts, vars_to_cut)
             for var in vars_to_calc:
                 # compute new column
                 temp_cols = calc_vars_dict[var]['var_args']
+                func = calc_vars_dict[var]['func']
+                str_args = calc_vars_dict[var]['var_args']
                 logger.info(f"Computing '{var}' column from {temp_cols}...")
-                df[var] = df.apply(lambda row: row_calc(var, row), axis=1)
+                df[var] = func(df, *str_args)
 
                 # # drop unnecessary columns extracted just for calculations
                 # to_drop = [var for var in temp_cols if var not in og_vars]
@@ -429,7 +443,7 @@ class Dataset:
         logger.info(f"time to build dataframe: {time.strftime('%H:%M:%S', time.gmtime(t2 - t1))}")
 
         # properly scale GeV columns
-        cls.__rescale_to_gev(df)
+        self.__rescale_to_gev(df)
 
         return df
 
@@ -510,7 +524,7 @@ class Dataset:
             raise ValueError(f"Missing kFactors in dataset {self.name}")
 
         return \
-            self.df[mc_weight] * self.lumi / self.df[tot_weighted_events] * \
+            self.lumi * self.df[mc_weight] * abs(self.df[mc_weight]) / self.df[tot_weighted_events] * \
             self.df[kFactor] * self.df[pileup_weight] * SF
 
     @staticmethod
@@ -796,13 +810,48 @@ class Dataset:
                 pkl.dump(hists, f)
                 logger.info(f"Saved pickle file to {f.name}")
 
-    def plot_mass_slices(self, **kwargs) -> None:
-        """
-        Plots mass slices for input variable xvar if dataset is_slices
+    def plot_mass_slices(self,
+                         var: str,
+                         bins: Union[List[float], Tuple[int, float, float]] = (30, 0, 5000),
+                         logbins: bool = False,
+                         logx: bool = False,
+                         logy: bool = True,
+                         xlabel: str = '',
+                         ylabel: str = '',
+                         title: str = '',
+                         **kwargs
+                         ) -> None:
+        # plt_utils.plot_mass_slices(self.df, self.lepton, plot_label=self.name, **kwargs)
+        logger.info(f'Plotting {var} in {self.name} as slices...')
 
-        :param kwargs: keyword arguments to be passed to plotting_utils.plot_mass_slices()
-        """
-        plt_utils.plot_mass_slices(self.df, self.lepton, plot_label=self.name, **kwargs)
+        bh_axis = plt_utils.get_axis(bins, logbins)
+
+        # per dsid
+        for dsid in self.df['DSID'].unique():
+            dsid_df = self.df.loc[self.df['DSID'] == dsid]
+            hist = bh.Histogram(bh_axis, storage=bh.storage.Weight())
+            hist.fill(dsid_df[var], weight=dsid_df['total_event_weight'], threads=config.n_threads)
+            hep.histplot(hist, label=dsid, **kwargs)
+        # inclusive
+        hist = bh.Histogram(bh_axis, storage=bh.storage.Weight())
+        hist.fill(self.df[var], weight=self.df['total_event_weight'])
+        hep.histplot(hist, label='Inclusive', color='k', **kwargs)
+
+        _xlabel, _ylabel = plt_utils.get_axis_labels(var, self.lepton)
+        plt.xlabel(xlabel if xlabel else _xlabel)
+        plt.ylabel(ylabel if ylabel else _ylabel)
+        plt.legend(fontsize=10, ncol=2)
+        if logx:
+            plt.semilogx()
+        if logy:
+            plt.semilogy()
+        hep.atlas.label(italic=(True, True), llabel='Internal', rlabel=title)
+
+        filename = config.paths['plot_dir'] + self.name + '_' + var + '_SLICES.png'
+        plt.savefig(filename, bbox_inches='tight')
+        plt.show()
+        logger.info(f'Saved mass slice plot of {var} in {self.name} to {filename}')
+        plt.clf()
 
     def gen_cutflow_hist(self,
                          event: bool = True,

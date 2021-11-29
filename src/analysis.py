@@ -12,7 +12,6 @@ from utils import file_utils, decorators
 class Analysis:
     def __init__(self, data_dict: Dict[str, Dict],
                  analysis_label: str,
-                 force_rebuild: bool = False,
                  global_lumi: Optional[float] = None,
                  phibins: Optional[Union[tuple, list]] = None,
                  etabins: Optional[Union[tuple, list]] = None,
@@ -28,7 +27,6 @@ class Analysis:
 
         :param data_dict: Dictionary of dictionaries containing paths to root files and the tree to extract from each.
         The key to the top-level dictionary is the label assigned to the dataset.
-        :param force_rebuild: Force rebuild all dataframes.
         :param global_lumi: all data will be scaled to this luminosity
         :param phibins: bins for plotting phi
         :param etabins: bins for plotting eta
@@ -39,6 +37,7 @@ class Analysis:
         # SET OUTPUT DIRECTORIES
         # ===========================
         # set and create output directories in outputs/<analysis_label>/
+        # TODO: Relationship with config.paths is over
         for path_var in config.paths:
             config.paths[path_var] = config.paths[path_var].format(analysis_label)
             file_utils.makedir(config.paths[path_var])
@@ -51,7 +50,7 @@ class Analysis:
         logger.setLevel(log_level)
         if log_out.lower() in ('file', 'both'):
             filehandler = logging.FileHandler(f"{config.paths['log_dir']}/{analysis_label}_{time.strftime('%Y-%m-%d_%H-%M-%S')}.log")
-            filehandler.setFormatter(logging.Formatter('%(asctime)s %(levelname)s-10s %(message)s'))
+            filehandler.setFormatter(logging.Formatter('%(asctime)s %(levelname)-10s %(message)s'))
             logger.addHandler(filehandler)
         if log_out.lower() in ('console', 'both'):
             logger.addHandler(logging.StreamHandler(sys.stdout))
@@ -154,19 +153,15 @@ class Analysis:
         self.datasets[ds_name].make_all_cutgroup_2dplots(**kwargs)
 
     @decorators.check_single_datafile
-    def plot_mass_slices(self, ds_name: Optional[str], xvar: str, inclusive_dataset: str = None, **kwargs) -> None:
+    def plot_mass_slices(self, ds_name: Optional[str], xvar: str, **kwargs) -> None:
         """
         Plots mass slices for input variable xvar if dataset is_slices
 
         :param ds_name: name of dataset (in slices) to plot
         :param xvar: variable in dataframe to plot
-        :param inclusive_dataset: if given, uses given dataset in analysis as inclusive overlay
         :param kwargs: keyword args to pass to dataclass.plot_mass_slices()
         """
-        if inclusive_dataset:
-            self.datasets[ds_name].plot_mass_slices(xvar=xvar, inclusive_dataset=self.datasets[inclusive_dataset].df, **kwargs)
-        else:
-            self.datasets[ds_name].plot_mass_slices(xvar=xvar, **kwargs)
+        self.datasets[ds_name].plot_mass_slices(var=xvar, **kwargs)
 
     # ===============================
     # ========= PRINTOUTS ===========

@@ -19,13 +19,16 @@ class Cutfile:
     """
     Handles importing cutfiles and extracting variables
     """
-    def __init__(self, file_path: str, name: str = ''):
+    def __init__(self, file_path: str):
         self.name = get_filename(file_path)
         self._path = file_path
         self._backup_path = config.paths['backup_cutfiles_dir']
         self.cut_dicts, self.vars_to_cut, self.options = self.parse_cutfile(file_path)
         self.cutgroups = self.gen_cutgroups(self.cut_dicts)
         self.alt_trees = self.gen_tree_dict(self.cut_dicts)
+
+    def __repr__(self):
+        return f'Cutfile("{self._path}")'
 
     @classmethod
     def parse_cutline(cls, cutline: str, sep='\t') -> dict:
@@ -78,7 +81,7 @@ class Cutfile:
         return cut_dict
 
     @classmethod
-    def parse_cutfile(cls, file: str, sep='\t') -> Tuple[List[dict], Set[str], Dict[str, bool]]:
+    def parse_cutfile(cls, file: str, sep='\t') -> Tuple[List[dict], Set[Tuple[str, str]], Dict[str, bool]]:
         """
         | Generates pythonic outputs from input cutfile
         | Cutfile should be formatted with headers [CUTS], [OUTPUTS] and [OPTIONS]
@@ -104,16 +107,24 @@ class Cutfile:
             for cutline in lines[lines.index('[CUTS]') + 1: lines.index('[OUTPUTS]')]:
                 if cutline.startswith('#') or len(cutline) < 2:
                     continue
-
                 cuts_list_of_dicts.append(cls.parse_cutline(cutline, sep=sep))
 
             # get output variables
-            output_vars_list = set()
+            output_vars = set()
             for output_var in lines[lines.index('[OUTPUTS]') + 1: lines.index('[OPTIONS]')]:
                 if output_var.startswith('#') or len(output_var) < 2:
                     continue
-
-                output_vars_list.add(output_var)
+                elif len(var_tree := output_var.split(sep)) > 2:
+                    raise SyntaxError(f"Check line '{output_var}'. Should be variable and tree (optional). "
+                                      f"Got '{var_tree}'.")
+                elif len(var_tree) == 2:
+                    out_var, tree = var_tree
+                    output_vars.add((out_var, tree))
+                elif len(var_tree) == 1:
+                    out_var = var_tree[0]
+                    output_vars.add((out_var, 'na'))
+                else:
+                    raise Exception("This should never happen")
 
             # global cut options
             options_dict = {}
@@ -137,28 +148,30 @@ class Cutfile:
             if missing_options := [opt for opt in necessary_options if opt not in options_dict.keys()]:
                 raise Exception(f"Missing option(s) in cutfile: {', '.join(missing_options)}")
 
-        return cuts_list_of_dicts, output_vars_list, options_dict
+        return cuts_list_of_dicts, output_vars, options_dict
 
-    @classmethod
-    def extract_cut_variables(cls,
-                              cut_dicts: List[dict],
-                              uncut_vars: Set[str],
-                              derived_vars: Dict[str, OtherVar]
-                              ) -> Tuple[Dict[str, set[str]], Set[str]]:
+    def extract_variables(self, derived_vars: Dict[str, OtherVar]) -> Tuple[Dict[str, set[str]], Set[str]]:
         """
         Get which variables are needed to extract from root file based on cutfile parser output
         uses outputs from parse_cutfile()
 
         :return Tuple[{Dictionary of trees and its variables to extract}, {set of variables to calculate}]
         """
-        tree_dict = cls.gen_tree_dict(cut_dicts)
-        calc_vars = {var for var in {cut_dict['cut_var'] for cut_dict in cut_dicts} if var in derived_vars}
-        calc_vars |= {var for var in uncut_vars if var in derived_vars}
+        tree_dict = self.gen_tree_dict(self.cut_dicts)
+        calc_vars = {var for var in {cut_dict['cut_var'] for cut_dict in self.cut_dicts} if var in derived_vars}
+        calc_vars |= {var for var, _ in self.vars_to_cut if var in derived_vars}
+        self.vars_to_cut -= {(var, tree) for var, tree in self.vars_to_cut if var in derived_vars}
 
         # for variables in the 'default' tree (when tree not specified)
-        tree_dict['na'] = {cut_dict['cut_var'] for cut_dict in cut_dicts if 'tree' not in cut_dict} - calc_vars
+        tree_dict['na'] = {cut_dict['cut_var'] for cut_dict in self.cut_dicts if 'tree' not in cut_dict} - calc_vars
 
-        # add any variables needed from which trees
+        for var, tree in self.vars_to_cut:
+            if tree in tree_dict:
+                tree_dict[tree] |= {var}
+            else:
+                tree_dict[tree] = {var}
+
+        # add any variables needed from which trees for calculating derived variables
         for calc_var in calc_vars:
             if (alt_tree := derived_vars[calc_var]['tree']) in tree_dict:
                 tree_dict[alt_tree] |= set(derived_vars[calc_var]['var_args'])
@@ -254,7 +267,7 @@ class Cutfile:
             if is_pkl_file:
                 old_df = pd.load_pickle(pkl_filepath)
                 old_cols = set(old_df.columns)
-                current_variables = self.all_vars(self.cut_dicts, self.vars_to_cut)
+                current_variables = self.all_vars(self.cut_dicts, {var[0] for var in self.vars_to_cut})
                 if current_variables <= old_cols:
                     logger.debug("All variables found in old pickle file.")
                     return False

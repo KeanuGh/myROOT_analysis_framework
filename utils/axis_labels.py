@@ -1,5 +1,13 @@
+from typing import Dict, TypedDict
+
+
+class BranchLabel(TypedDict):
+    xlabel: str
+    ylabel: str
+
+
 # labels for cross-sections
-labels_xs = {
+labels_xs: Dict[str, BranchLabel] = {
     # DATASET VARIABLES
     # =======================================================
     'weight_mc': {
@@ -21,7 +29,7 @@ labels_xs = {
 
     # DERIVED KINEMATIC VARIABLES
     # =======================================================
-    'lepton_mt': {  # boson pt from electron decay
+    'mt': {  # boson pt from electron decay
         'xlabel': r'Vector boson transverse momentum $m^{W}_{T}$ [GeV]',
         'ylabel': r'$\frac{d\sigma}{dm_{T}}$ [fb GeV$^{-1}$]',
     },
@@ -89,7 +97,7 @@ labels_xs = {
         'ylabel': r'$\frac{d\sigma}{dE}$ [fb GeV$^{-1}$]'
     },
     'met_met': {
-        'xlabel': r'$E_{T}^{\text{miss}}$',
+        'xlabel': r'$E_{T}^{\text{miss}}$ [GeV]',
         'ylabel': r'$\frac{d\sigma}{dE_{T}^{\text{miss}}$ [fb GeV$^{-1}$]'
     },
     'met_phi': {

@@ -4,21 +4,21 @@ Defines helper functions to calculate various kinematic/other physical variables
 from typing import Dict, TypedDict, Callable, List
 
 import numpy as np
+import pandas as pd
 
 
 # VARIABLE FUNCTIONS
 # ================================
-def calc_mt(l1_pt: float, l2_pt: float, l1_phi: float, l2_phi: float) -> float:
+def calc_mt(df: pd.DataFrame, l1_pt: str, l2_pt: str, l1_phi: str, l2_phi: str) -> pd.Series:
     """Calculate transverse mass of vector boson in Drell-Yan process"""
-    dphi = abs(l2_phi - l1_phi)
-    if dphi > np.pi:
-        dphi = 2 * np.pi - dphi
-    return np.sqrt(2. * l1_pt * l2_pt * (1 - np.cos(dphi)))
+    dphi = abs(df[l1_phi] - df[l2_phi])
+    dphi.loc[dphi > np.pi] = 2 * np.pi - dphi.loc[dphi > np.pi]
+    return np.sqrt(2. * df[l1_pt] * df[l2_pt] * (1 - np.cos(dphi)))
 
 
-def calc_vy(x1: float, x2: float) -> float:
+def calc_vy(df: pd.DataFrame, x1: str, x2: str) -> pd.Series:
     """Calculate boson rapidity"""
-    return .5 * np.log(x1 / x2)
+    return .5 * np.log(df[x1] / df[x2])
 
 
 # VARIABLE BUILDING DICTIONARY

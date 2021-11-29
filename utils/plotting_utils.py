@@ -25,6 +25,8 @@ plt.style.use([hep.style.ATLAS,
                ])
 
 
+# TODO: OOP-ify all this
+
 # ===============================
 # ========== SCALINGS ===========
 # ===============================
@@ -122,7 +124,7 @@ def getbins(var_to_plot) -> Tuple[bool, Optional[tuple]]:
 
 
 def get_axis(bins: Union[tuple, list],
-             transform: bh.axis.transform = None
+             logbins: bool = False,
              ) -> bh.axis.Axis:
     """
     Returns the correct type of boost-histogram axis based on the input bins.
@@ -130,8 +132,9 @@ def get_axis(bins: Union[tuple, list],
     :param bins: tuple of bins in x (n_bins, start, stop) or list of bin edges.
                  In the first case returns an axis of type Regular(), otherwise of type Variable().
                  Raises error if not formatted in one of these ways.
-    :param transform: transform to pass to axis constructor
+    :param logbins: whether logarithmic binnins
     """
+    transform = bh.axis.transform.log if logbins else None
     if isinstance(bins, tuple):
         if len(bins) != 3:
             raise ValueError("Tuple of bins should be formatted like (n_bins, start, stop).")
@@ -234,13 +237,7 @@ def histplot_1d(var_x: pd.Series,
     :return: histogram object
     """
 
-    # axis transformation
-    if is_logbins:
-        ax_transform = bh.axis.transform.log
-    else:
-        ax_transform = None
-
-    hist = bh.Histogram(get_axis(bins, ax_transform), storage=bh.storage.Weight())
+    hist = bh.Histogram(get_axis(bins, is_logbins), storage=bh.storage.Weight())
     hist.fill(var_x, weight=weights, threads=n_threads)
     if scaling:
         hist = scale_hist(scaling, hist, lumi)
