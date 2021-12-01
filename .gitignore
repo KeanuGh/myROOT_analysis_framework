@@ -13,6 +13,8 @@ venv.bak/
 .vscode/
 PMGCrossSectionTool/
 
+# tired of pushing images
+.png
 
 # don't push pycharm stuff
 .idea/

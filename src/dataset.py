@@ -89,12 +89,9 @@ class Dataset:
 
         # READ AND GET OPTIONS FROM CUTFILE
         # ========================
-        logger.info(f"Parsting cutfile for {self.name}...")
+        logger.info(f"Parsting cutfile '{self.cutfile_path}' for {self.name}...")
         self.cutfile = Cutfile(self.cutfile_path)
-        if self.force_rebuild:
-            self._rebuild = True
-        else:
-            self._rebuild = self.cutfile.if_build_dataframe(self.pkl_path)
+        self._build_df = True if self.force_rebuild else self.cutfile.if_build_dataframe(self.pkl_path)
         if self.cutfile.if_make_cutfile_backup():
             self.cutfile.backup_cutfile(self.name)
 
@@ -109,7 +106,8 @@ class Dataset:
         logger.debug(f"sequential cutflow: {self.cutfile.options['sequential']}")
         logger.debug(f"Forced dataset rebuild: {self.force_rebuild}")
         logger.debug(f"Validate missing events: {self.validate_missing_events}")
-        logger.debug(f"Valudate duplicated events: {self.validate_duplicated_events}")
+        logger.debug(f"Validate duplicated events: {self.validate_duplicated_events}")
+        logger.debug(f"Validate sum of weights: {self.validate_sumofweights}")
         logger.debug("----------------------------")
         logger.debug("")
 
@@ -117,7 +115,7 @@ class Dataset:
         # ========================
         """Define pipeline for building dataset dataframe"""
         # extract and clean data
-        if self._rebuild:
+        if self._build_df:
             logger.info(f"Building {self.name} dataframe from {self.data_path}...")
             self.df = self._build_dataframe(calc_vars_dict=derived_vars,
                                             validate_missing_events=self.validate_missing_events,
@@ -278,6 +276,7 @@ class Dataset:
         default_tree_vars = tree_dict.pop('na')
         default_tree_vars |= tree_dict.pop(self.TTree_name, set())
         default_tree_vars -= vars_to_calc
+        default_tree_vars.add('mcChannelNumber')  # to keep track of dataset IDs (DSIDs)
 
         # pull eventNumber from other trees
         for tree in tree_dict:
@@ -331,9 +330,6 @@ class Dataset:
                            "Some unexpected behaviour may occur.")
 
         t1 = time.time()
-        logger.info(f"Extracting mass slices from {self.data_path}...")
-        default_tree_vars.add('mcChannelNumber')  # to keep track of dataset IDs (DSIDs)
-
         logger.debug(f"Extracting {default_tree_vars} from {self.TTree_name} tree...")
         df = to_pandas(uproot.concatenate(self.data_path + ':' + self.TTree_name, default_tree_vars,
                                           num_workers=config.n_threads, begin_chunk_size=chunksize))
@@ -714,8 +710,7 @@ class Dataset:
 
         # save figure
         if to_pkl:
-            with open(config.paths['pkl_hist_dir'] + plot_label + '_' + var + '_1d_cutgroups_ratios.pkl',
-                      'wb') as f:
+            with open(config.paths['pkl_hist_dir'] + plot_label + '_' + var + '_1d_cutgroups_ratios.pkl', 'wb') as f:
                 pkl.dump(hists, f)
                 logger.info(f"Saved pickle file to {f.name}")
         hep.atlas.label(llabel="Internal", loc=0, ax=fig_ax, rlabel=plot_label)
@@ -821,7 +816,6 @@ class Dataset:
                          title: str = '',
                          **kwargs
                          ) -> None:
-        # plt_utils.plot_mass_slices(self.df, self.lepton, plot_label=self.name, **kwargs)
         logger.info(f'Plotting {var} in {self.name} as slices...')
 
         bh_axis = plt_utils.get_axis(bins, logbins)

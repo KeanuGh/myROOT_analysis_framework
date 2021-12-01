@@ -57,49 +57,6 @@ truth_df['total_w'] = LUMI_DATA * truth_df['weight_mc'] * abs(truth_df['weight_m
                       * truth_df['KFactor_weight_truth'] * truth_df['weight_pileup']
 print(f"Calculating total event weight {time.time() - t:.3f}s")
 
-# calculating cuts
-
-
-# calculate mt
-t = time.time()
-dphi = abs(truth_df['MC_WZneutrino_phi_born'] - truth_df['MC_WZmu_el_phi_born'])
-dphi.loc[dphi > np.pi] = 2 * np.pi - dphi.loc[dphi > np.pi]
-truth_df['mt'] = np.sqrt(2. * truth_df['MC_WZmu_el_pt_born'] * truth_df['MC_WZneutrino_pt_born'] * (1 - np.cos(dphi)))
-print(f"Calculating mt {time.time() - t:.3f}s")
-
-
-def plot(var: str, xlabel: str) -> None:
-    # plot
-    t0 = time.time()
-    for dsid in truth_df['mcChannelNumber'].unique():
-        # per dsid
-        truth_df_dsid = truth_df.loc[truth_df['mcChannelNumber'] == dsid]
-        hist = bh.Histogram(bh.axis.Regular(50, 0, 5000))
-        hist.fill(truth_df_dsid[var], weight=truth_df_dsid['total_w'], threads=N_THREADS // 2)
-        hep.histplot(hist, label=dsid)
-    # inclusive
-    hist = bh.Histogram(bh.axis.Regular(50, 0, 5000))
-    hist.fill(truth_df[var], weight=truth_df['total_w'])
-    hep.histplot(hist, label='Inclusive', color='k')
-    plt.xlabel(xlabel)
-    plt.ylabel("Entries")
-    plt.semilogy()
-    plt.legend(fontsize=10, ncol=2)
-    hep.atlas.label(italic=(True, True), llabel='Internal', rlabel=r'$W^+\rightarrow\tau\nu$ 13TeV')
-    plt.savefig(OUT_DIR + 'wplustaunu_' + var + '.png')
-    plt.show()
-    print(f"Making {var} plot: {time.time() - t0:.3f}s")
-    plt.clf()
-
-
-plot('MC_WZ_dilep_m_born', "Born $M_{ll}$ [GeV]")
-plot('mt', "$M_T^W$ [GeV]")
-_weight_truth'] * truth_df['weight_pileup']
-print(f"Calculating total event weight {time.time() - t:.3f}s")
-
-# calculating cuts
-
-
 # calculate mt
 t = time.time()
 dphi = abs(truth_df['MC_WZneutrino_phi_born'] - truth_df['MC_WZmu_el_phi_born'])

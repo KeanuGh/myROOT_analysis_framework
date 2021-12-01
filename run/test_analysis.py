@@ -15,8 +15,8 @@ if __name__ == '__main__':
         },
         'wmintaunu': {
             'data_path': '../data/mc16a_wmintaunu_SLICES/*.root',
-            'cutfile_path': '../options/cutfile_EXAMPLE.txt',
-            'TTree_name': 'truth',
+            'cutfile_path': '../options/cutfile_reco.txt',
+            'TTree_name': 'nominal_Loose',
             'year': '2015+2016',
             'lepton': 'tau',
             'force_rebuild': True,
