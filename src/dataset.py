@@ -352,7 +352,7 @@ class Dataset:
             logger.info("Validating duplicated events")
         else:
             validation = 'm:m'
-            logger.info("Skipping dulpacted events validation")
+            logger.info("Skipping duplicted events validation")
 
         for tree in tree_dict:
             logger.debug(f"Extracting {tree_dict[tree]} from {tree} tree...")
