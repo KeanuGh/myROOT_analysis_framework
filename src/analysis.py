@@ -55,7 +55,7 @@ class Analysis:
         if log_out.lower() in ('console', 'both'):
             logger.addHandler(logging.StreamHandler(sys.stdout))
         logging.captureWarnings(True)
-        
+
         logger.info(f"INITIALISING ANALYSIS '{analysis_label}'...")
         logger.info("="*(len(analysis_label)+27))
 

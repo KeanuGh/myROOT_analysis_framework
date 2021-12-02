@@ -5,7 +5,7 @@ import time
 from dataclasses import dataclass, field
 from glob import glob
 from itertools import combinations
-from typing import Optional, Union, List, Dict, OrderedDict, Tuple
+from typing import Optional, Union, List, OrderedDict, Tuple
 from warnings import warn
 
 import boost_histogram as bh
@@ -22,7 +22,7 @@ import utils.plotting_utils as plt_utils
 from src.cutfile import Cutfile
 from src.cutflow import Cutflow
 from utils.axis_labels import labels_xs
-from utils.var_helpers import derived_vars, OtherVar
+from utils.var_helpers import derived_vars
 
 logger = logging.getLogger('analysis')
 
@@ -42,16 +42,23 @@ class Dataset:
     TODO: Save histograms as dataset attributes? Ability to perform operations across hisograms? Custom histogram class?
     TODO: check branch types and perform dataframe merge in batches
     """
+    # INPUT
     name: str
     data_path: str  # path to root file(s)
     TTree_name: str  # name of TTree to extract
     cutfile_path: str  # path to cutfile
     year: str  # data year '2015', '2017', '2018' or '2015+2016'
+    label: str  # label for plot title or legends
 
+    # GENERATED
     lumi: float = field(init=False)  # generated from year
-    df: pd.DataFrame = field(init=False, repr=False)  # stores the actual data in a dataframe
-    cutflow: Cutflow = field(init=False)
+    df: pd.DataFrame = field(init=False, repr=False)  # stores the actual dataset
+    cutflow: Cutflow = field(init=False, repr=False)
+    cutfile: Cutfile = field(init=False, repr=False)
 
+    # OPTIONS
+    _reco: bool = False
+    _truth: bool = False
     pkl_path: str = None  # where the dataframe pickle file will be stored
     lepton: str = 'lepton'  # name of charged DY lepton channel in dataset (if applicable)
     chunksize: int = 1024  # chunksize for uproot ROOT file import
@@ -95,6 +102,33 @@ class Dataset:
         if self.cutfile.if_make_cutfile_backup():
             self.cutfile.backup_cutfile(self.name)
 
+        # get variables to extract from dataframe and their TTrees
+        self._tree_dict, self._vars_to_calc = self.cutfile.extract_variables(derived_vars)
+
+        # get set unlabeled variables in cutfile as being in default tree
+        if self.TTree_name in self._tree_dict:
+            self._tree_dict[self.TTree_name] |= self._tree_dict.pop('na', set())
+        else:
+            self._tree_dict[self.TTree_name] = self._tree_dict.pop('na', set())
+        self._tree_dict[self.TTree_name] -= self._vars_to_calc
+
+        # only add these to 'main tree' to avoid merge issues
+        self._tree_dict[self.TTree_name] |= {'weight_mc', 'weight_pileup'}
+
+        for tree in self._tree_dict:
+            # add necessary metadata to all trees
+            self._tree_dict[tree] |= {'mcChannelNumber', 'eventNumber'}
+            if 'nominal' in tree.lower():
+                logger.debug(f"Detected {tree} as reco tree, will pull 'weight_leptonSF' and 'weight_KFactor'")
+                self._tree_dict[tree] |= {'weight_leptonSF', 'weight_KFactor'}
+                self._reco = True
+            elif 'truth' in tree.lower():
+                logger.debug(f"Detected {tree} as truth tree, will pull 'KFactor_weight_truth'")
+                self._tree_dict[tree].add('KFactor_weight_truth')
+                self._truth = True
+            else:
+                logger.info(f"Neither {tree} as truth nor reco dataset detected.")
+
         # some debug information
         logger.debug("")
         logger.debug("DATASET INPUT OPTIONS: ")
@@ -111,16 +145,25 @@ class Dataset:
         logger.debug("----------------------------")
         logger.debug("")
 
+        if logger.level == logging.DEBUG:
+            for tree in self._tree_dict:
+                logger.debug(f"Variables to extract from {tree} tree: ")
+                for var in self._tree_dict[tree]:
+                    logger.debug(f"  - {var}")
+            if self._vars_to_calc:
+                logger.debug("Variables to calculate: ")
+                for var in self._vars_to_calc:
+                    logger.debug(f"  - {var}")
+
         # GENERATE DATAFRAME
         # ========================
         """Define pipeline for building dataset dataframe"""
         # extract and clean data
         if self._build_df:
             logger.info(f"Building {self.name} dataframe from {self.data_path}...")
-            self.df = self._build_dataframe(calc_vars_dict=derived_vars,
-                                            validate_missing_events=self.validate_missing_events,
-                                            validate_duplicated_events=self.validate_duplicated_events,
-                                            validate_sumofweights=self.validate_sumofweights)
+            self.df = self._build_dataframe(_validate_missing_events=self.validate_missing_events,
+                                            _validate_duplicated_events=self.validate_duplicated_events,
+                                            _validate_sumofweights=self.validate_sumofweights)
 
             # print into pickle file for easier read/write
             if self.pkl_path:
@@ -133,8 +176,12 @@ class Dataset:
         logger.info(f"Number of events in dataset {self.name}: {len(self.df)}")
 
         # map appropriate weights
-        logger.info(f"Creating weights for {self.name}...")
-        self.df['total_event_weight'] = self.__total_event_weight()
+        if self._truth:
+            logger.info(f"Calculating truth weight for {self.name}...")
+            self.df['truth_weight'] = self.__event_weight_truth()
+        if self._reco:
+            logger.info(f"Calculating reco weight for {self.name}...")
+            self.df['reco_weight'] = self.__event_weight_reco()
 
         # print some dataset ID metadata
         # TODO: avg event weight
@@ -195,8 +242,8 @@ class Dataset:
         """Calculate dataset luminosity"""
         return self._get_luminosity(self.df, xs=self.cross_section, weight_col=self._weight_column)
 
-    @classmethod
-    def _get_cross_section(cls, df: pd.DataFrame, n_events=None, weight_mc_col: str = 'weight_mc') -> float:
+    @staticmethod
+    def _get_cross_section(df: pd.DataFrame, n_events=None, weight_mc_col: str = 'weight_mc') -> float:
         """
         Calculates cross-section of data in dataframe
         :param df: input dataframe
@@ -253,85 +300,46 @@ class Dataset:
     # ====== DATAFRAME BUILDER ======
     # ===============================
     def _build_dataframe(self,
-                         calc_vars_dict: Dict[str, OtherVar],
                          chunksize: int = 1024,
-                         validate_missing_events: bool = True,
-                         validate_duplicated_events: bool = True,
-                         validate_sumofweights: bool = True,
+                         _validate_missing_events: bool = True,
+                         _validate_duplicated_events: bool = True,
+                         _validate_sumofweights: bool = True,
                          ) -> pd.DataFrame:
         """
         Builds a dataframe from cutfile inputs
-        :param calc_vars_dict: list of possible calculated variables (see utils.var_helpers)
         :param chunksize: chunksize for uproot concat method
-        :param validate_missing_events: whether to check for missing events
-        :param validate_duplicated_events: whether to check for duplicated events
-        :param validate_sumofweights: whether to check sum of weights against weight_mc
+        :param _validate_missing_events: whether to check for missing events
+        :param _validate_duplicated_events: whether to check for duplicated events
+        :param _validate_sumofweights: whether to check sum of weights against weight_mc
         :return: output dataframe containing columns corresponding to necessary variables
         """
-
-        # get variables to extract from dataframe and their TTrees
-        tree_dict, vars_to_calc = self.cutfile.extract_variables(calc_vars_dict)
-
-        # get default tree variables
-        default_tree_vars = tree_dict.pop('na')
-        default_tree_vars |= tree_dict.pop(self.TTree_name, set())
-        default_tree_vars -= vars_to_calc
-        default_tree_vars.add('mcChannelNumber')  # to keep track of dataset IDs (DSIDs)
-
-        # pull eventNumber from other trees
-        for tree in tree_dict:
-            tree_dict[tree].add('eventNumber')
-
-        # required variables for weighting and merging
-        default_tree_vars |= {'weight_mc', 'weight_pileup', 'eventNumber'}
-        # TODO: Perhaps not the best way of doing this?
-        if 'nominal' in self.TTree_name.lower():
-            logger.debug("Detected reco dataset, will pull 'weight_leptonSF' and 'weight_KFactor'")
-            default_tree_vars |= {'weight_leptonSF', 'weight_KFactor'}
-        elif 'truth' in self.TTree_name.lower():
-            logger.debug("Detected truth dataset, will pull 'KFactor_weight_truth'")
-            default_tree_vars.add('KFactor_weight_truth')
-        else:
-            logger.info("Neither truth nor reco dataset detected.")
-
-        if logger.level == logging.DEBUG:
-            logger.debug(f"Variables to extract from {self.TTree_name} tree: ")
-            for var in default_tree_vars:
-                logger.debug(f"  - {var}")
-            if tree_dict:
-                for tree in tree_dict:
-                    logger.debug(f"Variables to extract from {tree} tree: ")
-                    for var in tree_dict[tree]:
-                        logger.debug(f"  - {var}")
-            if vars_to_calc:
-                logger.debug("Variables to calculate: ")
-                for var in vars_to_calc:
-                    logger.debug(f"  - {var}")
 
         # check that TTree(s) and variables exist in file(s)
         logger.debug(f"Checking TTree and TBranch values in file(s) '{self.data_path}'...")
         for filepath in glob(self.data_path):
             with uproot.open(filepath) as file:
                 tree_list = [tree.split(';')[0] for tree in file.keys()]  # TTrees are labelled '<name>;<cycle number>'
-                if missing_trees := [t for t in [a_t for a_t in tree_dict] + [self.TTree_name] if t not in tree_list]:
+                if missing_trees := [t for t in [a_t for a_t in self._tree_dict] if t not in tree_list]:
                     raise ValueError(f"TTree(s) '{', '.join(missing_trees)}' not found in file {filepath}")
                 else:
-                    if missing_branches := [branch for branch in default_tree_vars
-                                            if branch not in file[self.TTree_name].keys()]:
-                        raise ValueError(f"Missing TBranch(es) {missing_branches} in TTree "
-                                         f"'{self.TTree_name}' of file '{self.data_path}'.")
+                    for tree, branches in self._tree_dict.items():
+                        if missing_branches := [branch for branch in branches
+                                                if branch not in file[tree].keys()]:
+                            raise ValueError(f"Missing TBranch(es) {missing_branches} in TTree "
+                                             f"'{tree}' of file '{self.data_path}'.")
             logger.debug(f"All TTrees and variables found in {filepath}...")
         logger.debug("All required TTrees variables found.")
 
         # check if vars are contained in label dictionary
-        if unexpected_vars := [unexpected_var for unexpected_var in default_tree_vars
+        all_vars = {var for var_set in self._tree_dict.values() for var in var_set}
+        if unexpected_vars := [unexpected_var for unexpected_var in all_vars
                                if unexpected_var not in labels_xs]:
             logger.warning(f"Variable(s) {unexpected_vars} not contained in labels dictionary. "
                            "Some unexpected behaviour may occur.")
 
         t1 = time.time()
-        logger.debug(f"Extracting {default_tree_vars} from {self.TTree_name} tree...")
-        df = to_pandas(uproot.concatenate(self.data_path + ':' + self.TTree_name, default_tree_vars,
+        logger.debug(f"Extracting {self._tree_dict[self.TTree_name]} from {self.TTree_name} tree...")
+        df = to_pandas(uproot.concatenate(self.data_path + ':' + self.TTree_name, self._tree_dict[self.TTree_name],
                                           num_workers=config.n_threads, begin_chunk_size=chunksize))
         logger.debug(f"Extracted {len(df)} events.")
 
@@ -342,37 +350,40 @@ class Dataset:
         logger.debug(f"Calculating sum of weights and merging...")
         sumw = sumw.groupby('dsid').sum()
         df = pd.merge(df, sumw, left_on='mcChannelNumber', right_on='dsid', sort=False, copy=False)
-        df.rename(columns={'mcChannelNumber': 'DSID'}, inplace=True)  # rename mcChannelNumber to DSID
-
-        # TODO: Drop duplicated events, set event number as index?
 
         # merge TTrees
-        if validate_duplicated_events:
+        if _validate_duplicated_events:
             validation = '1:1'
-            logger.info("Validating duplicated events")
+            logger.info(f"Validating duplicated events in tree {self.TTree_name}...")
+            self._drop_duplicates(df)
         else:
             validation = 'm:m'
             logger.info("Skipping duplicted events validation")
 
-        for tree in tree_dict:
-            logger.debug(f"Extracting {tree_dict[tree]} from {tree} tree...")
-            alt_df = to_pandas(uproot.concatenate(self.data_path + ":" + tree, tree_dict[tree],
+        for tree in self._tree_dict:
+            if tree == self.TTree_name:
+                continue
+            logger.debug(f"Extracting {self._tree_dict[tree]} from {tree} tree...")
+            alt_df = to_pandas(uproot.concatenate(self.data_path + ":" + tree, self._tree_dict[tree],
                                                   num_workers=config.n_threads, begin_chunk_size=chunksize))
             logger.debug(f"Extracted {len(alt_df)} events.")
 
-            if validate_missing_events:
-                logger.info("Checking for missing events..")
-                # test for missing events
+            if _validate_duplicated_events:
+                logger.info(f"Validating duplicated events in tree {tree}...")
+                self._drop_duplicates(alt_df)
+
+            if _validate_missing_events:
+                logger.info(f"Checking for missing events in tree '{tree}'..")
                 if n_missing := len(df[~df['eventNumber'].isin(alt_df['eventNumber'])]):
                     raise Exception(f"Found {n_missing} events in '{self.TTree_name}' tree not found in '{tree}' tree")
                 else:
                     logger.debug(f"All events in {self.TTree_name} tree found in {tree} tree")
             else:
-                logger.info("Skipping missing events check")
+                logger.info(f"Skipping missing events check in tree {tree}")
 
             logger.debug("Merging with rest of dataframe...")
             try:
-                df = pd.merge(df, alt_df, how='left', on='eventNumber', sort=False, copy=False, validate=validation)
+                df = pd.merge(df, alt_df, how='left', on=['eventNumber', 'mcChannelNumber'], sort=False, copy=False, validate=validation)
             except pd.errors.MergeError as e:
                 dup_l = df['eventNumber'][df.duplicated('eventNumber')]
                 n_l = len(dup_l)
@@ -391,8 +402,9 @@ class Dataset:
                     raise Exception(f"{n_r} duplicated events in '{tree}' TTree. Events: {evnt_r}")
                 else:
                     raise e
+        df.rename(columns={'mcChannelNumber': 'DSID'}, inplace=True)  # rename mcChannelNumber to DSID
 
-        if validate_sumofweights:
+        if _validate_sumofweights:
             # sanity check to make sure totalEventsWeighted really is what it says it is
             # also output DSID metadata
             dsids = df['DSID'].unique()
@@ -411,22 +423,18 @@ class Dataset:
                     logger.warning(
                         f"Value of 'totalEventsWeighted' ({totalEventsWeighted}) is not the same as the total summed values of "
                         f"'weight_mc' ({dsid_weight}) for DISD {dsid}. Ratio = {totalEventsWeighted / dsid_weight:.2g}")
-
-            default_tree_vars.remove('mcChannelNumber')
-            default_tree_vars.add('DSID')
         else:
             logger.info("Skipping sum of weights validation")
 
         # calculate and combine special derived variables
-        if vars_to_calc:
-
+        if self._vars_to_calc:
             # save which variables are actually necessary in order to drop extras (keep all columns for now)
             # og_vars = all_vars(cut_list_dicts, vars_to_cut)
-            for var in vars_to_calc:
+            for var in self._vars_to_calc:
                 # compute new column
-                temp_cols = calc_vars_dict[var]['var_args']
-                func = calc_vars_dict[var]['func']
-                str_args = calc_vars_dict[var]['var_args']
+                temp_cols = derived_vars[var]['var_args']
+                func = derived_vars[var]['func']
+                str_args = derived_vars[var]['var_args']
                 logger.info(f"Computing '{var}' column from {temp_cols}...")
                 df[var] = func(df, *str_args)
 
@@ -435,13 +443,26 @@ class Dataset:
                 # logger.debug(f"dropping {to_drop}")
                 # df.drop(columns=to_drop, inplace=True)
 
-        t2 = time.time()
-        logger.info(f"time to build dataframe: {time.strftime('%H:%M:%S', time.gmtime(t2 - t1))}")
-
-        # properly scale GeV columns
-        self.__rescale_to_gev(df)
+        # CLEANUP
+        df['DSID'] = pd.Categorical(df['DSID'])
+        self.__rescale_to_gev(df)  # properly scale GeV columns
+        logger.info(f"time to build dataframe: {time.strftime('%H:%M:%S', time.gmtime(time.time() - t1))}")
 
         return df
+
+    @staticmethod
+    def _drop_duplicates(df: pd.DataFrame) -> None:
+        """
+        Checks for and optionally drops duplicated events and events with same event numbers for each dataset ID
+        :param df: dataset
+        :return:
+        """
+        b_size = len(df.index)
+        df.drop_duplicates(inplace=True)
+        logger.info(f"{b_size - len(df.index)} duplicate events dropped")
+        b_size = len(df.index)
+        df.drop_duplicates(['eventNumber', 'mcChannelNumber'], inplace=True)
+        logger.info(f"{b_size - len(df.index)} duplicate event numbers dropped")
 
     @staticmethod
     def _create_cut_columns(df: pd.DataFrame, cut_dicts: List[dict]) -> None:
@@ -486,12 +507,35 @@ class Dataset:
                     f"{cut['name']:<{name_len}}: {'|' + cut['cut_var']:>{var_len}}| {cut['relation']} {cut['cut_val']}")
         logger.info('')
 
-    def __total_event_weight(self,
+    def __event_weight_reco(self,
+                            mc_weight: str = 'weight_mc',
+                            tot_weighted_events: str = 'totalEventsWeighted',
+                            kFactor: str = 'weight_KFactor',
+                            lepton_SF: str = 'weight_leptonSF',
+                            pileup_weight: str = 'weight_pileup',
+                            ) -> pd.Series:
+        """
+        Calculate total event weights
+
+        lumi_data taken from year
+        mc_weight = +/-1 * cross_section
+        kFactor = kFactor_weight_truth
+        pileup = weight_pileup
+        truth_weight = kFactor * pileup
+        lumi_weight = mc_weight * lumi_data / sum of event weights
+
+        total event weight = lumi_weight * truth_weight * reco_weight
+
+        This is done in one line for efficiency with pandas (sorry)
+        """
+        return \
+            self.lumi * self.df[mc_weight] * abs(self.df[mc_weight]) / self.df[tot_weighted_events] * \
+            self.df[kFactor] * self.df[pileup_weight] * self.df[lepton_SF]
+
+    def __event_weight_truth(self,
                              mc_weight: str = 'weight_mc',
                              tot_weighted_events: str = 'totalEventsWeighted',
-                             kFactor_reco: str = 'weight_KFactor',
-                             kFactor_truth: str = 'KFactor_weight_truth',
-                             lepton_SF: str = 'weight_leptonSF',
+                             kFactor: str = 'KFactor_weight_truth',
                              pileup_weight: str = 'weight_pileup',
                              ) -> pd.Series:
         """
@@ -500,28 +544,18 @@ class Dataset:
         lumi_data taken from year
         mc_weight = +/-1 * cross_section
         scale factor = weight_leptonSF
-        kFactor = weight_kFactor OR kFactor_weight_truth for truth-level
+        KFactor = weight_KFactor OR kFactor_weight_truth for truth-level
         pileup = weight_pileup
-        truth_weight = kFactor * pileup
-        recoweight = scalefactors
+        recoweight = scalefactors * KFactor * pileup
         lumi_weight = mc_weight * lumi_data / sum of event weights
 
         total event weight = lumi_weight * truth_weight * reco_weight
 
         This is done in one line for efficiency with pandas (sorry)
         """
-        if kFactor_truth in self.df:
-            kFactor = kFactor_truth
-            SF = 1.
-        elif kFactor_reco in self.df:
-            kFactor = kFactor_reco
-            SF = self.df[lepton_SF]
-        else:
-            raise ValueError(f"Missing kFactors in dataset {self.name}")
-
         return \
             self.lumi * self.df[mc_weight] * abs(self.df[mc_weight]) / self.df[tot_weighted_events] * \
-            self.df[kFactor] * self.df[pileup_weight] * SF
+            self.df[kFactor] * self.df[pileup_weight]
 
     @staticmethod
     def __rescale_to_gev(df: pd.DataFrame) -> None:
@@ -807,6 +841,7 @@ class Dataset:
 
     def plot_mass_slices(self,
                          var: str,
+                         weight: str,
                          bins: Union[List[float], Tuple[int, float, float]] = (30, 0, 5000),
                          logbins: bool = False,
                          logx: bool = False,
@@ -817,6 +852,8 @@ class Dataset:
                          **kwargs
                          ) -> None:
         logger.info(f'Plotting {var} in {self.name} as slices...')
+        if not title:
+            title = self.label
 
         bh_axis = plt_utils.get_axis(bins, logbins)
 
@@ -824,11 +861,11 @@ class Dataset:
         for dsid in self.df['DSID'].unique():
             dsid_df = self.df.loc[self.df['DSID'] == dsid]
             hist = bh.Histogram(bh_axis, storage=bh.storage.Weight())
-            hist.fill(dsid_df[var], weight=dsid_df['total_event_weight'], threads=config.n_threads)
+            hist.fill(dsid_df[var], weight=dsid_df[weight], threads=config.n_threads)
             hep.histplot(hist, label=dsid, **kwargs)
         # inclusive
         hist = bh.Histogram(bh_axis, storage=bh.storage.Weight())
-        hist.fill(self.df[var], weight=self.df['total_event_weight'])
+        hist.fill(self.df[var], weight=self.df[weight])
         hep.histplot(hist, label='Inclusive', color='k', **kwargs)
 
         _xlabel, _ylabel = plt_utils.get_axis_labels(var, self.lepton)

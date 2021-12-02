@@ -181,9 +181,9 @@ class Cutfile:
         return tree_dict, calc_vars
 
     @classmethod
-    def all_vars(cls, cut_dicts: List[dict], vars_list: Set[str]) -> Set[str]:
+    def all_vars(cls, cut_dicts: List[dict], vars_set: Set[Tuple[str, str]]) -> Set[str]:
         """Return all variables mentioned in cutfile"""
-        return {cut_dict['cut_var'] for cut_dict in cut_dicts} | vars_list
+        return {cut_dict['cut_var'] for cut_dict in cut_dicts} | {var for var, _ in vars_set}
 
     @classmethod
     def gen_cutgroups(cls, cut_list_of_dicts: List[dict]) -> OrderedDict[str, List[str]]:

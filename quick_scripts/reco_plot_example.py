@@ -12,6 +12,7 @@ from awkward import to_pandas
 
 hep.style.use('ATLAS')
 
+
 class timer(ContextDecorator):
     def __init__(self, msg: str):
         self.msg = msg
@@ -25,7 +26,8 @@ class timer(ContextDecorator):
 
 N_THREADS = os.cpu_count()
 OUT_DIR = '../outputs/quick_script_outputs/'
-DATAFILE = '/data/atlas/HighMassDrellYan/test_mc16a/wmintaunu_*/*.root'
+# DATAFILE = '/data/atlas/HighMassDrellYan/test_mc16a/wmintaunu_*/*.root'
+DATAFILE = '../data/test_mc16a_wmintaunu/*/*.root'
 LUMI_DATA = 32988.1 + 3219.56
 BRANCHES_NOMINAL = [
     'mcChannelNumber',
@@ -58,22 +60,40 @@ nominal_df = to_pandas(uproot.concatenate(DATAFILE + ':nominal_Loose', BRANCHES_
 print(f"Importing nominal from ROOT: {time.time() - t:.3f}s")
 nominal_df.to_pickle(OUT_DIR + 'nominal_wtaunu.pkl')
 
-print(f"number of events in nominal: {len(nominal_df.index)}")
-print(f"Number of duplicated rows in nominal: {len(nominal_df.duplicated().value_counts())}")
-print(f"Number of duplicated eventNumbers in nominal: {len(nominal_df.duplicated('eventNumber').value_counts())}")
+before_len = len(nominal_df.index)
+print(f"number of events in nominal: {before_len}")
+t = time.time()
+nominal_df.drop_duplicates(inplace=True)
+print(f"Dropped {len(nominal_df) - before_len} duplicate events: {time.time() - t:.3f}s")
+before_len = len(nominal_df.index)
+t = time.time()
+nominal_df.drop_duplicates(['eventNumber', 'mcChannelNumber'], inplace=True)
+print(f"Dropped {before_len - len(nominal_df)} duplicate event numbers: {time.time() - t:.3f}s")
+print(f"nominal dataset has {len(nominal_df)} events")
+
+# print(f"number of events in nominal: {len(nominal_df.index)}")
+#
+# print(f"Number of duplicated rows in nominal: {len(nominal_df.duplicated().value_counts())}")
+# print(f"Number of duplicated eventNumbers in nominal: {len(nominal_df.duplicated('eventNumber').value_counts())}")
 
 t = time.time()
 truth_df = to_pandas(uproot.concatenate(DATAFILE + ':truth', BRANCHES_TRUTH, num_workers=N_THREADS))
 print(f"Importing truth from ROOT: {time.time() - t:.3f}s")
 truth_df.to_pickle(OUT_DIR + 'truth_wtaunu.pkl')
 
-print(f"number of events in truth: {len(truth_df.index)}")
-print(f"Number of duplicated rows in truth: {len(truth_df.duplicated().value_counts())}")
-print(f"Number of duplicated eventNumbers in truth: {len(truth_df.duplicated('eventNumber').value_counts())}")
+before_len = len(truth_df.index)
+print(f"number of events in truth: {before_len}")
+t = time.time()
+truth_df.drop_duplicates(inplace=True)
+print(f"Dropped {len(truth_df) - before_len} duplicate events: {time.time() - t:.3f}s")
+before_len = len(truth_df.index)
+t = time.time()
+truth_df.drop_duplicates(['eventNumber', 'mcChannelNumber'], inplace=True)
+print(f"Dropped {before_len - len(truth_df)} duplicate event numbers: {time.time() - t:.3f}s")
+print(f"truth dataset has {len(truth_df)} events")
+# print(f"Number of duplicated rows in truth: {len(truth_df.duplicated().value_counts())}")
+# print(f"Number of duplicated eventNumbers in truth: {len(truth_df.duplicated('eventNumber').value_counts())}")
 
-
-# dup = len(nominal_df[~nominal_df['eventNumber'].isin(truth_df['eventNumber'])])
-# print(f"Found {dup} events in ")
 
 # merge
 t = time.time()
@@ -91,15 +111,14 @@ sumw = sumw.groupby('dsid').sum()
 df = pd.merge(df, sumw, left_on='mcChannelNumber', right_on='dsid', sort=False, copy=False)
 print(f"Calculating sum of weights: {time.time() - t:.3f}s")
 
+t = time.time()
+df['mcChannelNumber'] = pd.Categorical(df['mcChannelNumber'])
+print(f"dsid to category: {time.time() - t:.10f}s")
+
 # scale GeV
 GeV_cols = ['MC_WZ_dilep_m_born', 'mu_pt', 'met_met', 'MC_WZneutrino_pt_born', 'MC_WZmu_el_pt_born']
 t = time.time()
 df[GeV_cols] /= 1000
-# df['MC_WZ_dilep_m_born'] /= 1000
-# df['MC_WZmu_el_pt_born'] /= 1000
-# df['MC_WZneutrino_pt_born'] /= 1000
-# df['mu_pt'] /= 1000
-# df['met_met'] /= 1000
 print(f"Rescaling to GeV: {time.time() - t:.3f}s")
 
 # calculate total truth weight  
