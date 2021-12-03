@@ -11,8 +11,28 @@ labels_xs: Dict[str, BranchLabel] = {
     # DATASET VARIABLES
     # =======================================================
     'weight_mc': {
-        'xlabel': r'weight_mc',
+        'xlabel': r'MC weight',
         'ylabel': r'Entries',
+    },
+    'weight_KFactor': {
+        'xlabel': r'KFactor weight',
+        'ylabel': r'Entries'
+    },
+    'KFactor_weight_truth': {
+        'xlabel': r'KFactor weight',
+        'ylabel': r'Entries'
+    },
+    'weight_pileup': {
+        'xlabel': r'Pileup weight',
+        'ylabel': r'Entries'
+    },
+    'weight_leptonSF': {
+        'xlabel': r'Lepton scale factors',
+        'ylabel': r'Entries'
+    },
+    'totalEventsWeighted': {
+        'xlabel': r'Total DSID weight',
+        'ylabel': r'Entries'
     },
     'DSID': {
         'xlabel': r'Dataset ID',
@@ -29,9 +49,17 @@ labels_xs: Dict[str, BranchLabel] = {
 
     # DERIVED KINEMATIC VARIABLES
     # =======================================================
-    'mt': {  # boson pt from electron decay
-        'xlabel': r'Vector boson transverse momentum $m^{W}_{T}$ [GeV]',
-        'ylabel': r'$\frac{d\sigma}{dm_{T}}$ [fb GeV$^{-1}$]',
+    'mt_born': {  # boson pt from electron decay
+        'xlabel': r'Born $M^{W}_{T}$ [GeV]',
+        'ylabel': r'$\frac{d\sigma}{dM_{T}}$ [fb GeV$^{-1}$]',
+    },
+    'mt_bare': {  # boson pt from electron decay
+        'xlabel': r'Bare $M^{W}_{T}$ [GeV]',
+        'ylabel': r'$\frac{d\sigma}{dM_{T}}$ [fb GeV$^{-1}$]',
+    },
+    'mt_dres': {  # boson pt from electron decay
+        'xlabel': r'Dressed $M^{W}_{T}$ [GeV]',
+        'ylabel': r'$\frac{d\sigma}{dM_{T}}$ [fb GeV$^{-1}$]',
     },
     'w_y': {  # boson rapidity
         'xlabel': r'W rapidity $y$',

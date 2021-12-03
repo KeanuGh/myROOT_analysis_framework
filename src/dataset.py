@@ -515,7 +515,7 @@ class Dataset:
                             pileup_weight: str = 'weight_pileup',
                             ) -> pd.Series:
         """
-        Calculate total event weights
+        Calculate total reco event weights
 
         lumi_data taken from year
         mc_weight = +/-1 * cross_section
@@ -539,12 +539,12 @@ class Dataset:
                              pileup_weight: str = 'weight_pileup',
                              ) -> pd.Series:
         """
-        Calculate total event weights
+        Calculate total truth event weights
 
         lumi_data taken from year
         mc_weight = +/-1 * cross_section
         scale factor = weight_leptonSF
-        KFactor = weight_KFactor OR kFactor_weight_truth for truth-level
+        KFactor = KFactor_weight_truth
         pileup = weight_pileup
         recoweight = scalefactors * KFactor * pileup
         lumi_weight = mc_weight * lumi_data / sum of event weights
