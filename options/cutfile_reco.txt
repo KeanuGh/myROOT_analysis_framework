@@ -8,7 +8,7 @@ Missing $E_{T}$	met_met	>	25	lepton $p_{T}$ cut	false
 [OUTPUTS]
 # variables to process
 MC_WZ_dilep_m_born	truth
-mt
+mt_born
 
 [OPTIONS]
 # case-insensitive

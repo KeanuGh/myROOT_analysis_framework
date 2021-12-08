@@ -3,7 +3,6 @@ import operator as op
 import pickle as pkl
 import time
 from dataclasses import dataclass, field
-from glob import glob
 from itertools import combinations
 from typing import Optional, Union, List, OrderedDict, Tuple
 from warnings import warn
@@ -65,7 +64,7 @@ class Dataset:
     force_rebuild: bool = False  # whether to force rebuild dataset
     validate_missing_events: bool = True  # whether to check for missing events
     validate_duplicated_events: bool = True  # whether to check for duplicated events
-    validate_sumofweights: bool = True  # whether to whether to check sumofweights is sum of weight_mc for DSID
+    validate_sumofweights: bool = True  # whether to check sumofweights is sum of weight_mc for DSID
     _weight_column = 'weight'  # name of weight column in dataframe
 
     def __post_init__(self):
@@ -102,7 +101,6 @@ class Dataset:
         if self.cutfile.if_make_cutfile_backup():
             self.cutfile.backup_cutfile(self.name)
 
-        # get variables to extract from dataframe and their TTrees
         self._tree_dict, self._vars_to_calc = self.cutfile.extract_variables(derived_vars)
 
         # get set unlabeled variables in cutfile as being in default tree
@@ -128,6 +126,13 @@ class Dataset:
                 self._truth = True
             else:
                 logger.info(f"Neither {tree} as truth nor reco dataset detected.")
+
+        # check if vars are contained in label dictionary
+        all_vars = {var for var_set in self._tree_dict.values() for var in var_set}
+        if unexpected_vars := [unexpected_var for unexpected_var in all_vars
+                               if unexpected_var not in labels_xs]:
+            logger.warning(f"Variable(s) {unexpected_vars} not contained in labels dictionary. "
+                           "Some unexpected behaviour may occur.")
 
         # some debug information
         logger.debug("")
@@ -283,7 +288,7 @@ class Dataset:
 
     def print_cutflow_latex_table(self, check_backup: bool = True) -> None:
         """
-        Prints a latex table of cutflow. By default first checks if a current backup exists and will not print if
+        Prints a latex table of cutflow. By default, first checks if a current backup exists and will not print if
         backup is identical
         :param check_backup: default true. Checks if backup of current cutflow already exists and if so does not print
         :return: None
@@ -313,29 +318,6 @@ class Dataset:
         :param _validate_sumofweights: whether to check sum of weights against weight_mc
         :return: output dataframe containing columns corresponding to necessary variables
         """
-
-        # check that TTree(s) and variables exist in file(s)
-        logger.debug(f"Checking TTree and TBranch values in file(s) '{self.data_path}'...")
-        for filepath in glob(self.data_path):
-            with uproot.open(filepath) as file:
-                tree_list = [tree.split(';')[0] for tree in file.keys()]  # TTrees are labelled '<name>;<cycle number>'
-                if missing_trees := [t for t in [a_t for a_t in self._tree_dict] if t not in tree_list]:
-                    raise ValueError(f"TTree(s) '{', '.join(missing_trees)}' not found in file {filepath}")
-                else:
-                    for tree, branches in self._tree_dict.items():
-                        if missing_branches := [branch for branch in branches
-                                                if branch not in file[tree].keys()]:
-                            raise ValueError(f"Missing TBranch(es) {missing_branches} in TTree "
-                                             f"'{tree}' of file '{self.data_path}'.")
-            logger.debug(f"All TTrees and variables found in {filepath}...")
-        logger.debug("All required TTrees variables found.")
-
-        # check if vars are contained in label dictionary
-        all_vars = {var for var_set in self._tree_dict.values() for var in var_set}
-        if unexpected_vars := [unexpected_var for unexpected_var in all_vars
-                               if unexpected_var not in labels_xs]:
-            logger.warning(f"Variable(s) {unexpected_vars} not contained in labels dictionary. "
-                           "Some unexpected behaviour may occur.")
 
         t1 = time.time()
         logger.debug(f"Extracting {self._tree_dict[self.TTree_name]} from {self.TTree_name} tree...")
@@ -383,7 +365,8 @@ class Dataset:
 
             logger.debug("Merging with rest of dataframe...")
             try:
-                df = pd.merge(df, alt_df, how='left', on=['eventNumber', 'mcChannelNumber'], sort=False, copy=False, validate=validation)
+                df = pd.merge(df, alt_df, how='left', on=['eventNumber', 'mcChannelNumber'], sort=False, copy=False,
+                              validate=validation)
             except pd.errors.MergeError as e:
                 dup_l = df['eventNumber'][df.duplicated('eventNumber')]
                 n_l = len(dup_l)
@@ -446,6 +429,12 @@ class Dataset:
         # CLEANUP
         df['DSID'] = pd.Categorical(df['DSID'])
         self.__rescale_to_gev(df)  # properly scale GeV columns
+        if self._truth and self._reco:
+            pd.testing.assert_series_equal(df['KFactor_weight_truth'], df['weight_KFactor'],
+                                           check_exact=True, check_names=False, check_index=False), \
+                "reco and truth KFactors not equal"
+            df.drop(columns='KFactor_weight_truth')
+            logger.debug("Dropped extra KFactor column")
         logger.info(f"time to build dataframe: {time.strftime('%H:%M:%S', time.gmtime(time.time() - t1))}")
 
         return df
@@ -510,7 +499,7 @@ class Dataset:
     def __event_weight_reco(self,
                             mc_weight: str = 'weight_mc',
                             tot_weighted_events: str = 'totalEventsWeighted',
-                            kFactor: str = 'weight_KFactor',
+                            KFactor: str = 'weight_KFactor',
                             lepton_SF: str = 'weight_leptonSF',
                             pileup_weight: str = 'weight_pileup',
                             ) -> pd.Series:
@@ -530,12 +519,12 @@ class Dataset:
         """
         return \
             self.lumi * self.df[mc_weight] * abs(self.df[mc_weight]) / self.df[tot_weighted_events] * \
-            self.df[kFactor] * self.df[pileup_weight] * self.df[lepton_SF]
+            self.df[KFactor] * self.df[pileup_weight] * self.df[lepton_SF]
 
     def __event_weight_truth(self,
                              mc_weight: str = 'weight_mc',
                              tot_weighted_events: str = 'totalEventsWeighted',
-                             kFactor: str = 'KFactor_weight_truth',
+                             KFactor: str = 'KFactor_weight_truth',
                              pileup_weight: str = 'weight_pileup',
                              ) -> pd.Series:
         """
@@ -553,9 +542,11 @@ class Dataset:
 
         This is done in one line for efficiency with pandas (sorry)
         """
+        if self._reco:
+            KFactor = 'weight_KFactor'
         return \
             self.lumi * self.df[mc_weight] * abs(self.df[mc_weight]) / self.df[tot_weighted_events] * \
-            self.df[kFactor] * self.df[pileup_weight]
+            self.df[KFactor] * self.df[pileup_weight]
 
     @staticmethod
     def __rescale_to_gev(df: pd.DataFrame) -> None:
@@ -591,7 +582,7 @@ class Dataset:
                 **kwargs
                 ) -> plt.figure:
         """
-        Generate 1D plots of given variables in dataframe. Returns figure object of list of figure objects
+        Generate 1D plots of given variables in dataframe. Returns figure object of list of figure objects.
 
         :param x: variable name in dataframe to plot
         :param bins: binnings for x
@@ -627,7 +618,7 @@ class Dataset:
         Plots all variables in Dataset to cut from cutfile with each cutgroup applied
 
         :param bins: tuple of bins in x (n_bins, start, stop) or list of bin edges
-        :param scaling: either 'xs':     cross section scaling,
+        :param scaling: either 'xs':     cross-section scaling,
                                'widths': divided by bin widths,
                                None:     No scaling
                         y-axis labels set accordingly
@@ -763,8 +754,8 @@ class Dataset:
         """
         Runs over cutgroups in dictrionary and plots 2d histogram for each group
 
-        :param x_var: column in dataframe to plot on x axis
-        :param y_var: column in dataframe to plot on y axis
+        :param x_var: column in dataframe to plot on x-axis
+        :param y_var: column in dataframe to plot on y-axis
         :param xbins: binning in x
         :param ybins: binning in y
         :param plot_label: plot title

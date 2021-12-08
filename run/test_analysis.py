@@ -27,7 +27,7 @@ if __name__ == '__main__':
 
     my_analysis = Analysis(datasets, analysis_label='test_analysis', log_level=10, log_out='both')
 
-    my_analysis.plot_mass_slices('wmintaunu', 'mt', weight='truth_weight', bins=(50, 200, 5000))
+    my_analysis.plot_mass_slices('wmintaunu', 'mt_born', weight='truth_weight', bins=(50, 200, 5000))
     my_analysis.plot_mass_slices('wmintaunu', 'MC_WZ_dilep_m_born', weight='truth_weight', bins=(50, 200, 5000))
     my_analysis.plot_mass_slices('wmintaunu', 'mu_pt', weight='reco_weight', bins=(50, 200, 5000))
     # my_analysis.make_all_cutgroup_2dplots('wminmunu')
