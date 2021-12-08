@@ -875,7 +875,7 @@ class Dataset:
             plt.semilogx()
         if logy:
             plt.semilogy()
-        hep.atlas.label(italic=(True, True), llabel='Internal', rlabel=title)
+        hep.atlas.label(italic=(True, True), loc=0, llabel='Internal', rlabel=title)
 
         filename = self.paths['plot_dir'] + self.name + '_' + var + '_SLICES.png'
         plt.savefig(filename, bbox_inches='tight')
@@ -920,3 +920,18 @@ class Dataset:
                 warn("Sequential cuts can't generate cummulative cutflow. "
                      "Ratio of cuts to acceptance will be generated instead.")
                 self.cutflow.print_histogram(self.paths['plot_dir'], 'ratio')
+
+    def profile_plot(self, varx: str, vary: str,
+                     title: str = '',
+                     xlabel: str = '',
+                     ylabel: str = '',
+                     to_file: bool = True,
+                     **kwargs) -> None:
+        plt.figure()
+        plt.scatter(self.df[varx], self.df[vary], **kwargs)
+        plt.xlabel(xlabel if xlabel else labels_xs[varx]['xlabel'])
+        plt.ylabel(ylabel if ylabel else labels_xs[vary]['xlabel'])
+        hep.atlas.label(italic=(True, True), loc=0, llabel='Internal', rlabel=title if title else self.label)
+        plt.show()
+        if to_file:
+            plt.savefig(self.paths['plot_dir'] + varx + '_' + vary + '.png', bbox_inches='tight')
