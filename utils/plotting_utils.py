@@ -361,6 +361,7 @@ def ratio_plot_1d(
         y_label: str,
         title: str,
         bins: Union[tuple, list],
+        out_dir: str = None,
         is_logbins: bool = False,
         weight: pd.Series = None,
         log_x: bool = False,
@@ -393,13 +394,14 @@ def ratio_plot_1d(
 
     if to_file:
         hep.atlas.label(llabel="Internal", loc=0, ax=ax, rlabel=title)
-        out_png_file = config.paths['plot_dir'] + f"{title}.png"
+        out_png_file = out_dir + f"{title}.png"
         fig.savefig(out_png_file, bbox_inches='tight')
         logger.info(f"Figure saved to {out_png_file}")
 
     return fig
 
 
+# OLD FUNCTION
 def plot_mass_slices(df: pd.DataFrame,
                      lepton: str,
                      xvar: str,
@@ -409,6 +411,8 @@ def plot_mass_slices(df: pd.DataFrame,
                      id_col: str = 'DSID',
                      weight_col: str = 'total_event_weight',
                      plot_label: str = '',
+                     plot_path: str = None,
+                     hist_path: str = None,
                      inclusive_dataset: pd.DataFrame = None,
                      to_pkl: bool = False
                      ) -> None:
@@ -448,9 +452,9 @@ def plot_mass_slices(df: pd.DataFrame,
 
     name = f"{xvar}_mass_slices_full"
     if to_pkl:
-        with open(config.paths['pkl_hist_dir'] + plot_label + '_' + name + '.pkl', 'wb') as f:
+        with open(hist_path + plot_label + '_' + name + '.pkl', 'wb') as f:
             pkl.dump(hists, f)
             logger.info(f"Saved pickle file to {f.name}")
-    path = config.paths['plot_dir'] + plot_label + '_' + name + '.png'
+    path = plot_path + plot_label + '_' + name + '.png'
     fig.savefig(path, bbox_inches='tight')
     logger.info(f"Figure saved to {path}")

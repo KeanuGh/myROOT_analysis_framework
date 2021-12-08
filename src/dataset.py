@@ -4,7 +4,7 @@ import pickle as pkl
 import time
 from dataclasses import dataclass, field
 from itertools import combinations
-from typing import Optional, Union, List, OrderedDict, Tuple
+from typing import Optional, Union, List, OrderedDict, Tuple, Dict
 from warnings import warn
 
 import boost_histogram as bh
@@ -56,8 +56,9 @@ class Dataset:
     cutfile: Cutfile = field(init=False, repr=False)
 
     # OPTIONS
-    _reco: bool = False
-    _truth: bool = False
+    paths: Dict[str, str]  # file output paths
+    reco: bool = False  # whether a reco dataset
+    truth: bool = False  # whether a truth dataset
     pkl_path: str = None  # where the dataframe pickle file will be stored
     lepton: str = 'lepton'  # name of charged DY lepton channel in dataset (if applicable)
     chunksize: int = 1024  # chunksize for uproot ROOT file import
@@ -76,13 +77,17 @@ class Dataset:
         if not file_utils.file_exists(self.data_path):
             raise FileExistsError(f"File {self.data_path} not found.")
 
+        for name, path in self.paths.items():
+            # for degbug print output paths
+            logger.debug(f"{name}: {path}")
+
         self.lumi = lumi_year[self.year]
         logger.info(f"Year: {self.year}")
         logger.info(f"Data luminosity: {self.lumi}")
 
         if not self.pkl_path:
             # initialise pickle filepath with given name
-            self.pkl_path = config.paths['pkl_df_filepath'] + self.name + '_df.pkl'
+            self.pkl_path = self.paths['pkl_df_filepath'] + self.name + '_df.pkl'
 
         if logger.level == logging.DEBUG:
             # log contents of cutfile
@@ -96,7 +101,7 @@ class Dataset:
         # READ AND GET OPTIONS FROM CUTFILE
         # ========================
         logger.info(f"Parsting cutfile '{self.cutfile_path}' for {self.name}...")
-        self.cutfile = Cutfile(self.cutfile_path)
+        self.cutfile = Cutfile(self.cutfile_path, self.paths['backup_cutfiles_dir'])
         self._build_df = True if self.force_rebuild else self.cutfile.if_build_dataframe(self.pkl_path)
         if self.cutfile.if_make_cutfile_backup():
             self.cutfile.backup_cutfile(self.name)
@@ -116,14 +121,14 @@ class Dataset:
         for tree in self._tree_dict:
             # add necessary metadata to all trees
             self._tree_dict[tree] |= {'mcChannelNumber', 'eventNumber'}
-            if 'nominal' in tree.lower():
+            if self.reco or 'nominal' in tree.lower():
                 logger.debug(f"Detected {tree} as reco tree, will pull 'weight_leptonSF' and 'weight_KFactor'")
                 self._tree_dict[tree] |= {'weight_leptonSF', 'weight_KFactor'}
-                self._reco = True
-            elif 'truth' in tree.lower():
+                self.reco = True
+            elif self.truth or 'truth' in tree.lower():
                 logger.debug(f"Detected {tree} as truth tree, will pull 'KFactor_weight_truth'")
                 self._tree_dict[tree].add('KFactor_weight_truth')
-                self._truth = True
+                self.truth = True
             else:
                 logger.info(f"Neither {tree} as truth nor reco dataset detected.")
 
@@ -181,10 +186,10 @@ class Dataset:
         logger.info(f"Number of events in dataset {self.name}: {len(self.df)}")
 
         # map appropriate weights
-        if self._truth:
+        if self.truth:
             logger.info(f"Calculating truth weight for {self.name}...")
             self.df['truth_weight'] = self.__event_weight_truth()
-        if self._reco:
+        if self.reco:
             logger.info(f"Calculating reco weight for {self.name}...")
             self.df['reco_weight'] = self.__event_weight_reco()
 
@@ -294,12 +299,12 @@ class Dataset:
         :return: None
         """
         if check_backup:
-            last_backup = file_utils.get_last_backup(config.paths['latex_table_dir'])
-            latex_file = self.cutflow.print_latex_table(config.paths['latex_table_dir'], self.name)
+            last_backup = file_utils.get_last_backup(self.paths['latex_table_dir'])
+            latex_file = self.cutflow.print_latex_table(self.paths['latex_table_dir'], self.name)
             if file_utils.identical_to_backup(latex_file, backup_file=last_backup):
                 file_utils.delete_file(latex_file)
         else:
-            self.cutflow.print_latex_table(config.paths['latex_table_dir'], self.name)
+            self.cutflow.print_latex_table(self.paths['latex_table_dir'], self.name)
 
     # ===============================
     # ====== DATAFRAME BUILDER ======
@@ -365,8 +370,8 @@ class Dataset:
 
             logger.debug("Merging with rest of dataframe...")
             try:
-                df = pd.merge(df, alt_df, how='left', on=['eventNumber', 'mcChannelNumber'], sort=False, copy=False,
-                              validate=validation)
+                df = pd.merge(df, alt_df, how='left', on=['eventNumber', 'mcChannelNumber'],
+                              sort=False, copy=False, validate=validation)
             except pd.errors.MergeError as e:
                 dup_l = df['eventNumber'][df.duplicated('eventNumber')]
                 n_l = len(dup_l)
@@ -428,13 +433,16 @@ class Dataset:
 
         # CLEANUP
         df['DSID'] = pd.Categorical(df['DSID'])
+
         self.__rescale_to_gev(df)  # properly scale GeV columns
-        if self._truth and self._reco:
+
+        if self.truth and self.reco:
             pd.testing.assert_series_equal(df['KFactor_weight_truth'], df['weight_KFactor'],
                                            check_exact=True, check_names=False, check_index=False), \
                 "reco and truth KFactors not equal"
             df.drop(columns='KFactor_weight_truth')
             logger.debug("Dropped extra KFactor column")
+
         logger.info(f"time to build dataframe: {time.strftime('%H:%M:%S', time.gmtime(time.time() - t1))}")
 
         return df
@@ -542,7 +550,7 @@ class Dataset:
 
         This is done in one line for efficiency with pandas (sorry)
         """
-        if self._reco:
+        if self.reco:
             KFactor = 'weight_KFactor'
         return \
             self.lumi * self.df[mc_weight] * abs(self.df[mc_weight]) / self.df[tot_weighted_events] * \
@@ -602,7 +610,7 @@ class Dataset:
         if to_file:
             if not filename:
                 filename = self.name + '_' + x
-            out_png_file = config.paths['plot_dir'] + filename + '.png'
+            out_png_file = self.paths['plot_dir'] + filename + '.png'
             hep.atlas.label(llabel="Internal", loc=0, ax=ax, rlabel=title)
             fig.savefig(out_png_file, bbox_inches='tight')
             logger.info(f"Figure saved to {out_png_file}")
@@ -735,11 +743,11 @@ class Dataset:
 
         # save figure
         if to_pkl:
-            with open(config.paths['pkl_hist_dir'] + plot_label + '_' + var + '_1d_cutgroups_ratios.pkl', 'wb') as f:
+            with open(self.paths['pkl_hist_dir'] + plot_label + '_' + var + '_1d_cutgroups_ratios.pkl', 'wb') as f:
                 pkl.dump(hists, f)
                 logger.info(f"Saved pickle file to {f.name}")
         hep.atlas.label(llabel="Internal", loc=0, ax=fig_ax, rlabel=plot_label)
-        out_png_file = config.paths['plot_dir'] + f"{var}_{str(scaling)}.png"
+        out_png_file = self.paths['plot_dir'] + f"{var}_{str(scaling)}.png"
         fig.savefig(out_png_file, bbox_inches='tight')
         logger.info(f"Figure saved to {out_png_file}")
         fig.clf()  # clear for next plot
@@ -770,7 +778,7 @@ class Dataset:
         x_vars = self.df[x_var]
         y_vars = self.df[y_var]
 
-        out_path = config.paths['plot_dir'] + f"2d_{x_var}-{y_var}_inclusive.png"
+        out_path = self.paths['plot_dir'] + f"2d_{x_var}-{y_var}_inclusive.png"
         hist = plt_utils.histplot_2d(
             var_x=x_vars, var_y=y_vars,
             xbins=xbins, ybins=ybins,
@@ -802,7 +810,7 @@ class Dataset:
             x_vars = cut_df[x_var]
             y_vars = cut_df[y_var]
 
-            out_path = config.paths['plot_dir'] + f"2d_{x_var}-{y_var}_{cutgroup}.png"
+            out_path = self.paths['plot_dir'] + f"2d_{x_var}-{y_var}_{cutgroup}.png"
             hist = plt_utils.histplot_2d(
                 var_x=x_vars, var_y=y_vars,
                 xbins=xbins, ybins=ybins,
@@ -826,7 +834,7 @@ class Dataset:
             plt.close(fig)
 
         if to_pkl:
-            with open(config.paths['pkl_hist_dir'] + plot_label + f"_{x_var}-{y_var}_2d.pkl", 'wb') as f:
+            with open(self.paths['pkl_hist_dir'] + plot_label + f"_{x_var}-{y_var}_2d.pkl", 'wb') as f:
                 pkl.dump(hists, f)
                 logger.info(f"Saved pickle file to {f.name}")
 
@@ -869,7 +877,7 @@ class Dataset:
             plt.semilogy()
         hep.atlas.label(italic=(True, True), llabel='Internal', rlabel=title)
 
-        filename = config.paths['plot_dir'] + self.name + '_' + var + '_SLICES.png'
+        filename = self.paths['plot_dir'] + self.name + '_' + var + '_SLICES.png'
         plt.savefig(filename, bbox_inches='tight')
         plt.show()
         logger.info(f'Saved mass slice plot of {var} in {self.name} to {filename}')
@@ -897,18 +905,18 @@ class Dataset:
             event = ratio = cummulative = a_ratio = True
 
         if event:
-            self.cutflow.print_histogram('event')
+            self.cutflow.print_histogram(self.paths['plot_dir'], 'event')
         if ratio:
-            self.cutflow.print_histogram('ratio')
+            self.cutflow.print_histogram(self.paths['plot_dir'], 'ratio')
         if cummulative:
             if self.cutfile.options['sequential']:
-                self.cutflow.print_histogram('cummulative')
+                self.cutflow.print_histogram(self.paths['plot_dir'], 'cummulative')
             else:
                 warn("Sequential cuts cannot generate a cummulative cutflow")
         if a_ratio:
             if self.cutfile.options['sequential']:
-                self.cutflow.print_histogram('a_ratio')
+                self.cutflow.print_histogram(self.paths['plot_dir'], 'a_ratio')
             else:
                 warn("Sequential cuts can't generate cummulative cutflow. "
                      "Ratio of cuts to acceptance will be generated instead.")
-                self.cutflow.print_histogram('ratio')
+                self.cutflow.print_histogram(self.paths['plot_dir'], 'ratio')

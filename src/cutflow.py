@@ -144,7 +144,6 @@ class Cutflow:
         if logger.level == logging.DEBUG:
             self.printout()
 
-
     def printout(self) -> None:
         """
         Prints out cutflow table to terminal
@@ -182,8 +181,8 @@ class Cutflow:
             logger.info("Option: Non-sequential")
             logger.info("---------------------------------")
             logger.info("Cut " + " " * (max_name_len - 3) +
-                         "Events " + " " * (max_n_len - 6) +
-                         "Ratio")
+                        "Events " + " " * (max_n_len - 6) +
+                        "Ratio")
             # first line is inclusive sample
             logger.info("Inclusive " + " " * (max_name_len - 9) + f"{self._n_events_tot}   -")
 
@@ -196,7 +195,7 @@ class Cutflow:
                             f"{ratio:.3f}    ")
         logger.info('')
 
-    def print_histogram(self, kind: str, plot_label: str = '', **kwargs) -> None:
+    def print_histogram(self, out_path: str, kind: str, plot_label: str = '', **kwargs) -> None:
         """
         Generates and saves a cutflow histogram
 
@@ -205,6 +204,7 @@ class Cutflow:
                     'cummulative': ratio of all current cuts to acceptance
                     'a_ratio': ratio of only current cut to acceptance
                     'event': number of events passing through each cut
+        :param out_path: plot output directory
         :param plot_label: plot title
         :param kwargs: keyword arguments to pass to plt.bar()
         :return: None
@@ -225,7 +225,7 @@ class Cutflow:
         hep.atlas.label(llabel="Internal", loc=0, ax=ax, rlabel=plot_label)
         ax.grid(b=True, which='both', axis='y', alpha=0.3)
 
-        filepath = self._cuthist_options[kind]['filepath'].format(config.paths['plot_dir'])
+        filepath = self._cuthist_options[kind]['filepath'].format(out_path)
         fig.savefig(filepath)
         logger.info(f"Cutflow histogram saved to {filepath}")
 

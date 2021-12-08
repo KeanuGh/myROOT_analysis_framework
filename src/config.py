@@ -28,19 +28,3 @@ special_binning = {
     '_phi_': phibins,
     'w_y': etabins,
 }
-
-# FILEPATHS
-# ====================
-# root in the directory above this one
-root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
-# {} for formatting with name of analysis
-out_dir = root_dir + '/outputs/'  # where outputs go
-paths = {
-    'plot_dir': out_dir + '{}/plots/',  # where plots go
-    'pkl_df_filepath': out_dir + '{}/data/',  # pickle file containing extracted data, format to used dataset
-    'pkl_hist_dir': out_dir + "{}/histograms/",  # pickle file to place histograms into
-    'backup_cutfiles_dir': out_dir + '{}/cutfiles/',  # _cutfile backups
-    'latex_table_dir': out_dir + "{}/LaTeX_cutflow_table/",  # where to print latex cutflow table
-    'log_dir': out_dir + "{}/logs/"  # for .log files
-}

@@ -8,7 +8,6 @@ from typing import Tuple, List, OrderedDict, Dict, Set
 
 import pandas as pd
 
-import src.config as config
 from utils.file_utils import identical_to_backup, get_last_backup, is_dir_empty, get_filename
 from utils.var_helpers import OtherVar
 
@@ -19,10 +18,10 @@ class Cutfile:
     """
     Handles importing cutfiles and extracting variables
     """
-    def __init__(self, file_path: str):
+    def __init__(self, file_path: str, backup_path: str):
         self.name = get_filename(file_path)
         self._path = file_path
-        self._backup_path = config.paths['backup_cutfiles_dir']
+        self.backup_path = backup_path
         self.cut_dicts, self.vars_to_cut, self.options = self.parse_cutfile(file_path)
         self.cutgroups = self.gen_cutgroups(self.cut_dicts)
         self.alt_trees = self.gen_tree_dict(self.cut_dicts)
@@ -223,8 +222,8 @@ class Cutfile:
 
     def if_make_cutfile_backup(self) -> bool:
         """Decides if a backup cutfile should be made"""
-        if not is_dir_empty(self._backup_path):
-            return not identical_to_backup(self._path, backup_dir=self._backup_path, name=self.name)
+        if not is_dir_empty(self.backup_path):
+            return not identical_to_backup(self._path, backup_dir=self.backup_path, name=self.name)
         else:
             return True
 
@@ -242,8 +241,8 @@ class Cutfile:
             return True
 
         # if cutfile backup exists, check for new variables
-        if not is_dir_empty(self._backup_path):
-            latest_backup = get_last_backup(self._backup_path, self.name)
+        if not is_dir_empty(self.backup_path):
+            latest_backup = get_last_backup(self.backup_path, self.name)
             logger.debug(f"Found backup cutfile in {latest_backup}")
 
             BACKUP_cutfile_dicts, BACKUP_cutfile_outputs, _ = self.parse_cutfile(latest_backup)
@@ -263,7 +262,7 @@ class Cutfile:
         # if backup doesn't exit, make backup and check if there is already a pickle file
         else:
             # if pickle file already exists
-            logger.debug(f"No cutfile backup found in {self._backup_path}")
+            logger.debug(f"No cutfile backup found in {self.backup_path}")
             if is_pkl_file:
                 old_df = pd.load_pickle(pkl_filepath)
                 old_cols = set(old_df.columns)
@@ -285,6 +284,6 @@ class Cutfile:
         return False
 
     def backup_cutfile(self, name: str) -> None:
-        cutfile_backup_filepath = self._backup_path + self.name + '_' + name + '_' + time.strftime("%Y-%m-%d_%H-%M-%S") + ".txt"
+        cutfile_backup_filepath = self.backup_path + self.name + '_' + name + '_' + time.strftime("%Y-%m-%d_%H-%M-%S") + ".txt"
         copyfile(self._path, cutfile_backup_filepath)
         logger.info(f"Backup cutfile saved in {cutfile_backup_filepath}")

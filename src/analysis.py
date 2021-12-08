@@ -1,4 +1,5 @@
 import logging
+import os
 import sys
 import time
 from typing import Optional, Union, Dict
@@ -15,6 +16,7 @@ class Analysis:
                  global_lumi: Optional[float] = None,
                  phibins: Optional[Union[tuple, list]] = None,
                  etabins: Optional[Union[tuple, list]] = None,
+                 output_dir: str = None,
                  log_level: int = logging.INFO,
                  log_out: str = 'both',
                  ):
@@ -36,11 +38,19 @@ class Analysis:
 
         # SET OUTPUT DIRECTORIES
         # ===========================
-        # set and create output directories in outputs/<analysis_label>/
-        # TODO: Relationship with config.paths is over
-        for path_var in config.paths:
-            config.paths[path_var] = config.paths[path_var].format(analysis_label)
-            file_utils.makedir(config.paths[path_var])
+        if not output_dir:
+            # root in the directory above this one
+            output_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        output_dir = output_dir + '/outputs/' + analysis_label + '/'  # where outputs go
+        self.paths = {
+            'plot_dir': output_dir + '/plots/',  # where plots go
+            'pkl_df_filepath': output_dir + '/data/',  # pickle file containing extracted data, format to used dataset
+            'pkl_hist_dir': output_dir + '/histograms/',  # pickle file to place histograms into
+            'backup_cutfiles_dir': output_dir + '/cutfiles/',  # _cutfile backups
+            'latex_table_dir': output_dir + '/LaTeX_cutflow_table/'  # where to print latex cutflow table
+        }
+        for path in self.paths:
+            file_utils.makedir(self.paths[path])
 
         # LOGGING
         # ============================
@@ -49,7 +59,7 @@ class Analysis:
         logger = logging.getLogger('analysis')
         logger.setLevel(log_level)
         if log_out.lower() in ('file', 'both'):
-            filehandler = logging.FileHandler(f"{config.paths['log_dir']}/{analysis_label}_{time.strftime('%Y-%m-%d_%H-%M-%S')}.log")
+            filehandler = logging.FileHandler(f"{output_dir + '/logs/'}/{analysis_label}_{time.strftime('%Y-%m-%d_%H-%M-%S')}.log")
             filehandler.setFormatter(logging.Formatter('%(asctime)s %(levelname)-10s %(message)s'))
             logger.addHandler(filehandler)
         if log_out.lower() in ('console', 'both'):
@@ -77,7 +87,8 @@ class Analysis:
         
         # BUILD DATASETS
         # ============================
-        self.datasets: Dict[str, Dataset] = {name: Dataset(name, **ds) for name, ds in data_dict.items()}
+        self.datasets: Dict[str, Dataset] = {name: Dataset(name, paths=self.paths, **kwargs)
+                                             for name, kwargs in data_dict.items()}
 
         logger.info("="*(len(analysis_label)+23))
         logger.info(f"ANALYSIS '{analysis_label}' INITIALISED")
@@ -191,9 +202,9 @@ class Analysis:
         :return: None
         """
         if check_backup:
-            last_backup = file_utils.get_last_backup(config.paths['latex_table_dir'])
-            latex_file = self.datasets[ds_name].cutflow.print_latex_table(config.paths['latex_table_dir'], ds_name)
+            last_backup = file_utils.get_last_backup(self.paths['latex_table_dir'])
+            latex_file = self.datasets[ds_name].cutflow.print_latex_table(self.paths['latex_table_dir'], ds_name)
             if file_utils.identical_to_backup(latex_file, backup_file=last_backup):
                 file_utils.delete_file(latex_file)
         else:
-            self.datasets[ds_name].cutflow.print_latex_table(config.paths['latex_table_dir'], ds_name)
+            self.datasets[ds_name].cutflow.print_latex_table(self.paths['latex_table_dir'], ds_name)
