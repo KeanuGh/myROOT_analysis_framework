@@ -12,7 +12,7 @@ logger = logging.getLogger('analysis')
 
 
 def get_last_backup(backup_dir: str, name: str = '') -> Optional[str]:
-    if is_dir_empty(backup_dir):
+    if is_dir_empty(backup_dir) or len(glob(backup_dir + name + '*')) == 0:
         return None
     else:
         return max(glob(backup_dir + name + '*'), key=os.path.getctime)

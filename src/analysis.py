@@ -11,6 +11,13 @@ from utils import file_utils, decorators
 
 
 class Analysis:
+    """
+    Analysis class acts as a container for the src.dataset.Dataset class. Contains methods to apply either to
+    single datasets or across multiple datasets.
+    Access datasets in class with analysis.dataset_name or analsis['dataset_name']. Can set by key but not by attribute
+    When calling a method that applies to only one dataset, naming the dataset in argument ds_name is optional.
+    TODO: apply method to ALL datasets if ds_name not provided?
+    """
     def __init__(self, data_dict: Dict[str, Dict],
                  analysis_label: str,
                  global_lumi: Optional[float] = None,
@@ -21,12 +28,6 @@ class Analysis:
                  log_out: str = 'both',
                  ):
         """
-        Analysis class acts as a container for the src.dataset.Dataset class. Contains methods to apply either to
-        single datasets or across multiple datasets.
-        Access datasets in class with analysis.dataset_name or analsis['dataset_name']. Can set by key but not by attribute
-        When calling a method that applies to only one dataset, naming the dataset in argument ds_name is optional.
-        TODO: apply method to ALL datasets if ds_name not provided?
-
         :param data_dict: Dictionary of dictionaries containing paths to root files and the tree to extract from each.
         The key to the top-level dictionary is the label assigned to the dataset.
         :param global_lumi: all data will be scaled to this luminosity
@@ -47,7 +48,8 @@ class Analysis:
             'pkl_df_filepath': output_dir + '/data/',  # pickle file containing extracted data, format to used dataset
             'pkl_hist_dir': output_dir + '/histograms/',  # pickle file to place histograms into
             'backup_cutfiles_dir': output_dir + '/cutfiles/',  # _cutfile backups
-            'latex_table_dir': output_dir + '/LaTeX_cutflow_table/'  # where to print latex cutflow table
+            'latex_table_dir': output_dir + '/LaTeX_cutflow_table/',  # where to print latex cutflow table
+            'log_dir': output_dir + '/logs',
         }
         for path in self.paths:
             file_utils.makedir(self.paths[path])
@@ -59,7 +61,7 @@ class Analysis:
         logger = logging.getLogger('analysis')
         logger.setLevel(log_level)
         if log_out.lower() in ('file', 'both'):
-            filehandler = logging.FileHandler(f"{output_dir + '/logs/'}/{analysis_label}_{time.strftime('%Y-%m-%d_%H-%M-%S')}.log")
+            filehandler = logging.FileHandler(f"{self.paths['log_dir']}/{analysis_label}_{time.strftime('%Y-%m-%d_%H-%M-%S')}.log")
             filehandler.setFormatter(logging.Formatter('%(asctime)s %(levelname)-10s %(message)s'))
             logger.addHandler(filehandler)
         if log_out.lower() in ('console', 'both'):

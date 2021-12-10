@@ -59,7 +59,7 @@ class Dataset:
     paths: Dict[str, str]  # file output paths
     reco: bool = False  # whether a reco dataset
     truth: bool = False  # whether a truth dataset
-    pkl_path: str = None  # where the dataframe pickle file will be stored
+    pkl_out_dir: str = None  # where the dataframe pickle file will be stored
     lepton: str = 'lepton'  # name of charged DY lepton channel in dataset (if applicable)
     chunksize: int = 1024  # chunksize for uproot ROOT file import
     force_rebuild: bool = False  # whether to force rebuild dataset
@@ -85,8 +85,10 @@ class Dataset:
         logger.info(f"Year: {self.year}")
         logger.info(f"Data luminosity: {self.lumi}")
 
-        if not self.pkl_path:
-            # initialise pickle filepath with given name
+        # initialise pickle filepath with given name
+        if self.pkl_out_dir:
+            self.pkl_path = self.pkl_out_dir + self.name + '_df.pkl'
+        else:
             self.pkl_path = self.paths['pkl_df_filepath'] + self.name + '_df.pkl'
 
         if logger.level == logging.DEBUG:
@@ -122,11 +124,11 @@ class Dataset:
             # add necessary metadata to all trees
             self._tree_dict[tree] |= {'mcChannelNumber', 'eventNumber'}
             if self.reco or 'nominal' in tree.lower():
-                logger.debug(f"Detected {tree} as reco tree, will pull 'weight_leptonSF' and 'weight_KFactor'")
+                logger.info(f"Detected {tree} as reco tree, will pull 'weight_leptonSF' and 'weight_KFactor'")
                 self._tree_dict[tree] |= {'weight_leptonSF', 'weight_KFactor'}
                 self.reco = True
             elif self.truth or 'truth' in tree.lower():
-                logger.debug(f"Detected {tree} as truth tree, will pull 'KFactor_weight_truth'")
+                logger.info(f"Detected {tree} as truth tree, will pull 'KFactor_weight_truth'")
                 self._tree_dict[tree].add('KFactor_weight_truth')
                 self.truth = True
             else:
@@ -183,7 +185,7 @@ class Dataset:
         else:
             logger.info(f"Reading data for {self.name} dataframe from {self.pkl_path}...")
             self.df = pd.read_pickle(self.pkl_path)
-        logger.info(f"Number of events in dataset {self.name}: {len(self.df)}")
+        logger.info(f"Number of events in dataset {self.name}: {len(self.df.index)}")
 
         # map appropriate weights
         if self.truth:
@@ -450,7 +452,7 @@ class Dataset:
     @staticmethod
     def _drop_duplicates(df: pd.DataFrame) -> None:
         """
-        Checks for and optionally drops duplicated events and events with same event numbers for each dataset ID
+        Checks for and drops duplicated events and events with same event numbers for each dataset ID
         :param df: dataset
         :return:
         """
