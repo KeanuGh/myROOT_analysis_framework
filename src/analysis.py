@@ -34,7 +34,7 @@ class Analysis:
         :param phibins: bins for plotting phi
         :param etabins: bins for plotting eta
         :param log_level: logging level. See https://docs.python.org/3/library/logging.html#logging-levels
-        :param log_out: where to set log output: 'FILE', 'CONSOLE' or 'BOTH'. (case insensitive)
+        :param log_out: where to set log output: 'FILE', 'CONSOLE' or 'BOTH'. (case-insensitive)
         """
 
         # SET OUTPUT DIRECTORIES
@@ -197,7 +197,7 @@ class Analysis:
     @decorators.check_single_datafile
     def print_cutflow_latex_table(self, ds_name: Optional[str] = None, check_backup: bool = True) -> None:
         """
-        Prints a latex table of cutflow. By default first checks if a current backup exists and will not print if
+        Prints a latex table of cutflow. By default, first checks if a current backup exists and will not print if
         backup is identical
         :param ds_name:
         :param check_backup: default true. Checks if backup of current cutflow already exists and if so does not print

@@ -40,6 +40,7 @@ class Dataset:
     Dataset class. Contains/will contain all the variables needed for a singular analysis dataset.
     TODO: Save histograms as dataset attributes? Ability to perform operations across hisograms? Custom histogram class?
     TODO: check branch types and perform dataframe merge in batches
+    TODO: allow building of dataframe inputting only a TTree dictionary
     """
     # INPUT
     name: str
@@ -59,7 +60,8 @@ class Dataset:
     paths: Dict[str, str]  # file output paths
     reco: bool = False  # whether a reco dataset
     truth: bool = False  # whether a truth dataset
-    pkl_out_dir: str = None  # where the dataframe pickle file will be stored
+    to_pkl: bool = False  # whether to output to a pickle file
+    pkl_out_dir: str = ''  # where the dataframe pickle file will be stored
     lepton: str = 'lepton'  # name of charged DY lepton channel in dataset (if applicable)
     chunksize: int = 1024  # chunksize for uproot ROOT file import
     force_rebuild: bool = False  # whether to force rebuild dataset
@@ -86,6 +88,8 @@ class Dataset:
         logger.info(f"Data luminosity: {self.lumi}")
 
         # initialise pickle filepath with given name
+        if self.to_pkl and not self.pkl_out_dir:
+            raise ValueError("Must supply pickle output directory.")
         if self.pkl_out_dir:
             self.pkl_path = self.pkl_out_dir + self.name + '_df.pkl'
         else:
@@ -178,7 +182,7 @@ class Dataset:
                                             _validate_sumofweights=self.validate_sumofweights)
 
             # print into pickle file for easier read/write
-            if self.pkl_path:
+            if self.to_pkl:
                 pd.to_pickle(self.df, self.pkl_path)
                 logger.info(f"Dataframe built and saved in {self.pkl_path}")
 
@@ -434,6 +438,8 @@ class Dataset:
                 # df.drop(columns=to_drop, inplace=True)
 
         # CLEANUP
+        df.name = self.name
+
         df['DSID'] = pd.Categorical(df['DSID'])
 
         self.__rescale_to_gev(df)  # properly scale GeV columns
