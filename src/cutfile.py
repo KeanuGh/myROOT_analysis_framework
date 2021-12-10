@@ -213,7 +213,7 @@ class Cutfile:
         for cut_dict in list_of_cut_dicts:
             if 'tree' in cut_dict:
                 if cut_dict['tree'] not in out:
-                    out[cut_dict['tree']]: set = {cut_dict['cut_var']}
+                    out[cut_dict['tree']] = {cut_dict['cut_var']}
                 else:
                     out[cut_dict['tree']].add(cut_dict['cut_var'])
             else:
@@ -222,7 +222,7 @@ class Cutfile:
 
     def if_make_cutfile_backup(self) -> bool:
         """Decides if a backup cutfile should be made"""
-        if not is_dir_empty(self.backup_path):
+        if get_last_backup(self.backup_path, self.name):
             return not identical_to_backup(self._path, backup_dir=self.backup_path, name=self.name)
         else:
             return True

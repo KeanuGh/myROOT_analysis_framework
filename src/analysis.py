@@ -49,7 +49,7 @@ class Analysis:
             'pkl_hist_dir': output_dir + '/histograms/',  # pickle file to place histograms into
             'backup_cutfiles_dir': output_dir + '/cutfiles/',  # _cutfile backups
             'latex_table_dir': output_dir + '/LaTeX_cutflow_table/',  # where to print latex cutflow table
-            'log_dir': output_dir + '/logs',
+            'log_dir': output_dir + '/logs/',
         }
         for path in self.paths:
             file_utils.makedir(self.paths[path])
