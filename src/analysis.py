@@ -2,7 +2,8 @@ import logging
 import os
 import sys
 import time
-from typing import Optional, Union, Dict
+from typing import Optional, Union, Dict, Iterable
+import pandas as pd
 
 # project imports
 import src.config as config
@@ -58,21 +59,23 @@ class Analysis:
         # ============================
         if log_out not in ('file', 'both', 'console', None):
             raise ValueError("Accaptable values for 'log_out' parameter: 'file', 'both', 'console', None.")
-        logger = logging.getLogger('analysis')
-        logger.setLevel(log_level)
+        self.logger = logging.getLogger('analysis')
+        self.logger.setLevel(log_level)
         if log_out.lower() in ('file', 'both'):
             filehandler = logging.FileHandler(f"{self.paths['log_dir']}/{analysis_label}_{time.strftime('%Y-%m-%d_%H-%M-%S')}.log")
             filehandler.setFormatter(logging.Formatter('%(asctime)s %(levelname)-10s %(message)s'))
-            logger.addHandler(filehandler)
+            self.logger.addHandler(filehandler)
         if log_out.lower() in ('console', 'both'):
-            logger.addHandler(logging.StreamHandler(sys.stdout))
+            self.logger.addHandler(logging.StreamHandler(sys.stdout))
         logging.captureWarnings(True)
 
-        logger.info(f"INITIALISING ANALYSIS '{analysis_label}'...")
-        logger.info("="*(len(analysis_label)+27))
+        self.logger.info(f"INITIALISING ANALYSIS '{analysis_label}'...")
+        self.logger.info("="*(len(analysis_label)+27))
 
         # SET OTHER GLOBAL OPTIONS
         # ============================
+        self.name = analysis_label
+        
         if global_lumi:
             config.lumi = global_lumi
 
@@ -92,8 +95,8 @@ class Analysis:
         self.datasets: Dict[str, Dataset] = {name: Dataset(name, paths=self.paths, **kwargs)
                                              for name, kwargs in data_dict.items()}
 
-        logger.info("="*(len(analysis_label)+23))
-        logger.info(f"ANALYSIS '{analysis_label}' INITIALISED")
+        self.logger.info("="*(len(analysis_label)+23))
+        self.logger.info(f"ANALYSIS '{analysis_label}' INITIALISED")
 
     # ===============================
     # ========== BUILTINS ===========
@@ -110,22 +113,55 @@ class Analysis:
     def __getattr__(self, name):
         if name in self.datasets:
             return self.datasets[name]
-        elif name not in self.__dict__:
-            raise AttributeError(f"No attribute {name} in {self}")
         else:
-            getattr(self, name)
+            raise AttributeError(f"No attrbute or dataset {name} found in analysis {self.name}")
 
-    # len() is the number of contained datasets
     def __len__(self):
         return len(self.datasets)
 
-    # can iterate over datasets
     def __iter__(self):
         yield from self.datasets.values()
+        
+    def __repr__(self):
+        return f'Analysis("{self.name}",Datasets:{{{", ".join([f"{name}: {len(d)}, {list(d.columns)}" for name, d in self.datasets.items()])}}}'
+            
+    def __str__(self):
+        return f'"{self.name}",Datasets:{{{", ".join([f"{name}: {len(d)}, {list(d.columns)}" for name, d in self.datasets.items()])}}}'
+        
+    def __iadd__(self, other):
+        self.datasets |= other.datasets
+    
+    # ===============================
+    # ====== DATASET FUNCTIONS ======
+    # ===============================
+    def merge(self, *names: str, delete: bool = True, to_pkl: bool = False, delete_pkl: bool = False) -> None:
+        """
+        Merge datasets by concatenating one or more into the other
+        
+        :param names: strings of datasets to merge. First dataset will be merged into.
+        :param delete: whether to delete datasets 
+        """        
+        for n in names:
+            if n not in self.datasets:
+                raise ValueError(f"No dataset named {n} found in analysis {self.name}")
+        
+        self.logger.info(f"Merging dataset(s) {names[1:]} into dataset{names[0]}...")
+        self.datasets[names[0]].df.append([self.datasets[n].df for n in names[1:]], ignore_index=True)
+        
+        for n in names[1:]:
+            if delete:
+                self.logger.debug(f"Internally deleting dataset {n}")
+                del self.datasets[n]
+            if delete_pkl:
+                self.logger.info(f"Deleting pickled dataset {self.datasets[n].pkl_path}")
+                file_utils.delete_file(self.datasets[n].pkl_path)
+                    
+        if to_pkl:
+            pd.to_pickle(self.datasets[names[0]].df, self.datasets[names[0]].pkl_path)
 
     # ===============================
     # =========== PLOTS =============
-    # ===============================
+    # ===============================    
     @decorators.check_single_datafile
     def plot_1d(self, ds_name: Optional[str], **kwargs) -> None:
         """
@@ -186,13 +222,13 @@ class Analysis:
 
     def kinematics_printouts(self) -> None:
         """Prints some kinematic variables to terminal"""
-        logger = logging.getLogger('analysis')
-        logger.info(f"========== KINEMATICS ===========")
+        self.logger = logging.getLogger('analysis')
+        self.ogger.info(f"========== KINEMATICS ===========")
         for name in self.datasets:
-            logger.info(name + ":")
-            logger.info("---------------------------------")
-            logger.info(f"cross-section: {self.datasets[name].cross_section:.2f} fb")
-            logger.info(f"luminosity   : {self.datasets[name].luminosity:.2f} fb-1")
+            self.logger.info(name + ":")
+            self.logger.info("---------------------------------")
+            self.logger.info(f"cross-section: {self.datasets[name].cross_section:.2f} fb")
+            self.logger.info(f"luminosity   : {self.datasets[name].luminosity:.2f} fb-1")
 
     @decorators.check_single_datafile
     def print_cutflow_latex_table(self, ds_name: Optional[str] = None, check_backup: bool = True) -> None:

@@ -4,7 +4,7 @@ import pickle as pkl
 import time
 from dataclasses import dataclass, field
 from itertools import combinations
-from typing import Optional, Union, List, OrderedDict, Tuple, Dict
+from typing import Optional, Union, List, OrderedDict, Tuple, Dict, Type
 from warnings import warn
 
 import boost_histogram as bh
@@ -239,12 +239,26 @@ class Dataset:
 
     def __setitem__(self, col, item):
         self.df[col] = item
-
+    
+    def __getattr__(self, name):
+        try:
+            return self.df.__getattr__(name)
+        except AttributeError:
+            raise AttributeError(f"No attribute {name} in DataFrame or Dataset {self.name}")
+    
     def __repr__(self):
-        return f'Dataset("{self.name}",TTree:"{self.TTree_name},Events:{self.__len__}'
+        return f'Dataset("{self.name}",TTree:"{self.TTree_name},Events:{len(self)}'
 
     def __str__(self):
-        return f'{self.name},TTree:"{self.TTree_name}",Events:{self.__len__}'
+        return f'{self.name},TTree:"{self.TTree_name}",Events:{len(self)}'
+    
+    def __add__(self, other) -> pd.DataFrame:
+        """Concatenate two dataframes"""
+        return pd.concat([self.df, other.df], ignore_index=True, copy=False)
+
+    def __iadd__(self, other):
+        """Concatenate dataframe to self.df"""
+        self.df.append(other.df, ignore_index=True)
 
     # Variable setting
     # ===================
