@@ -1,6 +1,6 @@
 import logging
 import pickle as pkl
-from typing import Tuple, Optional, Union, Iterable
+from typing import Tuple, Optional, Union, Iterable, List
 from warnings import warn
 
 import boost_histogram as bh
@@ -123,7 +123,7 @@ def getbins(var_to_plot) -> Tuple[bool, Optional[tuple]]:
         return is_logbins, None
 
 
-def get_axis(bins: Union[tuple, list],
+def get_axis(bins: Union[List[float], Tuple[int, float, float]],
              logbins: bool = False,
              ) -> bh.axis.Axis:
     """

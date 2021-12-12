@@ -98,7 +98,7 @@ labels_xs: Dict[str, BranchLabel] = {
     },
     'e_delta_z0_sintheta': {
         'xlabel': r'Electron \Delta z_0\sin\theta',
-        'xlabel': r'Entries'
+        'ylabel': r'Entries'
     },
     'mu_pt': {
         'xlabel': r'Muon $p_{T}$ [GeV]',
@@ -122,7 +122,7 @@ labels_xs: Dict[str, BranchLabel] = {
     },
     'mu_delta_z0_sintheta': {
         'xlabel': r'Muon \Delta z_0\sin\theta',
-        'xlabel': r'Entries'
+        'ylabel': r'Entries'
     },
     'jet_pt': {
         'xlabel': r'Jet $p_{T}$ [GeV]',

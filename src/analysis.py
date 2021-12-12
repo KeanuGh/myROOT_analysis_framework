@@ -2,11 +2,12 @@ import logging
 import os
 import sys
 import time
-from typing import Optional, Union, Dict, Iterable, Tuple
-import pandas as pd
-import matplotlib.pyplot as plt
+from typing import Optional, Union, Dict, List, Tuple
+
 import boost_histogram as bh
+import matplotlib.pyplot as plt
 import mplhep as hep
+import pandas as pd
 
 # project imports
 import src.config as config
@@ -78,7 +79,7 @@ class Analysis:
         # SET OTHER GLOBAL OPTIONS
         # ============================
         self.name = analysis_label
-        
+
         if global_lumi:
             config.lumi = global_lumi
 
@@ -92,7 +93,7 @@ class Analysis:
             '_phi_': config.phibins,
             'w_y': config.phibins
         }
-        
+
         # BUILD DATASETS
         # ============================
         self.datasets: Dict[str, Dataset] = {name: Dataset(name, paths=self.paths, **kwargs)
@@ -124,23 +125,23 @@ class Analysis:
 
     def __iter__(self):
         yield from self.datasets.values()
-        
+
     def __repr__(self):
         return f'Analysis("{self.name}",Datasets:{{{", ".join([f"{name}: {len(d)}, {list(d.columns)}" for name, d in self.datasets.items()])}}}'
-            
+
     def __str__(self):
         return f'"{self.name}",Datasets:{{{", ".join([f"{name}: {len(d)}, {list(d.columns)}" for name, d in self.datasets.items()])}}}'
-        
+
     def __iadd__(self, other):
         self.datasets |= other.datasets
-    
+
     # ===============================
     # ====== DATASET FUNCTIONS ======
     # ===============================
-    def merge(self, 
-              *names: str, 
-              delete: bool = True, 
-              to_pkl: bool = False, 
+    def merge(self,
+              *names: str,
+              delete: bool = True,
+              to_pkl: bool = False,
               delete_pkl: bool = False) -> None:
         """
         Merge datasets by concatenating one or more into the other
@@ -153,10 +154,10 @@ class Analysis:
         for n in names:
             if n not in self.datasets:
                 raise ValueError(f"No dataset named {n} found in analysis {self.name}")
-        
+
         self.logger.info(f"Merging dataset(s) {names[1:]} into dataset{names[0]}...")
         self.datasets[names[0]].df.append([self.datasets[n].df for n in names[1:]], ignore_index=True)
-        
+
         for n in names[1:]:
             if delete:
                 self.logger.debug(f"Internally deleting dataset {n}")
@@ -164,7 +165,7 @@ class Analysis:
             if delete_pkl:
                 self.logger.info(f"Deleting pickled dataset {self.datasets[n].pkl_path}")
                 file_utils.delete_file(self.datasets[n].pkl_path)
-                    
+
         if to_pkl:
             pd.to_pickle(self.datasets[names[0]].df, self.datasets[names[0]].pkl_path)
             self.logger.info(f"Saved merged dataset to file {self.datasets[names[0]].pkl_path}")
@@ -172,11 +173,11 @@ class Analysis:
     # ===============================
     # =========== PLOTS =============
     # ===============================
-    def plot_hist_overlay(self, 
-                          datasets = Union[str, Iterable[str]],
-                          var = str,
-                          bins=Union[Iterable[float], Tuple[int, float, float]],
-                          labels: Iterable[str] = None,
+    def plot_hist_overlay(self,
+                          datasets: Union[str, List[str]],
+                          var: str,
+                          bins: Union[List[float], Tuple[int, float, float]],
+                          labels: List[str] = None,
                           weight: str = '',
                           logbins: bool = False,
                           logx: bool = False,
@@ -189,18 +190,18 @@ class Analysis:
                           ) -> None:
         """Plot overlaid variables in separate datasets"""
         self.logger.info(f'Plotting {var} in as overlay in {datasets}...')
-        
+
         bh_axis = plotting_utils.get_axis(bins, logbins)
-        
+
         if labels:
             assert len(labels) == len(datasets), \
-               f"Labels iterable (length: {len(labels)}) must be of same length as number of datasets ({len(datasets)})"
-    
+                f"Labels iterable (length: {len(labels)}) must be of same length as number of datasets ({len(datasets)})"
+
         for i, dataset in enumerate(datasets):
             hist = bh.Histogram(bh_axis, storage=bh.storage.Weight())
             hist.fill(self.datasets[dataset][var], weight=self.datasets[dataset][weight] if weight else None)
             hep.histplot(hist, label=labels[i] if labels else self.datasets[dataset].label, **kwargs)
-        
+
         _xlabel, _ylabel = plotting_utils.get_axis_labels(var, lepton)
         plt.xlabel(xlabel if xlabel else _xlabel)
         plt.ylabel(ylabel if ylabel else _ylabel)
@@ -210,13 +211,13 @@ class Analysis:
         if logy:
             plt.semilogy()
         hep.atlas.label(italic=(True, True), loc=0, llabel='Internal', rlabel=title)
-        
+
         filename = self.paths['plot_dir'] + '_'.join(datasets) + '_' + var + '_overlay.png'
         plt.savefig(filename, bbox_inches='tight')
         plt.show()
         self.logger.info(f'Saved overlay plot of {var} to {filename}')
         plt.clf()
-    
+
     @decorators.check_single_datafile
     def plot_1d(self, ds_name: Optional[str], **kwargs) -> None:
         """
