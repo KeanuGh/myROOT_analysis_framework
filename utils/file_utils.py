@@ -45,7 +45,10 @@ def is_dir_empty(dirpath: str) -> bool:
 
 def delete_file(file: str) -> None:
     """deletes a file"""
-    os.remove(file)
+    try:
+        os.remove(file)
+    except FileNotFoundError:
+        logger.warning(f"No file named {file}. No file deleted")
 
 
 def get_filename(filepath: str, suffix: bool = False) -> str:
