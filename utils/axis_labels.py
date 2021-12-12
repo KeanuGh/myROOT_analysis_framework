@@ -91,6 +91,14 @@ labels_xs: Dict[str, BranchLabel] = {
     'el_e': {
         'xlabel': r'Electron $E$ [GeV]',
         'ylabel': r'$\frac{d\sigma}{dE}$ [fb GeV$^{-1}$]'
+    }, 
+    'e_d0sig': {
+        'xlabel': r'Electron d_0',
+        'ylabel': r'Entries' 
+    },
+    'e_delta_z0_sintheta': {
+        'xlabel': r'Electron z_0\sin\theta',
+        'xlabel': r'Entries'
     },
     'mu_pt': {
         'xlabel': r'Muon $p_{T}$ [GeV]',
@@ -107,6 +115,14 @@ labels_xs: Dict[str, BranchLabel] = {
     'mu_e': {
         'xlabel': r'Muon $E$',
         'ylabel': r'$\frac{d\sigma}{dE}$ [fb GeV$^{-1}$]'
+    },
+    'mu_d0sig': {
+        'xlabel': r'Muon d_0',
+        'ylabel': r'Entries' 
+    },
+    'mu_delta_z0_sintheta': {
+        'xlabel': r'Muon z_0\sin\theta',
+        'xlabel': r'Entries'
     },
     'jet_pt': {
         'xlabel': r'Jet $p_{T}$ [GeV]',
