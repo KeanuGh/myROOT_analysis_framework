@@ -5,16 +5,18 @@ Tight muon	mu_isTight	=	1	tight muon cut	false
 eta	mu_eta	<	2.4	eta	true
 E_{T}^{MISS}	met_met	>	65	met	false
 p_T	mu_pt	>	65	mu pt	false
-M_T	mu_mt	>	55	muon mt	false
-M_W	MC_WZ_m	<	120	W m	false	truth
+M_T	mt_born	>	55	muon mt	false
 
 [OUTPUTS]
 # variables to process
-mu_mt
+mt_born
 mu_pt
 mu_eta
+mu_d0sig
+mu_delta_z0_sintheta
+mu_e
 
 [OPTIONS]
 # case-insensitive
-sequential	false
+sequential	true
 grouped cutflow	false

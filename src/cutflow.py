@@ -117,13 +117,13 @@ class Cutflow:
                 # loop over groups
                 for group in self._cutgroups.values():
                     cut_cols = [cut + config.cut_label for cut in group]
-                    n_events_cut = len(df[df[cut_cols].all(1)].index)
+                    n_events_cut = len(df[df[cut_cols].all()].index)
                     self.cutflow_n_events.append(n_events_cut)
                     self.cutflow_ratio.append(n_events_cut / self._n_events_tot)
                     del cut_cols
             else:
                 for cut in cut_dicts:
-                    n_events_cut = len(df[df[cut['name'] + config.cut_label].all(1)].index)
+                    n_events_cut = len(df[df[cut['name'] + config.cut_label].all()].index)
                     self.cutflow_n_events.append(n_events_cut)
                     self.cutflow_ratio.append(n_events_cut / self._n_events_tot)
 

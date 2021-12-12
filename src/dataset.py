@@ -60,7 +60,7 @@ class Dataset:
     paths: Dict[str, str]  # file output paths
     reco: bool = False  # whether a reco dataset
     truth: bool = False  # whether a truth dataset
-    to_pkl: bool = False  # whether to output to a pickle file
+    to_pkl: bool = True  # whether to output to a pickle file
     pkl_out_dir: str = ''  # where the dataframe pickle file will be stored
     lepton: str = 'lepton'  # name of charged DY lepton channel in dataset (if applicable)
     chunksize: int = 1024  # chunksize for uproot ROOT file import
@@ -88,8 +88,8 @@ class Dataset:
         logger.info(f"Data luminosity: {self.lumi}")
 
         # initialise pickle filepath with given name
-        if self.to_pkl and not self.pkl_out_dir:
-            raise ValueError("Must supply pickle output directory.")
+        if not self.pkl_out_dir:
+            self.pkl_out_dir = self.paths['pkl_df_filepath']
         if self.pkl_out_dir:
             self.pkl_path = self.pkl_out_dir + self.name + '_df.pkl'
         else:
