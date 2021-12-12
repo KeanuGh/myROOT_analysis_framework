@@ -2,13 +2,16 @@ import logging
 import os
 import sys
 import time
-from typing import Optional, Union, Dict, Iterable
+from typing import Optional, Union, Dict, Iterable, Tuple
 import pandas as pd
+import matplotlib.pyplot as plt
+import boost_histogram as bh
+import mplhep as hep
 
 # project imports
 import src.config as config
 from src.dataset import Dataset
-from utils import file_utils, decorators
+from utils import file_utils, decorators, plotting_utils
 
 
 class Analysis:
@@ -134,13 +137,19 @@ class Analysis:
     # ===============================
     # ====== DATASET FUNCTIONS ======
     # ===============================
-    def merge(self, *names: str, delete: bool = True, to_pkl: bool = False, delete_pkl: bool = False) -> None:
+    def merge(self, 
+              *names: str, 
+              delete: bool = True, 
+              to_pkl: bool = False, 
+              delete_pkl: bool = False) -> None:
         """
         Merge datasets by concatenating one or more into the other
         
         :param names: strings of datasets to merge. First dataset will be merged into.
-        :param delete: whether to delete datasets 
-        """        
+        :param delete: whether to delete datasets internally
+        :param to_pkl: whether to print new dataset to a pickle file (will replace original pickle file)
+        :param delete_pkl: whether to delete pickle files of merged datasets (not the one that is merged into)
+        """
         for n in names:
             if n not in self.datasets:
                 raise ValueError(f"No dataset named {n} found in analysis {self.name}")
@@ -158,10 +167,56 @@ class Analysis:
                     
         if to_pkl:
             pd.to_pickle(self.datasets[names[0]].df, self.datasets[names[0]].pkl_path)
+            self.logger.info(f"Saved merged dataset to file {self.datasets[names[0]].pkl_path}")
 
     # ===============================
     # =========== PLOTS =============
-    # ===============================    
+    # ===============================
+    def plot_hist_overlay(self, 
+                          datasets = Union[str, Iterable[str]],
+                          var = str,
+                          bins=Union[Iterable[float], Tuple[int, float, float]],
+                          labels: Iterable[str] = None,
+                          weight: str = '',
+                          logbins: bool = False,
+                          logx: bool = False,
+                          logy: bool = True,
+                          xlabel: str = '',
+                          ylabel: str = '',
+                          title: str = '',
+                          lepton: str = 'lepton',
+                          **kwargs
+                          ) -> None:
+        """Plot overlaid variables in separate datasets"""
+        self.logger.info(f'Plotting {var} in as overlay in {datasets}...')
+        
+        bh_axis = plotting_utils.get_axis(bins, logbins)
+        
+        if labels:
+            assert len(labels) == len(datasets), \
+               f"Labels iterable (length: {len(labels)}) must be of same length as number of datasets ({len(datasets)})"
+    
+        for i, dataset in enumerate(datasets):
+            hist = bh.Histogram(bh_axis, storage=bh.storage.Weight())
+            hist.fill(self.datasets[dataset][var], weight=self.datasets[dataset][weight] if weight else None)
+            hep.histplot(hist, label=labels[i] if labels else self.datasets[dataset].label, **kwargs)
+        
+        _xlabel, _ylabel = plotting_utils.get_axis_labels(var, lepton)
+        plt.xlabel(xlabel if xlabel else _xlabel)
+        plt.ylabel(ylabel if ylabel else _ylabel)
+        plt.legend(fontsize=10)
+        if logx:
+            plt.semilogx()
+        if logy:
+            plt.semilogy()
+        hep.atlas.label(italic=(True, True), loc=0, llabel='Internal', rlabel=title)
+        
+        filename = self.paths['plot_dir'] + '_'.join(datasets) + '_' + var + '_overlay.png'
+        plt.savefig(filename, bbox_inches='tight')
+        plt.show()
+        self.logger.info(f'Saved overlay plot of {var} to {filename}')
+        plt.clf()
+    
     @decorators.check_single_datafile
     def plot_1d(self, ds_name: Optional[str], **kwargs) -> None:
         """

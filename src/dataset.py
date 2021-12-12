@@ -4,7 +4,7 @@ import pickle as pkl
 import time
 from dataclasses import dataclass, field
 from itertools import combinations
-from typing import Optional, Union, List, OrderedDict, Tuple, Dict, Type
+from typing import Optional, Union, List, OrderedDict, Tuple, Dict, Iterable
 from warnings import warn
 
 import boost_histogram as bh
@@ -863,7 +863,7 @@ class Dataset:
     def plot_mass_slices(self,
                          var: str,
                          weight: str,
-                         bins: Union[List[float], Tuple[int, float, float]] = (30, 0, 5000),
+                         bins: Union[Iterable[float], Tuple[int, float, float]] = (30, 0, 5000),
                          logbins: bool = False,
                          logx: bool = False,
                          logy: bool = True,
