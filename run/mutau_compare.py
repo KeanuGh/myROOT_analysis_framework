@@ -19,7 +19,7 @@ if __name__ == '__main__':
             'TTree_name': 'nominal_Loose',
             'year': '2015+2016',
             'lepton': 'tau',
-            'force_rebuild': True,
+            'force_rebuild': False,
             'label': r'$W^-\rightarrow\tau\nu\rightarrow\mu\nu$',
         },
         'wminmunu': {
@@ -28,7 +28,7 @@ if __name__ == '__main__':
             'TTree_name': 'nominal_Loose',
             'year': '2015+2016',
             'lepton': 'muon',
-            'force_rebuild': True,
+            'force_rebuild': False,
             'label': r'$W^-\rightarrow\mu\nu$',
         },
         'wmintaunu': {
@@ -37,7 +37,7 @@ if __name__ == '__main__':
             'TTree_name': 'nominal_Loose',
             'year': '2015+2016',
             'lepton': 'tau',
-            'force_rebuild': True,
+            'force_rebuild': False,
             'label': r'$W^-\rightarrow\tau\nu\rightarrow\mu\nu$',
         },
         
@@ -48,7 +48,7 @@ if __name__ == '__main__':
             'TTree_name': 'nominal_Loose',
             'year': '2015+2016',
             'lepton': 'muon',
-            'force_rebuild': True,
+            'force_rebuild': False,
             'label': r'$W^+\rightarrow\mu\nu$',
         },
         'wplustaunu_hm': {
@@ -57,7 +57,7 @@ if __name__ == '__main__':
             'TTree_name': 'nominal_Loose',
             'year': '2015+2016',
             'lepton': 'tau',
-            'force_rebuild': True,
+            'force_rebuild': False,
             'label': r'$W^+\rightarrow\tau\nu\rightarrow\mu\nu$',
         },
         'wplusmunu': {
@@ -66,7 +66,7 @@ if __name__ == '__main__':
             'TTree_name': 'nominal_Loose',
             'year': '2015+2016',
             'lepton': 'muon',
-            'force_rebuild': True,
+            'force_rebuild': False,
             'label': r'$W^+\rightarrow\mu\nu$',
         },
         'wplustaunu': {
@@ -75,12 +75,12 @@ if __name__ == '__main__':
             'TTree_name': 'nominal_Loose',
             'year': '2015+2016',
             'lepton': 'tau',
-            'force_rebuild': True,
+            'force_rebuild': False,
             'label': r'$W^+\rightarrow\tau\nu\rightarrow\mu\nu$',
         }
     }
     
-    analysis = Analysis(datasets, 'mutau_compare', log_level=10, log_out='file')
+    analysis = Analysis(datasets, 'mutau_compare', log_level=10, log_out='console')
     
     analysis.merge("wminmunu",   "wminmunu_hm",   to_pkl=True)
     analysis.merge("wmintaunu",  "wmintaunu_hm",  to_pkl=True)

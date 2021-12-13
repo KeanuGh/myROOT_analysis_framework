@@ -63,7 +63,7 @@ class Cutflow:
                 for group in self._cutgroups.values():
                     curr_cut_columns += [cut + config.cut_label for cut in group]
                     # number of events passing current cut & all previous cuts
-                    n_events_left = len(df[df[curr_cut_columns].all(1)].index)
+                    n_events_left = len(df.loc[df[curr_cut_columns].all(1)].index)
                     # append calculations to cutflow arrays
                     self.cutflow_n_events.append(n_events_left)
                     self.cutflow_ratio.append(n_events_left / prev_n)
@@ -72,15 +72,14 @@ class Cutflow:
                     prev_n = n_events_left
             else:
                 # loop over individual cuts
-                for cut in self.cutflow_labels:
-                    curr_cut_columns.append(cut + config.cut_label)
+                for cut in self.cutflow_labels[1:]:
+                    curr_cut_columns += [cut + config.cut_label]
                     # number of events passing current cut & all previous cuts
-                    n_events_left = len(df[df[curr_cut_columns].all(1)].index)
-                    # append calculations to cutflow arrays
+                    n_events_left = len(df.loc[df[curr_cut_columns].all(1)].index)
                     self.cutflow_n_events.append(n_events_left)
                     self.cutflow_ratio.append(n_events_left / prev_n)
                     self.cutflow_cum.append(n_events_left / self._n_events_tot)
-                    self.cutflow_a_ratio.append(len(df[df[cut + config.cut_label].all(1)].index) / self._n_events_tot)
+                    self.cutflow_a_ratio.append(len(df[df[[cut + config.cut_label]].all(1)].index) / self._n_events_tot)
                     prev_n = n_events_left
 
             # assign histogram options for each type
@@ -117,13 +116,13 @@ class Cutflow:
                 # loop over groups
                 for group in self._cutgroups.values():
                     cut_cols = [cut + config.cut_label for cut in group]
-                    n_events_cut = len(df[df[cut_cols].all()].index)
+                    n_events_cut = len(df.loc[df[cut_cols]].index)
                     self.cutflow_n_events.append(n_events_cut)
                     self.cutflow_ratio.append(n_events_cut / self._n_events_tot)
                     del cut_cols
             else:
                 for cut in cut_dicts:
-                    n_events_cut = len(df[df[cut['name'] + config.cut_label].all()].index)
+                    n_events_cut = len(df.loc[df[cut['name'] + config.cut_label]].index)
                     self.cutflow_n_events.append(n_events_cut)
                     self.cutflow_ratio.append(n_events_cut / self._n_events_tot)
 
