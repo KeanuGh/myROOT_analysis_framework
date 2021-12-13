@@ -948,11 +948,26 @@ class Dataset:
                      xlabel: str = '',
                      ylabel: str = '',
                      to_file: bool = True,
+                     xlim: Tuple[float, float] = None,
+                     ylim: Tuple[float, float] = None,
+                     logx: bool = False,
+                     logy: bool = False,
                      **kwargs) -> None:
         plt.figure()
+
+        if xlim:
+            plt.xlim(xlim)
+        if ylim:
+            plt.ylim(ylim)
+        if logx:
+            plt.semilogx()
+        if logy:
+            plt.semilogy()
+
         plt.scatter(self.df[varx], self.df[vary], **kwargs)
         plt.xlabel(xlabel if xlabel else labels_xs[varx]['xlabel'])
         plt.ylabel(ylabel if ylabel else labels_xs[vary]['xlabel'])
+
         hep.atlas.label(italic=(True, True), loc=0, llabel='Internal', rlabel=title if title else self.label)
         plt.show()
         if to_file:
