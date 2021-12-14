@@ -5,7 +5,6 @@ import time
 from distutils.util import strtobool
 from shutil import copyfile
 from typing import Tuple, List, OrderedDict, Dict, Set
-from warnings import warn
 
 import pandas as pd
 
@@ -17,24 +16,24 @@ class Cutfile:
     """
     Handles importing cutfiles and extracting variables
     """
-    def __init__(self, file_path: str, backup_path: str, logger: logging.Logger):
+    def __init__(self, file_path: str, backup_path: str, logger: logging.Logger, sep='\t'):
+        self.sep = sep
         self.logger = logger
         self.name = get_filename(file_path)
         self._path = file_path
         self.backup_path = backup_path
-        self.cut_dicts, self.vars_to_cut, self.options = self.parse_cutfile(file_path)
+        self.cut_dicts, self.vars_to_cut, self.options = self.parse_cutfile()
         self.cutgroups = self.gen_cutgroups(self.cut_dicts)
         self.alt_trees = self.gen_tree_dict(self.cut_dicts)
 
     def __repr__(self):
         return f'Cutfile("{self._path}")'
 
-    @classmethod
-    def parse_cutline(cls, cutline: str, sep='\t') -> dict:
+    def parse_cutline(self, cutline: str) -> dict:
         """
         Processes each line of cuts into dictionary of cut options. with separator sep
         """
-        cutline_split = cutline.split(sep)
+        cutline_split = cutline.split(self.sep)
 
         # if badly formatted
         if len(cutline_split) not in (6, 7):
@@ -43,7 +42,7 @@ class Cutfile:
             if len(v) == 0:
                 raise SyntaxError(f"Check cutfile. Blank value given in line {cutline}. Got {cutline_split}.")
             if v[0] == ' ' or v[-1] == ' ':
-                warn(f"Found trailing space in option cutfile line {cutline}: Variable '{v}'.")
+                self.logger.warning(f"Found trailing space in option cutfile line {cutline}: Variable '{v}'.")
 
         name = cutline_split[0]
         cut_var = cutline_split[1]
@@ -79,8 +78,7 @@ class Cutfile:
 
         return cut_dict
 
-    @classmethod
-    def parse_cutfile(cls, file: str, sep='\t') -> Tuple[List[dict], Set[Tuple[str, str]], Dict[str, bool]]:
+    def parse_cutfile(self, sep='\t') -> Tuple[List[dict], Set[Tuple[str, str]], Dict[str, bool]]:
         """
         | Generates pythonic outputs from input cutfile
         | Cutfile should be formatted with headers [CUTS], [OUTPUTS] and [OPTIONS]
@@ -98,7 +96,7 @@ class Cutfile:
         | - sequential: (bool) whether each cut should be applied sequentially so a cutflow can be generated
         """
         # open file
-        with open(file, 'r') as f:
+        with open(self._path, 'r') as f:
             lines = [line.rstrip('\n') for line in f.readlines()]
 
             # get cut lines
@@ -106,7 +104,7 @@ class Cutfile:
             for cutline in lines[lines.index('[CUTS]') + 1: lines.index('[OUTPUTS]')]:
                 if cutline.startswith('#') or len(cutline) < 2:
                     continue
-                cuts_list_of_dicts.append(cls.parse_cutline(cutline, sep=sep))
+                cuts_list_of_dicts.append(self.parse_cutline(cutline))
 
             # get output variables
             output_vars = set()
