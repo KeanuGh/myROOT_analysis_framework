@@ -82,10 +82,10 @@ if __name__ == '__main__':
     
     analysis = Analysis(datasets, 'mutau_compare', log_level=10, log_out='console')
     
-    analysis.merge("wminmunu",   "wminmunu_hm",   to_pkl=True)
-    analysis.merge("wmintaunu",  "wmintaunu_hm",  to_pkl=True)
-    analysis.merge("wplusmunu",  "wplusmunu_hm",  to_pkl=True)
-    analysis.merge("wplustaunu", "wplustaunu_hm", to_pkl=True)
+    analysis.merge_datsets("wminmunu",   "wminmunu_hm",   to_pkl=True)
+    analysis.merge_datsets("wmintaunu",  "wmintaunu_hm",  to_pkl=True)
+    analysis.merge_datsets("wplusmunu",  "wplusmunu_hm",  to_pkl=True)
+    analysis.merge_datsets("wplustaunu", "wplustaunu_hm", to_pkl=True)
     
     analysis.plot_hist_overlay(['wminmunu, wmintaunu'],   'met_met', bins=(30, 0, 5000), lepton='muon')
     analysis.plot_hist_overlay(['wplusmunu, wplustaunu'], 'met_met', bins=(30, 0, 5000), lepton='muon')

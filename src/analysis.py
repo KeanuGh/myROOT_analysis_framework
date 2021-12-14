@@ -23,7 +23,8 @@ class Analysis:
     When calling a method that applies to only one dataset, naming the dataset in argument ds_name is optional.
     TODO: apply method to ALL datasets if ds_name not provided?
     """
-    def __init__(self, data_dict: Dict[str, Dict],
+
+    def __init__(self, data_dict: Dict[str, Dict[str]],
                  analysis_label: str,
                  global_lumi: Optional[float] = None,
                  phibins: Optional[Union[tuple, list]] = None,
@@ -31,15 +32,22 @@ class Analysis:
                  output_dir: str = None,
                  log_level: int = logging.INFO,
                  log_out: str = 'both',
+                 timedatelog: bool = True,
+                 separate_loggers: bool = False,
+                 **kwargs
                  ):
         """
         :param data_dict: Dictionary of dictionaries containing paths to root files and the tree to extract from each.
-        The key to the top-level dictionary is the label assigned to the dataset.
+               The key to the top-level dictionary is the label assigned to the dataset.
         :param global_lumi: all data will be scaled to this luminosity
         :param phibins: bins for plotting phi
         :param etabins: bins for plotting eta
         :param log_level: logging level. See https://docs.python.org/3/library/logging.html#logging-levels
         :param log_out: where to set log output: 'FILE', 'CONSOLE' or 'BOTH'. (case-insensitive)
+        :param timedatelog: whether to output log filename with timedate
+               (useful to turn off for testing or you'll be flooded with log files)
+        :param separate_loggers: whether each dataset should output logs to separate log files
+        :param kwargs: keyword arguments to pass to all datasets
         """
 
         # SET OUTPUT DIRECTORIES
@@ -66,7 +74,8 @@ class Analysis:
         self.logger = logging.getLogger('analysis')
         self.logger.setLevel(log_level)
         if log_out.lower() in ('file', 'both'):
-            filehandler = logging.FileHandler(f"{self.paths['log_dir']}/{analysis_label}_{time.strftime('%Y-%m-%d_%H-%M-%S')}.log")
+            filehandler = logging.FileHandler(f"{self.paths['log_dir']}/{analysis_label}_"
+                                              f"{time.strftime('%Y-%m-%d_%H-%M-%S') if timedatelog else None}.log")
             filehandler.setFormatter(logging.Formatter('%(asctime)s %(levelname)-10s %(message)s'))
             self.logger.addHandler(filehandler)
         if log_out.lower() in ('console', 'both'):
@@ -74,7 +83,7 @@ class Analysis:
         logging.captureWarnings(True)
 
         self.logger.info(f"INITIALISING ANALYSIS '{analysis_label}'...")
-        self.logger.info("="*(len(analysis_label)+27))
+        self.logger.info("=" * (len(analysis_label) + 27))
 
         # SET OTHER GLOBAL OPTIONS
         # ============================
@@ -96,10 +105,15 @@ class Analysis:
 
         # BUILD DATASETS
         # ============================
-        self.datasets: Dict[str, Dataset] = {name: Dataset(name, paths=self.paths, **kwargs)
-                                             for name, kwargs in data_dict.items()}
+        # parse options for all datasets
+        for name, args in data_dict.items():
+            if dup_args := set(args) & set(kwargs):
+                raise SyntaxError(f"Got multiple values for argument(s) {dup_args} for dataset {name}")
 
-        self.logger.info("="*(len(analysis_label)+23))
+        self.datasets: Dict[str, Dataset] = {name: Dataset(name, paths=self.paths, **kwargs, **data_kwargs)
+                                             for name, data_kwargs in data_dict.items()}
+
+        self.logger.info("=" * (len(analysis_label) + 23))
         self.logger.info(f"ANALYSIS '{analysis_label}' INITIALISED")
 
     # ===============================
@@ -138,11 +152,11 @@ class Analysis:
     # ===============================
     # ====== DATASET FUNCTIONS ======
     # ===============================
-    def merge(self,
-              *names: str,
-              delete: bool = True,
-              to_pkl: bool = False,
-              delete_pkl: bool = False) -> None:
+    def merge_datasets(self,
+                       *names: str,
+                       delete: bool = True,
+                       to_pkl: bool = False,
+                       delete_pkl: bool = False) -> None:
         """
         Merge datasets by concatenating one or more into the other
         
@@ -160,15 +174,23 @@ class Analysis:
 
         for n in names[1:]:
             if delete:
-                self.logger.debug(f"Internally deleting dataset {n}")
-                del self.datasets[n]
+                self.__delete_dataset(n)
             if delete_pkl:
-                self.logger.info(f"Deleting pickled dataset {self.datasets[n].pkl_path}")
-                file_utils.delete_file(self.datasets[n].pkl_path)
+                self.__delete_pickled_dataset(n)
 
         if to_pkl:
             pd.to_pickle(self.datasets[names[0]].df, self.datasets[names[0]].pkl_path)
             self.logger.info(f"Saved merged dataset to file {self.datasets[names[0]].pkl_path}")
+
+    @decorators.check_single_datafile
+    def __delete_dataset(self, ds_name: str) -> None:
+        self.logger.info(f"Deleting dataset {ds_name} from analysis {self.name}")
+        del self.datsets[ds_name]
+
+    @decorators.check_single_datafile
+    def __delete_pickled_dataset(self, ds_name: str) -> None:
+        self.logger.info(f"Deleting pickled dataset {ds_name}")
+        file_utils.delete_file(self.datasets[ds_name].pkl_path)
 
     # ===============================
     # =========== PLOTS =============

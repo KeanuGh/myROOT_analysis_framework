@@ -247,7 +247,7 @@ class Dataset:
             raise AttributeError(f"No attribute {name} in DataFrame or Dataset {self.name}")
     
     def __repr__(self):
-        return f'Dataset("{self.name}",TTree:"{self.TTree_name},Events:{len(self)}'
+        return f'Dataset("{self.name}",TTree:"{self.TTree_name},Events:{len(self)})'
 
     def __str__(self):
         return f'{self.name},TTree:"{self.TTree_name}",Events:{len(self)}'
