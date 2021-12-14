@@ -7,10 +7,6 @@ import ROOT
 import boost_histogram as bh
 import numpy as np
 
-logger = logging.getLogger('analysis')
-
-# import uproot
-
 # this dictionary decides which ROOT constructor needs to be called based on hist type and dimension
 # call it with TH1_constructor[type][n_dims](name, title, *n_bins, *bin_edges) where 'type' is in {'F','D','I','C','S'}
 TH1_constructor = {
@@ -61,7 +57,6 @@ def bh_to_TH1(h_bh: bh.Histogram, name: str, title: str, hist_type: str = 'F') -
     try:
         h_root = TH1_constructor[hist_type.upper()][n_dims](str(name), str(title), *binargs)
     except TypeError as e:
-        logger.debug("Input Arguments: ", name, title, *binargs)
         raise e
 
     # filling bins contents n-dimensionally for different storage types

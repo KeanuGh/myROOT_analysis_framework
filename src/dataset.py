@@ -23,8 +23,6 @@ from src.cutflow import Cutflow
 from utils.axis_labels import labels_xs
 from utils.var_helpers import derived_vars
 
-logger = logging.getLogger('analysis')
-
 # total dataset luminosity per year (pb-1)
 lumi_year = {
     '2015': 3219.56,
@@ -49,6 +47,7 @@ class Dataset:
     cutfile_path: str  # path to cutfile
     year: str  # data year '2015', '2017', '2018' or '2015+2016'
     label: str  # label for plot title or legends
+    logger: logging.Logger  # a logger to use
 
     # GENERATED
     lumi: float = field(init=False)  # generated from year
@@ -72,20 +71,20 @@ class Dataset:
 
     def __post_init__(self):
         """Dataset generation pipeline"""
-        logger.info("")
-        logger.info("=" * (42 + len(self.name)))
-        logger.info(f"======== INITIALISING DATASET '{self.name}' =========")
-        logger.info("=" * (42 + len(self.name)))
+        self.logger.info("")
+        self.logger.info("=" * (42 + len(self.name)))
+        self.logger.info(f"======== INITIALISING DATASET '{self.name}' =========")
+        self.logger.info("=" * (42 + len(self.name)))
         if not file_utils.file_exists(self.data_path):
             raise FileExistsError(f"File {self.data_path} not found.")
 
         for name, path in self.paths.items():
             # for degbug print output paths
-            logger.debug(f"{name}: {path}")
+            self.logger.debug(f"{name}: {path}")
 
         self.lumi = lumi_year[self.year]
-        logger.info(f"Year: {self.year}")
-        logger.info(f"Data luminosity: {self.lumi}")
+        self.logger.info(f"Year: {self.year}")
+        self.logger.info(f"Data luminosity: {self.lumi}")
 
         # initialise pickle filepath with given name
         if not self.pkl_out_dir:
@@ -95,19 +94,19 @@ class Dataset:
         else:
             self.pkl_path = self.paths['pkl_df_filepath'] + self.name + '_df.pkl'
 
-        if logger.level == logging.DEBUG:
+        if self.logger.level == logging.DEBUG:
             # log contents of cutfile
-            logger.debug("CUTFILE CONTENTS")
-            logger.debug('---------------------------')
+            self.logger.debug("CUTFILE CONTENTS")
+            self.logger.debug('---------------------------')
             with open(self.cutfile_path) as f:
                 for line in f.readlines():
-                    logger.debug(line.rstrip('\n'))
-            logger.debug('---------------------------')
+                    self.logger.debug(line.rstrip('\n'))
+            self.logger.debug('---------------------------')
 
         # READ AND GET OPTIONS FROM CUTFILE
         # ========================
-        logger.info(f"Parsting cutfile '{self.cutfile_path}' for {self.name}...")
-        self.cutfile = Cutfile(self.cutfile_path, self.paths['backup_cutfiles_dir'])
+        self.logger.info(f"Parsting cutfile '{self.cutfile_path}' for {self.name}...")
+        self.cutfile = Cutfile(self.cutfile_path, self.paths['backup_cutfiles_dir'], logger=self.logger)
         self._build_df = True if self.force_rebuild else self.cutfile.if_build_dataframe(self.pkl_path)
         if self.cutfile.if_make_cutfile_backup():
             self.cutfile.backup_cutfile(self.name)
@@ -128,55 +127,55 @@ class Dataset:
             # add necessary metadata to all trees
             self._tree_dict[tree] |= {'mcChannelNumber', 'eventNumber'}
             if self.reco or 'nominal' in tree.lower():
-                logger.info(f"Detected {tree} as reco tree, will pull 'weight_leptonSF' and 'weight_KFactor'")
+                self.logger.info(f"Detected {tree} as reco tree, will pull 'weight_leptonSF' and 'weight_KFactor'")
                 self._tree_dict[tree] |= {'weight_leptonSF', 'weight_KFactor'}
                 self.reco = True
             elif self.truth or 'truth' in tree.lower():
-                logger.info(f"Detected {tree} as truth tree, will pull 'KFactor_weight_truth'")
+                self.logger.info(f"Detected {tree} as truth tree, will pull 'KFactor_weight_truth'")
                 self._tree_dict[tree].add('KFactor_weight_truth')
                 self.truth = True
             else:
-                logger.info(f"Neither {tree} as truth nor reco dataset detected.")
+                self.logger.info(f"Neither {tree} as truth nor reco dataset detected.")
 
         # check if vars are contained in label dictionary
         all_vars = {var for var_set in self._tree_dict.values() for var in var_set}
         if unexpected_vars := [unexpected_var for unexpected_var in all_vars
                                if unexpected_var not in labels_xs]:
-            logger.warning(f"Variable(s) {unexpected_vars} not contained in labels dictionary. "
-                           "Some unexpected behaviour may occur.")
+            self.logger.warning(f"Variable(s) {unexpected_vars} not contained in labels dictionary. "
+                                "Some unexpected behaviour may occur.")
 
         # some debug information
-        logger.debug("")
-        logger.debug("DATASET INPUT OPTIONS: ")
-        logger.debug("----------------------------")
-        logger.debug(f"Input file(s):  {self.data_path}")
-        logger.debug(f"TTree: {self.TTree_name}")
-        logger.debug(f"Cutfile: {self.cutfile_path}")
-        logger.debug(f"grouped cutflow: {self.cutfile.options['grouped cutflow']}")
-        logger.debug(f"sequential cutflow: {self.cutfile.options['sequential']}")
-        logger.debug(f"Forced dataset rebuild: {self.force_rebuild}")
-        logger.debug(f"Validate missing events: {self.validate_missing_events}")
-        logger.debug(f"Validate duplicated events: {self.validate_duplicated_events}")
-        logger.debug(f"Validate sum of weights: {self.validate_sumofweights}")
-        logger.debug("----------------------------")
-        logger.debug("")
+        self.logger.debug("")
+        self.logger.debug("DATASET INPUT OPTIONS: ")
+        self.logger.debug("----------------------------")
+        self.logger.debug(f"Input file(s):  {self.data_path}")
+        self.logger.debug(f"TTree: {self.TTree_name}")
+        self.logger.debug(f"Cutfile: {self.cutfile_path}")
+        self.logger.debug(f"grouped cutflow: {self.cutfile.options['grouped cutflow']}")
+        self.logger.debug(f"sequential cutflow: {self.cutfile.options['sequential']}")
+        self.logger.debug(f"Forced dataset rebuild: {self.force_rebuild}")
+        self.logger.debug(f"Validate missing events: {self.validate_missing_events}")
+        self.logger.debug(f"Validate duplicated events: {self.validate_duplicated_events}")
+        self.logger.debug(f"Validate sum of weights: {self.validate_sumofweights}")
+        self.logger.debug("----------------------------")
+        self.logger.debug("")
 
-        if logger.level == logging.DEBUG:
+        if self.logger.level == logging.DEBUG:
             for tree in self._tree_dict:
-                logger.debug(f"Variables to extract from {tree} tree: ")
+                self.logger.debug(f"Variables to extract from {tree} tree: ")
                 for var in self._tree_dict[tree]:
-                    logger.debug(f"  - {var}")
+                    self.logger.debug(f"  - {var}")
             if self._vars_to_calc:
-                logger.debug("Variables to calculate: ")
+                self.logger.debug("Variables to calculate: ")
                 for var in self._vars_to_calc:
-                    logger.debug(f"  - {var}")
+                    self.logger.debug(f"  - {var}")
 
         # GENERATE DATAFRAME
         # ========================
         """Define pipeline for building dataset dataframe"""
         # extract and clean data
         if self._build_df:
-            logger.info(f"Building {self.name} dataframe from {self.data_path}...")
+            self.logger.info(f"Building {self.name} dataframe from {self.data_path}...")
             self.df = self._build_dataframe(_validate_missing_events=self.validate_missing_events,
                                             _validate_duplicated_events=self.validate_duplicated_events,
                                             _validate_sumofweights=self.validate_sumofweights)
@@ -184,49 +183,51 @@ class Dataset:
             # print into pickle file for easier read/write
             if self.to_pkl:
                 pd.to_pickle(self.df, self.pkl_path)
-                logger.info(f"Dataframe built and saved in {self.pkl_path}")
+                self.logger.info(f"Dataframe built and saved in {self.pkl_path}")
 
         else:
-            logger.info(f"Reading data for {self.name} dataframe from {self.pkl_path}...")
+            self.logger.info(f"Reading data for {self.name} dataframe from {self.pkl_path}...")
             self.df = pd.read_pickle(self.pkl_path)
-        logger.info(f"Number of events in dataset {self.name}: {len(self.df.index)}")
+        self.logger.info(f"Number of events in dataset {self.name}: {len(self.df.index)}")
 
         # map appropriate weights
         if self.truth:
-            logger.info(f"Calculating truth weight for {self.name}...")
+            self.logger.info(f"Calculating truth weight for {self.name}...")
             self.df['truth_weight'] = self.__event_weight_truth()
         if self.reco:
-            logger.info(f"Calculating reco weight for {self.name}...")
+            self.logger.info(f"Calculating reco weight for {self.name}...")
             self.df['reco_weight'] = self.__event_weight_reco()
 
         # print some dataset ID metadata
         # TODO: avg event weight
-        if logger.level == logging.DEBUG:
-            logger.info(f"DATASET INFO FOR {self.name}:")
-            logger.debug("DSID       n_events   sum_w         x-s fb        lumi fb-1")
-            logger.debug("==========================================================")
+        if self.logger.level == logging.DEBUG:
+            self.logger.info(f"DATASET INFO FOR {self.name}:")
+            self.logger.debug("DSID       n_events   sum_w         x-s fb        lumi fb-1")
+            self.logger.debug("==========================================================")
             for dsid in np.sort(self.df['DSID'].unique()):
                 df_id = self.df[self.df['DSID'] == dsid]
-                logger.debug(f"{int(dsid):<10} "
-                             f"{len(df_id):<10} "
-                             f"{df_id['weight_mc'].sum():<10.6e}  "
-                             f"{self._get_cross_section(df_id):<10.6e}  "
-                             f"{self.lumi:<10.6e}")
+                self.logger.debug(f"{int(dsid):<10} "
+                                  f"{len(df_id):<10} "
+                                  f"{df_id['weight_mc'].sum():<10.6e}  "
+                                  f"{self._get_cross_section(df_id):<10.6e}  "
+                                  f"{self.lumi:<10.6e}")
 
         # apply cuts to generate cut columns
-        logger.info(f"Creating cuts for {self.name}...")
-        self._create_cut_columns(self.df, cut_dicts=self.cutfile.cut_dicts)
+        self.logger.info(f"Creating cuts for {self.name}...")
+        self.__create_cut_columns()
 
         # GENERATE CUTFLOW
         # ========================
-        self.cutflow = Cutflow(self.df, self.cutfile.cut_dicts,
+        self.cutflow = Cutflow(self.df,
+                               self.cutfile.cut_dicts,
+                               self.logger,
                                self.cutfile.cutgroups if self.cutfile.options['grouped cutflow'] else None,
                                self.cutfile.options['sequential'])
 
-        logger.info("=" * (42 + len(self.name)))
-        logger.info(f"========= DATASET '{self.name}' INITIALISED =========")
-        logger.info("=" * (42 + len(self.name)))
-        logger.info("")
+        self.logger.info("=" * (42 + len(self.name)))
+        self.logger.info(f"========= DATASET '{self.name}' INITIALISED =========")
+        self.logger.info("=" * (42 + len(self.name)))
+        self.logger.info("")
 
     # Builtins
     # ===================
@@ -239,19 +240,19 @@ class Dataset:
 
     def __setitem__(self, col, item):
         self.df[col] = item
-    
+
     def __getattr__(self, name):
-        try:
-            return self.df.__getattr__(name)
-        except AttributeError:
+        if name not in self.df.__dict__:
             raise AttributeError(f"No attribute {name} in DataFrame or Dataset {self.name}")
-    
+        else:
+            return self.df.__getattr__(name)
+
     def __repr__(self):
         return f'Dataset("{self.name}",TTree:"{self.TTree_name},Events:{len(self)})'
 
     def __str__(self):
         return f'{self.name},TTree:"{self.TTree_name}",Events:{len(self)}'
-    
+
     def __add__(self, other) -> pd.DataFrame:
         """Concatenate two dataframes"""
         return pd.concat([self.df, other.df], ignore_index=True, copy=False)
@@ -306,10 +307,10 @@ class Dataset:
 
     def kinematics_printout(self) -> None:
         """Prints some kinematic variables to terminal"""
-        logger.info("")
-        logger.info(f"========{self.name.upper()} KINEMATICS ===========")
-        logger.info(f"cross-section: {self.cross_section:.2f} fb")
-        logger.info(f"luminosity   : {self.luminosity:.2f} fb-1")
+        self.logger.info("")
+        self.logger.info(f"========{self.name.upper()} KINEMATICS ===========")
+        self.logger.info(f"cross-section: {self.cross_section:.2f} fb")
+        self.logger.info(f"luminosity   : {self.luminosity:.2f} fb-1")
 
     def print_cutflow_latex_table(self, check_backup: bool = True) -> None:
         """
@@ -321,7 +322,7 @@ class Dataset:
         if check_backup:
             last_backup = file_utils.get_last_backup(self.paths['latex_table_dir'])
             latex_file = self.cutflow.print_latex_table(self.paths['latex_table_dir'], self.name)
-            if file_utils.identical_to_backup(latex_file, backup_file=last_backup):
+            if file_utils.identical_to_backup(latex_file, backup_file=last_backup, logger=self.logger):
                 file_utils.delete_file(latex_file)
         else:
             self.cutflow.print_latex_table(self.paths['latex_table_dir'], self.name)
@@ -345,50 +346,50 @@ class Dataset:
         """
 
         t1 = time.time()
-        logger.debug(f"Extracting {self._tree_dict[self.TTree_name]} from {self.TTree_name} tree...")
+        self.logger.debug(f"Extracting {self._tree_dict[self.TTree_name]} from {self.TTree_name} tree...")
         df = to_pandas(uproot.concatenate(self.data_path + ':' + self.TTree_name, self._tree_dict[self.TTree_name],
                                           num_workers=config.n_threads, begin_chunk_size=chunksize))
-        logger.debug(f"Extracted {len(df)} events.")
+        self.logger.debug(f"Extracted {len(df)} events.")
 
-        logger.debug(f"Extracting ['total_EventsWeighted', 'dsid'] from 'sumWeights' tree...")
+        self.logger.debug(f"Extracting ['total_EventsWeighted', 'dsid'] from 'sumWeights' tree...")
         sumw = to_pandas(uproot.concatenate(self.data_path + ':sumWeights', ['totalEventsWeighted', 'dsid'],
                                             num_workers=config.n_threads, begin_chunk_size=chunksize))
 
-        logger.debug(f"Calculating sum of weights and merging...")
+        self.logger.debug(f"Calculating sum of weights and merging...")
         sumw = sumw.groupby('dsid').sum()
         df = pd.merge(df, sumw, left_on='mcChannelNumber', right_on='dsid', sort=False, copy=False)
 
         # merge TTrees
         if _validate_duplicated_events:
             validation = '1:1'
-            logger.info(f"Validating duplicated events in tree {self.TTree_name}...")
-            self._drop_duplicates(df)
+            self.logger.info(f"Validating duplicated events in tree {self.TTree_name}...")
+            self.__drop_duplicates()
         else:
             validation = 'm:m'
-            logger.info("Skipping duplicted events validation")
+            self.logger.info("Skipping duplicted events validation")
 
         for tree in self._tree_dict:
             if tree == self.TTree_name:
                 continue
-            logger.debug(f"Extracting {self._tree_dict[tree]} from {tree} tree...")
+            self.logger.debug(f"Extracting {self._tree_dict[tree]} from {tree} tree...")
             alt_df = to_pandas(uproot.concatenate(self.data_path + ":" + tree, self._tree_dict[tree],
                                                   num_workers=config.n_threads, begin_chunk_size=chunksize))
-            logger.debug(f"Extracted {len(alt_df)} events.")
+            self.logger.debug(f"Extracted {len(alt_df)} events.")
 
             if _validate_duplicated_events:
-                logger.info(f"Validating duplicated events in tree {tree}...")
+                self.logger.info(f"Validating duplicated events in tree {tree}...")
                 self._drop_duplicates(alt_df)
 
             if _validate_missing_events:
-                logger.info(f"Checking for missing events in tree '{tree}'..")
+                self.logger.info(f"Checking for missing events in tree '{tree}'..")
                 if n_missing := len(df[~df['eventNumber'].isin(alt_df['eventNumber'])]):
                     raise Exception(f"Found {n_missing} events in '{self.TTree_name}' tree not found in '{tree}' tree")
                 else:
-                    logger.debug(f"All events in {self.TTree_name} tree found in {tree} tree")
+                    self.logger.debug(f"All events in {self.TTree_name} tree found in {tree} tree")
             else:
-                logger.info(f"Skipping missing events check in tree {tree}")
+                self.logger.info(f"Skipping missing events check in tree {tree}")
 
-            logger.debug("Merging with rest of dataframe...")
+            self.logger.debug("Merging with rest of dataframe...")
             try:
                 df = pd.merge(df, alt_df, how='left', on=['eventNumber', 'mcChannelNumber'],
                               sort=False, copy=False, validate=validation)
@@ -416,23 +417,24 @@ class Dataset:
             # sanity check to make sure totalEventsWeighted really is what it says it is
             # also output DSID metadata
             dsids = df['DSID'].unique()
-            logger.info(f"Found {len(dsids)} unique dsid(s).")
+            self.logger.info(f"Found {len(dsids)} unique dsid(s).")
             df_id_sub = df[['weight_mc', 'DSID']].groupby('DSID', as_index=False).sum()
             for dsid in dsids:
                 df_id = df.loc[df['DSID'] == dsid]
                 unique_totalEventsWeighted = df_id['totalEventsWeighted'].unique()
                 if len(unique_totalEventsWeighted) != 1:
-                    logger.warning("totalEventsWeighted should only have one value per DSID. "
-                                   f"Got {len(unique_totalEventsWeighted)}, of values {unique_totalEventsWeighted} for DSID {dsid}")
+                    self.logger.warning("totalEventsWeighted should only have one value per DSID. "
+                                        f"Got {len(unique_totalEventsWeighted)}, of values {unique_totalEventsWeighted} "
+                                        f"for DSID {dsid}")
 
                 dsid_weight = df_id_sub.loc[df_id_sub['DSID'] == dsid]['weight_mc'].values[0]  # just take first value
                 totalEventsWeighted = df_id['totalEventsWeighted'].values[0]
                 if dsid_weight != totalEventsWeighted:
-                    logger.warning(
+                    self.logger.warning(
                         f"Value of 'totalEventsWeighted' ({totalEventsWeighted}) is not the same as the total summed values of "
                         f"'weight_mc' ({dsid_weight}) for DISD {dsid}. Ratio = {totalEventsWeighted / dsid_weight:.2g}")
         else:
-            logger.info("Skipping sum of weights validation")
+            self.logger.info("Skipping sum of weights validation")
 
         # calculate and combine special derived variables
         if self._vars_to_calc:
@@ -443,7 +445,7 @@ class Dataset:
                 temp_cols = derived_vars[var]['var_args']
                 func = derived_vars[var]['func']
                 str_args = derived_vars[var]['var_args']
-                logger.info(f"Computing '{var}' column from {temp_cols}...")
+                self.logger.info(f"Computing '{var}' column from {temp_cols}...")
                 df[var] = func(df, *str_args)
 
                 # # drop unnecessary columns extracted just for calculations
@@ -456,40 +458,33 @@ class Dataset:
 
         df['DSID'] = pd.Categorical(df['DSID'])
 
-        self.__rescale_to_gev(df)  # properly scale GeV columns
+        self.__rescale_to_gev()  # properly scale GeV columns
 
         if self.truth and self.reco:
             pd.testing.assert_series_equal(df['KFactor_weight_truth'], df['weight_KFactor'],
                                            check_exact=True, check_names=False, check_index=False), \
-                "reco and truth KFactors not equal"
+                                                "reco and truth KFactors not equal"
             df.drop(columns='KFactor_weight_truth')
-            logger.debug("Dropped extra KFactor column")
+            self.logger.debug("Dropped extra KFactor column")
 
-        logger.info(f"time to build dataframe: {time.strftime('%H:%M:%S', time.gmtime(time.time() - t1))}")
+        self.logger.info(f"time to build dataframe: {time.strftime('%H:%M:%S', time.gmtime(time.time() - t1))}")
 
         return df
 
-    @staticmethod
-    def _drop_duplicates(df: pd.DataFrame) -> None:
+    def __drop_duplicates(self) -> None:
         """
         Checks for and drops duplicated events and events with same event numbers for each dataset ID
-        :param df: dataset
-        :return:
         """
-        b_size = len(df.index)
-        df.drop_duplicates(inplace=True)
-        logger.info(f"{b_size - len(df.index)} duplicate events dropped")
-        b_size = len(df.index)
-        df.drop_duplicates(['eventNumber', 'mcChannelNumber'], inplace=True)
-        logger.info(f"{b_size - len(df.index)} duplicate event numbers dropped")
+        b_size = len(self.df.index)
+        self.df.drop_duplicates(inplace=True)
+        self.logger.info(f"{b_size - len(self.df.index)} duplicate events dropped")
+        b_size = len(self.df.index)
+        self.df.drop_duplicates(['eventNumber', 'mcChannelNumber'], inplace=True)
+        self.logger.info(f"{b_size - len(self.df.index)} duplicate event numbers dropped")
 
-    @staticmethod
-    def _create_cut_columns(df: pd.DataFrame, cut_dicts: List[dict]) -> None:
+    def __create_cut_columns(self) -> None:
         """
         Creates boolean columns in dataframe corresponding to each cut
-        :param df: input dataframe
-        :param cut_dicts: list of dictionaries for each cut to apply
-        :return: None, this function applies inplace.
         """
         cut_label = config.cut_label  # get cut label from config
 
@@ -504,27 +499,28 @@ class Dataset:
             '>=': op.ge,
         }
 
-        for cut in cut_dicts:
+        for cut in self.cutfile.cut_dicts:
             if cut['relation'] not in op_dict:
                 raise ValueError(f"Unexpected comparison operator: {cut['relation']}.")
             if not cut['is_symmetric']:
-                df[cut['name'] + cut_label] = op_dict[cut['relation']](df[cut['cut_var']], cut['cut_val'])
+                self.df[cut['name'] + cut_label] = op_dict[cut['relation']](self.df[cut['cut_var']], cut['cut_val'])
             else:  # take absolute value instead
-                df[cut['name'] + cut_label] = op_dict[cut['relation']](df[cut['cut_var']].abs(), cut['cut_val'])
+                self.df[cut['name'] + cut_label] = op_dict[cut['relation']](self.df[cut['cut_var']].abs(),
+                                                                            cut['cut_val'])
 
         # print cutflow output
-        name_len = max([len(cut['name']) for cut in cut_dicts])
-        var_len = max([len(cut['cut_var']) for cut in cut_dicts])
-        logger.info('')
-        logger.info("========== CUTS USED ============")
-        for cut in cut_dicts:
+        name_len = max([len(cut['name']) for cut in self.cutfile.cut_dicts])
+        var_len = max([len(cut['cut_var']) for cut in self.cutfile.cut_dicts])
+        self.logger.info('')
+        self.logger.info("========== CUTS USED ============")
+        for cut in self.cutfile.cut_dicts:
             if not cut['is_symmetric']:
-                logger.info(
+                self.logger.info(
                     f"{cut['name']:<{name_len}}: {cut['cut_var']:>{var_len}} {cut['relation']} {cut['cut_val']}")
             else:
-                logger.info(
+                self.logger.info(
                     f"{cut['name']:<{name_len}}: {'|' + cut['cut_var']:>{var_len}}| {cut['relation']} {cut['cut_val']}")
-        logger.info('')
+        self.logger.info('')
 
     def __event_weight_reco(self,
                             mc_weight: str = 'weight_mc',
@@ -578,15 +574,14 @@ class Dataset:
             self.lumi * self.df[mc_weight] * abs(self.df[mc_weight]) / self.df[tot_weighted_events] * \
             self.df[KFactor] * self.df[pileup_weight]
 
-    @staticmethod
-    def __rescale_to_gev(df: pd.DataFrame) -> None:
+    def __rescale_to_gev(self) -> None:
         """rescales to GeV because athena's default output is in MeV for some reason"""
-        if GeV_columns := [column for column in df.columns
+        if GeV_columns := [column for column in self.df.columns
                            if (column in labels_xs) and ('[GeV]' in labels_xs[column]['xlabel'])]:
-            df[GeV_columns] /= 1000
-            logger.debug(f"Rescaled columns {GeV_columns} to GeV.")
+            self.df[GeV_columns] /= 1000
+            self.logger.debug(f"Rescaled columns {GeV_columns} to GeV.")
         else:
-            logger.debug(f"No columns rescaled to GeV.")
+            self.logger.debug(f"No columns rescaled to GeV.")
 
     @staticmethod
     def _cut_on_cutgroup(df: pd.DataFrame,
@@ -623,7 +618,7 @@ class Dataset:
         :param kwargs: keyword arguments to pass to plotting function
         :return: Figure
         """
-        logger.debug(f"Generating histogram {title} for {x} in {self.name}...")
+        self.logger.debug(f"Generating histogram {title} for {x} in {self.name}...")
 
         fig, ax = plt.subplots()
         fig = plt_utils.plot_1d_hist(df=self.df, x=x, bins=bins, fig=fig, ax=ax, scaling=scaling, **kwargs)
@@ -635,7 +630,7 @@ class Dataset:
             out_png_file = self.paths['plot_dir'] + filename + '.png'
             hep.atlas.label(llabel="Internal", loc=0, ax=ax, rlabel=title)
             fig.savefig(out_png_file, bbox_inches='tight')
-            logger.info(f"Figure saved to {out_png_file}")
+            self.logger.info(f"Figure saved to {out_png_file}")
 
         return fig
 
@@ -655,7 +650,7 @@ class Dataset:
         :param kwargs: keyword arguments to pass to plot_1d_overlay_and_acceptance_cutgroups()
         """
         for var_to_plot in self.cutfile.vars_to_cut:
-            logger.info(f"Generating histogram with cuts for {var_to_plot} in {self.name}...")
+            self.logger.info(f"Generating histogram with cuts for {var_to_plot} in {self.name}...")
             self.plot_1d_overlay_and_acceptance_cutgroups(
                 var=var_to_plot,
                 lumi=self.luminosity,
@@ -682,7 +677,7 @@ class Dataset:
                 xbins = bins
             if not ybins:
                 ybins = bins
-            logger.info(f"Generating 2d histogram for {x_var}-{y_var} in {self.name}...")
+            self.logger.info(f"Generating 2d histogram for {x_var}-{y_var} in {self.name}...")
             self.plot_2d_cutgroups(x_var=x_var, y_var=y_var,
                                    xbins=xbins, ybins=ybins,
                                    plot_label=self.name,
@@ -727,7 +722,7 @@ class Dataset:
         # PLOT CUTS
         # ================
         for cutgroup in self.cutfile.cutgroups.keys():
-            logger.info(f"    - generating cutgroup '{cutgroup}'")
+            self.logger.info(f"    - generating cutgroup '{cutgroup}'")
             cut_df = Dataset._cut_on_cutgroup(self.df, self.cutfile.cutgroups, cutgroup)
             weight_cut = cut_df[self._weight_column]
             var_cut = cut_df[var]
@@ -767,11 +762,11 @@ class Dataset:
         if to_pkl:
             with open(self.paths['pkl_hist_dir'] + plot_label + '_' + var + '_1d_cutgroups_ratios.pkl', 'wb') as f:
                 pkl.dump(hists, f)
-                logger.info(f"Saved pickle file to {f.name}")
+                self.logger.info(f"Saved pickle file to {f.name}")
         hep.atlas.label(llabel="Internal", loc=0, ax=fig_ax, rlabel=plot_label)
         out_png_file = self.paths['plot_dir'] + f"{var}_{str(scaling)}.png"
         fig.savefig(out_png_file, bbox_inches='tight')
-        logger.info(f"Figure saved to {out_png_file}")
+        self.logger.info(f"Figure saved to {out_png_file}")
         fig.clf()  # clear for next plot
 
     def plot_2d_cutgroups(self,
@@ -820,11 +815,11 @@ class Dataset:
         ax.set_ylabel(ylabel)
 
         fig.savefig(out_path, bbox_inches='tight')
-        logger.info(f"printed 2d histogram to {out_path}")
+        self.logger.info(f"printed 2d histogram to {out_path}")
         plt.close(fig)
 
         for cutgroup in self.cutfile.cutgroups:
-            logger.info(f"    - generating cutgroup '{cutgroup}'")
+            self.logger.info(f"    - generating cutgroup '{cutgroup}'")
             fig, ax = plt.subplots(figsize=(7, 7))
 
             cut_df = Dataset._cut_on_cutgroup(self.df, self.cutfile.cutgroups, cutgroup)
@@ -852,13 +847,13 @@ class Dataset:
             ax.set_ylabel(ylabel)
 
             fig.savefig(out_path, bbox_inches='tight')
-            logger.info(f"printed 2d histogram to {out_path}")
+            self.logger.info(f"printed 2d histogram to {out_path}")
             plt.close(fig)
 
         if to_pkl:
             with open(self.paths['pkl_hist_dir'] + plot_label + f"_{x_var}-{y_var}_2d.pkl", 'wb') as f:
                 pkl.dump(hists, f)
-                logger.info(f"Saved pickle file to {f.name}")
+                self.logger.info(f"Saved pickle file to {f.name}")
 
     def plot_mass_slices(self,
                          var: str,
@@ -872,7 +867,7 @@ class Dataset:
                          title: str = '',
                          **kwargs
                          ) -> None:
-        logger.info(f'Plotting {var} in {self.name} as slices...')
+        self.logger.info(f'Plotting {var} in {self.name} as slices...')
         if not title:
             title = self.label
 
@@ -902,7 +897,7 @@ class Dataset:
         filename = self.paths['plot_dir'] + self.name + '_' + var + '_SLICES.png'
         plt.savefig(filename, bbox_inches='tight')
         plt.show()
-        logger.info(f'Saved mass slice plot of {var} in {self.name} to {filename}')
+        self.logger.info(f'Saved mass slice plot of {var} in {self.name} to {filename}')
         plt.clf()
 
     def gen_cutflow_hist(self,

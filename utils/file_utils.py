@@ -4,11 +4,10 @@ from filecmp import cmp
 from glob import glob
 from pathlib import Path
 from typing import Optional, Union, List
+from warnings import warn
 
 import src.config as config
 from utils import ROOT_utils
-
-logger = logging.getLogger('analysis')
 
 
 def get_last_backup(backup_dir: str, name: str = '') -> Optional[str]:
@@ -19,6 +18,7 @@ def get_last_backup(backup_dir: str, name: str = '') -> Optional[str]:
 
 
 def identical_to_backup(file: str,
+                        logger: logging.Logger,
                         backup_dir: Optional[str] = None,
                         backup_file: Optional[str] = None,
                         name: str = '',
@@ -31,7 +31,7 @@ def identical_to_backup(file: str,
     if backup_dir and backup_file:
         raise Exception("Input either directory or filepath")
     elif not backup_dir and not backup_file:
-        logging.warning("Backup directory is empty")
+        logger.warning("Backup directory is empty")
         return False
     elif backup_dir:
         backup_file = get_last_backup(backup_dir, name)
@@ -48,7 +48,7 @@ def delete_file(file: str) -> None:
     try:
         os.remove(file)
     except FileNotFoundError:
-        logger.warning(f"No file named {file}. No file deleted")
+        warn(f"No file named {file}. No file deleted")
 
 
 def get_filename(filepath: str, suffix: bool = False) -> str:
@@ -82,39 +82,7 @@ def file_exists(filepath: str) -> bool:
     return bool(glob(filepath))
 
 
-def clear_pkl(ds_name: Optional[Union[List[str], str]] = None, clear_all: bool = False) -> None:
-    """
-    Deletes given pkl dataset. If clear_all set as True, clears all pkl_datasets
-
-    :param clear_all: whether to clear all files in dataset pickle dir
-    :param ds_name: OPTIONAL. String or list of string name(s) of dataset(s) to remove
-    """
-    path = config.paths['pkl_df_filepath']
-
-    if not ds_name and not clear_all:
-        raise SyntaxError("Must pass dataset name or clear_all")
-
-    if is_dir_empty(path):
-        raise FileNotFoundError("Pickle directory empty")
-
-    if clear_all:
-        delete_file(path.format('*'))
-        return
-    elif isinstance(ds_name, list):
-        for name in ds_name:
-            if not isinstance(name, str):
-                raise TypeError("Dataset name must be a string")
-            if not file_exists(path.format(name)):
-                raise FileNotFoundError(f"{path.format(name)} does not exist.")
-            delete_file(path.format(name))
-    elif isinstance(ds_name, str):
-        if not file_exists(path.format(ds_name)):
-            raise FileNotFoundError(f"{path.format(ds_name)} does not exist.")
-        delete_file(path.format(ds_name))
-
-    raise ValueError(f"ds_name should supply string or list of string name(s) of dataset(s) to remove")
-
-
+# FIXME
 def convert_pkl_to_root(pkl_name: Optional[str] = None, conv_all: bool = False) -> None:
     """
     Converts histogram pickle file into a root file containing the same histograms.
@@ -126,7 +94,7 @@ def convert_pkl_to_root(pkl_name: Optional[str] = None, conv_all: bool = False) 
             raise FileNotFoundError(f"Could not find pickle file {pkl_name}")
         if get_file_parent(pkl_name) in (config.paths['pkl_hist_dir'], '.') \
                 and conv_all:
-            logger.warning("Given file is contained in pickle file directory. Will convert all.")
+            warn("Given file is contained in pickle file directory. Will convert all.")
         else:
             # do just that file in pkl_hist_dir
             for file in glob(pkl_name):

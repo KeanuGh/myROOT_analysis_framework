@@ -5,20 +5,20 @@ import time
 from distutils.util import strtobool
 from shutil import copyfile
 from typing import Tuple, List, OrderedDict, Dict, Set
+from warnings import warn
 
 import pandas as pd
 
 from utils.file_utils import identical_to_backup, get_last_backup, is_dir_empty, get_filename
 from utils.var_helpers import OtherVar
 
-logger = logging.getLogger('analysis')
-
 
 class Cutfile:
     """
     Handles importing cutfiles and extracting variables
     """
-    def __init__(self, file_path: str, backup_path: str):
+    def __init__(self, file_path: str, backup_path: str, logger: logging.Logger):
+        self.logger = logger
         self.name = get_filename(file_path)
         self._path = file_path
         self.backup_path = backup_path
@@ -43,7 +43,7 @@ class Cutfile:
             if len(v) == 0:
                 raise SyntaxError(f"Check cutfile. Blank value given in line {cutline}. Got {cutline_split}.")
             if v[0] == ' ' or v[-1] == ' ':
-                logger.warning(f"Found trailing space in option cutfile line {cutline}: Variable '{v}'.")
+                warn(f"Found trailing space in option cutfile line {cutline}: Variable '{v}'.")
 
         name = cutline_split[0]
         cut_var = cutline_split[1]
@@ -223,7 +223,7 @@ class Cutfile:
     def if_make_cutfile_backup(self) -> bool:
         """Decides if a backup cutfile should be made"""
         if get_last_backup(self.backup_path, self.name):
-            return not identical_to_backup(self._path, backup_dir=self.backup_path, name=self.name)
+            return not identical_to_backup(self._path, backup_dir=self.backup_path, name=self.name, logger=self.logger)
         else:
             return True
 
@@ -236,14 +236,14 @@ class Cutfile:
         """
         is_pkl_file = os.path.isfile(pkl_filepath)
         if is_pkl_file:
-            logger.debug(f"Previous datafile found in {pkl_filepath}.")
+            self.logger.debug(f"Previous datafile found in {pkl_filepath}.")
         else:
             return True
 
         # if cutfile backup exists, check for new variables
         if not is_dir_empty(self.backup_path):
             latest_backup = get_last_backup(self.backup_path, self.name)
-            logger.debug(f"Found backup cutfile in {latest_backup}")
+            self.logger.debug(f"Found backup cutfile in {latest_backup}")
 
             BACKUP_cutfile_dicts, BACKUP_cutfile_outputs, _ = self.parse_cutfile(latest_backup)
             current_variables = self.all_vars(self.cut_dicts, self.vars_to_cut)
@@ -251,34 +251,34 @@ class Cutfile:
 
             # check whether variables in current cutfile are in previous cutfile
             if not current_variables <= backup_variables:
-                logger.debug(f"New variables found; dataframe will be rebuilt")
-                logger.debug(f" Current cutfile variables: {current_variables}. Previous: {backup_variables}")
+                self.logger.debug(f"New variables found; dataframe will be rebuilt")
+                self.logger.debug(f" Current cutfile variables: {current_variables}. Previous: {backup_variables}")
                 return True
             else:
-                logger.debug(f"All needed variables already contained in previous cutfile")
-                logger.debug(f"previous cutfile variables: {backup_variables}")
-                logger.debug(f"current cutfile variables: {current_variables}")
+                self.logger.debug(f"All needed variables already contained in previous cutfile")
+                self.logger.debug(f"previous cutfile variables: {backup_variables}")
+                self.logger.debug(f"current cutfile variables: {current_variables}")
 
         # if backup doesn't exit, make backup and check if there is already a pickle file
         else:
             # if pickle file already exists
-            logger.debug(f"No cutfile backup found in {self.backup_path}")
+            self.logger.debug(f"No cutfile backup found in {self.backup_path}")
             if is_pkl_file:
                 old_df = pd.load_pickle(pkl_filepath)
                 old_cols = set(old_df.columns)
                 current_variables = self.all_vars(self.cut_dicts, {var[0] for var in self.vars_to_cut})
                 if current_variables <= old_cols:
-                    logger.debug("All variables found in old pickle file.")
+                    self.logger.debug("All variables found in old pickle file.")
                     return False
                 else:
-                    logger.info("New variables found in cutfile. Will rebuild dataframe")
+                    self.logger.info("New variables found in cutfile. Will rebuild dataframe")
                     new_vars = {v for v in current_variables if v not in old_cols}
-                    logger.debug(f"New cutfile variable(s): {new_vars}")
+                    self.logger.debug(f"New cutfile variable(s): {new_vars}")
                     return True
 
             # if no backup or pickle file, rebuild
             else:
-                logger.info("No pickle file found. Will rebuild dataframe.")
+                self.logger.info("No pickle file found. Will rebuild dataframe.")
                 return True
 
         return False
@@ -286,4 +286,4 @@ class Cutfile:
     def backup_cutfile(self, name: str) -> None:
         cutfile_backup_filepath = self.backup_path + self.name + '_' + name + '_' + time.strftime("%Y-%m-%d_%H-%M-%S") + ".txt"
         copyfile(self._path, cutfile_backup_filepath)
-        logger.info(f"Backup cutfile saved in {cutfile_backup_filepath}")
+        self.logger.info(f"Backup cutfile saved in {cutfile_backup_filepath}")

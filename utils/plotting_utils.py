@@ -1,4 +1,3 @@
-import logging
 import pickle as pkl
 from typing import Tuple, Optional, Union, Iterable, List
 from warnings import warn
@@ -13,8 +12,6 @@ from matplotlib.colors import LogNorm
 import src.config as config
 from utils.axis_labels import labels_xs
 from utils.phys_vars import get_luminosity
-
-logger = logging.getLogger('analysis')
 
 # set plot style
 plt.style.use([hep.style.ATLAS,
@@ -396,7 +393,7 @@ def ratio_plot_1d(
         hep.atlas.label(llabel="Internal", loc=0, ax=ax, rlabel=title)
         out_png_file = out_dir + f"{title}.png"
         fig.savefig(out_png_file, bbox_inches='tight')
-        logger.info(f"Figure saved to {out_png_file}")
+        print(f"Figure saved to {out_png_file}")
 
     return fig
 
@@ -454,7 +451,7 @@ def plot_mass_slices(df: pd.DataFrame,
     if to_pkl:
         with open(hist_path + plot_label + '_' + name + '.pkl', 'wb') as f:
             pkl.dump(hists, f)
-            logger.info(f"Saved pickle file to {f.name}")
+            print(f"Saved pickle file to {f.name}")
     path = plot_path + plot_label + '_' + name + '.png'
     fig.savefig(path, bbox_inches='tight')
-    logger.info(f"Figure saved to {path}")
+    print(f"Figure saved to {path}")

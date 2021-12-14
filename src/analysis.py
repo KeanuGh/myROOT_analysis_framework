@@ -24,7 +24,8 @@ class Analysis:
     TODO: apply method to ALL datasets if ds_name not provided?
     """
 
-    def __init__(self, data_dict: Dict[str, Dict[str]],
+    def __init__(self,
+                 data_dict: Dict[str, Dict],
                  analysis_label: str,
                  global_lumi: Optional[float] = None,
                  phibins: Optional[Union[tuple, list]] = None,
@@ -49,6 +50,9 @@ class Analysis:
         :param separate_loggers: whether each dataset should output logs to separate log files
         :param kwargs: keyword arguments to pass to all datasets
         """
+        self.name = analysis_label
+        if self.name in data_dict:
+            raise SyntaxError("Analysis must have different name to any dataset")
 
         # SET OUTPUT DIRECTORIES
         # ===========================
@@ -69,21 +73,7 @@ class Analysis:
 
         # LOGGING
         # ============================
-        if log_out not in ('file', 'both', 'console', None):
-            raise ValueError("Accaptable values for 'log_out' parameter: 'file', 'both', 'console', None.")
-        self.logger = logging.getLogger('analysis')
-        self.logger.setLevel(log_level)
-        if log_out.lower() in ('file', 'both'):
-            filehandler = logging.FileHandler(f"{self.paths['log_dir']}/{analysis_label}_"
-                                              f"{time.strftime('%Y-%m-%d_%H-%M-%S') if timedatelog else None}.log")
-            filehandler.setFormatter(logging.Formatter('%(asctime)s %(levelname)-10s %(message)s'))
-            self.logger.addHandler(filehandler)
-        if log_out.lower() in ('console', 'both'):
-            self.logger.addHandler(logging.StreamHandler(sys.stdout))
-        logging.captureWarnings(True)
-
-        self.logger.info(f"INITIALISING ANALYSIS '{analysis_label}'...")
-        self.logger.info("=" * (len(analysis_label) + 27))
+        self.logger = self.__get_logger(self.name, log_level, log_out, timedatelog)
 
         # SET OTHER GLOBAL OPTIONS
         # ============================
@@ -110,8 +100,17 @@ class Analysis:
             if dup_args := set(args) & set(kwargs):
                 raise SyntaxError(f"Got multiple values for argument(s) {dup_args} for dataset {name}")
 
-        self.datasets: Dict[str, Dataset] = {name: Dataset(name, paths=self.paths, **kwargs, **data_kwargs)
-                                             for name, data_kwargs in data_dict.items()}
+        self.datasets: Dict[str, Dataset] = {
+            name: Dataset(
+                name,
+                paths=self.paths,
+                logger=self.__get_logger(name, log_level, log_out, timedatelog) if separate_loggers else self.logger,
+                **kwargs,
+                **data_kwargs,
+            )
+            for name, data_kwargs in data_dict.items()
+        }
+        self.logger.info(f"Initialised datasets: {self.datasets}")
 
         self.logger.info("=" * (len(analysis_label) + 23))
         self.logger.info(f"ANALYSIS '{analysis_label}' INITIALISED")
@@ -128,12 +127,6 @@ class Analysis:
             raise ValueError(f"Analysis dataset must be of type {Dataset}")
         self.datasets[ds_name] = dataset
 
-    def __getattr__(self, name):
-        if name in self.datasets:
-            return self.datasets[name]
-        else:
-            raise AttributeError(f"No attrbute or dataset {name} found in analysis {self.name}")
-
     def __len__(self):
         return len(self.datasets)
 
@@ -148,6 +141,30 @@ class Analysis:
 
     def __iadd__(self, other):
         self.datasets |= other.datasets
+
+    # ===============================
+    # ======== HANDLE LOGGING =======
+    # ===============================
+    def __get_logger(self,
+                     name: str,
+                     log_level: int,
+                     log_out: str,
+                     timedatelog: bool,
+                     ) -> logging.Logger:
+        """Generate logger object"""
+        if log_out not in ('file', 'both', 'console', None):
+            raise ValueError("Accaptable values for 'log_out' parameter: 'file', 'both', 'console', None.")
+        logger = logging.getLogger(name)
+        logger.setLevel(log_level)
+        if log_out.lower() in ('file', 'both'):
+            filehandler = logging.FileHandler(f"{self.paths['log_dir']}/{name}_"
+                                              f"{time.strftime('%Y-%m-%d_%H-%M-%S') if timedatelog else None}.log")
+            filehandler.setFormatter(logging.Formatter('%(asctime)s %(levelname)-10s %(message)s'))
+            logger.addHandler(filehandler)
+        if log_out.lower() in ('console', 'both'):
+            logger.addHandler(logging.StreamHandler(sys.stdout))
+
+        return logger
 
     # ===============================
     # ====== DATASET FUNCTIONS ======
@@ -185,7 +202,7 @@ class Analysis:
     @decorators.check_single_datafile
     def __delete_dataset(self, ds_name: str) -> None:
         self.logger.info(f"Deleting dataset {ds_name} from analysis {self.name}")
-        del self.datsets[ds_name]
+        del self.datasets[ds_name]
 
     @decorators.check_single_datafile
     def __delete_pickled_dataset(self, ds_name: str) -> None:
@@ -301,7 +318,7 @@ class Analysis:
     def kinematics_printouts(self) -> None:
         """Prints some kinematic variables to terminal"""
         self.logger = logging.getLogger('analysis')
-        self.ogger.info(f"========== KINEMATICS ===========")
+        self.logger.info(f"========== KINEMATICS ===========")
         for name in self.datasets:
             self.logger.info(name + ":")
             self.logger.info("---------------------------------")
@@ -320,7 +337,7 @@ class Analysis:
         if check_backup:
             last_backup = file_utils.get_last_backup(self.paths['latex_table_dir'])
             latex_file = self.datasets[ds_name].cutflow.print_latex_table(self.paths['latex_table_dir'], ds_name)
-            if file_utils.identical_to_backup(latex_file, backup_file=last_backup):
+            if file_utils.identical_to_backup(latex_file, backup_file=last_backup, logger=self.logger):
                 file_utils.delete_file(latex_file)
         else:
             self.datasets[ds_name].cutflow.print_latex_table(self.paths['latex_table_dir'], ds_name)

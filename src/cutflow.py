@@ -8,12 +8,11 @@ import pandas as pd
 
 import src.config as config
 
-logger = logging.getLogger('analysis')
-
 
 class Cutflow:
     def __init__(self, df: pd.DataFrame,
                  cut_dicts: List[Dict],
+                 logger: logging.Logger,
                  cutgroups: Optional[OrderedDict[str, List[str]]] = None,
                  sequential: bool = True):
         """
@@ -21,11 +20,14 @@ class Cutflow:
 
         :param df: Input analysis dataframe with boolean cut rows.
         :param cut_dicts: Dictionary of cufts made.
+        :param logger: logger to output to
         :param cutgroups: Optional ordered dictionary of cut groups. If suppled, will organise cutflow in terms of
                           cutgroups rather than individual cuts.
-        :param sequential: Whether or not to organise cutflow as each cut happening one after the other
+        :param sequential: Whether to organise cutflow as each cut happening one after the other
                            or each cut separately. Default True. If false, plots each cut separately.
         """
+        self.logger = logger
+
         # When sequential cuts, apply each cut one after each other in the order they were input into the cutfile
         self._is_sequential = sequential
 
@@ -68,7 +70,8 @@ class Cutflow:
                     self.cutflow_n_events.append(n_events_left)
                     self.cutflow_ratio.append(n_events_left / prev_n)
                     self.cutflow_cum.append(n_events_left / self._n_events_tot)
-                    self.cutflow_a_ratio.append(len(df[df[[cut + config.cut_label for cut in group]].all(1)].index) / self._n_events_tot)
+                    self.cutflow_a_ratio.append(
+                        len(df[df[[cut + config.cut_label for cut in group]].all(1)].index) / self._n_events_tot)
                     prev_n = n_events_left
             else:
                 # loop over individual cuts
@@ -139,7 +142,7 @@ class Cutflow:
                     'ylabel': 'Events',
                 },
             }
-        
+
         if logger.level == logging.DEBUG:
             self.printout()
 
@@ -153,15 +156,15 @@ class Cutflow:
 
         if self._is_sequential:
             # cutflow printout
-            logger.info('')
-            logger.info(f"=========== CUTFLOW =============")
-            logger.info("Option: Sequential")
-            logger.info("---------------------------------")
-            logger.info("Cut " + " " * (max_name_len - 3) +
-                        "Events " + " " * (max_n_len - 6) +
-                        "Ratio A. Ratio Cum. Ratio")
+            self.logger.info('')
+            self.logger.info(f"=========== CUTFLOW =============")
+            self.logger.info("Option: Sequential")
+            self.logger.info("---------------------------------")
+            self.logger.info("Cut " + " " * (max_name_len - 3) +
+                             "Events " + " " * (max_n_len - 6) +
+                             "Ratio A. Ratio Cum. Ratio")
             # first line is inclusive sample
-            logger.info("Inclusive " + " " * (max_name_len - 9) + f"{self._n_events_tot} -     -        -")
+            self.logger.info("Inclusive " + " " * (max_name_len - 9) + f"{self._n_events_tot} -     -        -")
 
             # print line
             for i, cutname in enumerate(self.cutflow_labels[1:]):
@@ -169,30 +172,30 @@ class Cutflow:
                 ratio = self.cutflow_ratio[i + 1]
                 cum_ratio = self.cutflow_cum[i + 1]
                 a_ratio = self.cutflow_a_ratio[i + 1]
-                logger.info(f"{cutname:<{max_name_len}} "
+                self.logger.info(f"{cutname:<{max_name_len}} "
                             f"{n_events:<{max_n_len}} "
                             f"{ratio:.3f} "
                             f"{a_ratio:.3f}    "
                             f"{cum_ratio:.3f}")
         else:
             # cutflow printout
-            logger.info(f"=========== CUTFLOW =============")
-            logger.info("Option: Non-sequential")
-            logger.info("---------------------------------")
-            logger.info("Cut " + " " * (max_name_len - 3) +
+            self.logger.info(f"=========== CUTFLOW =============")
+            self.logger.info("Option: Non-sequential")
+            self.logger.info("---------------------------------")
+            self.logger.info("Cut " + " " * (max_name_len - 3) +
                         "Events " + " " * (max_n_len - 6) +
                         "Ratio")
             # first line is inclusive sample
-            logger.info("Inclusive " + " " * (max_name_len - 9) + f"{self._n_events_tot}   -")
+            self.logger.info("Inclusive " + " " * (max_name_len - 9) + f"{self._n_events_tot}   -")
 
             # print line
             for i, cutname in enumerate(self.cutflow_labels[1:]):
                 n_events = self.cutflow_n_events[i + 1]
                 ratio = self.cutflow_ratio[i + 1]
-                logger.info(f"{cutname:<{max_name_len}} "
+                self.logger.info(f"{cutname:<{max_name_len}} "
                             f"{n_events:<{max_n_len}} "
                             f"{ratio:.3f}    ")
-        logger.info('')
+        self.logger.info('')
 
     def print_histogram(self, out_path: str, kind: str, plot_label: str = '', **kwargs) -> None:
         """
@@ -226,7 +229,7 @@ class Cutflow:
 
         filepath = self._cuthist_options[kind]['filepath'].format(out_path)
         fig.savefig(filepath)
-        logger.info(f"Cutflow histogram saved to {filepath}")
+        self.logger.info(f"Cutflow histogram saved to {filepath}")
 
     def print_latex_table(self, filepath: str, filename_prefix: str = '') -> str:
         """
@@ -242,19 +245,19 @@ class Cutflow:
                 f.write(f"Cut & Events & Ratio & Cumulative \\\\\\hline\n"
                         f"Inclusive & {self._n_events_tot} & — & — \\\\\n")
                 for i, cutname in enumerate(self.cutflow_labels[1:]):
-                    n_events = self.cutflow_n_events[i+1]
-                    ratio = self.cutflow_ratio[i+1]
-                    cum_ratio = self.cutflow_cum[i+1]
+                    n_events = self.cutflow_n_events[i + 1]
+                    ratio = self.cutflow_ratio[i + 1]
+                    cum_ratio = self.cutflow_cum[i + 1]
                     f.write(f"{cutname} & {n_events} & {ratio:.3f} & {cum_ratio:.3f} \\\\\n")
             else:
                 f.write(f"Cut & Events & Ratio\\\\\\hline\n"
                         f"Inclusive & {self._n_events_tot} & — \\\\\n")
                 for i, cutname in enumerate(self.cutflow_labels[1:]):
-                    n_events = self.cutflow_n_events[i+1]
-                    ratio = self.cutflow_ratio[i+1]
+                    n_events = self.cutflow_n_events[i + 1]
+                    ratio = self.cutflow_ratio[i + 1]
                     f.write(f"{cutname} & {n_events} & {ratio:.3f} \\\\\n")
             f.write("\\hline\n"
                     "\\end{tabular}\n")
 
-        logger.info(f"Saved LaTeX cutflow table in {latex_filepath}")
+        self.logger.info(f"Saved LaTeX cutflow table in {latex_filepath}")
         return latex_filepath
