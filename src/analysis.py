@@ -179,14 +179,15 @@ class Analysis:
                        *names: str,
                        delete: bool = True,
                        to_pkl: bool = False,
-                       verify: bool = False,
+                       verify: bool = True,
                        delete_pkl: bool = False) -> None:
         """
         Merge datasets by concatenating one or more into the other
-        
+
         :param names: strings of datasets to merge. First dataset will be merged into.
         :param delete: whether to delete datasets internally
         :param to_pkl: whether to print new dataset to a pickle file (will replace original pickle file)
+        :param verify: whether to check for duplicated events
         :param delete_pkl: whether to delete pickle files of merged datasets (not the one that is merged into)
         """
         for n in names:
@@ -194,7 +195,7 @@ class Analysis:
                 raise ValueError(f"No dataset named {n} found in analysis {self.name}")
 
         self.logger.info(f"Merging dataset(s) {names[1:]} into dataset {names[0]}...")
-        
+
         self.datasets[names[0]].df = pd.concat([self.datasets[n].df for n in names],
                                                ignore_index=True, verify_integrity=verify)
 
@@ -242,7 +243,7 @@ class Analysis:
                           ) -> None:
         """Plot overlaid variables in separate datasets"""
         self.logger.info(f'Plotting {var} in as overlay in {datasets}...')
-        
+
         if labels:
             assert len(labels) == len(datasets), \
                 f"Labels iterable (length: {len(labels)}) must be of same length as number of datasets ({len(datasets)})"
@@ -261,13 +262,13 @@ class Analysis:
             )
             hist = Histogram1D(bins, values, weights, logbins)
             hist.plot(
-                ax=ax, 
-                yerr=yerr, 
-                normalise=normalise, w2=w2, 
-                label= labels[i] if labels else self.datasets[dataset].label,
+                ax=ax,
+                yerr=yerr,
+                normalise=normalise, w2=w2,
+                label=labels[i] if labels else self.datasets[dataset].label,
                 **kwargs
             )
- 
+
         _xlabel, _ylabel = plotting_utils.get_axis_labels(var, lepton)
 
         ax.set_xlabel(xlabel if xlabel else _xlabel)

@@ -63,8 +63,8 @@ if __name__ == '__main__':
         log_out='both',
         timedatelog=False,
         year='2015+2016',
-        force_rebuild = False,
-        TTree_name = 'nominal_Loose'
+        force_rebuild=False,
+        TTree_name='nominal_Loose'
     )
     
     analysis.merge_datasets("wminmunu",   "wminmunu_hm", verify=True)

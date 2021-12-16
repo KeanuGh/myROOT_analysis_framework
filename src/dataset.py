@@ -457,7 +457,7 @@ class Dataset:
         if self.truth and self.reco:
             pd.testing.assert_series_equal(df['KFactor_weight_truth'], df['weight_KFactor'],
                                            check_exact=True, check_names=False, check_index=False), \
-                                                "reco and truth KFactors not equal"
+                                               "reco and truth KFactors not equal"
             df.drop(columns='KFactor_weight_truth')
             self.logger.debug("Dropped extra KFactor column")
 
@@ -585,7 +585,7 @@ class Dataset:
         cut_cols = [cut_name + config.cut_label for cut_name in cutgroups[group]]
         cut_data = df.loc[df[cut_cols].all(1)]
         return cut_data
-    
+
     def apply_cuts(self) -> pd.DataFrame:
         """Returns dataframe with all cuts applied"""
         cut_cols = [str(col) for col in self.df.columns if config.cut_label in col]
