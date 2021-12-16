@@ -179,6 +179,7 @@ class Analysis:
                        *names: str,
                        delete: bool = True,
                        to_pkl: bool = False,
+                       verify: bool = False,
                        delete_pkl: bool = False) -> None:
         """
         Merge datasets by concatenating one or more into the other
@@ -193,7 +194,8 @@ class Analysis:
                 raise ValueError(f"No dataset named {n} found in analysis {self.name}")
 
         self.logger.info(f"Merging dataset(s) {names[1:]} into dataset{names[0]}...")
-        self.datasets[names[0]].df.append([self.datasets[n].df for n in names[1:]], ignore_index=True)
+        self.datasets[names[0]].df.append([self.datasets[n].df for n in names[1:]], 
+                                          ignore_index=True, verify_integrity=verify)
 
         for n in names[1:]:
             if delete:
@@ -245,11 +247,21 @@ class Analysis:
 
         fig, ax = plt.subplots()
         for i, dataset in enumerate(datasets):
-            hist = Histogram1D(bins,
-                               self.datasets[dataset][var],
-                               self.datasets[dataset][weight] if weight else None,
-                               logbins)
-            hist.plot(ax=ax, yerr=yerr, normalise=normalise, w2=w2, label=labels[i], **kwargs)
+            hist = Histogram1D(
+                bins,
+                self.datasets[dataset][var],
+                self.datasets[dataset][weight] if weight else None,
+                logbins
+            )
+            hist.plot(
+                ax=ax, 
+                yerr=yerr, 
+                normalise=normalise, w2=w2, 
+                label=labels[i] 
+                     if labels
+                     else self.datasets[dataset].label,
+                **kwargs
+            )
 
         _xlabel, _ylabel = plotting_utils.get_axis_labels(var, lepton)
 
@@ -264,7 +276,6 @@ class Analysis:
 
         filename = self.paths['plot_dir'] + '_'.join(datasets) + '_' + var + '_' + 'NORMED' if normalise else '' + '_overlay.png'
         fig.savefig(filename, bbox_inches='tight')
-        plt.show()
         self.logger.info(f'Saved overlay plot of {var} to {filename}')
 
     @decorators.check_single_datafile

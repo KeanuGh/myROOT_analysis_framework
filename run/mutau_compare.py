@@ -80,19 +80,19 @@ if __name__ == '__main__':
         }
     }
     
-    analysis = Analysis(datasets, 'mutau_compare', log_level=10, log_out='both')
+    analysis = Analysis(datasets, 'mutau_compare', log_level=10, log_out='both', timedatelog=False)
     
-    analysis.merge("wminmunu",   "wminmunu_hm")
-    analysis.merge("wmintaunu",  "wmintaunu_hm")
-    analysis.merge("wplusmunu",  "wplusmunu_hm")
-    analysis.merge("wplustaunu", "wplustaunu_hm")
+    analysis.merge_datasets("wminmunu",   "wminmunu_hm", verify=True)
+    analysis.merge_datasets("wmintaunu",  "wmintaunu_hm", verify=True)
+    analysis.merge_datasets("wplusmunu",  "wplusmunu_hm", verify=True)
+    analysis.merge_datasets("wplustaunu", "wplustaunu_hm", verify=True)
     
-    analysis.plot_hist_overlay(['wminmunu', 'wmintaunu'],   'met_met', bins=(30, 0, 5000), lepton='muon', normalise=True)
-    analysis.plot_hist_overlay(['wplusmunu', 'wplustaunu'], 'met_met', bins=(30, 0, 5000), lepton='muon', normalise=True)
-    analysis.plot_hist_overlay(['wminmunu', 'wmintaunu'],   'mu_pt', bins=(30, 0, 5000), lepton='muon', normalise=True)
-    analysis.plot_hist_overlay(['wplusmunu', 'wplustaunu'], 'mu_pt', bins=(30, 0, 5000), lepton='muon', normalise=True)
-    analysis.plot_hist_overlay(['wminmunu', 'wmintaunu'],   'mu_d0sig', bins=(30, -3.5, 3.5), logy=True, lepton='muon', normalise=True)
-    analysis.plot_hist_overlay(['wplusmunu', 'wplustaunu'], 'mu_d0sig', bins=(30, -3.5, 3.5), logy=True, lepton='muon', normalise=True)
-    analysis.plot_hist_overlay(['wminmunu', 'wmintaunu'],   'mu_delta_z0_sintheta', bins=(30, -1, 1), lepton='muon', normalise=True)
-    analysis.plot_hist_overlay(['wplusmunu', 'wplustaunu'], 'mu_delta_z0_sintheta', bins=(30, -1, 1), lepton='muon', normalise=True)
+    analysis.plot_hist_overlay(['wminmunu', 'wmintaunu'],   'met_met', bins=(30, 1, 1000), logbins=True, lepton='muon', normalise=True, yerr=True, scale_by_bin_width=True)
+    analysis.plot_hist_overlay(['wplusmunu', 'wplustaunu'], 'met_met', bins=(30, 1, 1000), logbins=True, lepton='muon', normalise=True, yerr=True, scale_by_bin_width=True)
+    analysis.plot_hist_overlay(['wminmunu', 'wmintaunu'],   'mu_pt', bins=(30, 1, 1000), logbins=True, lepton='muon', normalise=True, yerr=True, scale_by_bin_width=True)
+    analysis.plot_hist_overlay(['wplusmunu', 'wplustaunu'], 'mu_pt', bins=(30, 1, 1000), logbins=True, lepton='muon', normalise=True, yerr=True, scale_by_bin_width=True)
+    analysis.plot_hist_overlay(['wminmunu', 'wmintaunu'],   'mu_d0sig', bins=(30, -3.5, 3.5), logy=True, lepton='muon', normalise=True, yerr=True)
+    analysis.plot_hist_overlay(['wplusmunu', 'wplustaunu'], 'mu_d0sig', bins=(30, -3.5, 3.5), logy=True, lepton='muon', normalise=True, yerr=True)
+    analysis.plot_hist_overlay(['wminmunu', 'wmintaunu'],   'mu_delta_z0_sintheta', bins=(30, -1, 1), lepton='muon', normalise=True, yerr=True)
+    analysis.plot_hist_overlay(['wplusmunu', 'wplustaunu'], 'mu_delta_z0_sintheta', bins=(30, -1, 1), lepton='muon', normalise=True, yerr=True)
 

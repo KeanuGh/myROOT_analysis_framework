@@ -137,8 +137,8 @@ class Histogram1D(bh.Histogram):
         :param kwargs: keyword arguments to pass to mplhep.histplot()
         :return: None
         """
-        hist = self.copy()
-
+        hist = self
+        
         if scale_by_bin_width:
             hist /= hist.axes[0].widths
 
