@@ -249,7 +249,7 @@ class Analysis:
                                self.datasets[dataset][var],
                                self.datasets[dataset][weight] if weight else None,
                                logbins)
-            hist.plot(ax=ax, yerr=yerr, density=normalise, w2=w2, label=labels[i], **kwargs)
+            hist.plot(ax=ax, yerr=yerr, normalise=normalise, w2=w2, label=labels[i], **kwargs)
 
         _xlabel, _ylabel = plotting_utils.get_axis_labels(var, lepton)
 
