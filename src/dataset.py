@@ -4,7 +4,7 @@ import pickle as pkl
 import time
 from dataclasses import dataclass, field
 from itertools import combinations
-from typing import Optional, Type, Union, List, OrderedDict, Tuple, Dict, Iterable
+from typing import Optional, Union, List, OrderedDict, Tuple, Dict, Iterable
 from warnings import warn
 
 import boost_histogram as bh
@@ -596,7 +596,7 @@ class Dataset:
         """Returns dataframe with all cuts applied"""
         if not labels:
             # Do not apply cuts
-            self.df
+            return self.df
         
         elif isinstance(labels, list):
             labels = [label + config.cut_label for label in labels]
@@ -609,8 +609,8 @@ class Dataset:
             
         elif isinstance(labels, str):
             cut_cols = [labels + config.cut_label]
-            
-        elif labels == True:
+
+        elif isinstance(labels, bool) and labels:
             cut_cols = [str(col) for col in self.df.columns if config.cut_label in col]
             
         else:

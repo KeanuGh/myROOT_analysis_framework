@@ -4,13 +4,11 @@ import sys
 import time
 from typing import Optional, Union, Dict, List, Tuple
 
-# import boost_histogram as bh
 import matplotlib.pyplot as plt
 import mplhep as hep
 import pandas as pd
 from numpy.typing import ArrayLike
 
-# project imports
 import src.config as config
 from src.dataset import Dataset
 from src.histogram import Histogram1D
