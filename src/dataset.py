@@ -118,7 +118,6 @@ class Dataset:
             self._tree_dict[self.TTree_name] |= self._tree_dict.pop('na', set())
         else:
             self._tree_dict[self.TTree_name] = self._tree_dict.pop('na', set())
-        self._tree_dict[self.TTree_name] -= self._vars_to_calc
 
         # only add these to 'main tree' to avoid merge issues
         self._tree_dict[self.TTree_name] |= {'weight_mc', 'weight_pileup'}
@@ -128,6 +127,7 @@ class Dataset:
         for tree in self._tree_dict:
             # add necessary metadata to all trees
             self._tree_dict[tree] |= {'mcChannelNumber', 'eventNumber'}
+            self._tree_dict[tree] -= self._vars_to_calc
             if self.reco or 'nominal' in tree.lower():
                 self.logger.info(f"Detected {tree} as reco tree, will pull 'weight_leptonSF' and 'weight_KFactor'")
                 self._tree_dict[tree] |= {'weight_leptonSF', 'weight_KFactor'}
