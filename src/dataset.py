@@ -241,12 +241,6 @@ class Dataset:
     def __setitem__(self, col, item):
         self.df[col] = item
 
-    def __getattr__(self, name):
-        if name not in self.df.__dict__:
-            raise AttributeError(f"No attribute {name} in DataFrame or Dataset {self.name}")
-        else:
-            return self.df.__getattr__(name)
-
     def __repr__(self):
         return f'Dataset("{self.name}",TTree:"{self.TTree_name},Events:{len(self)})'
 
@@ -363,7 +357,7 @@ class Dataset:
         if _validate_duplicated_events:
             validation = '1:1'
             self.logger.info(f"Validating duplicated events in tree {self.TTree_name}...")
-            self.__drop_duplicates()
+            self.__drop_duplicates(df)
         else:
             validation = 'm:m'
             self.logger.info("Skipping duplicted events validation")
@@ -378,7 +372,7 @@ class Dataset:
 
             if _validate_duplicated_events:
                 self.logger.info(f"Validating duplicated events in tree {tree}...")
-                self._drop_duplicates(alt_df)
+                self.__drop_duplicates(alt_df)
 
             if _validate_missing_events:
                 self.logger.info(f"Checking for missing events in tree '{tree}'..")
@@ -471,22 +465,22 @@ class Dataset:
 
         return df
 
-    def __drop_duplicates(self) -> None:
+    def __drop_duplicates(self, df: pd.DataFrame) -> None:
         """
         Checks for and drops duplicated events and events with same event numbers for each dataset ID
         """
-        b_size = len(self.df.index)
-        self.df.drop_duplicates(inplace=True)
-        self.logger.info(f"{b_size - len(self.df.index)} duplicate events dropped")
-        b_size = len(self.df.index)
-        self.df.drop_duplicates(['eventNumber', 'mcChannelNumber'], inplace=True)
-        self.logger.info(f"{b_size - len(self.df.index)} duplicate event numbers dropped")
+        b_size = len(df.index)
+        df.drop_duplicates(inplace=True)
+        self.logger.info(f"{b_size - len(df.index)} duplicate events dropped")
+        b_size = len(df.index)
+        df.drop_duplicates(['eventNumber', 'mcChannelNumber'], inplace=True)
+        self.logger.info(f"{b_size - len(df.index)} duplicate event numbers dropped")
 
     def __create_cut_columns(self) -> None:
         """
         Creates boolean columns in dataframe corresponding to each cut
         """
-        cut_label = config.cut_label  # get cut label from config
+        label = config.cut_label  # get cut label from config
 
         # use functions of compariton operators in dictionary to make life easier
         # (but maybe a bit harder to read)
@@ -503,10 +497,9 @@ class Dataset:
             if cut['relation'] not in op_dict:
                 raise ValueError(f"Unexpected comparison operator: {cut['relation']}.")
             if not cut['is_symmetric']:
-                self.df[cut['name'] + cut_label] = op_dict[cut['relation']](self.df[cut['cut_var']], cut['cut_val'])
+                self.df[cut['name'] + label] = op_dict[cut['relation']](self.df[cut['cut_var']], cut['cut_val'])
             else:  # take absolute value instead
-                self.df[cut['name'] + cut_label] = op_dict[cut['relation']](self.df[cut['cut_var']].abs(),
-                                                                            cut['cut_val'])
+                self.df[cut['name'] + label] = op_dict[cut['relation']](self.df[cut['cut_var']].abs(), cut['cut_val'])
 
         # print cutflow output
         name_len = max([len(cut['name']) for cut in self.cutfile.cut_dicts])

@@ -4,14 +4,16 @@ import sys
 import time
 from typing import Optional, Union, Dict, List, Tuple
 
-import boost_histogram as bh
+# import boost_histogram as bh
 import matplotlib.pyplot as plt
 import mplhep as hep
 import pandas as pd
+from numpy.typing import ArrayLike
 
 # project imports
 import src.config as config
 from src.dataset import Dataset
+from src.histogram import Histogram1D
 from utils import file_utils, decorators, plotting_utils
 
 
@@ -104,7 +106,11 @@ class Analysis:
             name: Dataset(
                 name,
                 paths=self.paths,
-                logger=self.__get_logger(name, log_level, log_out, timedatelog) if separate_loggers else self.logger,
+                logger=(
+                    self.logger
+                    if not separate_loggers
+                    else self.__get_logger(name, log_level, log_out, timedatelog)
+                ),
                 **kwargs,
                 **data_kwargs,
             )
@@ -134,10 +140,10 @@ class Analysis:
         yield from self.datasets.values()
 
     def __repr__(self):
-        return f'Analysis("{self.name}",Datasets:{{{", ".join([f"{name}: {len(d)}, {list(d.columns)}" for name, d in self.datasets.items()])}}}'
+        return f'Analysis("{self.name}",Datasets:{{{", ".join([f"{name}: {len(d)}, {list(d.df.columns)}" for name, d in self.datasets.items()])}}}'
 
     def __str__(self):
-        return f'"{self.name}",Datasets:{{{", ".join([f"{name}: {len(d)}, {list(d.columns)}" for name, d in self.datasets.items()])}}}'
+        return f'"{self.name}",Datasets:{{{", ".join([f"{name}: {len(d)}, {list(d.df.columns)}" for name, d in self.datasets.items()])}}}'
 
     def __iadd__(self, other):
         self.datasets |= other.datasets
@@ -218,6 +224,9 @@ class Analysis:
                           bins: Union[List[float], Tuple[int, float, float]],
                           labels: List[str] = None,
                           weight: str = '',
+                          yerr: Union[ArrayLike, bool] = None,
+                          w2: bool = False,
+                          normalise: bool = False,
                           logbins: bool = False,
                           logx: bool = False,
                           logy: bool = True,
@@ -230,32 +239,33 @@ class Analysis:
         """Plot overlaid variables in separate datasets"""
         self.logger.info(f'Plotting {var} in as overlay in {datasets}...')
 
-        bh_axis = plotting_utils.get_axis(bins, logbins)
-
         if labels:
             assert len(labels) == len(datasets), \
                 f"Labels iterable (length: {len(labels)}) must be of same length as number of datasets ({len(datasets)})"
 
+        fig, ax = plt.subplots()
         for i, dataset in enumerate(datasets):
-            hist = bh.Histogram(bh_axis, storage=bh.storage.Weight())
-            hist.fill(self.datasets[dataset][var], weight=self.datasets[dataset][weight] if weight else None)
-            hep.histplot(hist, label=labels[i] if labels else self.datasets[dataset].label, **kwargs)
+            hist = Histogram1D(bins,
+                               self.datasets[dataset][var],
+                               self.datasets[dataset][weight] if weight else None,
+                               logbins)
+            hist.plot(ax=ax, yerr=yerr, density=normalise, w2=w2, label=labels[i], **kwargs)
 
         _xlabel, _ylabel = plotting_utils.get_axis_labels(var, lepton)
-        plt.xlabel(xlabel if xlabel else _xlabel)
-        plt.ylabel(ylabel if ylabel else _ylabel)
-        plt.legend(fontsize=10)
-        if logx:
-            plt.semilogx()
-        if logy:
-            plt.semilogy()
-        hep.atlas.label(italic=(True, True), loc=0, llabel='Internal', rlabel=title)
 
-        filename = self.paths['plot_dir'] + '_'.join(datasets) + '_' + var + '_overlay.png'
-        plt.savefig(filename, bbox_inches='tight')
+        ax.set_xlabel(xlabel if xlabel else _xlabel)
+        ax.set_ylabel(ylabel if ylabel else _ylabel)
+        ax.legend(fontsize=10)
+        if logx:
+            ax.set_xscale('log')
+        if logy:
+            ax.set_yscale('log')
+        hep.atlas.label(italic=(True, True), ax=ax, loc=0, llabel='Internal', rlabel=title)
+
+        filename = self.paths['plot_dir'] + '_'.join(datasets) + '_' + var + '_' + 'NORMED' if normalise else '' + '_overlay.png'
+        fig.savefig(filename, bbox_inches='tight')
         plt.show()
         self.logger.info(f'Saved overlay plot of {var} to {filename}')
-        plt.clf()
 
     @decorators.check_single_datafile
     def plot_1d(self, ds_name: Optional[str], **kwargs) -> None:

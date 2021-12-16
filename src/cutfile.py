@@ -24,7 +24,6 @@ class Cutfile:
         self.backup_path = backup_path
         self.cut_dicts, self.vars_to_cut, self.options = self.parse_cutfile()
         self.cutgroups = self.gen_cutgroups(self.cut_dicts)
-        self.alt_trees = self.gen_tree_dict(self.cut_dicts)
 
     def __repr__(self):
         return f'Cutfile("{self._path}")'
@@ -78,7 +77,7 @@ class Cutfile:
 
         return cut_dict
 
-    def parse_cutfile(self, sep='\t') -> Tuple[List[dict], Set[Tuple[str, str]], Dict[str, bool]]:
+    def parse_cutfile(self, path: str = None, sep='\t') -> Tuple[List[dict], Set[Tuple[str, str]], Dict[str, bool]]:
         """
         | Generates pythonic outputs from input cutfile
         | Cutfile should be formatted with headers [CUTS], [OUTPUTS] and [OPTIONS]
@@ -94,9 +93,15 @@ class Cutfile:
         |
         | Each line under [OPTIONS] header should be '[option]<sep>[value]'
         | - sequential: (bool) whether each cut should be applied sequentially so a cutflow can be generated
+
+        :param path: path to an alternative cutfile
+        :param sep: cutfile separator. Default is TAB
+        :return list of cut dictionary, variables to output
         """
-        # open file
-        with open(self._path, 'r') as f:
+        if not path:
+            path = self._path
+
+        with open(path, 'r') as f:
             lines = [line.rstrip('\n') for line in f.readlines()]
 
             # get cut lines
@@ -128,12 +133,11 @@ class Cutfile:
             for option in lines[lines.index('[OPTIONS]') + 1:]:
                 if option.startswith('#') or len(option) < 2:
                     continue
-
                 option = option.split(sep)
 
                 # options should be formatted as '[option]<sep>[value]'
                 if len(option) != 2:
-                    raise Exception(f'Badly Formatted option: {sep.join(option)}')
+                    raise Exception(f'Badly Formatted option: {option}')
 
                 options_dict[option[0]] = bool(strtobool(option[1].lower()))  # converts string to boolean
 
@@ -262,9 +266,9 @@ class Cutfile:
             # if pickle file already exists
             self.logger.debug(f"No cutfile backup found in {self.backup_path}")
             if is_pkl_file:
-                old_df = pd.load_pickle(pkl_filepath)
+                old_df = pd.read_pickle(pkl_filepath)
                 old_cols = set(old_df.columns)
-                current_variables = self.all_vars(self.cut_dicts, {var[0] for var in self.vars_to_cut})
+                current_variables = self.all_vars(self.cut_dicts, self.vars_to_cut)
                 if current_variables <= old_cols:
                     self.logger.debug("All variables found in old pickle file.")
                     return False
