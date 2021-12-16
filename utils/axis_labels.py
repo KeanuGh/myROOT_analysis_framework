@@ -141,11 +141,11 @@ labels_xs: Dict[str, BranchLabel] = {
         'ylabel': r'$\frac{d\sigma}{dE}$ [fb GeV$^{-1}$]'
     },
     'met_met': {
-        'xlabel': r'$E_{T}^{\text{miss}}$ [GeV]',
-        'ylabel': r'$\frac{d\sigma}{dE_{T}^{\text{miss}}$ [fb GeV$^{-1}$]'
+        'xlabel': r'$E_{T}^{\mathrm{miss}}$ [GeV]',
+        'ylabel': r'$\frac{d\sigma}{dE_{T}^{\mathrm{miss}}}$ [fb GeV$^{-1}$]'
     },
     'met_phi': {
-        'xlabel': r'$\phi^{\text{miss}$',
+        'xlabel': r'$\phi^{\mathrm{miss}$',
         'ylabel': r'$\frac{d\sigma}{d\phi}$ [fb]'
     },
 
