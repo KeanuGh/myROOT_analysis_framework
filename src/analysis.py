@@ -33,6 +33,7 @@ class Analysis:
                  phibins: Optional[Union[tuple, list]] = None,
                  etabins: Optional[Union[tuple, list]] = None,
                  output_dir: str = None,
+                 data_dir: str = None,
                  log_level: int = logging.INFO,
                  log_out: str = 'both',
                  timedatelog: bool = True,
@@ -45,6 +46,8 @@ class Analysis:
         :param global_lumi: all data will be scaled to this luminosity
         :param phibins: bins for plotting phi
         :param etabins: bins for plotting eta
+        :param output_dir: root directory for outputs
+        :param data_dir: root directory for pickle data in/out
         :param log_level: logging level. See https://docs.python.org/3/library/logging.html#logging-levels
         :param log_out: where to set log output: 'FILE', 'CONSOLE' or 'BOTH'. (case-insensitive)
         :param timedatelog: whether to output log filename with timedate
@@ -64,7 +67,7 @@ class Analysis:
         output_dir = output_dir + '/outputs/' + analysis_label + '/'  # where outputs go
         self.paths = {
             'plot_dir': output_dir + '/plots/',  # where plots go
-            'pkl_df_filepath': output_dir + '/data/',  # pickle file containing extracted data, format to used dataset
+            'pkl_df_dir': data_dir if data_dir else output_dir + '/data/',  # pickle file containing extracted data, format to used dataset
             'pkl_hist_dir': output_dir + '/histograms/',  # pickle file to place histograms into
             'backup_cutfiles_dir': output_dir + '/cutfiles/',  # _cutfile backups
             'latex_table_dir': output_dir + '/LaTeX_cutflow_table/',  # where to print latex cutflow table

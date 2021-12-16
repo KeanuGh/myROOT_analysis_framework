@@ -73,17 +73,17 @@ if __name__ == '__main__':
     analysis.merge_datasets("wplustaunu", "wplustaunu_hm", verify=True)
     
     analysis.plot_hist_overlay(['wminmunu', 'wmintaunu'], 'met_met', title='reco',
-                               bins=(30, 150, 1000), logbins=True, logx=True, lepton='muon',
+                               bins=(30, 150, 5000), logbins=True, logx=True, lepton='muon',
                                normalise=True, yerr=True, scale_by_bin_width=True)
     analysis.plot_hist_overlay(['wplusmunu', 'wplustaunu'], 'met_met', title='reco',
-                               bins=(30, 150, 1000), logbins=True, logx=True,
+                               bins=(30, 150, 5000), logbins=True, logx=True,
                                lepton='muon', normalise=True, yerr=True, scale_by_bin_width=True)
     analysis.plot_hist_overlay(['wminmunu', 'wmintaunu'],   'mu_pt', title='reco',
-                               bins=(30, 150, 1000), logbins=True, logx=True,
+                               bins=(30, 150, 5000), logbins=True, logx=True,
                                lepton='muon', normalise=True, yerr=True, scale_by_bin_width=True)
-    analysis.plot_hist_overlay(['wplusmunu', 'wplustaunu'], 'mu_pt', bins=(30, 150, 1000),
-                               logbins=True, logx=True, lepton='muon', title='reco',
-                               normalise=True, yerr=True, scale_by_bin_width=True)
+    analysis.plot_hist_overlay(['wplusmunu', 'wplustaunu'], 'mu_pt', 
+                               bins=(30, 150, 5000), logbins=True, logx=True, title='reco',
+                               lepton='muon', normalise=True, yerr=True, scale_by_bin_width=True)
     analysis.plot_hist_overlay(['wminmunu', 'wmintaunu'], 'mu_d0sig', title='reco',
                                bins=(30, -3.5, 3.5), logy=True,
                                lepton='muon', normalise=True, yerr=True)

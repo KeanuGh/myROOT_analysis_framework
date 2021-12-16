@@ -49,16 +49,20 @@ labels_xs: Dict[str, BranchLabel] = {
 
     # DERIVED KINEMATIC VARIABLES
     # =======================================================
-    'mt_born': {  # boson pt from electron decay
+    'mt_born': {  # boson pt
         'xlabel': r'Born $M^{W}_{T}$ [GeV]',
         'ylabel': r'$\frac{d\sigma}{dM_{T}}$ [fb GeV$^{-1}$]',
     },
-    'mt_bare': {  # boson pt from electron decay
+    'mt_bare': {  # boson pt
         'xlabel': r'Bare $M^{W}_{T}$ [GeV]',
         'ylabel': r'$\frac{d\sigma}{dM_{T}}$ [fb GeV$^{-1}$]',
     },
-    'mt_dres': {  # boson pt from electron decay
+    'mt_dres': {  # boson pt
         'xlabel': r'Dressed $M^{W}_{T}$ [GeV]',
+        'ylabel': r'$\frac{d\sigma}{dM_{T}}$ [fb GeV$^{-1}$]',
+    },
+    'mt_reco': {  # boson pt
+        'xlabel': r'$M^{W}_{T}$ [GeV]',
         'ylabel': r'$\frac{d\sigma}{dM_{T}}$ [fb GeV$^{-1}$]',
     },
     'w_y': {  # boson rapidity

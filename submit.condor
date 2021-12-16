@@ -1,5 +1,0 @@
-executable = run_analysis.py
-output     = analysis.out
-error      = analysis.err
-log        = analysis.log
-queue

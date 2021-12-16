@@ -88,11 +88,11 @@ class Dataset:
 
         # initialise pickle filepath with given name
         if not self.pkl_out_dir:
-            self.pkl_out_dir = self.paths['pkl_df_filepath']
+            self.pkl_out_dir = self.paths['pkl_df_dir']
         if self.pkl_out_dir:
             self.pkl_path = self.pkl_out_dir + self.name + '_df.pkl'
         else:
-            self.pkl_path = self.paths['pkl_df_filepath'] + self.name + '_df.pkl'
+            self.pkl_path = self.paths['pkl_df_dir'] + self.name + '_df.pkl'
 
         if self.logger.level == logging.DEBUG:
             # log contents of cutfile
@@ -123,19 +123,25 @@ class Dataset:
         # only add these to 'main tree' to avoid merge issues
         self._tree_dict[self.TTree_name] |= {'weight_mc', 'weight_pileup'}
 
+        reco_flag = False
+        truth_flag = False
         for tree in self._tree_dict:
             # add necessary metadata to all trees
             self._tree_dict[tree] |= {'mcChannelNumber', 'eventNumber'}
             if self.reco or 'nominal' in tree.lower():
                 self.logger.info(f"Detected {tree} as reco tree, will pull 'weight_leptonSF' and 'weight_KFactor'")
                 self._tree_dict[tree] |= {'weight_leptonSF', 'weight_KFactor'}
-                self.reco = True
+                reco_flag = True
             elif self.truth or 'truth' in tree.lower():
                 self.logger.info(f"Detected {tree} as truth tree, will pull 'KFactor_weight_truth'")
                 self._tree_dict[tree].add('KFactor_weight_truth')
                 self.truth = True
+                truth_flag = True 
             else:
                 self.logger.info(f"Neither {tree} as truth nor reco dataset detected.")
+        
+        self.reco = reco_flag
+        self.truth = truth_flag
 
         # check if vars are contained in label dictionary
         all_vars = {var for var_set in self._tree_dict.values() for var in var_set}
