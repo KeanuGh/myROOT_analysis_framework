@@ -583,8 +583,13 @@ class Dataset:
                          ) -> pd.DataFrame:
         """Cuts on cutgroup on input dataframe or series"""
         cut_cols = [cut_name + config.cut_label for cut_name in cutgroups[group]]
-        cut_data = df[df[cut_cols].all(1)]
+        cut_data = df.loc[df[cut_cols].all(1)]
         return cut_data
+    
+    def apply_cuts(self) -> pd.DataFrame:
+        """Returns dataframe with all cuts applied"""
+        cut_cols = [str(col) for col in self.df.columns if config.cut_label in col]
+        return self.df.loc[self.df[cut_cols].all(1)]
 
     # ===========================================
     # =========== PLOTING FUNCTIONS =============

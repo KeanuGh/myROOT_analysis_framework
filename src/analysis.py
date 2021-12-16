@@ -164,7 +164,7 @@ class Analysis:
         logger.setLevel(log_level)
         if log_out.lower() in ('file', 'both'):
             filehandler = logging.FileHandler(f"{self.paths['log_dir']}/{name}_"
-                                              f"{time.strftime('%Y-%m-%d_%H-%M-%S') if timedatelog else None}.log")
+                                              f"{time.strftime('%Y-%m-%d_%H-%M-%S') if timedatelog else ''}.log")
             filehandler.setFormatter(logging.Formatter('%(asctime)s %(levelname)-10s %(message)s'))
             logger.addHandler(filehandler)
         if log_out.lower() in ('console', 'both'):
@@ -193,9 +193,10 @@ class Analysis:
             if n not in self.datasets:
                 raise ValueError(f"No dataset named {n} found in analysis {self.name}")
 
-        self.logger.info(f"Merging dataset(s) {names[1:]} into dataset{names[0]}...")
-        self.datasets[names[0]].df.append([self.datasets[n].df for n in names[1:]], 
-                                          ignore_index=True, verify_integrity=verify)
+        self.logger.info(f"Merging dataset(s) {names[1:]} into dataset {names[0]}...")
+        
+        self.datasets[names[0]].df = pd.concat([self.datasets[n].df for n in names],
+                                               ignore_index=True, verify_integrity=verify)
 
         for n in names[1:]:
             if delete:
@@ -236,33 +237,37 @@ class Analysis:
                           ylabel: str = '',
                           title: str = '',
                           lepton: str = 'lepton',
+                          apply_cuts: bool = True,
                           **kwargs
                           ) -> None:
         """Plot overlaid variables in separate datasets"""
         self.logger.info(f'Plotting {var} in as overlay in {datasets}...')
-
+        
         if labels:
             assert len(labels) == len(datasets), \
                 f"Labels iterable (length: {len(labels)}) must be of same length as number of datasets ({len(datasets)})"
 
         fig, ax = plt.subplots()
         for i, dataset in enumerate(datasets):
-            hist = Histogram1D(
-                bins,
-                self.datasets[dataset][var],
-                self.datasets[dataset][weight] if weight else None,
-                logbins
+            values = (
+                self.datasets[dataset].apply_cuts()[var]
+                if apply_cuts
+                else self.datasets[dataset][var]
             )
+            weights = (
+                self.datasets[dataset].apply_cuts()[weight]
+                if weight
+                else 1.
+            )
+            hist = Histogram1D(bins, values, weights, logbins)
             hist.plot(
                 ax=ax, 
                 yerr=yerr, 
                 normalise=normalise, w2=w2, 
-                label=labels[i] 
-                     if labels
-                     else self.datasets[dataset].label,
+                label= labels[i] if labels else self.datasets[dataset].label,
                 **kwargs
             )
-
+ 
         _xlabel, _ylabel = plotting_utils.get_axis_labels(var, lepton)
 
         ax.set_xlabel(xlabel if xlabel else _xlabel)
