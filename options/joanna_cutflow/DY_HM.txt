@@ -5,7 +5,7 @@ Tight muon	mu_isTight	=	1	tight muon cut	false	nominal_Loose
 eta	mu_eta	<	2.4	eta	true	nominal_Loose
 E_{T}^{MISS}	met_met	>	85	met	false	nominal_Loose
 p_T	mu_pt	>	65	mu pt	false	nominal_Loose
-M_T	mt_reco	>	200	muon mt	false	nominal_Loose
+M_T	mu_mt_reco	>	200	muon mt	false	nominal_Loose
 
 [OUTPUTS]
 # variables to process

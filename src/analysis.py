@@ -241,7 +241,7 @@ class Analysis:
                           ylabel: str = '',
                           title: str = '',
                           lepton: str = 'lepton',
-                          apply_cuts: bool = True,
+                          apply_cuts: Union[bool, str, List[str]] = True,
                           **kwargs
                           ) -> None:
         """Plot overlaid variables in separate datasets"""
@@ -254,12 +254,12 @@ class Analysis:
         fig, ax = plt.subplots()
         for i, dataset in enumerate(datasets):
             values = (
-                self.datasets[dataset].apply_cuts()[var]
+                self.datasets[dataset].apply_cuts(apply_cuts)[var]
                 if apply_cuts
                 else self.datasets[dataset][var]
             )
             weights = (
-                self.datasets[dataset].apply_cuts()[weight]
+                self.datasets[dataset].apply_cuts(apply_cuts)[weight]
                 if weight
                 else 1.
             )

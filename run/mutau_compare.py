@@ -71,7 +71,7 @@ if __name__ == '__main__':
     analysis.merge_datasets("wmintaunu",  "wmintaunu_hm", verify=True)
     analysis.merge_datasets("wplusmunu",  "wplusmunu_hm", verify=True)
     analysis.merge_datasets("wplustaunu", "wplustaunu_hm", verify=True)
-    
+
     analysis.plot_hist_overlay(['wminmunu', 'wmintaunu'], 'met_met', title='reco',
                                bins=(30, 150, 5000), logbins=True, logx=True, lepton='muon',
                                normalise=True, yerr=True, scale_by_bin_width=True)

@@ -4,7 +4,7 @@ import pickle as pkl
 import time
 from dataclasses import dataclass, field
 from itertools import combinations
-from typing import Optional, Union, List, OrderedDict, Tuple, Dict, Iterable
+from typing import Optional, Type, Union, List, OrderedDict, Tuple, Dict, Iterable
 from warnings import warn
 
 import boost_histogram as bh
@@ -592,9 +592,30 @@ class Dataset:
         cut_data = df.loc[df[cut_cols].all(1)]
         return cut_data
 
-    def apply_cuts(self) -> pd.DataFrame:
+    def apply_cuts(self, labels: Union[bool, str, List[str]] = True) -> pd.DataFrame:
         """Returns dataframe with all cuts applied"""
-        cut_cols = [str(col) for col in self.df.columns if config.cut_label in col]
+        if not labels:
+            # Do not apply cuts
+            self.df
+        
+        elif isinstance(labels, list):
+            labels = [label + config.cut_label for label in labels]
+            if not (cut_cols := [
+                col for col in self.df.columns 
+                if config.cut_label in col
+                and col in labels
+            ]):
+                raise ValueError(f"No cut label(s) {labels} in dataset {self.name}")
+            
+        elif isinstance(labels, str):
+            cut_cols = [labels + config.cut_label]
+            
+        elif labels == True:
+            cut_cols = [str(col) for col in self.df.columns if config.cut_label in col]
+            
+        else:
+            raise TypeError("cut labels must be a bool, a string or a list of strings")
+        
         return self.df.loc[self.df[cut_cols].all(1)]
 
     # ===========================================
