@@ -101,27 +101,27 @@ class Histogram1D(bh.Histogram):
     @property
     def root_sumw2(self) -> np.array:
         """get squared sum of weights"""
-        return np.sqrt(self.sum2)
-    
+        return np.sqrt(self.sumw2)
+
     @property
     def bin_widths(self) -> np.array:
         """get bin widths"""
         return self.axes[0].widths
-    
+
+    @property
+    def bin_edges(self) -> np.array:
+        """get bin edges"""
+        return self.axes[0].edges
+
     @property
     def bin_values(self) -> np.array:
         """get bin values"""
-        return self.view().value
+        return self.values()
 
     @property
-    def bin_integrals(self) -> np.array:
-        """get areas of each bin"""
-        return np.prod(self.axes.widths) * np.sum(self.view().value)
-
-    @property
-    def integral(self):
+    def integral(self) -> float:
         """get integral of histogram"""
-        return sum(self.bin_integrals)
+        return sum(self.bin_values)
 
     def plot(self,
              ax: plt.Axes,
@@ -150,14 +150,11 @@ class Histogram1D(bh.Histogram):
         """
         hist = self
 
-        if scale_by_bin_width:
-            hist /= hist.bin_widths
-
         if w2:
             sumw2 = hist.sumw2
             if normalise:
                 # scale sumw2 if normalising
-                sumw2 /= sumw2 * (normalise if normalise else 1.) / hist.bin_integrals
+                sumw2 /= sumw2 * (normalise if normalise else 1.) / hist.integral
         else: sumw2 = None
 
         if isinstance(yerr, str):
@@ -165,16 +162,30 @@ class Histogram1D(bh.Histogram):
                 yerr = hist.root_sumw2
                 if normalise:
                     # scale errors for normalisation factor
-                    yerr = yerr * (normalise if normalise else 1.) / hist.bin_integrals
+                    yerr = yerr * (normalise if normalise else 1.) / hist.integral
             elif yerr == 'sqrtN':
                 yerr = True
             else:
                 raise ValueError(f"Valid yerrs: 'rsumw2', 'sqrtN'. Got {yerr}")
+        elif not hasattr(yerr, '__len__'):
+            raise TypeError(f"Valid yerrs: 'rsumw2', 'sqrtN' or iterable of values. Got {yerr}")
 
         # normalise to value or unity
         if isinstance(normalise, (float, int, bool)):
-            bin_vals = (normalise if normalise else 1.) * hist.bin_values / hist.bin_integrals
+            bin_vals = (normalise if normalise else 1.) * hist.bin_values / hist.integral
         else:
             raise TypeError("'normalise' must be a float, int or boolean")
 
-        hep.histplot(bin_vals, bins=hist.axes[0].edges, ax=ax, yerr=yerr, w2=sumw2, **kwargs)
+        if scale_by_bin_width:
+            bin_vals /= hist.bin_widths
+            if hasattr(yerr, '__len__'):
+                yerr /= hist.bin_widths
+        
+        print(normalise)
+        print(yerr)
+        print(hist.integral)
+        print(hist.root_sumw2)
+        print(hist.bin_edges)
+        print(hist.bin_values)
+
+        hep.histplot(bin_vals, bins=hist.bin_edges, ax=ax, yerr=yerr, w2=sumw2, **kwargs)

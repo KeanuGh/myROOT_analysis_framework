@@ -227,10 +227,10 @@ class Analysis:
         var: str,
         bins: Union[List[float], Tuple[int, float, float]],
         weight: Union[str, float] = 1.,
-        yerr: Union[ArrayLike, bool] = None,
+        yerr: Union[ArrayLike, str] = None,
         labels: List[str] = None,
         w2: bool = False,
-        normalise: Union[float, bool, str] = False,
+        normalise: Union[float, bool, str] = 'lumi',
         apply_cuts: Union[bool, str, List[str]] = True,
         logbins: bool = False,
         logx: bool = False,
@@ -318,51 +318,51 @@ class Analysis:
             ax.set_yscale('log')
         hep.atlas.label(italic=(True, True), ax=ax, loc=0, llabel='Internal', rlabel=title)
 
-        filename = self.paths['plot_dir'] + '_'.join(datasets) + '_' + var + '_' + 'NORMED' if normalise else '' + '_overlay.png'
+        filename = self.paths['plot_dir'] + '_'.join(datasets) + '_' + var + ('_NORMED' if normalise else '') + '.png'
         fig.savefig(filename, bbox_inches='tight')
         self.logger.info(f'Saved overlay plot of {var} to {filename}')
 
     @decorators.check_single_datafile
-    def plot_1d(self, datasets: Optional[str], **kwargs) -> None:
+    def plot_1d(self, ds_name: Optional[str], **kwargs) -> None:
         """
         Plots variable in specific Dataset. Simple plotter.
 
         :param datasets: name of Dataset class to plot
         :param kwargs: keyword arguments to pass to method in dataset
         """
-        self.datasets[datasets].plot_1d(**kwargs)
+        self.datasets[ds_name].plot_1d(**kwargs)
 
     @decorators.check_single_datafile
-    def plot_with_cuts(self, datasets: Optional[str], **kwargs) -> None:
+    def plot_with_cuts(self, ds_name: Optional[str], **kwargs) -> None:
         """
         Plots each variable in specific Dataset to cut from cutfile with each cutgroup applied
 
         :param datasets: name of Dataset class to plot
         :param kwargs: keyword arguments to pass to method in dataset
         """
-        self.datasets[datasets].plot_all_with_cuts(**kwargs)
+        self.datasets[ds_name].plot_all_with_cuts(**kwargs)
 
     @decorators.check_single_datafile
-    def gen_cutflow_hist(self, datasets: Optional[str], **kwargs) -> None:
+    def gen_cutflow_hist(self, ds_name: Optional[str], **kwargs) -> None:
         """
         Generates and saves cutflow histograms. Choose which cutflow histogram option to print. Default: only by-event.
 
         :param datasets: Name of dataset to plot
         :return: None
         """
-        self.datasets[datasets].gen_cutflow_hist(**kwargs)
+        self.datasets[ds_name].gen_cutflow_hist(**kwargs)
 
     @decorators.check_single_datafile
-    def make_all_cutgroup_2dplots(self, datasets: Optional[str], **kwargs) -> None:
+    def make_all_cutgroup_2dplots(self, ds_name: Optional[str], **kwargs) -> None:
         """Plots all cutgroups as 2d plots
 
         :param datasets: name of dataset to plot
         :param kwargs: keyword arguments to pass to plot_utils.plot_2d_cutgroups
         """
-        self.datasets[datasets].make_all_cutgroup_2dplots(**kwargs)
+        self.datasets[ds_name].make_all_cutgroup_2dplots(**kwargs)
 
     @decorators.check_single_datafile
-    def plot_mass_slices(self, datasets: Optional[str], xvar: str, **kwargs) -> None:
+    def plot_mass_slices(self, ds_name: Optional[str], xvar: str, **kwargs) -> None:
         """
         Plots mass slices for input variable xvar if dataset is_slices
 
@@ -370,18 +370,18 @@ class Analysis:
         :param xvar: variable in dataframe to plot
         :param kwargs: keyword args to pass to dataclass.plot_mass_slices()
         """
-        self.datasets[datasets].plot_mass_slices(var=xvar, **kwargs)
+        self.datasets[ds_name].plot_mass_slices(var=xvar, **kwargs)
 
     # ===============================
     # ========= PRINTOUTS ===========
     # ===============================
     @decorators.check_single_datafile
-    def cutflow_printout(self, datasets: Optional[str] = None) -> None:
+    def cutflow_printout(self, ds_name: Optional[str] = None) -> None:
         """Prints cutflow table to terminal"""
-        if datasets is None:
+        if ds_name is None:
             for d in self:
                 d.cutflow_printout()
-        self.datasets[datasets].cutflow.printout()
+        self.datasets[ds_name].cutflow.printout()
 
     def kinematics_printouts(self) -> None:
         """Prints some kinematic variables to terminal"""
