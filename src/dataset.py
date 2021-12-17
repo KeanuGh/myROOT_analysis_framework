@@ -339,7 +339,7 @@ class Dataset:
         :param _validate_sumofweights: whether to check sum of weights against weight_mc
         :return: output dataframe containing columns corresponding to necessary variables
         """
-        #TODO: proper missing event check
+        # TODO: proper missing event check
         
         t1 = time.time()
         self.logger.debug(f"Extracting {self._tree_dict[self.TTree_name]} from {self.TTree_name} tree...")

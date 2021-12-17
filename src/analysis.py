@@ -81,9 +81,7 @@ class Analysis:
         # SET OTHER GLOBAL OPTIONS
         # ============================
         self.name = analysis_label
-
-        if global_lumi:
-            config.lumi = global_lumi
+        self.global_lumi = global_lumi
 
         # variables that require special (default) binning
         if etabins:
@@ -232,7 +230,8 @@ class Analysis:
         yerr: Union[ArrayLike, bool] = None,
         labels: List[str] = None,
         w2: bool = False,
-        normalise: Union[float, bool, str] = 'lumi',
+        normalise: Union[float, bool, str] = False,
+        apply_cuts: Union[bool, str, List[str]] = True,
         logbins: bool = False,
         logx: bool = False,
         logy: bool = True,
@@ -240,7 +239,6 @@ class Analysis:
         ylabel: str = '',
         title: str = '',
         lepton: str = 'lepton',
-        apply_cuts: Union[bool, str, List[str]] = True,
         **kwargs
     ) -> None:
         """
@@ -264,14 +262,15 @@ class Analysis:
                           - True for normalisation of unity
                           - 'lumi' (default) for normalisation to global_uni variable in analysis
                           - False for no normalisation
+        :param apply_cuts: True to apply all cuts to dataset before plotting or False for no cuts
+                           pass a string or list of strings of the cut label(s) to apply just those cuts
         :param logbins: whether logarithmic binnings
-        :param logx: whether log scale x axis
-        :param logy: whether log scale y axis
+        :param logx: whether log scale x-axis
+        :param logy: whether log scale y-axis
         :param xlabel: x label
         :param ylabel: y label
         :param title: plot title
         :param lepton: lepton to fill variable label
-        :param scale_by_bin_width: whether to scale histogram by bin widths
         :param kwargs: keyword arguments to pass to mplhep.histplot()
         """
         self.logger.info(f'Plotting {var} in as overlay in {datasets}...')
