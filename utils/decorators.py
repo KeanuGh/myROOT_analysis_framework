@@ -8,7 +8,7 @@ def check_single_datafile(func):
     """
     @functools.wraps(func)
     def wrapper(self, *args, **kwargs):
-        if (args and isinstance(args[0], str)) or 'ds_name' in kwargs:
+        if (args and isinstance(args[0], str)) or 'datasets' in kwargs:
             # if dataset name is passed, just return function as-is
             return func(self, *args, **kwargs)
         elif len(self.datasets) == 1:
