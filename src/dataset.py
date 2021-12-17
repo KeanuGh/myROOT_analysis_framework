@@ -339,6 +339,8 @@ class Dataset:
         :param _validate_sumofweights: whether to check sum of weights against weight_mc
         :return: output dataframe containing columns corresponding to necessary variables
         """
+        #TODO: proper missing event check
+        
         t1 = time.time()
         self.logger.debug(f"Extracting {self._tree_dict[self.TTree_name]} from {self.TTree_name} tree...")
         df = to_pandas(uproot.concatenate(self.data_path + ':' + self.TTree_name, self._tree_dict[self.TTree_name],
@@ -445,7 +447,7 @@ class Dataset:
 
         df['DSID'] = pd.Categorical(df['DSID'])
 
-        self.__rescale_to_gev()  # properly scale GeV columns
+        self.__rescale_to_gev(df)  # properly scale GeV columns
 
         if self.truth and self.reco:
             pd.testing.assert_series_equal(df['KFactor_weight_truth'], df['weight_KFactor'],
@@ -560,11 +562,11 @@ class Dataset:
             self.lumi * self.df[mc_weight] * abs(self.df[mc_weight]) / self.df[tot_weighted_events] * \
             self.df[KFactor] * self.df[pileup_weight]
 
-    def __rescale_to_gev(self) -> None:
+    def __rescale_to_gev(self, df) -> None:
         """rescales to GeV because athena's default output is in MeV for some reason"""
-        if GeV_columns := [column for column in self.df.columns
+        if GeV_columns := [column for column in df.columns
                            if (column in labels_xs) and ('[GeV]' in labels_xs[column]['xlabel'])]:
-            self.df[GeV_columns] /= 1000
+            df[GeV_columns] /= 1000
             self.logger.debug(f"Rescaled columns {GeV_columns} to GeV.")
         else:
             self.logger.debug(f"No columns rescaled to GeV.")

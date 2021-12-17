@@ -27,7 +27,7 @@ class Analysis:
     def __init__(self,
                  data_dict: Dict[str, Dict],
                  analysis_label: str,
-                 global_lumi: Optional[float] = None,
+                 global_lumi: Optional[float] = 139.,
                  phibins: Optional[Union[tuple, list]] = None,
                  etabins: Optional[Union[tuple, list]] = None,
                  output_dir: str = None,
@@ -41,7 +41,7 @@ class Analysis:
         """
         :param data_dict: Dictionary of dictionaries containing paths to root files and the tree to extract from each.
                The key to the top-level dictionary is the label assigned to the dataset.
-        :param global_lumi: all data will be scaled to this luminosity
+        :param global_lumi: all data will be scaled to this luminosity (fb-1)
         :param phibins: bins for plotting phi
         :param etabins: bins for plotting eta
         :param output_dir: root directory for outputs
@@ -223,27 +223,64 @@ class Analysis:
     # ===============================
     # =========== PLOTS =============
     # ===============================
-    def plot_hist_overlay(self,
-                          datasets: Union[str, List[str]],
-                          var: str,
-                          bins: Union[List[float], Tuple[int, float, float]],
-                          labels: List[str] = None,
-                          weight: str = '',
-                          yerr: Union[ArrayLike, bool] = None,
-                          w2: bool = False,
-                          normalise: bool = False,
-                          logbins: bool = False,
-                          logx: bool = False,
-                          logy: bool = True,
-                          xlabel: str = '',
-                          ylabel: str = '',
-                          title: str = '',
-                          lepton: str = 'lepton',
-                          apply_cuts: Union[bool, str, List[str]] = True,
-                          **kwargs
-                          ) -> None:
-        """Plot overlaid variables in separate datasets"""
+    def plot_hist(
+        self,
+        datasets: Union[str, List[str]],
+        var: str,
+        bins: Union[List[float], Tuple[int, float, float]],
+        weight: Union[str, float] = 1.,
+        yerr: Union[ArrayLike, bool] = None,
+        labels: List[str] = None,
+        w2: bool = False,
+        normalise: Union[float, bool, str] = 'lumi',
+        logbins: bool = False,
+        logx: bool = False,
+        logy: bool = True,
+        xlabel: str = '',
+        ylabel: str = '',
+        title: str = '',
+        lepton: str = 'lepton',
+        apply_cuts: Union[bool, str, List[str]] = True,
+        **kwargs
+    ) -> None:
+        """
+        Plot same variable from different datasets
+
+        :param datasets: string or list of strings corresponding to datasets in the analysis
+        :param var: variable name to be plotted. must exist in all datasets
+        :param bins: tuple of bins in x (n_bins, start, stop) or list of bin edges.
+                     In the first case returns an axis of type Regular(), otherwise of type Variable().
+                     Raises error if not formatted in one of these ways.
+        :param weight: variable name in dataset to weight by or numeric value to weight all
+        :param yerr: Histogram uncertainties. Following modes are supported:
+                     - 'rsumw2', sqrt(SumW2) errors
+                     - 'sqrtN', sqrt(N) errors or poissonian interval when w2 is specified
+                     - shape(N) array of for one-sided errors or list thereof
+                     - shape(Nx2) array of for two-sided errors or list thereof
+        :param labels: list of labels for plot legend corresponding to each dataset
+        :param w2: Whether to do a poissonian interval error calculation based on weights
+        :param normalise: Normalisation value:
+                          - int or float
+                          - True for normalisation of unity
+                          - 'lumi' (default) for normalisation to global_uni variable in analysis
+                          - False for no normalisation
+        :param logbins: whether logarithmic binnings
+        :param logx: whether log scale x axis
+        :param logy: whether log scale y axis
+        :param xlabel: x label
+        :param ylabel: y label
+        :param title: plot title
+        :param lepton: lepton to fill variable label
+        :param scale_by_bin_width: whether to scale histogram by bin widths
+        :param kwargs: keyword arguments to pass to mplhep.histplot()
+        """
         self.logger.info(f'Plotting {var} in as overlay in {datasets}...')
+        
+        if isinstance(normalise, str):
+            if normalise is 'lumi':
+                normalise = self.global_lumi
+            else:
+                raise ValueError("Only 'lumi' allowed for string value normalisation")
 
         if labels:
             assert len(labels) == len(datasets), \
@@ -258,14 +295,15 @@ class Analysis:
             )
             weights = (
                 self.datasets[dataset].apply_cuts(apply_cuts)[weight]
-                if weight
-                else 1.
+                if isinstance(weight, str)
+                else weight
             )
             hist = Histogram1D(bins, values, weights, logbins)
             hist.plot(
                 ax=ax,
                 yerr=yerr,
-                normalise=normalise, w2=w2,
+                normalise=normalise,
+                w2=w2,
                 label=labels[i] if labels else self.datasets[dataset].label,
                 **kwargs
             )
@@ -341,6 +379,9 @@ class Analysis:
     @decorators.check_single_datafile
     def cutflow_printout(self, ds_name: Optional[str] = None) -> None:
         """Prints cutflow table to terminal"""
+        if ds_name is None:
+            for d in self:
+                d.cutflow_printout()
         self.datasets[ds_name].cutflow.printout()
 
     def kinematics_printouts(self) -> None:
@@ -368,4 +409,7 @@ class Analysis:
             if file_utils.identical_to_backup(latex_file, backup_file=last_backup, logger=self.logger):
                 file_utils.delete_file(latex_file)
         else:
+            if ds_name is None:
+                for d in self:
+                    d.cutflow.print_latex_table(self.paths['latex_table_dir'], d.name)
             self.datasets[ds_name].cutflow.print_latex_table(self.paths['latex_table_dir'], ds_name)
