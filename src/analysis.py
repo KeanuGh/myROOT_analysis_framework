@@ -277,7 +277,7 @@ class Analysis:
         self.logger.info(f'Plotting {var} in as overlay in {datasets}...')
         
         if isinstance(normalise, str):
-            if normalise is 'lumi':
+            if normalise == 'lumi':
                 normalise = self.global_lumi
             else:
                 raise ValueError("Only 'lumi' allowed for string value normalisation")
