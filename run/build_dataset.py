@@ -44,8 +44,6 @@ parser.add_argument('--lepton', default='lepton',
                     help='name of lepton in W->lnu if applicable')
 parser.add_argument('--chunksize', default=1024, type=int,
                     help='chunksize for uproot ROOT file import')
-parser.add_argument('--no_validate_missing_events', action='store_false',
-                    help='do not check for missing events')
 parser.add_argument('--no_validate_duplicated_events', action='store_false',
                     help='do not check for duplicated events')
 parser.add_argument('--no_validate_sum_of_weights', action='store_false',

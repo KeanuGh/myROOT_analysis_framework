@@ -64,7 +64,6 @@ class Dataset:
     lepton: str = 'lepton'  # name of charged DY lepton channel in dataset (if applicable)
     chunksize: int = 1024  # chunksize for uproot ROOT file import
     force_rebuild: bool = False  # whether to force rebuild dataset
-    validate_missing_events: bool = True  # whether to check for missing events
     validate_duplicated_events: bool = True  # whether to check for duplicated events
     validate_sumofweights: bool = True  # whether to check sumofweights is sum of weight_mc for DSID
     _weight_column = 'weight'  # name of weight column in dataframe
@@ -160,7 +159,6 @@ class Dataset:
         self.logger.debug(f"grouped cutflow: {self.cutfile.options['grouped cutflow']}")
         self.logger.debug(f"sequential cutflow: {self.cutfile.options['sequential']}")
         self.logger.debug(f"Forced dataset rebuild: {self.force_rebuild}")
-        self.logger.debug(f"Validate missing events: {self.validate_missing_events}")
         self.logger.debug(f"Validate duplicated events: {self.validate_duplicated_events}")
         self.logger.debug(f"Validate sum of weights: {self.validate_sumofweights}")
         self.logger.debug("----------------------------")
@@ -182,8 +180,7 @@ class Dataset:
         # extract and clean data
         if self._build_df:
             self.logger.info(f"Building {self.name} dataframe from {self.data_path}...")
-            self.df = self._build_dataframe(_validate_missing_events=self.validate_missing_events,
-                                            _validate_duplicated_events=self.validate_duplicated_events,
+            self.df = self._build_dataframe(_validate_duplicated_events=self.validate_duplicated_events,
                                             _validate_sumofweights=self.validate_sumofweights)
 
             # print into pickle file for easier read/write
@@ -332,19 +329,16 @@ class Dataset:
     # ===============================
     def _build_dataframe(self,
                          chunksize: int = 1024,
-                         _validate_missing_events: bool = True,
                          _validate_duplicated_events: bool = True,
                          _validate_sumofweights: bool = True,
                          ) -> pd.DataFrame:
         """
         Builds a dataframe from cutfile inputs
         :param chunksize: chunksize for uproot concat method
-        :param _validate_missing_events: whether to check for missing events
         :param _validate_duplicated_events: whether to check for duplicated events
         :param _validate_sumofweights: whether to check sum of weights against weight_mc
         :return: output dataframe containing columns corresponding to necessary variables
         """
-
         t1 = time.time()
         self.logger.debug(f"Extracting {self._tree_dict[self.TTree_name]} from {self.TTree_name} tree...")
         df = to_pandas(uproot.concatenate(self.data_path + ':' + self.TTree_name, self._tree_dict[self.TTree_name],
@@ -369,8 +363,10 @@ class Dataset:
             self.logger.info("Skipping duplicted events validation")
 
         for tree in self._tree_dict:
+            
             if tree == self.TTree_name:
                 continue
+            
             self.logger.debug(f"Extracting {self._tree_dict[tree]} from {tree} tree...")
             alt_df = to_pandas(uproot.concatenate(self.data_path + ":" + tree, self._tree_dict[tree],
                                                   num_workers=config.n_threads, begin_chunk_size=chunksize))
@@ -379,15 +375,6 @@ class Dataset:
             if _validate_duplicated_events:
                 self.logger.info(f"Validating duplicated events in tree {tree}...")
                 self.__drop_duplicates(alt_df)
-
-            if _validate_missing_events:
-                self.logger.info(f"Checking for missing events in tree '{tree}'..")
-                if n_missing := len(df[~df['eventNumber'].isin(alt_df['eventNumber'])]):
-                    raise Exception(f"Found {n_missing} events in '{self.TTree_name}' tree not found in '{tree}' tree")
-                else:
-                    self.logger.debug(f"All events in {self.TTree_name} tree found in {tree} tree")
-            else:
-                self.logger.info(f"Skipping missing events check in tree {tree}")
 
             self.logger.debug("Merging with rest of dataframe...")
             try:
