@@ -221,7 +221,6 @@ class Analysis:
     # ===============================
     # =========== PLOTS =============
     # ===============================
-    @decorators.check_single_datafile
     def plot_hist(
         self,
         datasets: Union[str, List[str]],
