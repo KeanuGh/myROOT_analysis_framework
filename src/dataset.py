@@ -7,10 +7,8 @@ from itertools import combinations
 from typing import Optional, Union, List, OrderedDict, Tuple, Dict, Iterable
 from warnings import warn
 
-import boost_histogram as bh
 import matplotlib.pyplot as plt
 import mplhep as hep
-import numpy as np
 import pandas as pd
 import uproot
 from awkward import to_pandas
@@ -20,6 +18,7 @@ import utils.file_utils as file_utils
 import utils.plotting_utils as plt_utils
 from src.cutfile import Cutfile
 from src.cutflow import Cutflow
+from src.histogram import Histogram1D
 from utils.axis_labels import labels_xs
 from utils.var_helpers import derived_vars
 
@@ -36,9 +35,8 @@ lumi_year = {
 class Dataset:
     """
     Dataset class. Contains/will contain all the variables needed for a singular analysis dataset.
-    TODO: Save histograms as dataset attributes? Ability to perform operations across hisograms? Custom histogram class?
-    TODO: check branch types and perform dataframe merge in batches
     TODO: allow building of dataframe inputting only a TTree dictionary
+    TODO: migrate all plotting functions to new histogram
     """
     # INPUT
     name: str
@@ -57,13 +55,14 @@ class Dataset:
 
     # OPTIONS
     paths: Dict[str, str]  # file output paths
-    reco: bool = False  # whether a reco dataset
-    truth: bool = False  # whether a truth dataset
+    reco: bool = False  # whether dataset contains reconstructed data
+    truth: bool = False  # whether dataset contains truth data
     to_pkl: bool = True  # whether to output to a pickle file
     pkl_out_dir: str = ''  # where the dataframe pickle file will be stored
     lepton: str = 'lepton'  # name of charged DY lepton channel in dataset (if applicable)
     chunksize: int = 1024  # chunksize for uproot ROOT file import
     force_rebuild: bool = False  # whether to force rebuild dataset
+    validate_missing_events: bool = True  # whether to check for events in reco tree that are not in truth tree
     validate_duplicated_events: bool = True  # whether to check for duplicated events
     validate_sumofweights: bool = True  # whether to check sumofweights is sum of weight_mc for DSID
     _weight_column = 'weight'  # name of weight column in dataframe
@@ -107,8 +106,6 @@ class Dataset:
         self.logger.info(f"Parsting cutfile '{self.cutfile_path}' for {self.name}...")
         self.cutfile = Cutfile(self.cutfile_path, self.paths['backup_cutfiles_dir'], logger=self.logger)
         self._build_df = True if self.force_rebuild else self.cutfile.if_build_dataframe(self.pkl_path)
-        if self.cutfile.if_make_cutfile_backup():
-            self.cutfile.backup_cutfile(self.name)
 
         self._tree_dict, self._vars_to_calc = self.cutfile.extract_variables(derived_vars)
 
@@ -180,8 +177,11 @@ class Dataset:
         # extract and clean data
         if self._build_df:
             self.logger.info(f"Building {self.name} dataframe from {self.data_path}...")
-            self.df = self._build_dataframe(_validate_duplicated_events=self.validate_duplicated_events,
-                                            _validate_sumofweights=self.validate_sumofweights)
+            self.df = self._build_dataframe(
+                _validate_missing_events=self.validate_missing_events,
+                _validate_duplicated_events=self.validate_duplicated_events,
+                _validate_sumofweights=self.validate_sumofweights
+            )
 
             # print into pickle file for easier read/write
             if self.to_pkl:
@@ -192,6 +192,10 @@ class Dataset:
             self.logger.info(f"Reading data for {self.name} dataframe from {self.pkl_path}...")
             self.df = pd.read_pickle(self.pkl_path)
         self.logger.info(f"Number of events in dataset {self.name}: {len(self.df.index)}")
+
+        # backup cutfile only after having built the dataframe
+        if self.cutfile.if_make_cutfile_backup():
+            self.cutfile.backup_cutfile(self.name)
 
         # map appropriate weights
         if self.truth:
@@ -207,9 +211,8 @@ class Dataset:
             self.logger.info(f"DATASET INFO FOR {self.name}:")
             self.logger.debug("DSID       n_events   sum_w         x-s fb        lumi fb-1")
             self.logger.debug("==========================================================")
-            for dsid in np.sort(self.df['DSID'].unique()):
-                df_id = self.df[self.df['DSID'] == dsid]
-                self.logger.debug(f"{int(dsid):<10} "
+            for dsid, df_id in self.df.groupby(level='DSID', sort=True):
+                self.logger.debug(f"{dsid:<10} "
                                   f"{len(df_id):<10} "
                                   f"{df_id['weight_mc'].sum():<10.6e}  "
                                   f"{self._get_cross_section(df_id):<10.6e}  "
@@ -329,6 +332,7 @@ class Dataset:
     # ===============================
     def _build_dataframe(self,
                          chunksize: int = 1024,
+                         _validate_missing_events: bool = True,
                          _validate_duplicated_events: bool = True,
                          _validate_sumofweights: bool = True,
                          ) -> pd.DataFrame:
@@ -339,7 +343,8 @@ class Dataset:
         :param _validate_sumofweights: whether to check sum of weights against weight_mc
         :return: output dataframe containing columns corresponding to necessary variables
         """
-        # TODO: proper missing event check
+        # is the default tree a truth tree?
+        default_tree_truth = 'truth' in self.TTree_name
         
         t1 = time.time()
         self.logger.debug(f"Extracting {self._tree_dict[self.TTree_name]} from {self.TTree_name} tree...")
@@ -355,6 +360,10 @@ class Dataset:
         sumw = sumw.groupby('dsid').sum()
         df = pd.merge(df, sumw, left_on='mcChannelNumber', right_on='dsid', sort=False, copy=False)
 
+        df.set_index(['mcChannelNumber', 'eventNumber'], inplace=True)
+        df.index.names = ['DSID', 'eventNumber']
+        self.logger.debug("Set DSID/eventNumber as index")
+
         # merge TTrees
         if _validate_duplicated_events:
             validation = '1:1'
@@ -364,59 +373,59 @@ class Dataset:
             validation = 'm:m'
             self.logger.info("Skipping duplicted events validation")
 
+        # iterate over TTrees and merge
         for tree in self._tree_dict:
-            
             if tree == self.TTree_name:
                 continue
-            
+
             self.logger.debug(f"Extracting {self._tree_dict[tree]} from {tree} tree...")
             alt_df = to_pandas(uproot.concatenate(self.data_path + ":" + tree, self._tree_dict[tree],
                                                   num_workers=config.n_threads, begin_chunk_size=chunksize))
             self.logger.debug(f"Extracted {len(alt_df)} events.")
+
+            alt_df.set_index(['mcChannelNumber', 'eventNumber'], inplace=True)
+            alt_df.index.names = ['DSID', 'eventNumber']
+            self.logger.debug("Set DSID/eventNumber as index")
+
+            if _validate_missing_events:
+                self.logger.info(f"Checking for missing events in tree '{tree}'..")
+                tree_is_truth = 'truth' in tree
+
+                if tree_is_truth and not default_tree_truth:
+                    if n_missing := len(df.index.difference(alt_df.index)):
+                        raise Exception(f"Found {n_missing} events in '{self.TTree_name}' tree not found in '{tree}' tree")
+                    else:
+                        self.logger.debug(f"All events in {self.TTree_name} tree found in {tree} tree")
+                elif default_tree_truth and not tree_is_truth:
+                    if n_missing := len(alt_df.index.difference(df.index)):
+                        raise Exception(f"Found {n_missing} events in '{tree}' tree not found in '{self.TTree_name}' tree")
+                    else:
+                        self.logger.debug(f"All events in {tree} tree found in {self.TTree_name} tree")
+                else:
+                    self.logger.info(f"Skipping missing events check. Not truth/reco tree combination")
+
+            else:
+                self.logger.info(f"Skipping missing events check in tree {tree}")
 
             if _validate_duplicated_events:
                 self.logger.info(f"Validating duplicated events in tree {tree}...")
                 self.__drop_duplicates(alt_df)
 
             self.logger.debug("Merging with rest of dataframe...")
-            try:
-                df = pd.merge(df, alt_df, how='left', on=['eventNumber', 'mcChannelNumber'],
-                              sort=False, copy=False, validate=validation)
-            except pd.errors.MergeError as e:
-                dup_l = df['eventNumber'][df.duplicated('eventNumber')]
-                n_l = len(dup_l)
-                evnt_l = dup_l.unique()
-                dup_r = df['eventNumber'][alt_df.duplicated('eventNumber')]
-                n_r = len(dup_r)
-                evnt_r = dup_r.unique()
-
-                err = str(e)
-                if err == 'Merge keys are not unique in either left or right dataset; not a one-to-one merge':
-                    raise Exception(f"{n_l} duplicated events in '{self.TTree_name}' TTree. Events: {evnt_l}, "
-                                    f"and {n_r} in '{tree}' TTree. Events: {evnt_r}")
-                elif err == 'Merge keys are not unique in left dataset; not a one-to-one merge':
-                    raise Exception(f"{n_l} duplicated events in '{self.TTree_name}' TTree. Events: {evnt_l}")
-                elif err == 'Merge keys are not unique in right dataset; not a one-to-one merge':
-                    raise Exception(f"{n_r} duplicated events in '{tree}' TTree. Events: {evnt_r}")
-                else:
-                    raise e
-        df.rename(columns={'mcChannelNumber': 'DSID'}, inplace=True)  # rename mcChannelNumber to DSID
+            df = pd.merge(df, alt_df, left_index=True, right_index=True, sort=False, copy=False, validate=validation)
 
         if _validate_sumofweights:
             # sanity check to make sure totalEventsWeighted really is what it says it is
             # also output DSID metadata
-            dsids = df['DSID'].unique()
-            self.logger.info(f"Found {len(dsids)} unique dsid(s).")
-            df_id_sub = df[['weight_mc', 'DSID']].groupby('DSID', as_index=False).sum()
-            for dsid in dsids:
-                df_id = df.loc[df['DSID'] == dsid]
+            df_id_sub = df['weight_mc'].groupby(level='DSID').sum()
+            for dsid, df_id in df.groupby(level='DSID'):
                 unique_totalEventsWeighted = df_id['totalEventsWeighted'].unique()
                 if len(unique_totalEventsWeighted) != 1:
                     self.logger.warning("totalEventsWeighted should only have one value per DSID. "
                                         f"Got {len(unique_totalEventsWeighted)}, of values {unique_totalEventsWeighted} "
                                         f"for DSID {dsid}")
 
-                dsid_weight = df_id_sub.loc[df_id_sub['DSID'] == dsid]['weight_mc'].values[0]  # just take first value
+                dsid_weight = df_id_sub[dsid]
                 totalEventsWeighted = df_id['totalEventsWeighted'].values[0]
                 if dsid_weight != totalEventsWeighted:
                     self.logger.warning(
@@ -445,12 +454,12 @@ class Dataset:
         # CLEANUP
         df.name = self.name
 
-        df['DSID'] = pd.Categorical(df['DSID'])
-
         self.__rescale_to_gev(df)  # properly scale GeV columns
 
         if self.truth and self.reco:
-            pd.testing.assert_series_equal(df['KFactor_weight_truth'], df['weight_KFactor'],
+            # drop truth KFactor as long as values are the same for reco variables
+            pd.testing.assert_series_equal(df.loc[pd.notna(df['weight_KFactor']), 'KFactor_weight_truth'],
+                                           df['weight_KFactor'].dropna(),
                                            check_exact=True, check_names=False, check_index=False), \
                                                "reco and truth KFactors not equal"
             df.drop(columns='KFactor_weight_truth')
@@ -468,7 +477,7 @@ class Dataset:
         df.drop_duplicates(inplace=True)
         self.logger.info(f"{b_size - len(df.index)} duplicate events dropped")
         b_size = len(df.index)
-        df.drop_duplicates(['eventNumber', 'mcChannelNumber'], inplace=True)
+        df.index = df.index.drop_duplicates()
         self.logger.info(f"{b_size - len(df.index)} duplicate event numbers dropped")
 
     def __create_cut_columns(self) -> None:
@@ -879,40 +888,49 @@ class Dataset:
                          xlabel: str = '',
                          ylabel: str = '',
                          title: str = '',
+                         apply_cuts: Union[bool, str, List[str]] = True,
                          **kwargs
                          ) -> None:
-        self.logger.info(f'Plotting {var} in {self.name} as slices...')
-        if not title:
-            title = self.label
+        """
+        Plot single variable in dataset with different DSIDs visible
 
-        bh_axis = plt_utils.get_axis(bins, logbins)
+        :param var: variable in dataset to plot
+        :param weight: column in dataset to use as weight
+        :param bins: tuple of bins in x (n_bins, start, stop) or list of bin edges.
+                     In the first case returns an axis of type Regular(), otherwise of type Variable().
+                     Raises error if not formatted in one of these ways.
+        :param logbins: whether logarithmic binnings
+        :param logx: whether log scale x-axis
+        :param logy: whether log scale y-axis
+        :param xlabel: x label
+        :param ylabel: y label
+        :param title: plot title
+        :param apply_cuts: True to apply all cuts to dataset before plotting or False for no cuts
+                           pass a string or list of strings of the cut label(s) to apply just those cuts
+        :param kwargs: keyword arguments to pass to histogram plotting function
+        """
+        self.logger.info(f'Plotting {var} in {self.name} as slices...')
+
+        fig, ax = plt.subplots()
+        df = self.apply_cuts(apply_cuts)
 
         # per dsid
-        for dsid in self.df['DSID'].unique():
-            dsid_df = self.df.loc[self.df['DSID'] == dsid]
-            hist = bh.Histogram(bh_axis, storage=bh.storage.Weight())
-            hist.fill(dsid_df[var], weight=dsid_df[weight], threads=config.n_threads)
-            hep.histplot(hist, label=dsid, **kwargs)
+        for dsid, dsid_df in self.df.groupby(level='DSID', sort=True):
+            weights = dsid_df[weight] if isinstance(weight, str) else weight
+            hist = Histogram1D(bins, dsid_df[var], weights, logbins)
+            hist.plot(ax=ax, label=dsid, **kwargs)
         # inclusive
-        hist = bh.Histogram(bh_axis, storage=bh.storage.Weight())
-        hist.fill(self.df[var], weight=self.df[weight])
-        hep.histplot(hist, label='Inclusive', color='k', **kwargs)
+        weights = df[weight] if isinstance(weight, str) else weight
+        hist = Histogram1D(bins, df[var], weights, logbins)
+        hist.plot(ax=ax, label='Inclusive', color='k', **kwargs)
 
-        _xlabel, _ylabel = plt_utils.get_axis_labels(var, self.lepton)
-        plt.xlabel(xlabel if xlabel else _xlabel)
-        plt.ylabel(ylabel if ylabel else _ylabel)
-        plt.legend(fontsize=10, ncol=2)
-        if logx:
-            plt.semilogx()
-        if logy:
-            plt.semilogy()
-        hep.atlas.label(italic=(True, True), loc=0, llabel='Internal', rlabel=title)
+        ax.legend(fontsize=10, ncol=2)
+        title = self.label if not title else title
+        plt_utils.set_axis_options(ax, var, bins, self.lepton, logbins, xlabel, ylabel, title, logx, logy)
 
         filename = self.paths['plot_dir'] + self.name + '_' + var + '_SLICES.png'
-        plt.savefig(filename, bbox_inches='tight')
-        plt.show()
+        fig.savefig(filename, bbox_inches='tight')
         self.logger.info(f'Saved mass slice plot of {var} in {self.name} to {filename}')
-        plt.clf()
 
     def gen_cutflow_hist(self,
                          event: bool = True,

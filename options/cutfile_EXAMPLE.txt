@@ -12,6 +12,11 @@ MC_WZ_dilep_m_bare
 MC_WZ_dilep_m_dres
 MC_WZ_pt
 mt_born
+mu_mt_reco	nominal_Loose
+mu_pt	nominal_Loose
+mu_eta	nominal_Loose
+met_met	nominal_Loose
+met_phi	nominal_Loose
 
 [OPTIONS]
 # case-insensitive

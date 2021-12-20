@@ -5,7 +5,6 @@ import time
 from typing import Optional, Union, Dict, List, Tuple
 
 import matplotlib.pyplot as plt
-import mplhep as hep
 import pandas as pd
 from numpy.typing import ArrayLike
 
@@ -286,18 +285,16 @@ class Analysis:
                 f"Labels iterable (length: {len(labels)}) must be of same length as number of datasets ({len(datasets)})"
 
         fig, ax = plt.subplots()
+        if isinstance(datasets, str):
+            datasets = [datasets]
         for i, dataset in enumerate(datasets):
-            values = (
-                self.datasets[dataset].apply_cuts(apply_cuts)[var]
-                if apply_cuts
-                else self.datasets[dataset][var]
-            )
+            df = self.datasets[dataset].apply_cuts(apply_cuts)
             weights = (
-                self.datasets[dataset].apply_cuts(apply_cuts)[weight]
+                df[weight]
                 if isinstance(weight, str)
                 else weight
             )
-            hist = Histogram1D(bins, values, weights, logbins)
+            hist = Histogram1D(bins, df[var], weights, logbins)
             hist.plot(
                 ax=ax,
                 yerr=yerr,
@@ -307,16 +304,8 @@ class Analysis:
                 **kwargs
             )
 
-        _xlabel, _ylabel = plotting_utils.get_axis_labels(var, lepton)
-
-        ax.set_xlabel(xlabel if xlabel else _xlabel)
-        ax.set_ylabel(ylabel if ylabel else _ylabel)
         ax.legend(fontsize=10)
-        if logx:
-            ax.set_xscale('log')
-        if logy:
-            ax.set_yscale('log')
-        hep.atlas.label(italic=(True, True), ax=ax, loc=0, llabel='Internal', rlabel=title)
+        plotting_utils.set_axis_options(ax, var, bins, lepton, logbins, xlabel, ylabel, title, logx, logy)
 
         filename = self.paths['plot_dir'] + '_'.join(datasets) + '_' + var + ('_NORMED' if normalise else '') + '.png'
         fig.savefig(filename, bbox_inches='tight')
@@ -327,7 +316,7 @@ class Analysis:
         """
         Plots variable in specific Dataset. Simple plotter.
 
-        :param datasets: name of Dataset class to plot
+        :param ds_name: name of Dataset class to plot
         :param kwargs: keyword arguments to pass to method in dataset
         """
         self.datasets[ds_name].plot_1d(**kwargs)
@@ -337,7 +326,7 @@ class Analysis:
         """
         Plots each variable in specific Dataset to cut from cutfile with each cutgroup applied
 
-        :param datasets: name of Dataset class to plot
+        :param ds_name: name of Dataset class to plot
         :param kwargs: keyword arguments to pass to method in dataset
         """
         self.datasets[ds_name].plot_all_with_cuts(**kwargs)
@@ -347,7 +336,7 @@ class Analysis:
         """
         Generates and saves cutflow histograms. Choose which cutflow histogram option to print. Default: only by-event.
 
-        :param datasets: Name of dataset to plot
+        :param ds_name: Name of dataset to plot
         :return: None
         """
         self.datasets[ds_name].gen_cutflow_hist(**kwargs)
@@ -356,7 +345,7 @@ class Analysis:
     def make_all_cutgroup_2dplots(self, ds_name: Optional[str], **kwargs) -> None:
         """Plots all cutgroups as 2d plots
 
-        :param datasets: name of dataset to plot
+        :param ds_name: name of dataset to plot
         :param kwargs: keyword arguments to pass to plot_utils.plot_2d_cutgroups
         """
         self.datasets[ds_name].make_all_cutgroup_2dplots(**kwargs)
@@ -366,7 +355,7 @@ class Analysis:
         """
         Plots mass slices for input variable xvar if dataset is_slices
 
-        :param datasets: name of dataset (in slices) to plot
+        :param ds_name: name of dataset (in slices) to plot
         :param xvar: variable in dataframe to plot
         :param kwargs: keyword args to pass to dataclass.plot_mass_slices()
         """

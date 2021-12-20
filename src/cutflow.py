@@ -173,18 +173,18 @@ class Cutflow:
                 cum_ratio = self.cutflow_cum[i + 1]
                 a_ratio = self.cutflow_a_ratio[i + 1]
                 self.logger.info(f"{cutname:<{max_name_len}} "
-                            f"{n_events:<{max_n_len}} "
-                            f"{ratio:.3f} "
-                            f"{a_ratio:.3f}    "
-                            f"{cum_ratio:.3f}")
+                                 f"{n_events:<{max_n_len}} "
+                                 f"{ratio:.3f} "
+                                 f"{a_ratio:.3f}    "
+                                 f"{cum_ratio:.3f}")
         else:
             # cutflow printout
             self.logger.info(f"=========== CUTFLOW =============")
             self.logger.info("Option: Non-sequential")
             self.logger.info("---------------------------------")
             self.logger.info("Cut " + " " * (max_name_len - 3) +
-                        "Events " + " " * (max_n_len - 6) +
-                        "Ratio")
+                             "Events " + " " * (max_n_len - 6) +
+                             "Ratio")
             # first line is inclusive sample
             self.logger.info("Inclusive " + " " * (max_name_len - 9) + f"{self._n_events_tot}   -")
 
@@ -193,8 +193,8 @@ class Cutflow:
                 n_events = self.cutflow_n_events[i + 1]
                 ratio = self.cutflow_ratio[i + 1]
                 self.logger.info(f"{cutname:<{max_name_len}} "
-                            f"{n_events:<{max_n_len}} "
-                            f"{ratio:.3f}    ")
+                                 f"{n_events:<{max_n_len}} "
+                                 f"{ratio:.3f}    ")
         self.logger.info('')
 
     def print_histogram(self, out_path: str, kind: str, plot_label: str = '', **kwargs) -> None:

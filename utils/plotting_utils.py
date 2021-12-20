@@ -1,4 +1,3 @@
-import pickle as pkl
 from typing import Tuple, Optional, Union, Iterable, List
 from warnings import warn
 
@@ -14,15 +13,11 @@ from utils.axis_labels import labels_xs
 from utils.phys_vars import get_luminosity
 
 # set plot style
-plt.style.use([hep.style.ATLAS,
-               {'font.sans-serif': ['Tex Gyre Heros']},  # use when helvetica isn't installed
-               {'errorbar.capsize': 5},
-               {'axes.labelsize': 23},
-               {'axes.labelpad': 23},
-               ])
+plt.style.use([hep.style.ATLAS])
 
 
-# TODO: OOP-ify all this
+# TODO: migrate all these to use new histogram
+
 
 # ===============================
 # ========== SCALINGS ===========
@@ -198,6 +193,56 @@ def set_fig_1d_axis_options(axis: plt.axes,
     return axis
 
 
+def set_axis_options(axis: plt.axes,
+                     var_name: str,
+                     bins: Union[tuple, list],
+                     lepton: str = None,
+                     is_logbins: bool = True,
+                     xlabel: str = '',
+                     ylabel: str = '',
+                     title: str = '',
+                     logx: bool = False,
+                     logy: bool = False,
+                     ) -> plt.axes:
+    """
+    Sets my default axis options
+
+    :param axis: axis to change
+    :param var_name: name of variable being plotted
+    :param bins: tuple of bins in y (n_bins, start, stop) or list of bin edge
+    :param lepton: name of lepton for axis label
+    :param is_logbins: whether bins are logarithmic
+    :param xlabel: x label
+    :param ylabel: y label
+    :param title: plot title
+    :param logx: bool whether to set log axis
+    :param logy: whether to set logarithmic bins where appropriate
+    :return: changed axis (also works in place)
+    """
+    # get axis labels (x label, y label)
+    _xlabel, _ylabel = get_axis_labels(str(var_name), lepton)
+
+    if logy:
+        axis.semilogy()
+    if is_logbins:  # set axis edge at 0
+        if isinstance(bins, tuple):
+            axis.set_xlim(bins[1], bins[2])
+        elif isinstance(bins, list):
+            axis.set_xlim(bins[0], bins[-1])
+        else:
+            raise TypeError("Bins must be formatted as either tuple (n_bins, start, stop) or a list of bin edges. "
+                            f"Given input was {bins}")
+        if logx:
+            axis.semilogx()
+
+    # set axis labels
+    axis.set_xlabel(xlabel if xlabel else _xlabel)
+    axis.set_ylabel(ylabel if ylabel else _ylabel)
+    hep.atlas.label(italic=(True, True), ax=axis, loc=0, llabel='Internal', rlabel=title)
+
+    return axis
+
+
 # ===============================
 # ==== BUILDING HISTOGRAMS ======
 # ===============================
@@ -320,7 +365,7 @@ def plot_1d_hist(
         log_y: bool = False,
         legend_label: str = None,
         weight_col: str = 'weight_mc',
-        ) -> plt.figure:
+) -> plt.figure:
     """Simple plotting function"""
 
     # check if variable needs to be specially binned
@@ -366,7 +411,7 @@ def ratio_plot_1d(
         to_file: bool = True,
         y_lim: tuple = None,
         **kwargs
-        ) -> plt.figure:
+) -> plt.figure:
     """Plot of bin-wise ratio between two variables"""
 
     ax_transform = bh.axis.transform.log if is_logbins else None
@@ -396,62 +441,3 @@ def ratio_plot_1d(
         print(f"Figure saved to {out_png_file}")
 
     return fig
-
-
-# OLD FUNCTION
-def plot_mass_slices(df: pd.DataFrame,
-                     lepton: str,
-                     xvar: str,
-                     xbins: Union[tuple, list] = (100, 300, 10000),
-                     logbins: bool = True,
-                     logx: bool = False,
-                     id_col: str = 'DSID',
-                     weight_col: str = 'total_event_weight',
-                     plot_label: str = '',
-                     plot_path: str = None,
-                     hist_path: str = None,
-                     inclusive_dataset: pd.DataFrame = None,
-                     to_pkl: bool = False
-                     ) -> None:
-    """Plots all mass slices as well as inclusive sample (in this case just all given slices together)"""
-    fig, ax = plt.subplots()
-
-    hists = dict()  # dictionary to hold mass slice histograms
-
-    for dsid, mass_slice in df.groupby(id_col):
-        hist = histplot_1d(var_x=mass_slice[xvar], weights=mass_slice[weight_col],
-                           bins=xbins, yerr=None, fig_axis=ax, label=str(dsid),
-                           is_logbins=logbins, scaling='widths')
-        if to_pkl:
-            hists[dsid] = hist
-
-    if inclusive_dataset is not None:
-        hist_inc = histplot_1d(var_x=inclusive_dataset[xvar], weights=inclusive_dataset[weight_col],
-                               bins=xbins, fig_axis=ax, yerr=None, is_logbins=logbins,
-                               scaling='widths', color='k', linewidth=2, label='Inclusive')
-    else:
-        hist_inc = histplot_1d(var_x=df[xvar], weights=df[weight_col],
-                               bins=xbins, fig_axis=ax, yerr=None, is_logbins=logbins,
-                               scaling='widths', color='k', linewidth=2, label='Inclusive')
-    if to_pkl:
-        hists['inclusive'] = hist_inc
-
-    ax.legend(fontsize=10, ncol=2, loc='upper right')
-    ax.semilogy()
-    if logx:
-        plt.semilogx()
-    hep.atlas.label(italic=(True, True), ax=ax, llabel='Internal', rlabel=plot_label)
-
-    xlabel, ylabel = get_axis_labels(xvar, lepton)
-    ax.set_xlabel(xlabel)
-    ax.set_ylabel(ylabel)
-    ax.set_xlim(130, 11000)
-
-    name = f"{xvar}_mass_slices_full"
-    if to_pkl:
-        with open(hist_path + plot_label + '_' + name + '.pkl', 'wb') as f:
-            pkl.dump(hists, f)
-            print(f"Saved pickle file to {f.name}")
-    path = plot_path + plot_label + '_' + name + '.png'
-    fig.savefig(path, bbox_inches='tight')
-    print(f"Figure saved to {path}")

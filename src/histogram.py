@@ -157,7 +157,9 @@ class Histogram1D(bh.Histogram):
                 sumw2 /= sumw2 * (normalise if normalise else 1.) / hist.integral
         else: sumw2 = None
 
-        if isinstance(yerr, str):
+        if yerr is None:
+            pass
+        elif isinstance(yerr, str):
             if yerr == 'rsumw2':
                 yerr = hist.root_sumw2
                 if normalise:
@@ -171,7 +173,9 @@ class Histogram1D(bh.Histogram):
             raise TypeError(f"Valid yerrs: 'rsumw2', 'sqrtN' or iterable of values. Got {yerr}")
 
         # normalise to value or unity
-        if isinstance(normalise, (float, int, bool)):
+        if not normalise:
+            bin_vals = hist.bin_values
+        elif isinstance(normalise, (float, int, bool)):
             bin_vals = (normalise if normalise else 1.) * hist.bin_values / hist.integral
         else:
             raise TypeError("'normalise' must be a float, int or boolean")
@@ -180,12 +184,5 @@ class Histogram1D(bh.Histogram):
             bin_vals /= hist.bin_widths
             if hasattr(yerr, '__len__'):
                 yerr /= hist.bin_widths
-        
-        print(normalise)
-        print(yerr)
-        print(hist.integral)
-        print(hist.root_sumw2)
-        print(hist.bin_edges)
-        print(hist.bin_values)
 
         hep.histplot(bin_vals, bins=hist.bin_edges, ax=ax, yerr=yerr, w2=sumw2, **kwargs)
