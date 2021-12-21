@@ -17,6 +17,7 @@ if __name__ == '__main__':
             'cutfile_path': '../options/cutfile_EXAMPLE.txt',
             'TTree_name': 'truth',
             'year': '2015+2016',
+            'hard_cut': r'Muon $|#eta|$',
             'lepton': 'tau',
             'label': r'$W^-\rightarrow\tau\nu\rightarrow\mu\nu$',
         }
@@ -32,8 +33,8 @@ if __name__ == '__main__':
     # my_analysis.plot_hist(['wminmunu', 'wmintaunu'], 'MC_WZ_dilep_m_born', bins=(50, 120, 5000), weight='truth_weight',
     #                       lepton='muon', title='test plot', normalise=False)
     # my_analysis.plot_mass_slices('wmintaunu', 'mt_born', weight='truth_weight', bins=(50, 200, 5000))
-    my_analysis.plot_mass_slices('wmintaunu', 'MC_WZ_dilep_m_born', weight='truth_weight', bins=(50, 200, 10000), logbins=True, logx=True, yerr=None)
-    my_analysis.plot_mass_slices('wmintaunu', 'mu_pt', weight='reco_weight', bins=(50, 200, 5000), logbins=True, yerr=None)
+    my_analysis.plot_mass_slices('wmintaunu', 'MC_WZ_dilep_m_born', weight='truth_weight', bins=(50, 200, 10000), logbins=True, logx=True, yerr='rsumw2')
+    my_analysis.plot_mass_slices('wmintaunu', 'mu_pt', weight='reco_weight', bins=(50, 200, 5000), logbins=True, yerr='rsumw2', logx=True)
     # my_analysis['wmintaunu'].profile_plot('MC_WZ_dilep_m_born', 'weight_KFactor', c='k', s=0.5, logx=True,
     #                                       xlim=(100, 600), ylim=(0.98, 1.025))
     # my_analysis.make_all_cutgroup_2dplots('wminmunu')

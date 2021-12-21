@@ -55,6 +55,7 @@ class Dataset:
 
     # OPTIONS
     paths: Dict[str, str]  # file output paths
+    hard_cut: Union[str, List[str]] = None  # name(s) of cut(s) that should be applied to dataframe and not as columns
     reco: bool = False  # whether dataset contains reconstructed data
     truth: bool = False  # whether dataset contains truth data
     to_pkl: bool = True  # whether to output to a pickle file
@@ -207,6 +208,8 @@ class Dataset:
 
         # print some dataset ID metadata
         # TODO: avg event weight
+        if self.df.index.names != ['DSID', 'eventNumber']:
+            raise ValueError("Incorrect index")
         if self.logger.level == logging.DEBUG:
             self.logger.info(f"DATASET INFO FOR {self.name}:")
             self.logger.debug("DSID       n_events   sum_w         x-s fb        lumi fb-1")
@@ -234,6 +237,10 @@ class Dataset:
         self.logger.info(f"========= DATASET '{self.name}' INITIALISED =========")
         self.logger.info("=" * (42 + len(self.name)))
         self.logger.info("")
+
+        if self.hard_cut:
+            self.logger.info(f"Applying hard cut(s): {self.hard_cut}")
+            self.apply_cuts(self.hard_cut, inplace=True)
 
     # Builtins
     # ===================
@@ -590,7 +597,10 @@ class Dataset:
         cut_data = df.loc[df[cut_cols].all(1)]
         return cut_data
 
-    def apply_cuts(self, labels: Union[bool, str, List[str]] = True) -> pd.DataFrame:
+    def apply_cuts(self,
+                   labels: Union[bool, str, List[str]] = True,
+                   inplace: bool = False
+                   ) -> Union[pd.DataFrame, None]:
         """Returns dataframe with all cuts applied"""
         if not labels:
             # Do not apply cuts
@@ -610,11 +620,14 @@ class Dataset:
 
         elif isinstance(labels, bool) and labels:
             cut_cols = [str(col) for col in self.df.columns if config.cut_label in col]
-            
+
         else:
             raise TypeError("cut labels must be a bool, a string or a list of strings")
-        
-        return self.df.loc[self.df[cut_cols].all(1)]
+
+        if inplace:
+            self.df = self.df.loc[self.df[cut_cols].all(1)]
+        else:
+            return self.df.loc[self.df[cut_cols].all(1)]
 
     # ===========================================
     # =========== PLOTING FUNCTIONS =============
