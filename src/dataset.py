@@ -12,6 +12,7 @@ import mplhep as hep
 import pandas as pd
 import uproot
 from awkward import to_pandas
+from numpy.typing import ArrayLike
 
 import src.config as config
 import utils.file_utils as file_utils
@@ -133,10 +134,10 @@ class Dataset:
                 self.logger.info(f"Detected {tree} as truth tree, will pull 'KFactor_weight_truth'")
                 self._tree_dict[tree].add('KFactor_weight_truth')
                 self.truth = True
-                truth_flag = True 
+                truth_flag = True
             else:
                 self.logger.info(f"Neither {tree} as truth nor reco dataset detected.")
-        
+
         self.reco = reco_flag
         self.truth = truth_flag
 
@@ -352,7 +353,7 @@ class Dataset:
         """
         # is the default tree a truth tree?
         default_tree_truth = 'truth' in self.TTree_name
-        
+
         t1 = time.time()
         self.logger.debug(f"Extracting {self._tree_dict[self.TTree_name]} from {self.TTree_name} tree...")
         df = to_pandas(uproot.concatenate(self.data_path + ':' + self.TTree_name, self._tree_dict[self.TTree_name],
@@ -400,12 +401,14 @@ class Dataset:
 
                 if tree_is_truth and not default_tree_truth:
                     if n_missing := len(df.index.difference(alt_df.index)):
-                        raise Exception(f"Found {n_missing} events in '{self.TTree_name}' tree not found in '{tree}' tree")
+                        raise Exception(
+                            f"Found {n_missing} events in '{self.TTree_name}' tree not found in '{tree}' tree")
                     else:
                         self.logger.debug(f"All events in {self.TTree_name} tree found in {tree} tree")
                 elif default_tree_truth and not tree_is_truth:
                     if n_missing := len(alt_df.index.difference(df.index)):
-                        raise Exception(f"Found {n_missing} events in '{tree}' tree not found in '{self.TTree_name}' tree")
+                        raise Exception(
+                            f"Found {n_missing} events in '{tree}' tree not found in '{self.TTree_name}' tree")
                     else:
                         self.logger.debug(f"All events in {tree} tree found in {self.TTree_name} tree")
                 else:
@@ -468,7 +471,7 @@ class Dataset:
             pd.testing.assert_series_equal(df.loc[pd.notna(df['weight_KFactor']), 'KFactor_weight_truth'],
                                            df['weight_KFactor'].dropna(),
                                            check_exact=True, check_names=False, check_index=False), \
-                                               "reco and truth KFactors not equal"
+                                                "reco and truth KFactors not equal"
             df.drop(columns='KFactor_weight_truth')
             self.logger.debug("Dropped extra KFactor column")
 
@@ -605,16 +608,16 @@ class Dataset:
         if not labels:
             # Do not apply cuts
             return self.df
-        
+
         elif isinstance(labels, list):
             labels = [label + config.cut_label for label in labels]
             if not (cut_cols := [
-                col for col in self.df.columns 
+                col for col in self.df.columns
                 if config.cut_label in col
                 and col in labels
             ]):
                 raise ValueError(f"No cut label(s) {labels} in dataset {self.name}")
-            
+
         elif isinstance(labels, str):
             cut_cols = [labels + config.cut_label]
 
@@ -632,43 +635,62 @@ class Dataset:
     # ===========================================
     # =========== PLOTING FUNCTIONS =============
     # ===========================================
-    # TODO: strip special characters from filepaths
-    def plot_1d(self,
-                x: Union[str, List[str]],
-                bins: Union[tuple, list],
-                title: str = '',
-                to_file: bool = True,
-                filename: str = '',
-                scaling: str = None,
-                **kwargs
-                ) -> plt.figure:
+    def plot_hist(
+            self,
+            var: Union[str, List[str]],
+            bins: Union[tuple, list],
+            weight: Union[str, float] = 1.,
+            ax: plt.Axes = None,
+            yerr: Union[ArrayLike, str] = None,
+            normalise: Union[float, bool, str] = 'lumi',
+            logbins: bool = False,
+            apply_cuts: Union[bool, str, List[str]] = True,
+            **kwargs
+    ) -> plt.Axes:
         """
         Generate 1D plots of given variables in dataframe. Returns figure object of list of figure objects.
 
-        :param x: variable name in dataframe to plot
-        :param bins: binnings for x
-        :param title: plot title
-        :param to_file: bool: to save to file or not
-        :param filename: filename to give to output figure
-        :param scaling: scaling to apply to plot. Either 'xs' for cross-section or 'widths' for divisiion by bin widths
-        :param kwargs: keyword arguments to pass to plotting function
-        :return: Figure
+        :param var: variable name to be plotted. must exist in all datasets
+        :param bins: tuple of bins in x (n_bins, start, stop) or list of bin edges.
+                     In the first case returns an axis of type Regular(), otherwise of type Variable().
+                     Raises error if not formatted in one of these ways.
+        :param weight: variable name in dataset to weight by or numeric value to weight all
+        :param ax: axis to plot on. Will create new plot if not given
+        :param yerr: Histogram uncertainties. Following modes are supported:
+                     - 'rsumw2', sqrt(SumW2) errors
+                     - 'sqrtN', sqrt(N) errors or poissonian interval when w2 is specified
+                     - shape(N) array of for one-sided errors or list thereof
+                     - shape(Nx2) array of for two-sided errors or list thereof
+        :param normalise: Normalisation value:
+                          - int or float
+                          - True for normalisation of unity
+                          - 'lumi' (default) for normalisation to global_uni variable in analysis
+                          - False for no normalisation
+        :param apply_cuts: True to apply all cuts to dataset before plotting or False for no cuts
+                           pass a string or list of strings of the cut label(s) to apply just those cuts
+        :param logbins: whether logarithmic binnings
+        :param kwargs: keyword arguments to pass to mplhep.histplot()
+        :return: Axis
         """
-        self.logger.debug(f"Generating histogram {title} for {x} in {self.name}...")
+        self.logger.debug(f"Generating {var} histogram in {self.name}...")
 
-        fig, ax = plt.subplots()
-        fig = plt_utils.plot_1d_hist(df=self.df, x=x, bins=bins, fig=fig, ax=ax, scaling=scaling, **kwargs)
-        fig.tight_layout()
+        if not ax:
+            fig, ax = plt.subplots()
 
-        if to_file:
-            if not filename:
-                filename = self.name + '_' + x
-            out_png_file = self.paths['plot_dir'] + filename + '.png'
-            hep.atlas.label(llabel="Internal", loc=0, ax=ax, rlabel=title)
-            fig.savefig(out_png_file, bbox_inches='tight')
-            self.logger.info(f"Figure saved to {out_png_file}")
-
-        return fig
+        df = self.apply_cuts(apply_cuts)
+        weights = (
+            df[weight]
+            if isinstance(weight, str)
+            else weight
+        )
+        hist = Histogram1D(bins, df[var], weights, logbins)
+        hist.plot(
+            ax=ax,
+            yerr=yerr,
+            normalise=normalise,
+            **kwargs
+        )
+        return ax
 
     def plot_all_with_cuts(self,
                            bins: Union[tuple, list] = (30, 1, 500),
@@ -731,7 +753,6 @@ class Dataset:
                                                  plot_label: Optional[str] = None,
                                                  ) -> None:
         """Plots overlay of cutgroups and acceptance (ratio) plots"""
-        # TODO: write docs for this function
         fig, (fig_ax, accept_ax) = plt.subplots(2, 1,
                                                 figsize=(plot_width * 1.2, plot_height),
                                                 gridspec_kw={'height_ratios': [3, 1]})
@@ -772,7 +793,8 @@ class Dataset:
                 hists[cutgroup] = h_cut
 
             # RATIO PLOT
-            # ================
+            # ================        :param kwargs: keyword arguments to pass to mplhep.histplot()
+
             hep.histplot(h_cut.view().value / h_inclusive.view().value,
                          bins=h_cut.axes[0].edges, ax=accept_ax, label=cutgroup,
                          color=fig_ax.get_lines()[-1].get_color())

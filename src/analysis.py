@@ -10,7 +10,6 @@ from numpy.typing import ArrayLike
 
 import src.config as config
 from src.dataset import Dataset
-from src.histogram import Histogram1D
 from utils import file_utils, decorators, plotting_utils
 
 
@@ -158,13 +157,20 @@ class Analysis:
         """Generate logger object"""
         if log_out not in ('file', 'both', 'console', None):
             raise ValueError("Accaptable values for 'log_out' parameter: 'file', 'both', 'console', None.")
+
         logger = logging.getLogger(name)
         logger.setLevel(log_level)
+
         if log_out.lower() in ('file', 'both'):
-            filehandler = logging.FileHandler(f"{self.paths['log_dir']}/{name}_"
-                                              f"{time.strftime('%Y-%m-%d_%H-%M-%S') if timedatelog else ''}.log")
+            filename = f"{self.paths['log_dir']}/" \
+                       f"{name}{'_' + time.strftime('%Y-%m-%d_%H-%M-%S') if timedatelog else ''}.log"
+            if file_utils.file_exists(filename):
+                file_utils.delete_file(filename)
+
+            filehandler = logging.FileHandler(filename)
             filehandler.setFormatter(logging.Formatter('%(asctime)s %(levelname)-10s %(message)s'))
             logger.addHandler(filehandler)
+
         if log_out.lower() in ('console', 'both'):
             logger.addHandler(logging.StreamHandler(sys.stdout))
 
@@ -288,19 +294,17 @@ class Analysis:
         if isinstance(datasets, str):
             datasets = [datasets]
         for i, dataset in enumerate(datasets):
-            df = self.datasets[dataset].apply_cuts(apply_cuts)
-            weights = (
-                df[weight]
-                if isinstance(weight, str)
-                else weight
-            )
-            hist = Histogram1D(bins, df[var], weights, logbins)
-            hist.plot(
+            self.datasets[dataset].plot_hist(
+                var=var,
+                bins=bins,
+                weight=weight,
                 ax=ax,
                 yerr=yerr,
                 normalise=normalise,
-                w2=w2,
+                logbins=logbins,
                 label=labels[i] if labels else self.datasets[dataset].label,
+                apply_cuts=apply_cuts,
+                w2=w2,
                 **kwargs
             )
 
@@ -319,7 +323,7 @@ class Analysis:
         :param ds_name: name of Dataset class to plot
         :param kwargs: keyword arguments to pass to method in dataset
         """
-        self.datasets[ds_name].plot_1d(**kwargs)
+        self.datasets[ds_name].plot_hist(**kwargs)
 
     @decorators.check_single_datafile
     def plot_with_cuts(self, ds_name: Optional[str], **kwargs) -> None:
