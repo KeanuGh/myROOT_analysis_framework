@@ -149,12 +149,20 @@ class Histogram1D(bh.Histogram):
         :return: None
         """
         hist = self
+        
+        # normalise to value or unity
+        if not normalise:
+            bin_vals = hist.bin_values
+        elif isinstance(normalise, (float, int, bool)):
+            bin_vals = (normalise if normalise else 1.) * hist.bin_values / hist.integral
+        else:
+            raise TypeError("'normalise' must be a float, int or boolean")
 
         if w2:
             sumw2 = hist.sumw2
             if normalise:
                 # scale sumw2 if normalising
-                sumw2 /= sumw2 * (normalise if normalise else 1.) / hist.integral
+                sumw2 /= sumw2 * normalise / hist.integral
         else: sumw2 = None
 
         if yerr is None:
@@ -164,21 +172,13 @@ class Histogram1D(bh.Histogram):
                 yerr = hist.root_sumw2
                 if normalise:
                     # scale errors for normalisation factor
-                    yerr = yerr * (normalise if normalise else 1.) / hist.integral
+                    yerr = yerr * normalise / hist.integral
             elif yerr == 'sqrtN':
                 yerr = True
             else:
                 raise ValueError(f"Valid yerrs: 'rsumw2', 'sqrtN'. Got {yerr}")
         elif not hasattr(yerr, '__len__'):
             raise TypeError(f"Valid yerrs: 'rsumw2', 'sqrtN' or iterable of values. Got {yerr}")
-
-        # normalise to value or unity
-        if not normalise:
-            bin_vals = hist.bin_values
-        elif isinstance(normalise, (float, int, bool)):
-            bin_vals = (normalise if normalise else 1.) * hist.bin_values / hist.integral
-        else:
-            raise TypeError("'normalise' must be a float, int or boolean")
 
         if scale_by_bin_width:
             bin_vals /= hist.bin_widths

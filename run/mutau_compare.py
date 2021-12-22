@@ -72,67 +72,67 @@ if __name__ == '__main__':
     analysis.merge_datasets("wplustaunu", "wplustaunu_hm", verify=True)
 
     # normalised
-    analysis.plot_hist(['wminmunu', 'wmintaunu'], 'met_met', weight='reco_weight', title='reco',
-                       bins=(30, 150, 5000), logbins=True, logx=True, lepton='muon',
-                       normalise='lumi', yerr='rsumw2', scale_by_bin_width=True)
-
-    analysis.plot_hist(['wplusmunu', 'wplustaunu'], 'met_met', weight='reco_weight', title='reco',
+    analysis.plot_hist(['wminmunu', 'wmintaunu'], 'met_met', weight='reco_weight', title='reco 139fb$^{-1}$',
                        bins=(30, 150, 5000), logbins=True, logx=True,
                        lepton='muon', normalise='lumi', yerr='rsumw2', scale_by_bin_width=True)
 
-    analysis.plot_hist(['wminmunu', 'wmintaunu'], 'mu_pt', weight='reco_weight', title='reco',
+    analysis.plot_hist(['wplusmunu', 'wplustaunu'], 'met_met', weight='reco_weight', title='reco 139fb$^{-1}$',
                        bins=(30, 150, 5000), logbins=True, logx=True,
                        lepton='muon', normalise='lumi', yerr='rsumw2', scale_by_bin_width=True)
 
-    analysis.plot_hist(['wplusmunu', 'wplustaunu'], 'mu_pt', weight='reco_weight', title='reco',
+    analysis.plot_hist(['wminmunu', 'wmintaunu'], 'mu_pt', weight='reco_weight', title='reco 139fb$^{-1}$',
                        bins=(30, 150, 5000), logbins=True, logx=True,
                        lepton='muon', normalise='lumi', yerr='rsumw2', scale_by_bin_width=True)
 
-    analysis.plot_hist(['wminmunu', 'wmintaunu'], 'mu_d0sig', weight='reco_weight', title='reco',
+    analysis.plot_hist(['wplusmunu', 'wplustaunu'], 'mu_pt', weight='reco_weight', title='reco 139fb$^{-1}$',
+                       bins=(30, 150, 5000), logbins=True, logx=True,
+                       lepton='muon', normalise='lumi', yerr='rsumw2', scale_by_bin_width=True)
+
+    analysis.plot_hist(['wminmunu', 'wmintaunu'], 'mu_d0sig', weight='reco_weight', title='reco 139fb$^{-1}$',
                        bins=(30, -3.5, 3.5), logy=True,
                        lepton='muon', normalise='lumi', yerr='rsumw2')
 
-    analysis.plot_hist(['wplusmunu', 'wplustaunu'], 'mu_d0sig', weight='reco_weight', title='reco',
+    analysis.plot_hist(['wplusmunu', 'wplustaunu'], 'mu_d0sig', weight='reco_weight', title='reco 139fb$^{-1}$',
                        bins=(30, -3.5, 3.5), logy=True,
                        lepton='muon', normalise='lumi', yerr='rsumw2')
 
-    analysis.plot_hist(['wminmunu', 'wmintaunu'], 'mu_delta_z0_sintheta', weight='reco_weight', title='reco',
+    analysis.plot_hist(['wminmunu', 'wmintaunu'], 'mu_delta_z0_sintheta', weight='reco_weight', title='reco 139fb$^{-1}$',
                        bins=(30, -1, 1),
                        lepton='muon', normalise='lumi', yerr='rsumw2')
 
-    analysis.plot_hist(['wplusmunu', 'wplustaunu'], 'mu_delta_z0_sintheta', weight='reco_weight', title='reco',
+    analysis.plot_hist(['wplusmunu', 'wplustaunu'], 'mu_delta_z0_sintheta', weight='reco_weight', title='reco 139fb$^{-1}$',
                        bins=(30, -1, 1),
                        lepton='muon', normalise='lumi', yerr='rsumw2')
 
     # un-normalised
     analysis.plot_hist(['wminmunu', 'wmintaunu'], 'met_met', weight='reco_weight', title='reco',
-                       bins=(30, 150, 5000), logbins=True, logx=True, lepton='muon',
-                       yerr='rsumw2', scale_by_bin_width=True)
+                       bins=(30, 150, 5000), logbins=True, logx=True, normalise=False,
+                       lepton='muon', yerr='rsumw2', scale_by_bin_width=True)
 
     analysis.plot_hist(['wplusmunu', 'wplustaunu'], 'met_met', weight='reco_weight', title='reco',
-                       bins=(30, 150, 5000), logbins=True, logx=True,
+                       bins=(30, 150, 5000), logbins=True, logx=True, normalise=False,
                        lepton='muon', yerr='rsumw2', scale_by_bin_width=True)
 
     analysis.plot_hist(['wminmunu', 'wmintaunu'], 'mu_pt', weight='reco_weight', title='reco',
-                       bins=(30, 150, 5000), logbins=True, logx=True,
+                       bins=(30, 150, 5000), logbins=True, logx=True, normalise=False,
                        lepton='muon', yerr='rsumw2', scale_by_bin_width=True)
 
     analysis.plot_hist(['wplusmunu', 'wplustaunu'], 'mu_pt', weight='reco_weight', title='reco',
-                       bins=(30, 150, 5000), logbins=True, logx=True,
+                       bins=(30, 150, 5000), logbins=True, logx=True, normalise=False,
                        lepton='muon', yerr='rsumw2', scale_by_bin_width=True)
 
     analysis.plot_hist(['wminmunu', 'wmintaunu'], 'mu_d0sig', weight='reco_weight', title='reco',
-                       bins=(30, -3.5, 3.5), logy=True,
+                       bins=(30, -3.5, 3.5), logy=True, normalise=False,
                        lepton='muon', yerr='rsumw2')
 
     analysis.plot_hist(['wplusmunu', 'wplustaunu'], 'mu_d0sig', weight='reco_weight', title='reco',
-                       bins=(30, -3.5, 3.5), logy=True,
+                       bins=(30, -3.5, 3.5), logy=True, normalise=False,
                        lepton='muon', yerr='rsumw2')
 
     analysis.plot_hist(['wminmunu', 'wmintaunu'], 'mu_delta_z0_sintheta', weight='reco_weight', title='reco',
-                       bins=(30, -1, 1),
+                       bins=(30, -1, 1), normalise=False,
                        lepton='muon', yerr='rsumw2')
 
     analysis.plot_hist(['wplusmunu', 'wplustaunu'], 'mu_delta_z0_sintheta', weight='reco_weight', title='reco',
-                       bins=(30, -1, 1),
+                       bins=(30, -1, 1), normalise=False,
                        lepton='muon', yerr='rsumw2')
