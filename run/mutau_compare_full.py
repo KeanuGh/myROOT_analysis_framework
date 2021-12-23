@@ -72,7 +72,7 @@ if __name__ == '__main__':
     analysis.merge_datasets("wmintaunu",  "wmintaunu_hm", verify=True)
     analysis.merge_datasets("wplusmunu",  "wplusmunu_hm", verify=True)
     analysis.merge_datasets("wplustaunu", "wplustaunu_hm", verify=True)
-    analysis.print_cutflow_latex_table()
+    # analysis.print_cutflow_latex_table()
 
     # =========================
     # ======= NORMALISED ======

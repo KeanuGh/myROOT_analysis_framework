@@ -422,7 +422,7 @@ class Dataset:
                 self.__drop_duplicates(alt_df)
 
             self.logger.debug("Merging with rest of dataframe...")
-            df = pd.merge(df, alt_df, left_index=True, right_index=True, sort=False, copy=False, validate=validation)
+            df = pd.merge(df, alt_df, how='left' left_index=True, right_index=True, sort=False, copy=False, validate=validation)
 
         if _validate_sumofweights:
             # sanity check to make sure totalEventsWeighted really is what it says it is
