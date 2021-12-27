@@ -158,6 +158,7 @@ class Dataset:
         self.logger.debug(f"grouped cutflow: {self.cutfile.options['grouped cutflow']}")
         self.logger.debug(f"sequential cutflow: {self.cutfile.options['sequential']}")
         self.logger.debug(f"Forced dataset rebuild: {self.force_rebuild}")
+        self.logger.debug(f"Validate missing events: {self.validate_missing_events}")
         self.logger.debug(f"Validate duplicated events: {self.validate_duplicated_events}")
         self.logger.debug(f"Validate sum of weights: {self.validate_sumofweights}")
         self.logger.debug("----------------------------")
@@ -256,7 +257,7 @@ class Dataset:
         self.df[col] = item
 
     def __repr__(self):
-        return f'Dataset("{self.name}",TTree:"{self.TTree_name},Events:{len(self)})'
+        return f'Dataset("{self.name}",TTree:"{self.TTree_name}",Events:{len(self)})'
 
     def __str__(self):
         return f'{self.name},TTree:"{self.TTree_name}",Events:{len(self)}'

@@ -61,10 +61,15 @@ labels_xs: Dict[str, BranchLabel] = {
         'xlabel': r'Dressed $M^{W}_{T}$ [GeV]',
         'ylabel': r'$\frac{d\sigma}{dM_{T}}$ [fb GeV$^{-1}$]',
     },
-    'mt_reco': {  # boson pt
+    'mu_mt_reco': {  # boson pt
         'xlabel': r'$M^{W}_{T}$ [GeV]',
         'ylabel': r'$\frac{d\sigma}{dM_{T}}$ [fb GeV$^{-1}$]',
     },
+    'e_mt_reco': {  # boson pt
+        'xlabel': r'$M^{W}_{T}$ [GeV]',
+        'ylabel': r'$\frac{d\sigma}{dM_{T}}$ [fb GeV$^{-1}$]',
+    },
+
     'w_y': {  # boson rapidity
         'xlabel': r'W rapidity $y$',
         'ylabel': r'$\frac{d\sigma}{dy}$ [fb]',
