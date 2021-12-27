@@ -67,12 +67,15 @@ if __name__ == '__main__':
         force_rebuild=False,
         TTree_name='truth'
     )
+    logger = analysis.logger
 
     analysis.merge_datasets("wminmunu",   "wminmunu_hm", verify=True)
     analysis.merge_datasets("wmintaunu",  "wmintaunu_hm", verify=True)
     analysis.merge_datasets("wplusmunu",  "wplusmunu_hm", verify=True)
     analysis.merge_datasets("wplustaunu", "wplustaunu_hm", verify=True)
-    # analysis.print_cutflow_latex_table()
+    
+    # some checks
+    
 
     # =========================
     # ======= NORMALISED ======

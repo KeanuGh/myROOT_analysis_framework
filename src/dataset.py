@@ -216,7 +216,7 @@ class Dataset:
             self.logger.info(f"DATASET INFO FOR {self.name}:")
             self.logger.debug("DSID       n_events   sum_w         x-s fb        lumi fb-1")
             self.logger.debug("==========================================================")
-            for dsid, df_id in self.df.groupby(level='DSID', sort=True):
+            for dsid, df_id in self.df.groupby(level='DSID'):
                 self.logger.debug(f"{dsid:<10} "
                                   f"{len(df_id):<10} "
                                   f"{df_id['weight_mc'].sum():<10.6e}  "
@@ -475,6 +475,9 @@ class Dataset:
                                                 "reco and truth KFactors not equal"
             df.drop(columns='KFactor_weight_truth')
             self.logger.debug("Dropped extra KFactor column")
+        
+        self.logger.info("Sorting by DSID...")
+        df.sort_index(level='DSID', inplace=True)
 
         self.logger.info(f"time to build dataframe: {time.strftime('%H:%M:%S', time.gmtime(time.time() - t1))}")
 
@@ -608,21 +611,25 @@ class Dataset:
         """Returns dataframe with all cuts applied"""
         if not labels:
             # Do not apply cuts
+            self.logger.debug(f"No cuts applied to {self.name}")
             return self.df
 
         elif isinstance(labels, list):
+            self.logger.debug(f"Applying cuts: {labels} to {self.name}...")
             labels = [label + config.cut_label for label in labels]
             if not (cut_cols := [
                 col for col in self.df.columns
                 if config.cut_label in col
                 and col in labels
             ]):
-                raise ValueError(f"No cut label(s) {labels} in dataset {self.name}")
+                raise ValueError(f"No cut label(s) {labels} in dataset {self.name}...")
 
         elif isinstance(labels, str):
+            self.logger.debug(f"Applying cut: {labels} to {self.name}...")
             cut_cols = [labels + config.cut_label]
 
-        elif isinstance(labels, bool) and labels:
+        elif labels is True:
+            self.logger.debug(f"Applying all cuts to {self.name}...")
             cut_cols = [str(col) for col in self.df.columns if config.cut_label in col]
 
         else:
@@ -676,7 +683,7 @@ class Dataset:
         self.logger.debug(f"Generating {var} histogram in {self.name}...")
 
         if not ax:
-            fig, ax = plt.subplots()
+            _, ax = plt.subplots()
 
         df = self.apply_cuts(apply_cuts)
         weights = (
