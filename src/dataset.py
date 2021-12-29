@@ -641,7 +641,6 @@ class Dataset:
                 raise ValueError(f"No cut(s) {missing_cut_cols} in dataset {self.name}...")
 
         if not labels:
-            self.logger.debug(f"No cuts applied to {self.name}")
             if inplace:
                 return
             else:
