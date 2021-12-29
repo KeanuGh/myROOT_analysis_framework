@@ -55,7 +55,7 @@ class Dataset:
 
     # OPTIONS
     paths: Dict[str, str]  # file output paths
-    hard_cut: Union[str, List[str]] = None  # name(s) of cut(s) that should be applied to dataframe and not as columns
+    hard_cut: Union[str, List[str], None] = None  # name(s) of cut(s) that should be applied to dataframe and not as columns
     reco: bool = False  # whether dataset contains reconstructed data
     truth: bool = False  # whether dataset contains truth data
     to_pkl: bool = True  # whether to output to a pickle file
@@ -152,6 +152,23 @@ class Dataset:
                                if unexpected_var not in labels_xs]:
             self.logger.warning(f"Variable(s) {unexpected_vars} not contained in labels dictionary. "
                                 "Some unexpected behaviour may occur.")
+
+        # check if hard cut(s) exists in cutfile. If not, skip
+        if self.hard_cut is not None:
+            if isinstance(self.hard_cut, str):
+                if self.hard_cut not in [cut_dict['name'] for cut_dict in self.cutfile.cut_dicts]:
+                    self.logger.debug(f"No cut named '{self.hard_cut}' in cutfile; skipping.")
+                    self.hard_cut = None
+
+            elif isinstance(self.hard_cut, list):
+                for i, cut in enumerate(self.hard_cut):
+                    if cut not in [cut_dict['name'] for cut_dict in self.cutfile.cut_dicts]:
+                        self.logger.debug(f"No cut named '{self.hard_cut}' in cutfile; skipping.")
+                        self.hard_cut.remove(cut)
+
+            else:
+                raise TypeError(f"hard_cut parameter must be of type string or list of strings. "
+                                f"Got type {type(self.hard_cut)}")
 
         # some debug information
         self.logger.debug("")
