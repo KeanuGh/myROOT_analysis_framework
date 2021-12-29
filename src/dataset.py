@@ -331,21 +331,7 @@ class Dataset:
         Returns the name of the printed table
         """
         latex_filepath = self.paths['latex_dir'] + self.name + "_cutflow.tex"
-
-        with open(latex_filepath, "w") as f:
-            f.write("\\begin{tabular}{|c||c|c|c|}\n"
-                    "\\hline\n")
-            f.write(f"Cut & Events & Ratio & Cumulative \\\\\\hline\n"
-                    f"Inclusive & {len(self)} & — & — \\\\\n")
-            for i, cutname in enumerate(self.cutflow.cutflow_labels[1:]):
-                f.write(f"{cutname} & "
-                        f"{self.cutflow.cutflow_n_events[i + 1]} & "
-                        f"{self.cutflow.cutflow_ratio[i + 1]:.3f} & "
-                        f"{self.cutflow.cutflow_cum[i + 1]:.3f} "
-                        f"\\\\\n")
-            f.write("\\hline\n"
-                    "\\end{tabular}\n")
-
+        self.cutflow.print_latex_table(latex_filepath)
         self.logger.info(f"Saved LaTeX cutflow table in {latex_filepath}")
 
     # ===============================

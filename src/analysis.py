@@ -437,7 +437,7 @@ class Analysis:
             self.logger.info(f"cross-section: {self.datasets[name].cross_section:.2f} fb")
             self.logger.info(f"luminosity   : {self.datasets[name].luminosity:.2f} fb-1")
 
-    def print_cutflow_latex_table(self, datasets: Union[bool, str, List[str]] = True) -> None:
+    def print_latex_table(self, datasets: Union[bool, str, List[str]] = True) -> None:
         """
         Prints a latex table(s) of cutflow.
 

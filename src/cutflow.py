@@ -46,7 +46,6 @@ class Cutflow:
         # extract only the cut columns from the dataframe
         df = df[[col for col in df.columns if config.cut_label in col]]
 
-        # special variables only for sequential cuts
         self.cutflow_a_ratio = [1.0]  # contains ratio of each separate cut to inclusive sample
         self.cutflow_cum = [1.0]  # contains ratio of each cut to inclusive sample
 
@@ -116,7 +115,6 @@ class Cutflow:
         # cutflow printout
         self.logger.info('')
         self.logger.info(f"=========== CUTFLOW =============")
-        self.logger.info("Option: Sequential")
         self.logger.info("---------------------------------")
         self.logger.info("Cut " + " " * (max_name_len - 3) +
                          "Events " + " " * (max_n_len - 6) +
@@ -126,16 +124,30 @@ class Cutflow:
 
         # print line
         for i, cutname in enumerate(self.cutflow_labels[1:]):
-            n_events = self.cutflow_n_events[i + 1]
-            ratio = self.cutflow_ratio[i + 1]
-            cum_ratio = self.cutflow_cum[i + 1]
-            a_ratio = self.cutflow_a_ratio[i + 1]
             self.logger.info(f"{cutname:<{max_name_len}} "
-                             f"{n_events:<{max_n_len}} "
-                             f"{ratio:.3f} "
-                             f"{a_ratio:.3f}    "
-                             f"{cum_ratio:.3f}")
+                             f"{self.cutflow_n_events[i + 1]:<{max_n_len}} "
+                             f"{self.cutflow_ratio[i + 1]:.3f} "
+                             f"{self.cutflow_a_ratio[i + 1]:.3f}    "
+                             f"{self.cutflow_cum[i + 1]:.3f}")
         self.logger.info('')
+
+    def print_latex_table(self, filepath: str) -> None:
+        """
+        Prints a latex table containing cutflow to file in filepath with date and time.
+        Returns the name of the printed table
+        """
+        with open(filepath, "w") as f:
+            f.write("\\begin{tabular}{|c||c|c|c|}\n"
+                    "\\hline\n")
+            f.write(f"Cut & Events & Ratio & Cumulative \\\\\\hline\n"
+                    f"Inclusive & {self.cutflow_n_events[0]} & — & — \\\\\n")
+            for i, cutname in enumerate(self.cutflow_labels[1:]):
+                f.write(f"{cutname} & "
+                        f"{self.cutflow_n_events[i + 1]} & "
+                        f"{self.cutflow_ratio[i + 1]:.3f} & "
+                        f"{self.cutflow_cum[i + 1]:.3f} "
+                        f"\\\\\n")
+            f.write("\\hline\n\\end{tabular}\n")
 
     def print_histogram(self, out_path: str, kind: str, plot_label: str = '', **kwargs) -> None:
         """
