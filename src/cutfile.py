@@ -100,7 +100,6 @@ class Cutfile:
         | Each line under [OUTPUTS] should be a variable in root file
         |
         | Each line under [OPTIONS] header should be '[option]<sep>[value]'
-        | - sequential: (bool) whether each cut should be applied sequentially so a cutflow can be generated
 
         :param path: path to an alternative cutfile
         :param sep: cutfile separator. Default is TAB
@@ -151,7 +150,6 @@ class Cutfile:
 
             # Options necessary for the analysis to run (remember to add to this when adding new options)
             necessary_options = [
-                'sequential',
                 'grouped cutflow',
             ]
             if missing_options := [opt for opt in necessary_options if opt not in options_dict.keys()]:
@@ -292,6 +290,39 @@ class Cutfile:
                 return True
 
         return False
+
+    def get_cut_string(self, cut_label: str, name: bool = False, align: bool = False) -> str:
+        """
+        Get displayed string of cut.
+
+        :param cut_label: name of cut to print
+        :param name: if starting with the name of the cut
+        :param align: if aligning to all other cuts
+        :return: string of style "cool name: var_1 > 10" if name is True else "var_1 > 10"
+                 optionally returns the string 'None' if cut_label is None
+        """
+        if cut_label is None:
+            return 'None'
+
+        # get cut dict with name cut_label
+        cut_dict = next((d for d in self.cut_dicts if d['name'] == cut_label), None)
+        if cut_dict is None:
+            raise ValueError(f"No cut named '{cut_label}' in cutfile {self.name}")
+
+        name_len = max([len(cut['name']) for cut in self.cut_dicts]) if align else 0
+        var_len = max([len(cut['cut_var']) for cut in self.cut_dicts]) if align else 0
+
+        if not cut_dict['is_symmetric']:
+            return (f"{cut_dict['name']:<{name_len}}: " if name else '') + \
+                   f"{cut_dict['cut_var']:>{var_len}} {cut_dict['relation']} {cut_dict['cut_val']}"
+        else:
+            return (f"{cut_dict['name']:<{name_len}}: " if name else '') + \
+                   f"{'|' + cut_dict['cut_var']:>{max(var_len - 1, 0)}}| {cut_dict['relation']} {cut_dict['cut_val']}"
+
+    def log_cuts(self, name: bool = True) -> None:
+        """send list of cuts in cutfile to logger"""
+        for cut_name in [cut['name'] for cut in self.cut_dicts]:
+            self.logger.info(self.get_cut_string(cut_name, name=name, align=True))
 
     def backup_cutfile(self, name: str) -> None:
         cutfile_backup_filepath = self.backup_path + self.name + '_' + name + '_' + time.strftime("%Y-%m-%d_%H-%M-%S") + ".txt"

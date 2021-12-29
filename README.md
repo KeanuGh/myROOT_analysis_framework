@@ -77,7 +77,6 @@ PDFinfo_Q
 
 [OPTIONS]
 # case-insensitive
-sequential	false
 grouped cutflow	false
 ```
 Cutfile contains lists of tab-separated values. 
@@ -96,7 +95,6 @@ For **[CUTS]** The columns are:
 List of the variables that you plan to plot. The variables that are cut on will still be accessible in the dataframe though so you can plot them if you want 
 
 **[OPTIONS]** 
-- '_sequential_': This set whether the cuts should be applied one after the other or separately. Remember if sequential is true that the order in which you write in [CUTS] matters
 - '_grouped cutflow_': this sets whether the different cut groupings should be set applied as a single cut in the cutflow
 
 ## Extra variables

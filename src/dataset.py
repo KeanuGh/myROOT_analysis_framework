@@ -5,7 +5,6 @@ import time
 from dataclasses import dataclass, field
 from itertools import combinations
 from typing import Optional, Union, List, OrderedDict, Tuple, Dict, Iterable
-from warnings import warn
 
 import matplotlib.pyplot as plt
 import mplhep as hep
@@ -107,6 +106,12 @@ class Dataset:
         # ========================
         self.logger.info(f"Parsting cutfile '{self.cutfile_path}' for {self.name}...")
         self.cutfile = Cutfile(self.cutfile_path, self.paths['backup_cutfiles_dir'], logger=self.logger)
+
+        self.logger.info('')
+        self.logger.info("========== CUTS USED ============")
+        self.log_cuts()
+        self.logger.info('')
+
         self._build_df = True if self.force_rebuild else self.cutfile.if_build_dataframe(self.pkl_path)
 
         self._tree_dict, self._vars_to_calc = self.cutfile.extract_variables(derived_vars)
@@ -156,7 +161,7 @@ class Dataset:
         self.logger.debug(f"TTree: {self.TTree_name}")
         self.logger.debug(f"Cutfile: {self.cutfile_path}")
         self.logger.debug(f"grouped cutflow: {self.cutfile.options['grouped cutflow']}")
-        self.logger.debug(f"sequential cutflow: {self.cutfile.options['sequential']}")
+        self.logger.debug(f"Hard cut applied: {self.cutfile.get_cut_string(self.hard_cut)}")
         self.logger.debug(f"Forced dataset rebuild: {self.force_rebuild}")
         self.logger.debug(f"Validate missing events: {self.validate_missing_events}")
         self.logger.debug(f"Validate duplicated events: {self.validate_duplicated_events}")
@@ -232,11 +237,10 @@ class Dataset:
         self.cutflow = Cutflow(self.df,
                                self.cutfile.cut_dicts,
                                self.logger,
-                               self.cutfile.cutgroups if self.cutfile.options['grouped cutflow'] else None,
-                               self.cutfile.options['sequential'])
+                               self.cutfile.cutgroups if self.cutfile.options['grouped cutflow'] else None)
 
         if self.hard_cut:
-            self.logger.info(f"Applying hard cut(s): {self.hard_cut}...")
+            self.logger.info(f"Applying hard cut(s): {self.hard_cut}: {self.cutflow}...")
             self.apply_cuts(self.hard_cut, inplace=True)
 
         self.logger.info("=" * (42 + len(self.name)))
@@ -321,20 +325,28 @@ class Dataset:
         self.logger.info(f"cross-section: {self.cross_section:.2f} fb")
         self.logger.info(f"luminosity   : {self.luminosity:.2f} fb-1")
 
-    def print_cutflow_latex_table(self, check_backup: bool = True) -> None:
+    def print_latex_table(self) -> None:
         """
-        Prints a latex table of cutflow. By default, first checks if a current backup exists and will not print if
-        backup is identical
-        :param check_backup: default true. Checks if backup of current cutflow already exists and if so does not print
-        :return: None
+        Prints a latex table containing cutflow to file in filepath with date and time.
+        Returns the name of the printed table
         """
-        if check_backup:
-            last_backup = file_utils.get_last_backup(self.paths['latex_table_dir'])
-            latex_file = self.cutflow.print_latex_table(self.paths['latex_table_dir'], self.name)
-            if file_utils.identical_to_backup(latex_file, backup_file=last_backup, logger=self.logger):
-                file_utils.delete_file(latex_file)
-        else:
-            self.cutflow.print_latex_table(self.paths['latex_table_dir'], self.name)
+        latex_filepath = self.paths['latex_dir'] + self.name + "_cutflow.tex"
+
+        with open(latex_filepath, "w") as f:
+            f.write("\\begin{tabular}{|c||c|c|c|}\n"
+                    "\\hline\n")
+            f.write(f"Cut & Events & Ratio & Cumulative \\\\\\hline\n"
+                    f"Inclusive & {len(self)} & — & — \\\\\n")
+            for i, cutname in enumerate(self.cutflow.cutflow_labels[1:]):
+                f.write(f"{cutname} & "
+                        f"{self.cutflow.cutflow_n_events[i + 1]} & "
+                        f"{self.cutflow.cutflow_ratio[i + 1]:.3f} & "
+                        f"{self.cutflow.cutflow_cum[i + 1]:.3f} "
+                        f"\\\\\n")
+            f.write("\\hline\n"
+                    "\\end{tabular}\n")
+
+        self.logger.info(f"Saved LaTeX cutflow table in {latex_filepath}")
 
     # ===============================
     # ====== DATAFRAME BUILDER ======
@@ -525,19 +537,9 @@ class Dataset:
             else:  # take absolute value instead
                 self.df[cut['name'] + label] = op_dict[cut['relation']](self.df[cut['cut_var']].abs(), cut['cut_val'])
 
-        # print cutflow output
-        name_len = max([len(cut['name']) for cut in self.cutfile.cut_dicts])
-        var_len = max([len(cut['cut_var']) for cut in self.cutfile.cut_dicts])
-        self.logger.info('')
-        self.logger.info("========== CUTS USED ============")
-        for cut in self.cutfile.cut_dicts:
-            if not cut['is_symmetric']:
-                self.logger.info(
-                    f"{cut['name']:<{name_len}}: {cut['cut_var']:>{var_len}} {cut['relation']} {cut['cut_val']}")
-            else:
-                self.logger.info(
-                    f"{cut['name']:<{name_len}}: {'|' + cut['cut_var']:>{var_len}}| {cut['relation']} {cut['cut_val']}")
-        self.logger.info('')
+    def log_cuts(self, name: bool = True) -> None:
+        """send list of cuts in cutfile to logger"""
+        self.cutfile.log_cuts(name=name)
 
     def __event_weight_reco(self,
                             mc_weight: str = 'weight_mc',
@@ -1014,8 +1016,7 @@ class Dataset:
         Generates and saves cutflow histograms. Choose which cutflow histogram option to print. Default: only by-event.
 
         :param event: y-axis is number of events passing each cut
-        :param ratio: ratio of each subsequent cut if sequential,
-                      else ratio of events passing each cut to inclusive sample
+        :param ratio: ratio of events passing each cut to inclusive sample
         :param cummulative: ratio of each cut to the previous cut
         :param a_ratio: ratio of cut to inclusive sample
         :param all_plots: it True, plot all
@@ -1023,23 +1024,14 @@ class Dataset:
         """
         if all_plots:
             event = ratio = cummulative = a_ratio = True
-
         if event:
             self.cutflow.print_histogram(self.paths['plot_dir'], 'event')
         if ratio:
             self.cutflow.print_histogram(self.paths['plot_dir'], 'ratio')
         if cummulative:
-            if self.cutfile.options['sequential']:
-                self.cutflow.print_histogram(self.paths['plot_dir'], 'cummulative')
-            else:
-                warn("Sequential cuts cannot generate a cummulative cutflow")
+            self.cutflow.print_histogram(self.paths['plot_dir'], 'cummulative')
         if a_ratio:
-            if self.cutfile.options['sequential']:
-                self.cutflow.print_histogram(self.paths['plot_dir'], 'a_ratio')
-            else:
-                warn("Sequential cuts can't generate cummulative cutflow. "
-                     "Ratio of cuts to acceptance will be generated instead.")
-                self.cutflow.print_histogram(self.paths['plot_dir'], 'ratio')
+            self.cutflow.print_histogram(self.paths['plot_dir'], 'a_ratio')
 
     def profile_plot(self, varx: str, vary: str,
                      title: str = '',

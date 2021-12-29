@@ -66,7 +66,7 @@ class Analysis:
             'pkl_df_dir': data_dir if data_dir else output_dir + '/data/',  # pickle file containing extracted data, format to used dataset
             'pkl_hist_dir': output_dir + '/histograms/',  # pickle file to place histograms into
             'backup_cutfiles_dir': output_dir + '/cutfiles/',  # _cutfile backups
-            'latex_table_dir': output_dir + '/LaTeX_cutflow_table/',  # where to print latex cutflow table
+            'latex_dir': output_dir + '/LaTeX/',  # where to print latex cutflow table
             'log_dir': output_dir + '/logs/',
         }
         for path in self.paths:
@@ -437,22 +437,18 @@ class Analysis:
             self.logger.info(f"cross-section: {self.datasets[name].cross_section:.2f} fb")
             self.logger.info(f"luminosity   : {self.datasets[name].luminosity:.2f} fb-1")
 
-    @decorators.check_single_datafile
-    def print_cutflow_latex_table(self, ds_name: Optional[str] = None, check_backup: bool = True) -> None:
+    def print_cutflow_latex_table(self, datasets: Union[bool, str, List[str]] = True) -> None:
         """
-        Prints a latex table of cutflow. By default, first checks if a current backup exists and will not print if
-        backup is identical
-        :param ds_name:
-        :param check_backup: default true. Checks if backup of current cutflow already exists and if so does not print
+        Prints a latex table(s) of cutflow.
+
+        :param datasets: list of datasets or single dataset name. If True applies to all datasets.
         :return: None
         """
-        if check_backup:
-            last_backup = file_utils.get_last_backup(self.paths['latex_table_dir'])
-            latex_file = self.datasets[ds_name].cutflow.print_latex_table(self.paths['latex_table_dir'], ds_name)
-            if file_utils.identical_to_backup(latex_file, backup_file=last_backup, logger=self.logger):
-                file_utils.delete_file(latex_file)
-        else:
-            if ds_name is None:
-                for d in self:
-                    d.cutflow.print_latex_table(self.paths['latex_table_dir'], d.name)
-            self.datasets[ds_name].cutflow.print_latex_table(self.paths['latex_table_dir'], ds_name)
+        if datasets is True:
+            # apply to all datasets
+            datasets = self.datasets.keys()
+        elif isinstance(datasets, str):
+            datasets = [datasets]
+
+        for dataset in datasets:
+            self.datasets[dataset].print_latex_table()

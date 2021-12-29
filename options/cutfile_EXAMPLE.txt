@@ -20,5 +20,4 @@ met_phi	nominal_Loose
 
 [OPTIONS]
 # case-insensitive
-sequential	true
 grouped cutflow	true
