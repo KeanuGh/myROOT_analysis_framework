@@ -235,14 +235,14 @@ class Dataset:
                                self.cutfile.cutgroups if self.cutfile.options['grouped cutflow'] else None,
                                self.cutfile.options['sequential'])
 
+        if self.hard_cut:
+            self.logger.info(f"Applying hard cut(s): {self.hard_cut}...")
+            self.apply_cuts(self.hard_cut, inplace=True)
+
         self.logger.info("=" * (42 + len(self.name)))
         self.logger.info(f"========= DATASET '{self.name}' INITIALISED =========")
         self.logger.info("=" * (42 + len(self.name)))
         self.logger.info("")
-
-        if self.hard_cut:
-            self.logger.info(f"Applying hard cut(s): {self.hard_cut}")
-            self.apply_cuts(self.hard_cut, inplace=True)
 
     # Builtins
     # ===================
@@ -467,6 +467,12 @@ class Dataset:
 
         self.__rescale_to_gev(df)  # properly scale GeV columns
 
+        # output number of truth and reco events
+        if self.truth:
+            self.logger.info(f"number of truth events in '{self.name}': {(~df['KFactor_weight_truth'].isna()).sum()}")
+        if self.reco:
+            self.logger.info(f"number of reco events in '{self.name}': {(~df['weight_KFactor'].isna()).sum()}")
+
         if self.truth and self.reco:
             # drop truth KFactor as long as values are the same for reco variables
             pd.testing.assert_series_equal(df.loc[pd.notna(df['weight_KFactor']), 'KFactor_weight_truth'],
@@ -587,8 +593,11 @@ class Dataset:
 
     def __rescale_to_gev(self, df) -> None:
         """rescales to GeV because athena's default output is in MeV for some reason"""
-        if GeV_columns := [column for column in df.columns
-                           if (column in labels_xs) and ('[GeV]' in labels_xs[column]['xlabel'])]:
+        if GeV_columns := [
+            column for column in df.columns
+            if (column in labels_xs)
+            and ('[GeV]' in labels_xs[column]['xlabel'])
+        ]:
             df[GeV_columns] /= 1000
             self.logger.debug(f"Rescaled columns {GeV_columns} to GeV.")
         else:
@@ -608,37 +617,56 @@ class Dataset:
                    labels: Union[bool, str, List[str]] = True,
                    inplace: bool = False
                    ) -> Union[pd.DataFrame, None]:
-        """Returns dataframe with all cuts applied"""
+        """
+        Apply cut(s) to DataFrame.
+
+        :param labels: list of cut labels or single cut label. If True applies all cuts. Skips if logical false.
+        :param inplace: If True, applies cuts in place to dataframe in self.
+                        If False returns DataFrame object
+        :return: None if inplace is True.
+                 If False returns DataFrame with cuts applied and associated cut columns removed.
+                 Raises ValueError if cuts do not exist in dataframe
+        """
+        def __check_cut_cols(c: List[str]) -> None:
+            """Check if columns exist in dataframe"""
+            if missing_cut_cols := [
+                label for label in c
+                if label not in self.df.columns
+            ]:
+                raise ValueError(f"No cut(s) {missing_cut_cols} in dataset {self.name}...")
+
         if not labels:
-            # Do not apply cuts
             self.logger.debug(f"No cuts applied to {self.name}")
-            return self.df
+            if inplace:
+                return
+            else:
+                return self.df
 
         elif isinstance(labels, list):
             self.logger.debug(f"Applying cuts: {labels} to {self.name}...")
-            labels = [label + config.cut_label for label in labels]
-            if not (cut_cols := [
-                col for col in self.df.columns
-                if config.cut_label in col
-                and col in labels
-            ]):
-                raise ValueError(f"No cut label(s) {labels} in dataset {self.name}...")
+            cut_cols = [label + config.cut_label for label in labels]
+            __check_cut_cols(cut_cols)
 
         elif isinstance(labels, str):
             self.logger.debug(f"Applying cut: {labels} to {self.name}...")
             cut_cols = [labels + config.cut_label]
+            __check_cut_cols(cut_cols)
 
         elif labels is True:
             self.logger.debug(f"Applying all cuts to {self.name}...")
             cut_cols = [str(col) for col in self.df.columns if config.cut_label in col]
+            __check_cut_cols(cut_cols)
 
         else:
-            raise TypeError("cut labels must be a bool, a string or a list of strings")
+            raise TypeError("'labels' must be a bool, a string or a list of strings")
 
+        # apply cuts
         if inplace:
             self.df = self.df.loc[self.df[cut_cols].all(1)]
+            self.df.drop(columns=cut_cols, inplace=True)
+
         else:
-            return self.df.loc[self.df[cut_cols].all(1)]
+            return self.df.loc[self.df[cut_cols].all(1)].drop(columns=cut_cols)
 
     # ===========================================
     # =========== PLOTING FUNCTIONS =============

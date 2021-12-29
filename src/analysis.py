@@ -115,6 +115,12 @@ class Analysis:
         }
         self.logger.info(f"Initialised datasets: {self.datasets}")
 
+        if separate_loggers:
+            # return control of logging to analysis after datasets have been built
+            for dataset in self.datasets.keys():
+                self.datasets[dataset].logger = self.logger
+                self.datasets[dataset].logger.debug(f"{dataset} log handler returned to analysis.")  # test
+
         self.logger.info("=" * (len(analysis_label) + 23))
         self.logger.info(f"ANALYSIS '{analysis_label}' INITIALISED")
 
@@ -164,11 +170,9 @@ class Analysis:
         if log_out.lower() in ('file', 'both'):
             filename = f"{self.paths['log_dir']}/" \
                        f"{name}{'_' + time.strftime('%Y-%m-%d_%H-%M-%S') if timedatelog else ''}.log"
-            if file_utils.file_exists(filename):
-                file_utils.delete_file(filename)
 
-            filehandler = logging.FileHandler(filename)
-            filehandler.setFormatter(logging.Formatter('%(asctime)s %(levelname)-10s %(message)s'))
+            filehandler = logging.FileHandler(filename, mode='w')
+            filehandler.setFormatter(logging.Formatter('%(asctime)s %(name)s %(levelname)-10s %(message)s'))
             logger.addHandler(filehandler)
 
         if log_out.lower() in ('console', 'both'):
@@ -180,38 +184,85 @@ class Analysis:
     # ====== DATASET FUNCTIONS ======
     # ===============================
     def merge_datasets(self,
-                       *names: str,
+                       *datasets: str,
+                       apply_cuts: Union[bool, str, List[str]] = False,
                        delete: bool = True,
                        to_pkl: bool = False,
-                       verify: bool = True,
-                       delete_pkl: bool = False) -> None:
+                       verify: bool = False,
+                       delete_pkl: bool = False
+                       ) -> None:
         """
         Merge datasets by concatenating one or more into the other
 
-        :param names: strings of datasets to merge. First dataset will be merged into.
+        :param datasets: strings of datasets to merge. First dataset will be merged into.
+        :param apply_cuts: True to apply all cuts to datasets before merging or False for no cuts
+                           pass a string or list of strings of the cut label(s) to apply just those cuts
         :param delete: whether to delete datasets internally
         :param to_pkl: whether to print new dataset to a pickle file (will replace original pickle file)
         :param verify: whether to check for duplicated events
         :param delete_pkl: whether to delete pickle files of merged datasets (not the one that is merged into)
         """
-        for n in names:
+        for n in datasets:
             if n not in self.datasets:
                 raise ValueError(f"No dataset named {n} found in analysis {self.name}")
 
-        self.logger.info(f"Merging dataset(s) {names[1:]} into dataset {names[0]}...")
+        if apply_cuts:
+            self.apply_cuts(list(datasets), labels=apply_cuts)
 
-        self.datasets[names[0]].df = pd.concat([self.datasets[n].df for n in names],
-                                               ignore_index=True, verify_integrity=verify)
+        self.logger.info(f"Merging dataset(s) {datasets[1:]} into dataset {datasets[0]}...")
 
-        for n in names[1:]:
+        self.datasets[datasets[0]].df = pd.concat([self.datasets[n].df for n in datasets],
+                                                  verify_integrity=verify, copy=False)
+
+        for n in datasets[1:]:
             if delete:
                 self.__delete_dataset(n)
             if delete_pkl:
                 self.__delete_pickled_dataset(n)
 
         if to_pkl:
-            pd.to_pickle(self.datasets[names[0]].df, self.datasets[names[0]].pkl_path)
-            self.logger.info(f"Saved merged dataset to file {self.datasets[names[0]].pkl_path}")
+            pd.to_pickle(self.datasets[datasets[0]].df, self.datasets[datasets[0]].pkl_path)
+            self.logger.info(f"Saved merged dataset to file {self.datasets[datasets[0]].pkl_path}")
+
+    def apply_cuts(self,
+                   datasets: Union[bool, str, List[str]] = True,
+                   labels: Union[bool, str, List[str]] = True,
+                   ) -> None:
+        """
+        Apply cuts to dataset dataframes. Skip cuts that do not exist in dataset, logging in debug.
+
+        :param datasets: list of datasets or single dataset name. If True applies to all datasets.
+        :param labels: list of cut labels or single cut label. If True applies all cuts. Skips if logical false.
+        :return: None if inplace is True.
+                 If False returns DataFrame with cuts applied and associated cut columns removed.
+                 Raises ValueError if cuts do not exist in dataframe
+        """
+        if datasets is True:
+            # apply to all datasets
+            datasets = self.datasets.keys()
+        elif isinstance(datasets, str):
+            datasets = [datasets]
+
+        for dataset in datasets:
+            # skip cuts that don't exist in dataset
+            if isinstance(labels, str):
+                if labels + config.cut_label not in self.datasets[dataset].df.columns:
+                    self.logger.debug(f"No cut '{labels}' in dataset '{dataset}'; skipping.")
+                    return
+
+            elif isinstance(labels, list):
+                if missing_cuts := [
+                    label for label in labels
+                    if label + config.cut_label not in self.datasets[dataset].df.columns
+                ]:
+                    self.logger.debug(f"No cuts {missing_cuts} in dataset '{dataset}'; skipping.")
+                    # remove missing cuts from list
+                    labels = [
+                        label for label in labels
+                        if label + config.cut_label not in missing_cuts
+                    ]
+
+            self[dataset].apply_cuts(labels, inplace=True)
 
     @decorators.check_single_datafile
     def __delete_dataset(self, ds_name: str) -> None:
@@ -236,7 +287,7 @@ class Analysis:
         labels: List[str] = None,
         w2: bool = False,
         normalise: Union[float, bool, str] = 'lumi',
-        apply_cuts: Union[bool, str, List[str]] = True,
+        apply_cuts: Union[bool, str, List[str]] = False,
         logbins: bool = False,
         logx: bool = False,
         logy: bool = True,
