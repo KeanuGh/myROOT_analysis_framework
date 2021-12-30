@@ -226,9 +226,21 @@ class Dataset:
         if self.truth:
             self.logger.info(f"Calculating truth weight for {self.name}...")
             self.df['truth_weight'] = self.__event_weight_truth()
+            # EVERY event MUST have a truth weight
+            self.logger.info(f"Verifying truth weight for {self.name}...")
+            if self.df['truth_weight'].isna().any():
+                raise ValueError("NAN values in truth weights!")
         if self.reco:
             self.logger.info(f"Calculating reco weight for {self.name}...")
             self.df['reco_weight'] = self.__event_weight_reco()
+            # every reco event MUST have a reco weight
+            self.logger.info(f"Verifying reco weight for {self.name}...")
+            if not self.truth:
+                if self.df['reco_weight'].isna().any():
+                    raise ValueError("NAN values in reco weights!")
+            else:
+                assert (~self.df['reco_weight'].isna()).sum() == (~self.df['weight_leptonSF'].isna()).sum(), \
+                            "Different number of events for reco weight and lepton scale factors!"
 
         # print some dataset ID metadata
         # TODO: avg event weight
@@ -489,14 +501,17 @@ class Dataset:
             self.logger.info(f"number of reco events in '{self.name}': {(~df['weight_KFactor'].isna()).sum()}")
 
         if self.truth and self.reco:
-            # drop truth KFactor as long as values are the same for reco variables
+            # drop reco KFactor as long as values are the same for reco variables
             pd.testing.assert_series_equal(df.loc[pd.notna(df['weight_KFactor']), 'KFactor_weight_truth'],
                                            df['weight_KFactor'].dropna(),
                                            check_exact=True, check_names=False, check_index=False), \
                                                 "reco and truth KFactors not equal"
-            df.drop(columns='KFactor_weight_truth')
+            df.drop(columns='weight_KFactor', inplace=True)
             self.logger.debug("Dropped extra KFactor column")
-        
+        # ensure there is always only one KFactor column and it is named 'weight_KFactor'
+        if self.truth:
+            df.rename(columns={'KFactor_weight_truth': 'weight_KFactor'}, inplace=True)
+
         self.logger.info("Sorting by DSID...")
         df.sort_index(level='DSID', inplace=True)
 
@@ -572,7 +587,7 @@ class Dataset:
     def __event_weight_truth(self,
                              mc_weight: str = 'weight_mc',
                              tot_weighted_events: str = 'totalEventsWeighted',
-                             KFactor: str = 'KFactor_weight_truth',
+                             KFactor: str = 'weight_KFactor',
                              pileup_weight: str = 'weight_pileup',
                              ) -> pd.Series:
         """
@@ -590,8 +605,6 @@ class Dataset:
 
         This is done in one line for efficiency with pandas (sorry)
         """
-        if self.reco:
-            KFactor = 'weight_KFactor'
         return \
             self.lumi * self.df[mc_weight] * abs(self.df[mc_weight]) / self.df[tot_weighted_events] * \
             self.df[KFactor] * self.df[pileup_weight]

@@ -224,16 +224,16 @@ def set_axis_options(axis: plt.axes,
 
     if logy:
         axis.semilogy()
-    if is_logbins:  # set axis edge at 0
-        if isinstance(bins, tuple):
-            axis.set_xlim(bins[1], bins[2])
-        elif isinstance(bins, list):
-            axis.set_xlim(bins[0], bins[-1])
-        else:
-            raise TypeError("Bins must be formatted as either tuple (n_bins, start, stop) or a list of bin edges. "
-                            f"Given input was {bins}")
-        if logx:
-            axis.semilogx()
+
+    if isinstance(bins, tuple):
+        axis.set_xlim(bins[1], bins[2])
+    elif isinstance(bins, list):
+        axis.set_xlim(bins[0], bins[-1])
+    else:
+        raise TypeError("Bins must be formatted as either tuple (n_bins, start, stop) or a list of bin edges. "
+                        f"Given input was {bins}")
+    if logx:
+        axis.semilogx()
 
     # set axis labels
     axis.set_xlabel(xlabel if xlabel else _xlabel)
