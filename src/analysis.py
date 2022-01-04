@@ -2,7 +2,7 @@ import logging
 import os
 import sys
 import time
-from typing import Optional, Union, Dict, List, Tuple
+from typing import Optional, Union, Dict, List, Tuple, Iterable
 
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -10,7 +10,8 @@ from numpy.typing import ArrayLike
 
 import src.config as config
 from src.dataset import Dataset
-from utils import file_utils, decorators, plotting_utils
+from utils import file_utils, plotting_utils
+from utils.decorators import check_single_dataset, handle_dataset_arg
 
 
 class Analysis:
@@ -127,7 +128,6 @@ class Analysis:
     # ===============================
     # ========== BUILTINS ===========
     # ===============================
-    # keys and attributes access containing datasets
     def __getitem__(self, ds_name):
         return self.datasets[ds_name]
 
@@ -185,7 +185,7 @@ class Analysis:
     # ===============================
     def merge_datasets(self,
                        *datasets: str,
-                       apply_cuts: Union[bool, str, List[str]] = False,
+                       apply_cuts: Union[bool, str, Iterable[str]] = False,
                        delete: bool = True,
                        to_pkl: bool = False,
                        verify: bool = False,
@@ -224,52 +224,46 @@ class Analysis:
             pd.to_pickle(self.datasets[datasets[0]].df, self.datasets[datasets[0]].pkl_path)
             self.logger.info(f"Saved merged dataset to file {self.datasets[datasets[0]].pkl_path}")
 
+    @handle_dataset_arg
     def apply_cuts(self,
-                   datasets: Union[bool, str, List[str]] = True,
+                   datasets: Union[str, Iterable[str]],
                    labels: Union[bool, str, List[str]] = True,
                    ) -> None:
         """
         Apply cuts to dataset dataframes. Skip cuts that do not exist in dataset, logging in debug.
 
-        :param datasets: list of datasets or single dataset name. If True applies to all datasets.
+        :param datasets: list of datasets or single dataset name. If not given applies to all datasets.
         :param labels: list of cut labels or single cut label. If True applies all cuts. Skips if logical false.
         :return: None if inplace is True.
                  If False returns DataFrame with cuts applied and associated cut columns removed.
                  Raises ValueError if cuts do not exist in dataframe
         """
-        if datasets is True:
-            # apply to all datasets
-            datasets = self.datasets.keys()
-        elif isinstance(datasets, str):
-            datasets = [datasets]
+        # skip cuts that don't exist in dataset
+        if isinstance(labels, str):
+            if labels + config.cut_label not in self.datasets[datasets].df.columns:
+                self.logger.debug(f"No cut '{labels}' in dataset '{datasets}'; skipping.")
+                return
 
-        for dataset in datasets:
-            # skip cuts that don't exist in dataset
-            if isinstance(labels, str):
-                if labels + config.cut_label not in self.datasets[dataset].df.columns:
-                    self.logger.debug(f"No cut '{labels}' in dataset '{dataset}'; skipping.")
-                    return
-
-            elif isinstance(labels, list):
-                if missing_cuts := [
+        elif isinstance(labels, list):
+            if missing_cuts := [
+                label for label in labels
+                if label + config.cut_label not in self.datasets[datasets].df.columns
+            ]:
+                self.logger.debug(f"No cuts {missing_cuts} in dataset '{datasets}'; skipping.")
+                # remove missing cuts from list
+                labels = [
                     label for label in labels
-                    if label + config.cut_label not in self.datasets[dataset].df.columns
-                ]:
-                    self.logger.debug(f"No cuts {missing_cuts} in dataset '{dataset}'; skipping.")
-                    # remove missing cuts from list
-                    labels = [
-                        label for label in labels
-                        if label + config.cut_label not in missing_cuts
-                    ]
+                    if label + config.cut_label not in missing_cuts
+                ]
 
-            self[dataset].apply_cuts(labels, inplace=True)
+        self[datasets].apply_cuts(labels, inplace=True)
 
-    @decorators.check_single_datafile
+    @check_single_dataset
     def __delete_dataset(self, ds_name: str) -> None:
         self.logger.info(f"Deleting dataset {ds_name} from analysis {self.name}")
         del self.datasets[ds_name]
 
-    @decorators.check_single_datafile
+    @check_single_dataset
     def __delete_pickled_dataset(self, ds_name: str) -> None:
         self.logger.info(f"Deleting pickled dataset {ds_name}")
         file_utils.delete_file(self.datasets[ds_name].pkl_path)
@@ -279,7 +273,7 @@ class Analysis:
     # ===============================
     def plot_hist(
         self,
-        datasets: Union[str, List[str]],
+        datasets: Union[str, Iterable[str]],
         var: str,
         bins: Union[List[float], Tuple[int, float, float]],
         weight: Union[str, float] = 1.,
@@ -366,7 +360,7 @@ class Analysis:
         fig.savefig(filename, bbox_inches='tight')
         self.logger.info(f'Saved overlay plot of {var} to {filename}')
 
-    @decorators.check_single_datafile
+    @check_single_dataset
     def plot_with_cuts(self, ds_name: Optional[str], **kwargs) -> None:
         """
         Plots each variable in specific Dataset to cut from cutfile with each cutgroup applied
@@ -376,7 +370,7 @@ class Analysis:
         """
         self.datasets[ds_name].plot_all_with_cuts(**kwargs)
 
-    @decorators.check_single_datafile
+    @check_single_dataset
     def gen_cutflow_hist(self, ds_name: Optional[str], **kwargs) -> None:
         """
         Generates and saves cutflow histograms. Choose which cutflow histogram option to print. Default: only by-event.
@@ -386,7 +380,7 @@ class Analysis:
         """
         self.datasets[ds_name].gen_cutflow_hist(**kwargs)
 
-    @decorators.check_single_datafile
+    @check_single_dataset
     def make_all_cutgroup_2dplots(self, ds_name: Optional[str], **kwargs) -> None:
         """Plots all cutgroups as 2d plots
 
@@ -395,7 +389,7 @@ class Analysis:
         """
         self.datasets[ds_name].make_all_cutgroup_2dplots(**kwargs)
 
-    @decorators.check_single_datafile
+    @check_single_dataset
     def plot_mass_slices(self, ds_name: Optional[str], xvar: str, **kwargs) -> None:
         """
         Plots mass slices for input variable xvar if dataset is_slices
@@ -409,13 +403,10 @@ class Analysis:
     # ===============================
     # ========= PRINTOUTS ===========
     # ===============================
-    @decorators.check_single_datafile
-    def cutflow_printout(self, ds_name: Optional[str] = None) -> None:
+    @handle_dataset_arg
+    def cutflow_printout(self, datasets: Union[str, Iterable[str]]) -> None:
         """Prints cutflow table to terminal"""
-        if ds_name is None:
-            for d in self:
-                d.cutflow_printout()
-        self.datasets[ds_name].cutflow.printout()
+        self[datasets].cutflow.printout()
 
     def kinematics_printouts(self) -> None:
         """Prints some kinematic variables to terminal"""
@@ -427,18 +418,12 @@ class Analysis:
             self.logger.info(f"cross-section: {self.datasets[name].cross_section:.2f} fb")
             self.logger.info(f"luminosity   : {self.datasets[name].luminosity:.2f} fb-1")
 
-    def print_latex_table(self, datasets: Union[bool, str, List[str]] = True) -> None:
+    @handle_dataset_arg
+    def print_latex_table(self, datasets: Union[str, Iterable[str]]) -> None:
         """
         Prints a latex table(s) of cutflow.
 
-        :param datasets: list of datasets or single dataset name. If True applies to all datasets.
+        :param datasets: list of datasets or single dataset name. If not given applies to all datasets.
         :return: None
         """
-        if datasets is True:
-            # apply to all datasets
-            datasets = self.datasets.keys()
-        elif isinstance(datasets, str):
-            datasets = [datasets]
-
-        for dataset in datasets:
-            self.datasets[dataset].print_latex_table()
+        self[datasets].print_latex_table()
