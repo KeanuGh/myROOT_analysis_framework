@@ -45,7 +45,7 @@ def handle_dataset_arg(func: Callable) -> Callable:
             # return apply to just the one function
             if datasets not in self.datasets:
                 raise ValueError(f"No dataset '{datasets}' in analysis '{self.name}'")
-            func(self, *args, **kwargs)
+            func(self, *args, **kwargs, datasets=datasets)
 
         elif hasattr(datasets, '__iter__'):
             # apply to each dataset in iterable
