@@ -755,7 +755,8 @@ class Dataset:
                 pkl.dump(hists, f)
                 self.logger.info(f"Saved pickle file to {f.name}")
 
-    def plot_mass_slices(self,
+    def plot_mass_slices(
+            self,
             var: str,
             weight: str,
             bins: Union[Iterable[float], Tuple[int, float, float]] = (30, 0, 5000),
@@ -978,7 +979,14 @@ class DataFrameBuilder:
             validate_sumofweights: bool = True,
     ) -> pd.DataFrame:
         """
-        Builds a dataframe from cutfile inputs
+         Builds a dataframe
+
+        :param data_path: path to ROOT datafile(s)
+        :param default_TTree: TTree in datapath to set as default tree
+        :param tree_dict: dictionary of tree: variables to extract from Datapath
+        :param vars_to_calc: list of variables to calculate to pass to add to DataFrame
+        :param is_truth: whether dataset contains truth data
+        :param is_reco: whether dataset contains reco data
         :param chunksize: chunksize for uproot concat method
         :param validate_duplicated_events: whether to check for duplicated events
         :param validate_sumofweights: whether to check sum of weights against weight_mc
@@ -1117,9 +1125,7 @@ class DataFrameBuilder:
         return df
 
     def __drop_duplicates(self, df: pd.DataFrame) -> None:
-        """
-        Checks for and drops duplicated events and events with same event numbers for each dataset ID
-        """
+        """Checks for and drops duplicated events and events with same event numbers for each dataset ID"""
         b_size = len(df.index)
         df.drop_duplicates(inplace=True)
         self.logger.info(f"{b_size - len(df.index)} duplicate events dropped")
