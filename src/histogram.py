@@ -45,7 +45,7 @@ class Histogram1D(bh.Histogram):
         :param var: iterable of values to fill histogram 
         :param weight: iterable of weights corresponding to each variable value or value to weight by
         :param logbins: whether logarithmic binnings
-        :param kwargs: keyword arguments that would be passed to numpy.histogram()
+        :param kwargs: keyword arguments that would be passed to boost_histogram.Histogram()
         """
         super().__init__(
             self._get_axis(bins, logbins),
