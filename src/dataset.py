@@ -814,8 +814,7 @@ class Dataset:
                 hists[cutgroup] = h_cut
 
             # RATIO PLOT
-            # ================        :param kwargs: keyword arguments to pass to mplhep.histplot()
-
+            # ================
             hep.histplot(h_cut.view().value / h_inclusive.view().value,
                          bins=h_cut.axes[0].edges, ax=accept_ax, label=cutgroup,
                          color=fig_ax.get_lines()[-1].get_color())
