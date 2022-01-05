@@ -107,44 +107,11 @@ class Dataset:
         self.logger.info(f"Parsting cutfile '{self.cutfile_path}' for {self.name}...")
         self.cutfile = Cutfile(self.cutfile_path, self.paths['backup_cutfiles_dir'], logger=self.logger)
 
-        self.logger.info('')
-        self.logger.info("========== CUTS USED ============")
-        self.log_cuts()
-        self.logger.info('')
-
+        # figure out whether dataframe should be rebuilt (not very good - doesn't actually check pickle file)
         self._build_df = True if self.force_rebuild else self.cutfile.if_build_dataframe(self.pkl_path)
 
-        self._tree_dict, self._vars_to_calc = self.cutfile.extract_variables(derived_vars)
-
-        # get set unlabeled variables in cutfile as being in default tree
-        if self.TTree_name in self._tree_dict:
-            self._tree_dict[self.TTree_name] |= self._tree_dict.pop('na', set())
-        else:
-            self._tree_dict[self.TTree_name] = self._tree_dict.pop('na', set())
-
-        # only add these to 'main tree' to avoid merge issues
-        self._tree_dict[self.TTree_name] |= {'weight_mc', 'weight_pileup'}
-
-        reco_flag = False
-        truth_flag = False
-        for tree in self._tree_dict:
-            # add necessary metadata to all trees
-            self._tree_dict[tree] |= {'mcChannelNumber', 'eventNumber'}
-            self._tree_dict[tree] -= self._vars_to_calc
-            if self.reco or 'nominal' in tree.lower():
-                self.logger.info(f"Detected {tree} as reco tree, will pull 'weight_leptonSF' and 'weight_KFactor'")
-                self._tree_dict[tree] |= {'weight_leptonSF', 'weight_KFactor'}
-                reco_flag = True
-            elif self.truth or 'truth' in tree.lower():
-                self.logger.info(f"Detected {tree} as truth tree, will pull 'KFactor_weight_truth'")
-                self._tree_dict[tree].add('KFactor_weight_truth')
-                self.truth = True
-                truth_flag = True
-            else:
-                self.logger.info(f"Neither {tree} as truth nor reco dataset detected.")
-
-        self.reco = reco_flag
-        self.truth = truth_flag
+        # get tree dictionary, set of variables to calculate, and whether the dataset will contain truth, reco data
+        self._tree_dict, self._vars_to_calc, self.truth, self.reco = self.cutfile.extract_var_data(derived_vars, self.TTree_name)
 
         # check if vars are contained in label dictionary
         all_vars = {var for var_set in self._tree_dict.values() for var in var_set}
@@ -155,20 +122,15 @@ class Dataset:
 
         # check if hard cut(s) exists in cutfile. If not, skip
         if self.hard_cut is not None:
-            if isinstance(self.hard_cut, str):
-                if self.hard_cut not in [cut_dict['name'] for cut_dict in self.cutfile.cut_dicts]:
-                    self.logger.debug(f"No cut named '{self.hard_cut}' in cutfile; skipping.")
-                    self.hard_cut = None
-
-            elif isinstance(self.hard_cut, list):
-                for i, cut in enumerate(self.hard_cut):
-                    if cut not in [cut_dict['name'] for cut_dict in self.cutfile.cut_dicts]:
-                        self.logger.debug(f"No cut named '{self.hard_cut}' in cutfile; skipping.")
-                        self.hard_cut.remove(cut)
-
-            else:
+            if not isinstance(self.hard_cut, (str, list)):
                 raise TypeError(f"hard_cut parameter must be of type string or list of strings. "
                                 f"Got type {type(self.hard_cut)}")
+            elif isinstance(self.hard_cut, str):
+                self.hard_cut = [self.hard_cut]
+            for i, cut in enumerate(self.hard_cut):
+                if not self.cutfile.cut_exists(cut):
+                    self.logger.debug(f"No cut named '{self.hard_cut}' in cutfile; skipping.")
+                    self.hard_cut.remove(cut)
 
         # some debug information
         self.logger.debug("")
@@ -178,7 +140,8 @@ class Dataset:
         self.logger.debug(f"TTree: {self.TTree_name}")
         self.logger.debug(f"Cutfile: {self.cutfile_path}")
         self.logger.debug(f"grouped cutflow: {self.cutfile.options['grouped cutflow']}")
-        self.logger.debug(f"Hard cut applied: {self.cutfile.get_cut_string(self.hard_cut)}")
+        hard_cuts = '\n'.join([self.cutfile.get_cut_string(cut) for cut in self.hard_cut]) if self.hard_cut else None
+        self.logger.debug(f"Hard cut(s) applied: {hard_cuts}")
         self.logger.debug(f"Forced dataset rebuild: {self.force_rebuild}")
         self.logger.debug(f"Validate missing events: {self.validate_missing_events}")
         self.logger.debug(f"Validate duplicated events: {self.validate_duplicated_events}")
@@ -268,6 +231,7 @@ class Dataset:
                                self.logger,
                                self.cutfile.cutgroups if self.cutfile.options['grouped cutflow'] else None)
 
+        # apply hard cut(s)
         if self.hard_cut:
             self.logger.info(f"Applying hard cut(s): {self.hard_cut}: {self.cutflow}...")
             self.apply_cuts(self.hard_cut, inplace=True)

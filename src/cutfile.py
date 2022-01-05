@@ -15,15 +15,23 @@ from utils.var_helpers import OtherVar
 class Cutfile:
     """
     Handles importing cutfiles and extracting variables
-    """
+    """    
     def __init__(self, file_path: str, backup_path: str, logger: logging.Logger, sep='\t'):
         self.sep = sep
+        self.__na_tree = '0:NONE'
         self.logger = logger
         self.name = get_filename(file_path)
         self._path = file_path
         self.backup_path = backup_path
         self.cut_dicts, self.vars_to_cut, self.options = self.parse_cutfile()
         self.cutgroups = self.gen_cutgroups(self.cut_dicts)
+        self.has_reco = False
+        self.has_truth = False
+
+        self.logger.info('')
+        self.logger.info("========== CUTS USED ============")
+        self.log_cuts()
+        self.logger.info('')
 
     def __repr__(self):
         return f'Cutfile("{self._path}")'
@@ -79,9 +87,8 @@ class Cutfile:
             'cut_val': cut_val,
             'group': group,
             'is_symmetric': is_symmetric,
+            'tree': tree if tree else self.__na_tree
         }
-        if tree:
-            cut_dict['tree'] = tree
 
         return cut_dict
 
@@ -131,7 +138,7 @@ class Cutfile:
                     output_vars.add((out_var, tree))
                 elif len(var_tree) == 1:
                     out_var = var_tree[0]
-                    output_vars.add((out_var, 'na'))
+                    output_vars.add((out_var, self.__na_tree))
                 else:
                     raise Exception("This should never happen")
 
@@ -157,20 +164,41 @@ class Cutfile:
 
         return cuts_list_of_dicts, output_vars, options_dict
 
-    def extract_variables(self, derived_vars: Dict[str, OtherVar]) -> Tuple[Dict[str, set[str]], Set[str]]:
+    def extract_variables(self,
+                          derived_vars: Dict[str, OtherVar],
+                          list_of_cut_dicts: List[dict]
+                          ) -> Tuple[Dict[str, Set[str]], Set[str]]:
         """
         Get which variables are needed to extract from root file based on cutfile parser output
         uses outputs from parse_cutfile()
 
         :return Tuple[{Dictionary of trees and its variables to extract}, {set of variables to calculate}]
         """
-        tree_dict = self.gen_tree_dict(self.cut_dicts)
-        calc_vars = {var for var in {cut_dict['cut_var'] for cut_dict in self.cut_dicts} if var in derived_vars}
-        calc_vars |= {var for var, _ in self.vars_to_cut if var in derived_vars}
-        self.vars_to_cut -= {(var, tree) for var, tree in self.vars_to_cut if var in derived_vars}
+        # generate initial dict. Fill 'blank' tree with self.__na_tree to avoid possible tree name overlap
+        tree_dict = {self.__na_tree: set()}
+        for cut_dict in list_of_cut_dicts:
+            if cut_dict['tree'] not in tree_dict:
+                tree_dict[cut_dict['tree']] = {cut_dict['cut_var']}
+            else:
+                tree_dict[cut_dict['tree']].add(cut_dict['cut_var'])
 
-        # for variables in the 'default' tree (when tree not specified)
-        tree_dict['na'] = {cut_dict['cut_var'] for cut_dict in self.cut_dicts if 'tree' not in cut_dict} - calc_vars
+        # work out which variables to calculate and which to extract from ROOT file
+        calc_vars = {  # cut variables that are in derived vars
+            (var, tree) for var, tree in {(_['cut_var'], _['tree']) for _ in self.cut_dicts}
+            if var in derived_vars
+        }
+        calc_vars |= {  # add output variables in derived vars
+            (var, tree) for var, tree in self.vars_to_cut
+            if var in derived_vars
+        }
+        self.vars_to_cut -= {  # remove derived variables from variables to cut on
+            (var, tree) for var, tree in self.vars_to_cut
+            if var in derived_vars
+        }
+        tree_dict[self.__na_tree] = {  # get default tree variables and remove variables to calculate from default tree
+            cut_dict['cut_var'] for cut_dict in self.cut_dicts
+            if cut_dict['tree'] == self.__na_tree
+        } - {var for var, _ in calc_vars}
 
         for var, tree in self.vars_to_cut:
             if tree in tree_dict:
@@ -179,13 +207,16 @@ class Cutfile:
                 tree_dict[tree] = {var}
 
         # add any variables needed from which trees for calculating derived variables
-        for calc_var in calc_vars:
-            if (alt_tree := derived_vars[calc_var]['tree']) in tree_dict:
+        for calc_var, alt_tree in calc_vars:
+            if alt_tree == self.__na_tree:  # if no tree provided use the one in the derived_vars dictionary
+                alt_tree = derived_vars[calc_var]['tree']
+            if alt_tree in tree_dict:
                 tree_dict[alt_tree] |= set(derived_vars[calc_var]['var_args'])
             else:
                 tree_dict[alt_tree] = set(derived_vars[calc_var]['var_args'])
 
-        return tree_dict, calc_vars
+        # only return the actual variable names to calculate. Which tree to extract from will be handled by tree_dict
+        return tree_dict, {var for var, _ in calc_vars}
 
     @classmethod
     def all_vars(cls, cut_dicts: List[dict], vars_set: Set[Tuple[str, str]]) -> Set[str]:
@@ -211,22 +242,44 @@ class Cutfile:
 
         return collections.OrderedDict(cutgroups)
 
-    @classmethod
-    def gen_tree_dict(cls, list_of_cut_dicts: List[dict]) -> Dict[str, set[str]]:
+    def extract_var_data(self,
+                         derived_vars: Dict[str, OtherVar],
+                         default_tree_name: str,
+                         ) -> Tuple[Dict[str, Set[str]], Set[str], bool, bool]:
         """
-        generate dictionary like {'tree': {'var', ...}, ...} in order to extract variables from other trees in root file
-        'na' when tree not given (this is the default tree given in dataset)
+        generate full tree dictionary that a Dataset object might need
+        returns the tree dictionary, set of variables to calculate,
+        and whether the dataset will contain truth, reco data
         """
-        out = {'na': set()}
-        for cut_dict in list_of_cut_dicts:
-            if 'tree' in cut_dict:
-                if cut_dict['tree'] not in out:
-                    out[cut_dict['tree']] = {cut_dict['cut_var']}
-                else:
-                    out[cut_dict['tree']].add(cut_dict['cut_var'])
+        tree_dict, vars_to_calc = self.extract_variables(derived_vars, self.cut_dicts)
+
+        # get set unlabeled variables in cutfile as being in default tree
+        if default_tree_name in tree_dict:
+            tree_dict[default_tree_name] |= tree_dict.pop(self.__na_tree, set())
+        else:
+            tree_dict[default_tree_name] = tree_dict.pop(self.__na_tree, set())
+
+        # only add these to 'main tree' to avoid merge issues
+        tree_dict[default_tree_name] |= {'weight_mc', 'weight_pileup'}
+
+        reco = False
+        truth = False
+        for tree in tree_dict:
+            # add necessary metadata to all trees
+            tree_dict[tree] |= {'mcChannelNumber', 'eventNumber'}
+            tree_dict[tree] -= vars_to_calc
+            if 'nominal' in tree.lower():
+                self.logger.info(f"Detected {tree} as reco tree, will pull 'weight_leptonSF' and 'weight_KFactor'")
+                tree_dict[tree] |= {'weight_leptonSF', 'weight_KFactor'}
+                reco = True
+            elif 'truth' in tree.lower():
+                self.logger.info(f"Detected {tree} as truth tree, will pull 'KFactor_weight_truth'")
+                tree_dict[tree].add('KFactor_weight_truth')
+                truth = True
             else:
-                out['na'].add(cut_dict['cut_var'])
-        return out
+                self.logger.info(f"Neither {tree} as truth nor reco dataset detected.")
+
+        return tree_dict, vars_to_calc, truth, reco
 
     def if_make_cutfile_backup(self) -> bool:
         """Decides if a backup cutfile should be made"""
@@ -319,12 +372,16 @@ class Cutfile:
             return (f"{cut_dict['name']:<{name_len}}: " if name else '') + \
                    f"{'|' + cut_dict['cut_var']:>{max(var_len - 1, 0)}}| {cut_dict['relation']} {cut_dict['cut_val']}"
 
+    def cut_exists(self, cut_name: str) -> bool:
+        """check if cut exists in cutfile"""
+        return cut_name in [cut['name'] for cut in self.cut_dicts]
+
     def log_cuts(self, name: bool = True) -> None:
         """send list of cuts in cutfile to logger"""
         for cut_name in [cut['name'] for cut in self.cut_dicts]:
             self.logger.info(self.get_cut_string(cut_name, name=name, align=True))
 
     def backup_cutfile(self, name: str) -> None:
-        cutfile_backup_filepath = self.backup_path + self.name + '_' + name + '_' + time.strftime("%Y-%m-%d_%H-%M-%S") + ".txt"
+        cutfile_backup_filepath = f"{self.backup_path}{self.name}_{name}_{time.strftime('%Y-%m-%d_%H-%M-%S')}.txt"
         copyfile(self._path, cutfile_backup_filepath)
         self.logger.info(f"Backup cutfile saved in {cutfile_backup_filepath}")
