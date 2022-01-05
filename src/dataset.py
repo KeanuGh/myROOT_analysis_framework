@@ -214,11 +214,13 @@ class Dataset:
             self.logger.debug("DSID       n_events   sum_w         x-s fb        lumi fb-1")
             self.logger.debug("==========================================================")
             for dsid, df_id in self.df.groupby(level='DSID'):
-                self.logger.debug(f"{dsid:<10} "
-                                  f"{len(df_id):<10} "
-                                  f"{df_id['weight_mc'].sum():<10.6e}  "
-                                  f"{self._get_cross_section(df_id):<10.6e}  "
-                                  f"{self.lumi:<10.6e}")
+                self.logger.debug(
+                    f"{dsid:<10} "
+                    f"{len(df_id):<10} "
+                    f"{df_id['weight_mc'].sum():<10.6e}  "
+                    f"{self._get_cross_section(df_id):<10.6e}  "
+                    f"{self.lumi:<10.6e}"
+                )
 
         # apply cuts to generate cut columns
         self.logger.info(f"Creating cuts for {self.name}...")
@@ -226,10 +228,12 @@ class Dataset:
 
         # GENERATE CUTFLOW
         # ========================
-        self.cutflow = Cutflow(self.df,
-                               self.cutfile.cut_dicts,
-                               self.logger,
-                               self.cutfile.cutgroups if self.cutfile.options['grouped cutflow'] else None)
+        self.cutflow = Cutflow(
+            self.df,
+            self.cutfile.cut_dicts,
+            self.logger,
+            self.cutfile.cutgroups if self.cutfile.options['grouped cutflow'] else None
+        )
 
         # apply hard cut(s)
         if self.hard_cut:

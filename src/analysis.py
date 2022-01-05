@@ -75,7 +75,7 @@ class Analysis:
 
         # LOGGING
         # ============================
-        self.logger = self.__get_logger(self.name, log_level, log_out, timedatelog)
+        self.logger = self.get_logger(self.name, self.paths['log_dir'], log_level, log_out, timedatelog)
 
         # SET OTHER GLOBAL OPTIONS
         # ============================
@@ -107,7 +107,13 @@ class Analysis:
                 logger=(
                     self.logger
                     if not separate_loggers
-                    else self.__get_logger(name, log_level, log_out, timedatelog)
+                    else self.get_logger(
+                        name,
+                        self.paths['log_dir'],
+                        log_level,
+                        log_out,
+                        timedatelog
+                    )
                 ),
                 **kwargs,
                 **data_kwargs,
@@ -117,9 +123,16 @@ class Analysis:
         self.logger.info(f"Initialised datasets: {self.datasets}")
 
         if separate_loggers:
-            # return control of logging to analysis after datasets have been built
+            # set new logger to append to analysis logger
             for dataset in self.datasets.keys():
-                self.datasets[dataset].logger = self.logger
+                self.datasets[dataset].logger = self.get_logger(
+                    self.datasets[dataset].name,
+                    self.paths['log_dir'],
+                    log_level,
+                    log_out,
+                    timedatelog,
+                    mode='a'
+                )
                 self.datasets[dataset].logger.debug(f"{dataset} log handler returned to analysis.")  # test
 
         self.logger.info("=" * (len(analysis_label) + 23))
@@ -154,12 +167,14 @@ class Analysis:
     # ===============================
     # ======== HANDLE LOGGING =======
     # ===============================
-    def __get_logger(self,
-                     name: str,
-                     log_level: int,
-                     log_out: str,
-                     timedatelog: bool,
-                     ) -> logging.Logger:
+    @staticmethod
+    def get_logger(name: str,
+                   log_dir: str,
+                   log_level: int,
+                   log_out: str,
+                   timedatelog: bool,
+                   mode: str = 'w',
+                   ) -> logging.Logger:
         """Generate logger object"""
         if log_out not in ('file', 'both', 'console', None):
             raise ValueError("Accaptable values for 'log_out' parameter: 'file', 'both', 'console', None.")
@@ -168,15 +183,17 @@ class Analysis:
         logger.setLevel(log_level)
 
         if log_out.lower() in ('file', 'both'):
-            filename = f"{self.paths['log_dir']}/" \
+            filename = f"{log_dir}/" \
                        f"{name}{'_' + time.strftime('%Y-%m-%d_%H-%M-%S') if timedatelog else ''}.log"
 
-            filehandler = logging.FileHandler(filename, mode='w')
+            filehandler = logging.FileHandler(filename, mode=mode)
             filehandler.setFormatter(logging.Formatter('%(asctime)s %(name)s %(levelname)-10s %(message)s'))
             logger.addHandler(filehandler)
 
         if log_out.lower() in ('console', 'both'):
             logger.addHandler(logging.StreamHandler(sys.stdout))
+
+        logger.propagate = False
 
         return logger
 

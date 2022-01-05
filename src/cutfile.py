@@ -15,7 +15,7 @@ from utils.var_helpers import OtherVar
 class Cutfile:
     """
     Handles importing cutfiles and extracting variables
-    """    
+    """
     def __init__(self, file_path: str, backup_path: str, logger: logging.Logger, sep='\t'):
         self.sep = sep
         self.__na_tree = '0:NONE'

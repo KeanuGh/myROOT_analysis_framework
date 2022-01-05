@@ -24,7 +24,7 @@ if __name__ == '__main__':
     }
 
     my_analysis = Analysis(datasets, analysis_label='test_analysis', force_rebuild=False,
-                           log_level=10, log_out='both', timedatelog=False, separate_loggers=False)
+                           log_level=10, log_out='both', timedatelog=False, separate_loggers=True)
     my_analysis.print_latex_table(['wminmunu', 'wmintaunu'])
 
     my_analysis.apply_cuts()
