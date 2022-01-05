@@ -16,7 +16,7 @@ class Cutfile:
     """
     Handles importing cutfiles and extracting variables
     """
-    def __init__(self, file_path: str, backup_path: str, logger: logging.Logger, sep='\t'):
+    def __init__(self, file_path: str, logger: logging.Logger, backup_path: str = None, sep='\t'):
         self.sep = sep
         self.__na_tree = '0:NONE'
         self.logger = logger
@@ -25,8 +25,6 @@ class Cutfile:
         self.backup_path = backup_path
         self.cut_dicts, self.vars_to_cut, self.options = self.parse_cutfile()
         self.cutgroups = self.gen_cutgroups(self.cut_dicts)
-        self.has_reco = False
-        self.has_truth = False
 
         self.logger.info('')
         self.logger.info("========== CUTS USED ============")
@@ -245,7 +243,7 @@ class Cutfile:
     def extract_var_data(self,
                          derived_vars: Dict[str, OtherVar],
                          default_tree_name: str,
-                         ) -> Tuple[Dict[str, Set[str]], Set[str], bool, bool]:
+                         ) -> Tuple[Dict[str, Set[str]], Set[str]]:
         """
         generate full tree dictionary that a Dataset object might need
         returns the tree dictionary, set of variables to calculate,
@@ -262,8 +260,6 @@ class Cutfile:
         # only add these to 'main tree' to avoid merge issues
         tree_dict[default_tree_name] |= {'weight_mc', 'weight_pileup'}
 
-        reco = False
-        truth = False
         for tree in tree_dict:
             # add necessary metadata to all trees
             tree_dict[tree] |= {'mcChannelNumber', 'eventNumber'}
@@ -271,19 +267,30 @@ class Cutfile:
             if 'nominal' in tree.lower():
                 self.logger.info(f"Detected {tree} as reco tree, will pull 'weight_leptonSF' and 'weight_KFactor'")
                 tree_dict[tree] |= {'weight_leptonSF', 'weight_KFactor'}
-                reco = True
             elif 'truth' in tree.lower():
                 self.logger.info(f"Detected {tree} as truth tree, will pull 'KFactor_weight_truth'")
                 tree_dict[tree].add('KFactor_weight_truth')
-                truth = True
             else:
                 self.logger.info(f"Neither {tree} as truth nor reco dataset detected.")
 
-        return tree_dict, vars_to_calc, truth, reco
+        return tree_dict, vars_to_calc
+
+    @staticmethod
+    def truth_reco(tree_dict: Dict[str, Set[str]]) -> Tuple[bool, bool]:
+        """Does cutfile ask for truth data? Does cutfile ask for reco data?"""
+        is_truth = is_reco = False
+        for tree in tree_dict.keys():
+            if 'nominal' in tree:
+                is_reco = True
+            elif 'truth' in tree:
+                is_truth = True
+        return is_truth, is_reco
 
     def if_make_cutfile_backup(self) -> bool:
         """Decides if a backup cutfile should be made"""
-        if get_last_backup(self.backup_path, self.name):
+        if self.backup_path is None:
+            self.logger.info("No backup path given. Skipping backup check")
+        elif get_last_backup(self.backup_path, self.name):
             return not identical_to_backup(self._path, backup_dir=self.backup_path, name=self.name, logger=self.logger)
         else:
             return True
@@ -295,6 +302,9 @@ class Cutfile:
         :param pkl_filepath: pickle file containing data in pandas dataframe
         :return: whether to build new dataframe
         """
+        if self.backup_path is None:
+            raise ValueError("No cutfile backup path")
+
         is_pkl_file = os.path.isfile(pkl_filepath)
         if is_pkl_file:
             self.logger.debug(f"Previous datafile found in {pkl_filepath}.")
@@ -382,6 +392,8 @@ class Cutfile:
             self.logger.info(self.get_cut_string(cut_name, name=name, align=True))
 
     def backup_cutfile(self, name: str) -> None:
+        if self.backup_path is None:
+            self.logger.info("No cutfile backup path, skipping backup")
         cutfile_backup_filepath = f"{self.backup_path}{self.name}_{name}_{time.strftime('%Y-%m-%d_%H-%M-%S')}.txt"
         copyfile(self._path, cutfile_backup_filepath)
         self.logger.info(f"Backup cutfile saved in {cutfile_backup_filepath}")
