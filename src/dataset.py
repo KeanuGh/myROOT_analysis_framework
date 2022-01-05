@@ -1018,6 +1018,7 @@ class DataFrameBuilder:
             validation = '1:1'
             self.logger.info(f"Validating duplicated events in tree {default_TTree}...")
             self.__drop_duplicates(df)
+            self.__drop_duplicate_event_numbers(df)
         else:
             validation = 'm:m'
             self.logger.info("Skipping duplicted events validation")
@@ -1129,6 +1130,8 @@ class DataFrameBuilder:
         b_size = len(df.index)
         df.drop_duplicates(inplace=True)
         self.logger.info(f"{b_size - len(df.index)} duplicate events dropped")
+
+    def __drop_duplicate_event_numbers(self, df: pd.DataFrame) -> None:
         b_size = len(df.index)
         df.index = df.index.drop_duplicates()
         self.logger.info(f"{b_size - len(df.index)} duplicate event numbers dropped")
