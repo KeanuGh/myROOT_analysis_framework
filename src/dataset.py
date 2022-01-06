@@ -887,9 +887,9 @@ class DataFrameBuilder:
     default_TTree: str
     logger: logging.Logger
     chunksize: int = 1024
-    _validate_missing_events: bool = True
-    _validate_duplicated_events: bool = True
-    _validate_sumofweights: bool = True
+    validate_missing_events: bool = True
+    validate_duplicated_events: bool = True
+    validate_sumofweights: bool = True
 
     @overload
     def build(self, cutfile_path: str) -> pd.DataFrame:
@@ -960,9 +960,9 @@ class DataFrameBuilder:
             is_truth=is_truth,
             is_reco=is_reco,
             chunksize=self.chunksize,
-            validate_missing_events=self._validate_missing_events,
-            validate_duplicated_events=self._validate_duplicated_events,
-            validate_sumofweights=self._validate_sumofweights
+            validate_missing_events=self.validate_missing_events,
+            validate_duplicated_events=self.validate_duplicated_events,
+            validate_sumofweights=self.validate_sumofweights
         )
 
     def __build_dataframe(
