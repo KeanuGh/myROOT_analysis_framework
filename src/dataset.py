@@ -793,7 +793,7 @@ class Dataset:
         df = self.apply_cuts(apply_cuts)
 
         # per dsid
-        for dsid, dsid_df in self.df.groupby(level='DSID', sort=True):
+        for dsid, dsid_df in self.df.groupby(level='DSID'):
             weights = dsid_df[weight] if isinstance(weight, str) else weight
             hist = Histogram1D(bins, dsid_df[var], weights, logbins)
             hist.plot(ax=ax, label=dsid, **kwargs)
