@@ -54,7 +54,7 @@ class Dataset:
 
     # OPTIONS
     paths: Dict[str, str]  # file output paths
-    hard_cut: Union[str, List[str], None] = None  # name(s) of cut(s) that should be applied to dataframe and not as columns
+    hard_cut: Union[str, List[str], None] = None  # name(s) of cut(s) that should be applied to dataframe immediately
     reco: bool = False  # whether dataset contains reconstructed data
     truth: bool = False  # whether dataset contains truth data
     to_pkl: bool = True  # whether to output to a pickle file
@@ -217,7 +217,7 @@ class Dataset:
                     raise ValueError("NAN values in reco weights!")
             else:
                 assert (~self.df['reco_weight'].isna()).sum() == (~self.df['weight_leptonSF'].isna()).sum(), \
-                            "Different number of events for reco weight and lepton scale factors!"
+                    "Different number of events for reco weight and lepton scale factors!"
 
         # print some dataset ID metadata
         # TODO: avg event weight
@@ -836,18 +836,21 @@ class Dataset:
         if a_ratio:
             self.cutflow.print_histogram(self.paths['plot_dir'], 'a_ratio')
 
-    def profile_plot(self, varx: str, vary: str,
-                     title: str = '',
-                     xlabel: str = '',
-                     ylabel: str = '',
-                     ax: plt.Axes = None,
-                     to_file: bool = True,
-                     xlim: Tuple[float, float] = None,
-                     ylim: Tuple[float, float] = None,
-                     logx: bool = False,
-                     logy: bool = False,
-                     **kwargs) -> None:
-
+    def profile_plot(
+            self,
+            varx: str,
+            vary: str,
+            title: str = '',
+            xlabel: str = '',
+            ylabel: str = '',
+            ax: plt.Axes = None,
+            to_file: bool = True,
+            xlim: Tuple[float, float] = None,
+            ylim: Tuple[float, float] = None,
+            logx: bool = False,
+            logy: bool = False,
+            **kwargs
+    ) -> None:
         if not ax:
             fig, ax = plt.subplots()
 
@@ -1138,8 +1141,7 @@ class DataFrameBuilder:
         """rescales to GeV because athena's default output is in MeV for some reason"""
         if GeV_columns := [
             column for column in df.columns
-            if (column in labels_xs)
-            and ('[GeV]' in labels_xs[column]['xlabel'])
+            if (column in labels_xs) and ('[GeV]' in labels_xs[column]['xlabel'])
         ]:
             df[GeV_columns] /= 1000
             self.logger.debug(f"Rescaled columns {GeV_columns} to GeV.")
