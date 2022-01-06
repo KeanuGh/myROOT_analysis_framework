@@ -45,7 +45,7 @@ def main():
                               help="Whether to print logs to 'console', 'file', or 'both'")
     logging_args.add_argument('--timedatelog', action='store_true',
                               help='Whether to append datetime to log filename')
-    logging_args.add_argument('--log_mode', type=str, choices=['w', 'w+', 'a', 'a+'],
+    logging_args.add_argument('--log_mode', type=str, choices=['w', 'w+', 'a', 'a+'], default='w',
                               help='mode for openning log file')
 
     # data options
