@@ -39,9 +39,9 @@ def main():
     # Options
     # logging options
     logging_args = parser.add_argument_group(title='Logging options', description='Options for logger')
-    logging_args.add_argument('--log_level', type=int, default=10,
+    logging_args.add_argument('--log_level', type=str.lower, default='debug', choices=['debug', 'info', 'warning'],
                               help='Logging level. Default: DEBUG')
-    logging_args.add_argument('--log_out', type=str, default='console', choices=['console', 'file', 'both'],
+    logging_args.add_argument('--log_out', type=str.lower, default='console', choices=['console', 'file', 'both'],
                               help="Whether to print logs to 'console', 'file', or 'both'")
     logging_args.add_argument('--timedatelog', action='store_true',
                               help='Whether to append datetime to log filename')
@@ -66,9 +66,10 @@ def main():
     # get logger
     if args.log_out in ('file', 'both'):
         args.log_file = args.name + '.log'
+    log_levels = {'debug': 10, 'info': 20, 'warning': 30}
     logger = Analysis.get_logger(
         name=args.name,
-        log_level=args.log_level,
+        log_level=log_levels[args.log_level],
         log_out=args.log_out,
         timedatelog=args.timedatelog,
         log_file=args.log_file,
