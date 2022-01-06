@@ -200,13 +200,14 @@ class Analysis:
         """
         if log_out not in ('file', 'both', 'console', None):
             raise ValueError("Accaptable values for 'log_out' parameter: 'file', 'both', 'console', None.")
-        if (log_dir and log_file) or (log_dir == log_file is None):
-            raise ValueError("Pass either 'log_dir' or 'logfile'")
 
         logger = logging.getLogger(name)
         logger.setLevel(log_level)
 
         if log_out.lower() in ('file', 'both'):
+            if (log_dir and log_file) or (log_dir == log_file is None):
+                raise ValueError("Pass either 'log_dir' or 'logfile'")
+
             filename = log_file if log_file \
                 else f"{log_dir}/" \
                      f"{name}{'_' + time.strftime('%Y-%m-%d_%H-%M-%S') if timedatelog else ''}.log"

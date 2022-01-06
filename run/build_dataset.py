@@ -1,55 +1,95 @@
 import argparse
-import pathlib
 
-from src.dataset import lumi_year
+from src.analysis import Analysis
+from src.dataset import lumi_year, DataFrameBuilder
 
-parser = argparse.ArgumentParser(description="Build singular dataset",
-                                 formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
-# INPUT
-parser.add_argument('test', help='test')
+def main():
+    # PARSER
+    # ============================
+    parser = argparse.ArgumentParser(description="Build singular dataset",
+                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
-parser.add_argument('--datapath', '-d', type=pathlib.Path, required=True,
-                    help='Path to ROOT file(s)')
-parser.add_argument('--name', '-n', default='data',
-                    help='Dataset name')
-parser.add_argument('--TTree', '-T', required=True,
-                    help='Name of default TTree')
-parser.add_argument('--cutfile', '-c', type=pathlib.Path, required=True,
-                    help='Path to cutfile')
-parser.add_argument('--label', '-l', default='',
-                    help='dataset label for plots')
-parser.add_argument('--pkl_dir', type=pathlib.Path,
-                    help='directory of pickle file')
+    # Input
+    inputs = parser.add_argument_group(title='Inputs', description='Dataset inputs')
+    inputs.add_argument('--datapath', '-d', type=str, required=True,
+                        help='Path to ROOT file(s)')
+    inputs.add_argument('--name', '-n', default='data',
+                        help='Dataset name')
+    inputs.add_argument('--TTree', '-T', required=True,
+                        help='Name of default TTree')
+    inputs.add_argument('--cutfile', '-c', type=str, required=True,
+                        help='Path to cutfile')
+    inputs.add_argument('--label', '-l', default='',
+                        help='dataset label for plots')
+    lumi_year_group = inputs.add_mutually_exclusive_group()
+    lumi_year_group.add_argument('--year', '-y', default='2015+2016', choices=lumi_year.keys(),
+                                 help='data-taking year')
+    lumi_year_group.add_argument('--luminosity', '--lumi', type=float,
+                                 help='data luminosity')
 
-lumi_year_group = parser.add_mutually_exclusive_group()
-lumi_year_group.add_argument('--year', '-y', default='2015+2016', choices=lumi_year.keys(),
-                             help='data-taking year')
-lumi_year_group.add_argument('--luminosity', '--lumi', type=float,
-                             help='data luminosity')
+    # Output
+    outputs = parser.add_argument_group(title='Output',
+                                        description="Output paths")
+    outputs.add_argument('--pkl_file', '-o', type=str, required=False,
+                         help="Pickled DataFrame output file. DEFAULT: './<name>.pkl'")
+    outputs.add_argument('--log_file', type=str, required=False,
+                         help="Log output file. DEFAULT: './<name>.log'")
 
-# PATHS
-parser.add_argument('--output_root_dir', '-o',
-                    help='output directory')
-# parser.add_argument('output')
+    # Options
+    # logging options
+    logging_args = parser.add_argument_group(title='Logging options', description='Options for logger')
+    logging_args.add_argument('--log_level', type=int, default=10,
+                              help='Logging level. Default: DEBUG')
+    logging_args.add_argument('--log_out', type=str, default='console', choices=['console', 'file', 'both'],
+                              help="Whether to print logs to 'console', 'file', or 'both'")
+    logging_args.add_argument('--timedatelog', action='store_true',
+                              help='Whether to append datetime to log filename')
+    logging_args.add_argument('--log_mode', type=str, choices=['w', 'w+', 'a', 'a+'],
+                              help='mode for openning log file')
 
-# OPTIONS
-parser.add_argument('--reco', action='store_true',
-                    help='whether dataset will contain reconstructed data (will try and guess if not given)')
-parser.add_argument('--truth', action='store_true',
-                    help='whether dataset will contain truth data (will try and guess if not given)')
-parser.add_argument('--to_pkl', action='store_false',
-                    help='whether to output to a pickle file')
-parser.add_argument('--lepton', default='lepton',
-                    help='name of lepton in W->lnu if applicable')
-parser.add_argument('--chunksize', default=1024, type=int,
-                    help='chunksize for uproot ROOT file import')
-parser.add_argument('--no_validate_missing_events', action='store_false',
-                    help='do not check for missing events from truth tree')
-parser.add_argument('--no_validate_duplicated_events', action='store_false',
-                    help='do not check for duplicated events')
-parser.add_argument('--no_validate_sum_of_weights', action='store_false',
-                    help='do not check if sumofweights is sum of weight_mc for DSIDs')
+    # data options
+    data_opt = parser.add_argument_group(title='Dataset options', description='Options for dataset building')
+    data_opt.add_argument('--chunksize', default=1024, type=int,
+                          help='chunksize for uproot ROOT file import')
+    data_opt.add_argument('--no_validate_missing_events', action='store_false',
+                          help='do not check for missing events from truth tree')
+    data_opt.add_argument('--no_validate_duplicated_events', action='store_false',
+                          help='do not check for duplicated events')
+    data_opt.add_argument('--no_validate_sumofweights', action='store_false',
+                          help='do not check if sumofweights is sum of weight_mc for DSIDs')
 
-args = parser.parse_args()
-print(args.test)
+    # RUN
+    # ========================
+    args = parser.parse_args()
+
+    # get logger
+    if args.log_out in ('file', 'both'):
+        args.log_file = args.name + '.log'
+    logger = Analysis.get_logger(
+        name=args.name,
+        log_level=args.log_level,
+        log_out=args.log_out,
+        timedatelog=args.timedatelog,
+        log_file=args.log_file,
+        mode=args.log_mode,
+    )
+
+    builder = DataFrameBuilder(
+        data_path=args.datapath,
+        default_TTree=args.TTree,
+        logger=logger,
+        chunksize=args.chunksize,
+        validate_sumofweights=not args.no_validate_sumofweights,
+        validate_missing_events=not args.no_validate_missing_events,
+        validate_duplicated_events=not args.no_validate_duplicated_events
+    )
+    df = builder.build(cutfile_path=args.cutfile)
+
+    filename = args.pkl_file if args.pkl_file else args.name + '.pkl'
+    df.to_pickle(filename)
+    logger.info(f"Saved pickle file to {filename}")
+
+
+if __name__ == "__main__":
+    main()

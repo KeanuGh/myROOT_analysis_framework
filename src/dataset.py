@@ -880,8 +880,9 @@ class DataFrameBuilder:
     :param default_TTree: TTree in datapath to set as default tree
     :param logger: logger to write to
     :param chunksize: chunksize for uproot concat method
-    :param _validate_duplicated_events: whether to check for duplicated events
-    :param _validate_sumofweights: whether to check sum of weights against weight_mc
+    :param validate_missing_events: whether to check for missing events
+    :param validate_duplicated_events: whether to check for duplicated events
+    :param validate_sumofweights: whether to check sum of weights against weight_mc
     :return: output dataframe containing columns corresponding to necessary variables
     """
     data_path: str
@@ -1060,7 +1061,7 @@ class DataFrameBuilder:
             else:
                 self.logger.info(f"Skipping missing events check in tree {tree}")
 
-            if _validate_duplicated_events:
+            if validate_duplicated_events:
                 self.logger.info(f"Validating duplicated events in tree {tree}...")
                 self.__drop_duplicates(alt_df)
 
