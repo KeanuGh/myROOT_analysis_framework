@@ -75,7 +75,13 @@ class Analysis:
 
         # LOGGING
         # ============================
-        self.logger = self.get_logger(self.name, self.paths['log_dir'], log_level, log_out, timedatelog)
+        self.logger = self.get_logger(
+            name=self.name,
+            log_dir=self.paths['log_dir'],
+            log_level=log_level,
+            log_out=log_out,
+            timedatelog=timedatelog
+        )
 
         # SET OTHER GLOBAL OPTIONS
         # ============================
@@ -109,10 +115,10 @@ class Analysis:
                     if not separate_loggers
                     else self.get_logger(
                         name,
-                        self.paths['log_dir'],
-                        log_level,
-                        log_out,
-                        timedatelog
+                        log_dir=self.paths['log_dir'],
+                        log_level=log_level,
+                        log_out=log_out,
+                        timedatelog=timedatelog
                     )
                 ),
                 **kwargs,
@@ -127,10 +133,10 @@ class Analysis:
             for dataset in self.datasets.keys():
                 self.datasets[dataset].logger = self.get_logger(
                     self.datasets[dataset].name,
-                    self.paths['log_dir'],
-                    log_level,
-                    log_out,
-                    timedatelog,
+                    log_dir=self.paths['log_dir'],
+                    log_level=log_level,
+                    log_out=log_out,
+                    timedatelog=timedatelog,
                     mode='a'
                 )
                 self.datasets[dataset].logger.debug(f"{dataset} log handler returned to analysis.")  # test
@@ -169,23 +175,39 @@ class Analysis:
     # ===============================
     @staticmethod
     def get_logger(name: str,
-                   log_dir: str,
                    log_level: int,
                    log_out: str,
                    timedatelog: bool,
+                   log_dir: str = None,
+                   log_file: str = None,
                    mode: str = 'w',
                    ) -> logging.Logger:
-        """Generate logger object"""
+        """
+        Generate logger object
+
+        :param name: Name of logger
+        :param log_level: Log level
+        :param log_out: Whether to output log to 'file', 'console' or 'both'
+        :param timedatelog: Whether to append datetime to log filename
+        :param log_dir: Directory to save log file to if log_out is 'file' or 'both'. Ignored otherwise.
+                        Pass either this or log_file
+        :param log_file: File to log to if log_out is 'file' or 'both'. Ignored otherwise.
+                         Pass either this or log_dir
+        :param mode: Mode to open log file as.
+        :return: logging.Logger object
+        """
         if log_out not in ('file', 'both', 'console', None):
             raise ValueError("Accaptable values for 'log_out' parameter: 'file', 'both', 'console', None.")
+        if (log_dir and log_file) or (log_dir == log_file is None):
+            raise ValueError("Pass either 'log_dir' or 'logfile'")
 
         logger = logging.getLogger(name)
         logger.setLevel(log_level)
 
         if log_out.lower() in ('file', 'both'):
-            filename = f"{log_dir}/" \
-                       f"{name}{'_' + time.strftime('%Y-%m-%d_%H-%M-%S') if timedatelog else ''}.log"
-
+            filename = log_file if log_file \
+                       else f"{log_dir}/" \
+                            f"{name}{'_' + time.strftime('%Y-%m-%d_%H-%M-%S') if timedatelog else ''}.log"
             filehandler = logging.FileHandler(filename, mode=mode)
             filehandler.setFormatter(logging.Formatter('%(asctime)s %(name)s %(levelname)-10s %(message)s'))
             logger.addHandler(filehandler)
