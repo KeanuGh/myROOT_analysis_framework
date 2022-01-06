@@ -23,20 +23,21 @@ class Analysis:
     TODO: apply method to ALL datasets if ds_name not provided?
     """
 
-    def __init__(self,
-                 data_dict: Dict[str, Dict],
-                 analysis_label: str,
-                 global_lumi: Optional[float] = 139.,
-                 phibins: Optional[Union[tuple, list]] = None,
-                 etabins: Optional[Union[tuple, list]] = None,
-                 output_dir: str = None,
-                 data_dir: str = None,
-                 log_level: int = logging.INFO,
-                 log_out: str = 'both',
-                 timedatelog: bool = True,
-                 separate_loggers: bool = False,
-                 **kwargs
-                 ):
+    def __init__(
+            self,
+            data_dict: Dict[str, Dict],
+            analysis_label: str,
+            global_lumi: Optional[float] = 139.,
+            phibins: Optional[Union[tuple, list]] = None,
+            etabins: Optional[Union[tuple, list]] = None,
+            output_dir: str = None,
+            data_dir: str = None,
+            log_level: int = logging.INFO,
+            log_out: str = 'both',
+            timedatelog: bool = True,
+            separate_loggers: bool = False,
+            **kwargs
+    ):
         """
         :param data_dict: Dictionary of dictionaries containing paths to root files and the tree to extract from each.
                The key to the top-level dictionary is the label assigned to the dataset.
@@ -64,9 +65,9 @@ class Analysis:
         output_dir = output_dir + '/outputs/' + analysis_label + '/'  # where outputs go
         self.paths = {
             'plot_dir': output_dir + '/plots/',  # where plots go
-            'pkl_df_dir': data_dir if data_dir else output_dir + '/data/',  # pickle file containing extracted data, format to used dataset
+            'pkl_df_dir': data_dir if data_dir else output_dir + '/data/',  # pickle file directory
             'pkl_hist_dir': output_dir + '/histograms/',  # pickle file to place histograms into
-            'backup_cutfiles_dir': output_dir + '/cutfiles/',  # _cutfile backups
+            'backup_cutfiles_dir': output_dir + '/cutfiles/',  # cutfile backups
             'latex_dir': output_dir + '/LaTeX/',  # where to print latex cutflow table
             'log_dir': output_dir + '/logs/',
         }
@@ -174,14 +175,15 @@ class Analysis:
     # ======== HANDLE LOGGING =======
     # ===============================
     @staticmethod
-    def get_logger(name: str,
-                   log_level: int,
-                   log_out: str,
-                   timedatelog: bool,
-                   log_dir: str = None,
-                   log_file: str = None,
-                   mode: str = 'w',
-                   ) -> logging.Logger:
+    def get_logger(
+            name: str,
+            log_level: int,
+            log_out: str,
+            timedatelog: bool,
+            log_dir: str = None,
+            log_file: str = None,
+            mode: str = 'w',
+    ) -> logging.Logger:
         """
         Generate logger object
 
@@ -206,8 +208,8 @@ class Analysis:
 
         if log_out.lower() in ('file', 'both'):
             filename = log_file if log_file \
-                       else f"{log_dir}/" \
-                            f"{name}{'_' + time.strftime('%Y-%m-%d_%H-%M-%S') if timedatelog else ''}.log"
+                else f"{log_dir}/" \
+                     f"{name}{'_' + time.strftime('%Y-%m-%d_%H-%M-%S') if timedatelog else ''}.log"
             filehandler = logging.FileHandler(filename, mode=mode)
             filehandler.setFormatter(logging.Formatter('%(asctime)s %(name)s %(levelname)-10s %(message)s'))
             logger.addHandler(filehandler)
@@ -222,14 +224,15 @@ class Analysis:
     # ===============================
     # ====== DATASET FUNCTIONS ======
     # ===============================
-    def merge_datasets(self,
-                       *datasets: str,
-                       apply_cuts: Union[bool, str, Iterable[str]] = False,
-                       delete: bool = True,
-                       to_pkl: bool = False,
-                       verify: bool = False,
-                       delete_pkl: bool = False
-                       ) -> None:
+    def merge_datasets(
+            self,
+            *datasets: str,
+            apply_cuts: Union[bool, str, Iterable[str]] = False,
+            delete: bool = True,
+            to_pkl: bool = False,
+            verify: bool = False,
+            delete_pkl: bool = False
+    ) -> None:
         """
         Merge datasets by concatenating one or more into the other
 
@@ -311,24 +314,24 @@ class Analysis:
     # =========== PLOTS =============
     # ===============================
     def plot_hist(
-        self,
-        datasets: Union[str, Iterable[str]],
-        var: str,
-        bins: Union[List[float], Tuple[int, float, float]],
-        weight: Union[str, float] = 1.,
-        yerr: Union[ArrayLike, str] = None,
-        labels: List[str] = None,
-        w2: bool = False,
-        normalise: Union[float, bool, str] = 'lumi',
-        apply_cuts: Union[bool, str, List[str]] = False,
-        logbins: bool = False,
-        logx: bool = False,
-        logy: bool = True,
-        xlabel: str = '',
-        ylabel: str = '',
-        title: str = '',
-        lepton: str = 'lepton',
-        **kwargs
+            self,
+            datasets: Union[str, Iterable[str]],
+            var: str,
+            bins: Union[List[float], Tuple[int, float, float]],
+            weight: Union[str, float] = 1.,
+            yerr: Union[ArrayLike, str] = None,
+            labels: List[str] = None,
+            w2: bool = False,
+            normalise: Union[float, bool, str] = 'lumi',
+            apply_cuts: Union[bool, str, List[str]] = False,
+            logbins: bool = False,
+            logx: bool = False,
+            logy: bool = True,
+            xlabel: str = '',
+            ylabel: str = '',
+            title: str = '',
+            lepton: str = 'lepton',
+            **kwargs
     ) -> None:
         """
         Plot same variable from different datasets
@@ -363,7 +366,7 @@ class Analysis:
         :param kwargs: keyword arguments to pass to mplhep.histplot()
         """
         self.logger.info(f'Plotting {var} in as overlay in {datasets}...')
-        
+
         if isinstance(normalise, str):
             if normalise == 'lumi':
                 normalise = self.global_lumi
