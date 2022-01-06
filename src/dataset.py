@@ -154,8 +154,6 @@ class Dataset:
 
         # GENERATE DATAFRAME
         # ========================
-        """Define pipeline for building dataset dataframe"""
-        # extract and clean data
         if self._build_df:
             self.logger.info(f"Building {self.name} dataframe from {self.data_path}...")
             builder = DataFrameBuilder(
