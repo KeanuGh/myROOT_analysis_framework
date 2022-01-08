@@ -1,7 +1,4 @@
-import logging
 import os
-import sys
-import time
 from typing import Optional, Union, Dict, List, Tuple, Iterable
 
 import matplotlib.pyplot as plt
@@ -10,6 +7,8 @@ from numpy.typing import ArrayLike
 
 import src.config as config
 from src.dataset import Dataset
+from src.datasetbuilder import DatasetBuilder
+from src.logger import get_logger
 from utils import file_utils, plotting_utils
 from utils.decorators import check_single_dataset, handle_dataset_arg
 
@@ -28,11 +27,9 @@ class Analysis:
             data_dict: Dict[str, Dict],
             analysis_label: str,
             global_lumi: Optional[float] = 139.,
-            phibins: Optional[Union[tuple, list]] = None,
-            etabins: Optional[Union[tuple, list]] = None,
             output_dir: str = None,
             data_dir: str = None,
-            log_level: int = logging.INFO,
+            log_level: int = 20,
             log_out: str = 'both',
             timedatelog: bool = True,
             separate_loggers: bool = False,
@@ -41,17 +38,15 @@ class Analysis:
         """
         :param data_dict: Dictionary of dictionaries containing paths to root files and the tree to extract from each.
                The key to the top-level dictionary is the label assigned to the dataset.
-        :param global_lumi: all data will be scaled to this luminosity (fb-1)
-        :param phibins: bins for plotting phi
-        :param etabins: bins for plotting eta
-        :param output_dir: root directory for outputs
-        :param data_dir: root directory for pickle data in/out
-        :param log_level: logging level. See https://docs.python.org/3/library/logging.html#logging-levels
-        :param log_out: where to set log output: 'FILE', 'CONSOLE' or 'BOTH'. (case-insensitive)
-        :param timedatelog: whether to output log filename with timedate
+        :param global_lumi: All data will be scaled to this luminosity (fb-1)
+        :param output_dir: Root directory for outputs
+        :param data_dir: Root directory for pickle data in/out
+        :param log_level: Logging level. Default INFO. See https://docs.python.org/3/library/logging.html#logging-levels
+        :param log_out: Where to set log output: 'FILE', 'CONSOLE' or 'BOTH'. (case-insensitive)
+        :param timedatelog: Whether to output log filename with timedate
                (useful to turn off for testing or you'll be flooded with log files)
-        :param separate_loggers: whether each dataset should output logs to separate log files
-        :param kwargs: keyword arguments to pass to all datasets
+        :param separate_loggers: Whether each dataset should output logs to separate log files
+        :param kwargs: Options arguments to pass to all dataset builders
         """
         self.name = analysis_label
         if self.name in data_dict:
@@ -59,6 +54,7 @@ class Analysis:
 
         # SET OUTPUT DIRECTORIES
         # ===========================
+        # TODO: change how this is done
         if not output_dir:
             # root in the directory above this one
             output_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -76,7 +72,7 @@ class Analysis:
 
         # LOGGING
         # ============================
-        self.logger = self.get_logger(
+        self.logger = get_logger(
             name=self.name,
             log_dir=self.paths['log_dir'],
             log_level=log_level,
@@ -89,58 +85,75 @@ class Analysis:
         self.name = analysis_label
         self.global_lumi = global_lumi
 
-        # variables that require special (default) binning
-        if etabins:
-            config.etabins = etabins
-        if phibins:
-            config.phibins = phibins
-        config.special_binning = {
-            '_eta_': config.etabins,
-            '_phi_': config.phibins,
-            'w_y': config.phibins
-        }
-
         # BUILD DATASETS
         # ============================
-        # parse options for all datasets
-        for name, args in data_dict.items():
-            if dup_args := set(args) & set(kwargs):
+        self.datasets: Dict[str, Dataset] = dict()
+        for name, data_args in data_dict.items():
+            self.logger.info("")
+            self.logger.info("=" * (42 + len(self.name)))
+            self.logger.info(f"======== INITIALISING DATASET '{self.name}' =========")
+            self.logger.info("=" * (42 + len(self.name)))
+
+            if dup_args := set(data_args) & set(kwargs):
                 raise SyntaxError(f"Got multiple values for argument(s) {dup_args} for dataset {name}")
 
-        self.datasets: Dict[str, Dataset] = {
-            name: Dataset(
-                name,
-                paths=self.paths,
+            # get dataset build arguments out of options passed to analysis
+            build_args = dict()
+            for arg in [
+                'data_path',
+                'pkl_path',
+                'cutfile_path',
+                'cutfile',
+                'tree_dict',
+                'vars_to_calc',
+                'cut_dicts'
+            ]:
+                build_args[arg] = data_args.pop(arg, None)
+
+            # set correct pickle path if passed as a build argument
+            if build_args['pkl_path'] is None:
+                build_args['pkl_path'] = f"{self.paths['pkl_df_dir']}{name}_df.pkl"
+
+            # check if a pickle file already exists if not already given
+            # avoids rebuilding dataset unnecessarily
+            if file_utils.file_exists(build_args['pkl_path']):
+                self.logger.debug(f"Found pickle file at {build_args['pkl_path']}. Passing to builder")
+
+            # make dataset
+            builder = DatasetBuilder(
+                name=name,
                 logger=(
-                    self.logger
+                    self.logger  # use single logger
                     if not separate_loggers
-                    else self.get_logger(
-                        name,
+                    else get_logger(  # if seperate, make new logger for each Dataset
+                        name=name,
                         log_dir=self.paths['log_dir'],
                         log_level=log_level,
                         log_out=log_out,
                         timedatelog=timedatelog
                     )
                 ),
-                **kwargs,
-                **data_kwargs,
+                **data_args,
+                **kwargs
             )
-            for name, data_kwargs in data_dict.items()
-        }
-        self.logger.info(f"Initialised datasets: {self.datasets}")
+            dataset = builder.build(**build_args)
+            dataset.set_plot_dir(self.paths['plot_dir'])
+            dataset.set_pkl_path(build_args['pkl_path'])
 
-        if separate_loggers:
-            # set new logger to append to analysis logger
-            for dataset in self.datasets.keys():
-                self.datasets[dataset].logger = self.get_logger(
-                    self.datasets[dataset].name,
-                    log_dir=self.paths['log_dir'],
-                    log_level=log_level,
-                    log_out=log_out,
-                    timedatelog=timedatelog,
-                    mode='a'
-                )
-                self.datasets[dataset].logger.debug(f"{dataset} log handler returned to analysis.")  # test
+            if separate_loggers:
+                # set new logger to append to analysis logger
+                dataset.logger = self.logger
+                dataset.logger.debug(f"{name} log handler returned to analysis.")  # test
+
+            # save dataset no matter what
+            dataset.save_pkl_file()
+
+            self[name] = dataset  # save to analysis
+
+            self.logger.info("=" * (42 + len(self.name)))
+            self.logger.info(f"========= DATASET '{self.name}' INITIALISED =========")
+            self.logger.info("=" * (42 + len(self.name)))
+            self.logger.info("")
 
         self.logger.info("=" * (len(analysis_label) + 23))
         self.logger.info(f"ANALYSIS '{analysis_label}' INITIALISED")
@@ -170,57 +183,6 @@ class Analysis:
 
     def __iadd__(self, other):
         self.datasets |= other.datasets
-
-    # ===============================
-    # ======== HANDLE LOGGING =======
-    # ===============================
-    @staticmethod
-    def get_logger(
-            name: str,
-            log_level: int,
-            log_out: str,
-            timedatelog: bool,
-            log_dir: str = None,
-            log_file: str = None,
-            mode: str = 'w',
-    ) -> logging.Logger:
-        """
-        Generate logger object
-
-        :param name: Name of logger
-        :param log_level: Log level
-        :param log_out: Whether to output log to 'file', 'console' or 'both'
-        :param timedatelog: Whether to append datetime to log filename
-        :param log_dir: Directory to save log file to if log_out is 'file' or 'both'. Ignored otherwise.
-                        Pass either this or log_file
-        :param log_file: File to log to if log_out is 'file' or 'both'. Ignored otherwise.
-                         Pass either this or log_dir
-        :param mode: Mode to open log file as.
-        :return: logging.Logger object
-        """
-        if log_out not in ('file', 'both', 'console', None):
-            raise ValueError("Accaptable values for 'log_out' parameter: 'file', 'both', 'console', None.")
-
-        logger = logging.getLogger(name)
-        logger.setLevel(log_level)
-
-        if log_out.lower() in ('file', 'both'):
-            if (log_dir and log_file) or (log_dir == log_file is None):
-                raise ValueError("Pass either 'log_dir' or 'logfile'")
-
-            filename = log_file if log_file \
-                else f"{log_dir}/" \
-                     f"{name}{'_' + time.strftime('%Y-%m-%d_%H-%M-%S') if timedatelog else ''}.log"
-            filehandler = logging.FileHandler(filename, mode=mode)
-            filehandler.setFormatter(logging.Formatter('%(asctime)s %(name)s %(levelname)-10s %(message)s'))
-            logger.addHandler(filehandler)
-
-        if log_out.lower() in ('console', 'both'):
-            logger.addHandler(logging.StreamHandler(sys.stdout))
-
-        logger.propagate = False
-
-        return logger
 
     # ===============================
     # ====== DATASET FUNCTIONS ======
@@ -264,8 +226,8 @@ class Analysis:
                 self.__delete_pickled_dataset(n)
 
         if to_pkl:
-            pd.to_pickle(self.datasets[datasets[0]].df, self.datasets[datasets[0]].pkl_path)
-            self.logger.info(f"Saved merged dataset to file {self.datasets[datasets[0]].pkl_path}")
+            pd.to_pickle(self.datasets[datasets[0]].df, self.datasets[datasets[0]].pkl_file)
+            self.logger.info(f"Saved merged dataset to file {self.datasets[datasets[0]].pkl_file}")
 
     @handle_dataset_arg
     def apply_cuts(self,
@@ -309,7 +271,7 @@ class Analysis:
     @check_single_dataset
     def __delete_pickled_dataset(self, ds_name: str) -> None:
         self.logger.info(f"Deleting pickled dataset {ds_name}")
-        file_utils.delete_file(self.datasets[ds_name].pkl_path)
+        file_utils.delete_file(self.datasets[ds_name].pkl_file)
 
     # ===============================
     # =========== PLOTS =============
@@ -397,21 +359,11 @@ class Analysis:
             )
 
         ax.legend(fontsize=10)
-        plotting_utils.set_axis_options(ax, var, bins, lepton, logbins, xlabel, ylabel, title, logx, logy)
+        plotting_utils.set_axis_options(ax, var, bins, lepton, xlabel, ylabel, title, logx, logy)
 
-        filename = self.paths['plot_dir'] + '_'.join(datasets) + '_' + var + ('_NORMED' if normalise else '') + '.png'
+        filename = f"{self.paths['plot_dir']}{'_'.join(datasets)}_{var}{'_NORMED' if normalise else ''}.png"
         fig.savefig(filename, bbox_inches='tight')
         self.logger.info(f'Saved overlay plot of {var} to {filename}')
-
-    @check_single_dataset
-    def plot_with_cuts(self, ds_name: Optional[str], **kwargs) -> None:
-        """
-        Plots each variable in specific Dataset to cut from cutfile with each cutgroup applied
-
-        :param ds_name: name of Dataset class to plot
-        :param kwargs: keyword arguments to pass to method in dataset
-        """
-        self.datasets[ds_name].plot_all_with_cuts(**kwargs)
 
     @check_single_dataset
     def gen_cutflow_hist(self, ds_name: Optional[str], **kwargs) -> None:
@@ -423,25 +375,16 @@ class Analysis:
         """
         self.datasets[ds_name].gen_cutflow_hist(**kwargs)
 
-    @check_single_dataset
-    def make_all_cutgroup_2dplots(self, ds_name: Optional[str], **kwargs) -> None:
-        """Plots all cutgroups as 2d plots
-
-        :param ds_name: name of dataset to plot
-        :param kwargs: keyword arguments to pass to plot_utils.plot_2d_cutgroups
-        """
-        self.datasets[ds_name].make_all_cutgroup_2dplots(**kwargs)
-
-    @check_single_dataset
-    def plot_mass_slices(self, ds_name: Optional[str], xvar: str, **kwargs) -> None:
+    @handle_dataset_arg
+    def plot_mass_slices(self, datasets: Union[str, Iterable[str]], xvar: str, **kwargs) -> None:
         """
         Plots mass slices for input variable xvar if dataset is_slices
 
-        :param ds_name: name of dataset (in slices) to plot
+        :param datasets: name(s) of dataset to plot
         :param xvar: variable in dataframe to plot
-        :param kwargs: keyword args to pass to dataclass.plot_mass_slices()
+        :param kwargs: keyword args to pass to Dataset.plot_mass_slices()
         """
-        self.datasets[ds_name].plot_mass_slices(var=xvar, **kwargs)
+        self.datasets[datasets].plot_mass_slices(var=xvar, **kwargs)
 
     # ===============================
     # ========= PRINTOUTS ===========
@@ -453,7 +396,6 @@ class Analysis:
 
     def kinematics_printouts(self) -> None:
         """Prints some kinematic variables to terminal"""
-        self.logger = logging.getLogger('analysis')
         self.logger.info(f"========== KINEMATICS ===========")
         for name in self.datasets:
             self.logger.info(name + ":")
@@ -469,4 +411,4 @@ class Analysis:
         :param datasets: list of datasets or single dataset name. If not given applies to all datasets.
         :return: None
         """
-        self[datasets].print_latex_table()
+        self[datasets].print_latex_table(f"{self.paths['latex_dir']}{self[datasets].name}_cutflow.tex")

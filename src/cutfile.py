@@ -1,20 +1,30 @@
 import collections
 import logging
-import os
 import time
 from distutils.util import strtobool
 from shutil import copyfile
-from typing import Tuple, List, OrderedDict, Dict, Set
+from typing import Tuple, List, OrderedDict, Dict, Set, TypedDict
 
-import pandas as pd
-
-from utils.file_utils import identical_to_backup, get_last_backup, is_dir_empty, get_filename
+import src.config as config
+from utils.file_utils import identical_to_backup, get_last_backup, get_filename
 from utils.var_helpers import OtherVar
+
+
+class CutDict(TypedDict):
+    """Define type hint for cut dictionary"""
+    name: str
+    cut_var: str
+    relation: str
+    cut_val: float
+    group: str
+    is_symmetric: bool
+    tree: str
 
 
 class Cutfile:
     """
     Handles importing cutfiles and extracting variables
+    # TODO: create Cut class (will simpify getting cuts SO much)
     """
     def __init__(self, file_path: str, logger: logging.Logger, backup_path: str = None, sep='\t'):
         self.sep = sep
@@ -26,15 +36,10 @@ class Cutfile:
         self.cut_dicts, self.vars_to_cut, self.options = self.parse_cutfile()
         self.cutgroups = self.gen_cutgroups(self.cut_dicts)
 
-        self.logger.info('')
-        self.logger.info("========== CUTS USED ============")
-        self.log_cuts()
-        self.logger.info('')
-
     def __repr__(self):
         return f'Cutfile("{self._path}")'
 
-    def parse_cutline(self, cutline: str) -> dict:
+    def parse_cutline(self, cutline: str) -> CutDict:
         """
         Processes each line of cuts into dictionary of cut options. with separator sep
         """
@@ -90,7 +95,7 @@ class Cutfile:
 
         return cut_dict
 
-    def parse_cutfile(self, path: str = None, sep='\t') -> Tuple[List[dict], Set[Tuple[str, str]], Dict[str, bool]]:
+    def parse_cutfile(self, path: str = None, sep='\t') -> Tuple[List[CutDict], Set[Tuple[str, str]], Dict[str, bool]]:
         """
         | Generates pythonic outputs from input cutfile
         | Cutfile should be formatted with headers [CUTS], [OUTPUTS] and [OPTIONS]
@@ -164,7 +169,7 @@ class Cutfile:
 
     def extract_variables(self,
                           derived_vars: Dict[str, OtherVar],
-                          list_of_cut_dicts: List[dict]
+                          list_of_cut_dicts: List[CutDict]
                           ) -> Tuple[Dict[str, Set[str]], Set[str]]:
         """
         Get which variables are needed to extract from root file based on cutfile parser output
@@ -217,12 +222,12 @@ class Cutfile:
         return tree_dict, {var for var, _ in calc_vars}
 
     @classmethod
-    def all_vars(cls, cut_dicts: List[dict], vars_set: Set[Tuple[str, str]]) -> Set[str]:
+    def all_vars(cls, cut_dicts: List[CutDict], vars_set: Set[Tuple[str, str]]) -> Set[str]:
         """Return all variables mentioned in cutfile"""
         return {cut_dict['cut_var'] for cut_dict in cut_dicts} | {var for var, _ in vars_set}
 
     @classmethod
-    def gen_cutgroups(cls, cut_list_of_dicts: List[dict]) -> OrderedDict[str, List[str]]:
+    def gen_cutgroups(cls, cut_list_of_dicts: List[CutDict]) -> OrderedDict[str, List[str]]:
         """
         Creates an ordererd dictionary, where the keys are strings containing the name of the group,
         and the values are a list of all the cuts to be applied at once (the cutgroup)
@@ -239,6 +244,10 @@ class Cutfile:
                 cutgroups.append((cut_dict['group'], [cut_dict['name']]))
 
         return collections.OrderedDict(cutgroups)
+
+    def get_cutgroup(self, group: str):
+        """Get names of cuts within group"""
+        return [cut_name + config.cut_label for cut_name in self.cutgroups[group]]
 
     def extract_var_data(self,
                          derived_vars: Dict[str, OtherVar],
@@ -295,65 +304,6 @@ class Cutfile:
         else:
             return True
 
-    def if_build_dataframe(self, pkl_filepath: str) -> bool:
-        """
-        compares current cutfile and dataframe to backups and decides whether to rebuild dataframe
-        cutfile
-        :param pkl_filepath: pickle file containing data in pandas dataframe
-        :return: whether to build new dataframe
-        """
-        if self.backup_path is None:
-            raise ValueError("No cutfile backup path")
-
-        is_pkl_file = os.path.isfile(pkl_filepath)
-        if is_pkl_file:
-            self.logger.debug(f"Previous datafile found in {pkl_filepath}.")
-        else:
-            return True
-
-        # if cutfile backup exists, check for new variables
-        if not is_dir_empty(self.backup_path):
-            latest_backup = get_last_backup(self.backup_path, self.name)
-            self.logger.debug(f"Found backup cutfile in {latest_backup}")
-
-            BACKUP_cutfile_dicts, BACKUP_cutfile_outputs, _ = self.parse_cutfile(latest_backup)
-            current_variables = self.all_vars(self.cut_dicts, self.vars_to_cut)
-            backup_variables = self.all_vars(BACKUP_cutfile_dicts, BACKUP_cutfile_outputs)
-
-            # check whether variables in current cutfile are in previous cutfile
-            if not current_variables <= backup_variables:
-                self.logger.debug(f"New variables found; dataframe will be rebuilt")
-                self.logger.debug(f" Current cutfile variables: {current_variables}. Previous: {backup_variables}")
-                return True
-            else:
-                self.logger.debug(f"All needed variables already contained in previous cutfile")
-                self.logger.debug(f"previous cutfile variables: {backup_variables}")
-                self.logger.debug(f"current cutfile variables: {current_variables}")
-
-        # if backup doesn't exit, make backup and check if there is already a pickle file
-        else:
-            # if pickle file already exists
-            self.logger.debug(f"No cutfile backup found in {self.backup_path}")
-            if is_pkl_file:
-                old_df = pd.read_pickle(pkl_filepath)
-                old_cols = set(old_df.columns)
-                current_variables = self.all_vars(self.cut_dicts, self.vars_to_cut)
-                if current_variables <= old_cols:
-                    self.logger.debug("All variables found in old pickle file.")
-                    return False
-                else:
-                    self.logger.info("New variables found in cutfile. Will rebuild dataframe")
-                    new_vars = {v for v in current_variables if v not in old_cols}
-                    self.logger.debug(f"New cutfile variable(s): {new_vars}")
-                    return True
-
-            # if no backup or pickle file, rebuild
-            else:
-                self.logger.info("No pickle file found. Will rebuild dataframe.")
-                return True
-
-        return False
-
     def get_cut_string(self, cut_label: str, name: bool = False, align: bool = False) -> str:
         """
         Get displayed string of cut.
@@ -386,10 +336,13 @@ class Cutfile:
         """check if cut exists in cutfile"""
         return cut_name in [cut['name'] for cut in self.cut_dicts]
 
-    def log_cuts(self, name: bool = True) -> None:
+    def log_cuts(self, name: bool = True, debug: bool = False) -> None:
         """send list of cuts in cutfile to logger"""
         for cut_name in [cut['name'] for cut in self.cut_dicts]:
-            self.logger.info(self.get_cut_string(cut_name, name=name, align=True))
+            if debug:
+                self.logger.debug(self.get_cut_string(cut_name, name=name, align=True))
+            else:
+                self.logger.info(self.get_cut_string(cut_name, name=name, align=True))
 
     def backup_cutfile(self, name: str) -> None:
         if self.backup_path is None:

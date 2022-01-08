@@ -9,6 +9,7 @@ from numpy.typing import ArrayLike
 plt.style.use(hep.style.ATLAS)
 
 
+# TODO: 2D hist
 class Histogram1D(bh.Histogram):
     """
     Wrapper around boost-histogram histogram for 1D
@@ -149,7 +150,7 @@ class Histogram1D(bh.Histogram):
         :return: None
         """
         hist = self
-        
+
         # normalise to value or unity
         if not normalise:
             bin_vals = hist.bin_values

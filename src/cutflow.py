@@ -23,6 +23,13 @@ class Cutflow:
         :param cutgroups: Optional ordered dictionary of cut groups. If suppled, will organise cutflow in terms of
                           cutgroups rather than individual cuts.
         """
+        if missing_cuts := {
+            cut['name']
+            for cut in cut_dicts
+            if cut['name'] + config.cut_label not in df.columns
+        }:
+            raise ValueError(f"Missing cut(s) {missing_cuts} in DataFrame")
+
         self.logger = logger
 
         # generate cutflow
@@ -55,6 +62,13 @@ class Cutflow:
         if self._cutgroups:
             # loop over groups
             for group in self._cutgroups.values():
+                if missing_cuts := {
+                    cut
+                    for cut in group
+                    if cut + config.cut_label not in df.columns
+                }:
+                    raise ValueError(f"Missing cut(s) {missing_cuts} in DataFrame")
+
                 curr_cut_columns += [cut + config.cut_label for cut in group]
                 # number of events passing current cut & all previous cuts
                 n_events_left = len(df.loc[df[curr_cut_columns].all(1)].index)

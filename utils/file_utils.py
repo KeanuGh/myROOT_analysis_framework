@@ -65,7 +65,7 @@ def get_file_parent(filepath: str) -> Path:
 
 
 def makedir(dirpath: Union[str, List[str]]) -> None:
-    """creates director(y/ies) if it/they doesn't exist. Accepts either string or list of strings"""
+    """creates director(y/ies) if it/they don't exist. Accepts either string or list of strings"""
     if isinstance(dirpath, str):
         if not os.path.exists(dirpath):
             os.makedirs(dirpath)
@@ -80,6 +80,11 @@ def makedir(dirpath: Union[str, List[str]]) -> None:
 def file_exists(filepath: str) -> bool:
     """Does the file exist?"""
     return bool(glob(filepath))
+
+
+def n_files(filepath: str) -> int:
+    """how many files?"""
+    return len(glob(filepath))
 
 
 # FIXME

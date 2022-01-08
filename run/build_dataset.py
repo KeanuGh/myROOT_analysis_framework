@@ -1,7 +1,7 @@
 import argparse
 
-from src.analysis import Analysis
-from src.dataset import lumi_year, DataFrameBuilder
+from src.datasetbuilder import lumi_year, DatasetBuilder
+from src.logger import get_logger
 
 
 def main():
@@ -67,7 +67,7 @@ def main():
     if args.log_out in ('file', 'both'):
         args.log_file = args.name + '.log'
     log_levels = {'debug': 10, 'info': 20, 'warning': 30}
-    logger = Analysis.get_logger(
+    logger = get_logger(
         name=args.name,
         log_level=log_levels[args.log_level],
         log_out=args.log_out,
@@ -76,20 +76,18 @@ def main():
         mode=args.log_mode,
     )
 
-    builder = DataFrameBuilder(
-        data_path=args.datapath,
-        default_TTree=args.TTree,
+    builder = DatasetBuilder(
+        name=args.name,
+        TTree_name=args.TTree,
         logger=logger,
         chunksize=args.chunksize,
         validate_sumofweights=not args.no_validate_sumofweights,
         validate_missing_events=not args.no_validate_missing_events,
         validate_duplicated_events=not args.no_validate_duplicated_events
     )
-    df = builder.build(cutfile_path=args.cutfile)
+    dataset = builder.build(data_path=args.datapath, cutfile_path=args.cutfile)
 
-    filename = args.pkl_file if args.pkl_file else args.name + '.pkl'
-    df.to_pickle(filename)
-    logger.info(f"Saved pickle file to {filename}")
+    dataset.save_pkl_file(args.pkl_file if args.pkl_file else None)
 
 
 if __name__ == "__main__":
