@@ -347,7 +347,7 @@ class DatasetBuilder:
         if df.index.names != ['DSID', 'eventNumber']:
             raise ValueError("Incorrect index")
         if self.logger.level == logging.DEBUG:
-            self.logger.info(f"DATASET INFO FOR {self.name}:")
+            self.logger.debug(f"DATASET INFO FOR {self.name}:")
             self.logger.debug("DSID       n_events   sum_w         x-s fb        lumi fb-1")
             self.logger.debug("==========================================================")
             for dsid, df_id in df.groupby(level='DSID'):
@@ -358,6 +358,7 @@ class DatasetBuilder:
                     f"{Dataset.get_cross_section(df_id):<10.6e}  "
                     f"{self.lumi:<10.6e}"
                 )
+        self.logger.debug("")
 
         # BUILD DATASET
         # ===============================

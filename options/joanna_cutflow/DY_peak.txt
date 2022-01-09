@@ -20,7 +20,8 @@ mt_born	truth
 # reco
 mu_d0sig	nominal_Loose
 mu_delta_z0_sintheta	nominal_Loose
-met_eta	nominal_Loose
+primaryVertices	nominal_Loose
+
 
 [OPTIONS]
 # case-insensitive
