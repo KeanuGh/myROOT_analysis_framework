@@ -113,7 +113,7 @@ class Dataset:
     def n_truth_events(self) -> int:
         """How many truth events in dataset"""
         if self.is_truth:
-            return df['truth_weight'].notna().sum()
+            return self.df['truth_weight'].notna().sum()
         else:
             return 0
 
@@ -121,7 +121,7 @@ class Dataset:
     def n_reco_events(self) -> int:
         """How many reco events in dataset"""
         if self.is_reco:
-            return df['reco_weight'].notna().sum()
+            return self.df['reco_weight'].notna().sum()
         else:
             return 0
 
@@ -202,7 +202,7 @@ class Dataset:
     # ===============================
     def cut_on_cutgroup(self, group: str) -> pd.DataFrame:
         """Cuts on cutgroup on input dataframe or series"""
-        return self.df.loc[df[self.cutfile.get_cutgroup(group)].all(1)]
+        return self.df.loc[self.df[self.cutfile.get_cutgroup(group)].all(1)]
 
     def apply_cuts(self,
                    labels: Union[bool, str, List[str]] = True,
