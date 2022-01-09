@@ -35,6 +35,8 @@ def main():
                          help="Pickled DataFrame output file. DEFAULT: './<name>.pkl'")
     outputs.add_argument('--log_file', type=str, required=False,
                          help="Log output file. DEFAULT: './<name>.log'")
+    outputs.add_argument('--latex_cutflow', '-f', type=str,
+                         help='File to output a latex cutflow to')
 
     # Options
     # logging options
@@ -88,6 +90,9 @@ def main():
     dataset = builder.build(data_path=args.datapath, cutfile_path=args.cutfile)
 
     dataset.save_pkl_file(args.pkl_file if args.pkl_file else None)
+
+    if args.latex_cutflow:
+        dataset.print_latex_table(args.latex_cutflow)
 
 
 if __name__ == "__main__":
