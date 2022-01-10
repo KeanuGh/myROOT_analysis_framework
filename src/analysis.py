@@ -135,6 +135,8 @@ class Analysis:
                 **kwargs
             )
             dataset = builder.build(**build_args)
+            dataset.dsid_metadata_printout()
+
             dataset.set_plot_dir(self.paths['plot_dir'])
             dataset.set_pkl_path(build_args['pkl_path'])
 

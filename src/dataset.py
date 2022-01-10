@@ -107,13 +107,13 @@ class Dataset:
     @property
     def is_reco(self) -> bool:
         """Does dataset contain reco data?"""
-        return 'is_reco' in self.df.columns
+        return 'reco_weight' in self.df.columns
 
     @property
     def n_truth_events(self) -> int:
         """How many truth events in dataset"""
         if self.is_truth:
-            return self.df['truth_weight'].notna().sum()
+            return df['truth_weight'].notna().sum()
         else:
             return 0
 
@@ -125,13 +125,15 @@ class Dataset:
         else:
             return 0
 
-    def get_truth_events(self) -> pd.DataFrame:
+    def get_truth_events(self, df: pd.DataFrame = None) -> pd.DataFrame:
         """Retrun view of truth events"""
-        return self.df.loc[self.df['truth_weight'].notna()]
+        if df is None: df = self.df
+        return df.loc[self.df['truth_weight'].notna()]
 
-    def get_reco_events(self) -> pd.DataFrame:
+    def get_reco_events(self, df: pd.DataFrame = None) -> pd.DataFrame:
         """Retrun view of reco events"""
-        return self.df.loc[self.df['reco_weight'].notna()]
+        if df is None: df = self.df
+        return df.loc[self.df['reco_weight'].notna()]
 
     @property
     def cross_section(self) -> float:
@@ -168,6 +170,43 @@ class Dataset:
         if not xs:
             xs = cls.get_cross_section(df)
         return df[weight_col].sum() / xs
+
+    def dsid_metadata_printout(self):
+        """print some dataset ID metadata"""
+        if self.df.index.names != ['DSID', 'eventNumber']:
+            raise ValueError("Incorrect index")
+
+        print_truth = self.is_truth
+        print_reco = self.is_reco
+
+        if self.logger.level == logging.DEBUG:
+            self.logger.info(f"DATASET INFO FOR {self.name}:")
+            header = (
+                "DSID   " +
+                "n_events   " +
+                "sum_w        " +
+                "x-s fb       " +
+                "lumi fb-1    " +
+                ("truth events " if print_truth else "") +
+                ("avg truth wt " if print_truth else "") +
+                ("reco events  " if print_reco else "") +
+                ("avg reco wt  " if print_reco else "")
+            )
+            self.logger.info(header)
+            self.logger.info("=" * len(header))
+            for dsid, df_id in self.df.groupby(level='DSID'):
+                self.logger.info(
+                    f"{dsid:<6} " +
+                    f"{len(df_id):<10} " +
+                    f"{df_id['weight_mc'].sum():<10.6e} " +
+                    f"{Dataset.get_cross_section(df_id):<10.6e} " +
+                    f"{self.lumi:<10.6e} " +
+                    (f"{df_id['truth_weight'].notna().sum():<11}  " if print_truth else "") +
+                    (f"{df_id['truth_weight'].notna().mean():<11.5e}  " if print_truth else "") +
+                    (f"{df_id['reco_weight'].notna().sum():<11}  " if print_reco else "") +
+                    (f"{df_id['reco_weight'].notna().mean():<11.5e}  " if print_reco else "")
+                )
+            self.logger.info("-" * len(header))
 
     # ===============================
     # ========= PRINTOUTS ===========

@@ -88,6 +88,7 @@ def main():
         validate_duplicated_events=not args.no_validate_duplicated_events
     )
     dataset = builder.build(data_path=args.datapath, cutfile_path=args.cutfile)
+    dataset.dsid_metadata_printout()
 
     dataset.save_pkl_file(args.pkl_file if args.pkl_file else None)
 

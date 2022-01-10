@@ -274,10 +274,12 @@ class Cutfile:
             tree_dict[tree] |= {'mcChannelNumber', 'eventNumber'}
             tree_dict[tree] -= vars_to_calc
             if 'nominal' in tree.lower():
-                self.logger.info(f"Detected {tree} as reco tree, will pull 'weight_leptonSF' and 'weight_KFactor'")
+                self.logger.info(f"Detected {tree} as reco tree, "
+                                 f"adding 'weight_leptonSF' and 'weight_KFactor' to tree variables")
                 tree_dict[tree] |= {'weight_leptonSF', 'weight_KFactor'}
             elif 'truth' in tree.lower():
-                self.logger.info(f"Detected {tree} as truth tree, will pull 'KFactor_weight_truth'")
+                self.logger.info(f"Detected {tree} as truth tree, "
+                                 f"adding 'KFactor_weight_truth' to tree variables")
                 tree_dict[tree].add('KFactor_weight_truth')
             else:
                 self.logger.info(f"Neither {tree} as truth nor reco dataset detected.")

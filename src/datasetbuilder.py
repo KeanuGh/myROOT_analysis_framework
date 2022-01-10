@@ -179,7 +179,7 @@ class DatasetBuilder:
             is_truth, is_reco = cutfile.truth_reco(tree_dict)
             cut_dicts = cutfile.cut_dicts
         elif tree_dict:
-            if vars_to_calc is None or cut_dicts is None:
+            if (vars_to_calc is None) or (cut_dicts is None):
                 raise ValueError("Must provide variables to cut and cut dictionary list if not building from cutfile")
             else:
                 is_truth, is_reco = Cutfile.truth_reco(tree_dict)
@@ -236,6 +236,7 @@ class DatasetBuilder:
         if pkl_path and not self.force_rebuild:
             df = self.__read_pkl_df(pkl_path)
 
+            # Pickle file checks
             if self.skip_verify_pkl:
                 self.logger.debug("Skipped pickle verification")
                 __build_df = False
@@ -341,24 +342,6 @@ class DatasetBuilder:
             cut_cols = [cut + config.cut_label for cut in cuts]
             df = df.loc[df[cut_cols].all(1)]
             df.drop(columns=cut_cols, inplace=True)
-
-        # print some dataset ID metadata
-        # TODO: avg event weight
-        if df.index.names != ['DSID', 'eventNumber']:
-            raise ValueError("Incorrect index")
-        if self.logger.level == logging.DEBUG:
-            self.logger.debug(f"DATASET INFO FOR {self.name}:")
-            self.logger.debug("DSID       n_events   sum_w         x-s fb        lumi fb-1")
-            self.logger.debug("==========================================================")
-            for dsid, df_id in df.groupby(level='DSID'):
-                self.logger.debug(
-                    f"{dsid:<10} "
-                    f"{len(df_id):<10} "
-                    f"{df_id['weight_mc'].sum():<10.6e}  "
-                    f"{Dataset.get_cross_section(df_id):<10.6e}  "
-                    f"{self.lumi:<10.6e}"
-                )
-        self.logger.debug("")
 
         # BUILD DATASET
         # ===============================
