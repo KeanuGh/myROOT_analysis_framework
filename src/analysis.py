@@ -161,13 +161,18 @@ class Analysis:
     # ===============================
     # ========== BUILTINS ===========
     # ===============================
-    def __getitem__(self, ds_name):
-        return self.datasets[ds_name]
+    def __getitem__(self, key):
+        self.__check_ds(key)
+        return self.datasets[key]
 
     def __setitem__(self, ds_name, dataset: Dataset):
         if not isinstance(dataset, Dataset):
             raise ValueError(f"Analysis dataset must be of type {Dataset}")
         self.datasets[ds_name] = dataset
+
+    def __delitem__(self, key):
+        self.__check_ds(key)
+        del self.datasets[key]
 
     def __len__(self):
         return len(self.datasets)
@@ -187,6 +192,11 @@ class Analysis:
     # ===============================
     # ====== DATASET FUNCTIONS ======
     # ===============================
+    def __check_ds(self, key: str) -> None:
+        """Does dataset exist?"""
+        if key not in self.datasets:
+            raise ValueError(f"No dataset named {key} found in analysis {self.name}")
+
     def merge_datasets(
             self,
             *datasets: str,
@@ -216,8 +226,8 @@ class Analysis:
 
         self.logger.info(f"Merging dataset(s) {datasets[1:]} into dataset {datasets[0]}...")
 
-        self.datasets[datasets[0]].df = pd.concat([self.datasets[n].df for n in datasets],
-                                                  verify_integrity=verify, copy=False)
+        self[datasets[0]].df = pd.concat([self[n].df for n in datasets],
+                                         verify_integrity=verify, copy=False)
 
         for n in datasets[1:]:
             if delete:
@@ -226,8 +236,8 @@ class Analysis:
                 self.__delete_pickled_dataset(n)
 
         if to_pkl:
-            pd.to_pickle(self.datasets[datasets[0]].df, self.datasets[datasets[0]].pkl_file)
-            self.logger.info(f"Saved merged dataset to file {self.datasets[datasets[0]].pkl_file}")
+            pd.to_pickle(self[datasets[0]].df, self[datasets[0]].pkl_file)
+            self.logger.info(f"Saved merged dataset to file {self[datasets[0]].pkl_file}")
 
     @handle_dataset_arg
     def apply_cuts(self,
@@ -245,14 +255,14 @@ class Analysis:
         """
         # skip cuts that don't exist in dataset
         if isinstance(labels, str):
-            if labels + config.cut_label not in self.datasets[datasets].df.columns:
+            if labels + config.cut_label not in self[datasets].df.columns:
                 self.logger.debug(f"No cut '{labels}' in dataset '{datasets}'; skipping.")
                 return
 
         elif isinstance(labels, list):
             if missing_cuts := [
                 label for label in labels
-                if label + config.cut_label not in self.datasets[datasets].df.columns
+                if label + config.cut_label not in self[datasets].df.columns
             ]:
                 self.logger.debug(f"No cuts {missing_cuts} in dataset '{datasets}'; skipping.")
                 # remove missing cuts from list
@@ -266,12 +276,12 @@ class Analysis:
     @check_single_dataset
     def __delete_dataset(self, ds_name: str) -> None:
         self.logger.info(f"Deleting dataset {ds_name} from analysis {self.name}")
-        del self.datasets[ds_name]
+        del self[ds_name]
 
     @check_single_dataset
     def __delete_pickled_dataset(self, ds_name: str) -> None:
         self.logger.info(f"Deleting pickled dataset {ds_name}")
-        file_utils.delete_file(self.datasets[ds_name].pkl_file)
+        file_utils.delete_file(self[ds_name].pkl_file)
 
     # ===============================
     # =========== PLOTS =============
@@ -344,7 +354,7 @@ class Analysis:
         if isinstance(datasets, str):
             datasets = [datasets]
         for i, dataset in enumerate(datasets):
-            self.datasets[dataset].plot_hist(
+            self[dataset].plot_hist(
                 var=var,
                 bins=bins,
                 weight=weight,
@@ -352,7 +362,7 @@ class Analysis:
                 yerr=yerr,
                 normalise=normalise,
                 logbins=logbins,
-                label=labels[i] if labels else self.datasets[dataset].label,
+                label=labels[i] if labels else self[dataset].label,
                 apply_cuts=apply_cuts,
                 w2=w2,
                 **kwargs
@@ -373,7 +383,7 @@ class Analysis:
         :param ds_name: Name of dataset to plot
         :return: None
         """
-        self.datasets[ds_name].gen_cutflow_hist(**kwargs)
+        self[ds_name].gen_cutflow_hist(**kwargs)
 
     @handle_dataset_arg
     def plot_mass_slices(self, datasets: Union[str, Iterable[str]], xvar: str, **kwargs) -> None:
@@ -384,7 +394,7 @@ class Analysis:
         :param xvar: variable in dataframe to plot
         :param kwargs: keyword args to pass to Dataset.plot_mass_slices()
         """
-        self.datasets[datasets].plot_mass_slices(var=xvar, **kwargs)
+        self[datasets].plot_mass_slices(var=xvar, **kwargs)
 
     # ===============================
     # ========= PRINTOUTS ===========
@@ -400,8 +410,8 @@ class Analysis:
         for name in self.datasets:
             self.logger.info(name + ":")
             self.logger.info("---------------------------------")
-            self.logger.info(f"cross-section: {self.datasets[name].cross_section:.2f} fb")
-            self.logger.info(f"luminosity   : {self.datasets[name].luminosity:.2f} fb-1")
+            self.logger.info(f"cross-section: {self[name].cross_section:.2f} fb")
+            self.logger.info(f"luminosity   : {self[name].luminosity:.2f} fb-1")
 
     @handle_dataset_arg
     def print_latex_table(self, datasets: Union[str, Iterable[str]]) -> None:
