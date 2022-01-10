@@ -45,6 +45,7 @@ class DatasetBuilder:
     :param force_rebuild: whether to force build of DataFrame
     :param force_recalc_weights: whether to force recalculating weights, no matter if the column already exists
     :param force_recalc_cuts: whether to force recalculating cuts, whether columns exist or not
+    :param force_recalc_vars: whether to force recalculating variables like M^W_T
     :param skip_verify_pkl: verifying pickle file against cutfile
     :param chunksize: chunksize for uproot concat method
     :param validate_missing_events: whether to check for missing events
@@ -63,6 +64,7 @@ class DatasetBuilder:
     force_rebuild: bool = False
     force_recalc_weights: bool = False
     force_recalc_cuts: bool = False
+    force_recalc_vars: bool = False
     skip_verify_pkl: bool = False
     chunksize: int = 1024
     validate_missing_events: bool = True
@@ -246,7 +248,7 @@ class DatasetBuilder:
                 cols = df.columns
                 if not self.__check_var_cols(cols, tree_dict, raise_error=__error_at_rebuild):
                     __build_df = True
-                elif not self.__check_calc_var_cols(cols, vars_to_calc):
+                elif not self.__check_calc_var_cols(cols, vars_to_calc) and not self.force_recalc_vars:
                     if not self.__check_argument_var_cols(cols, vars_to_calc, raise_error=__error_at_rebuild):
                         __build_df = True
                     else:
@@ -254,8 +256,14 @@ class DatasetBuilder:
                 else:
                     self.logger.debug("Found all necessary variables. No rebuild necessary")
                     __build_df = False
-                    __create_cut_cols = not self.__check_cut_cols(cols, cut_dicts)
-                    __create_weight_cols = not self.__check_weight_cols(cols, truth=is_truth, reco=is_reco)
+                    __create_cut_cols = (
+                        True if self.force_recalc_cuts
+                        else not self.__check_cut_cols(cols, cut_dicts)
+                    )
+                    __create_weight_cols = (
+                        True if self.force_recalc_weights
+                        else not self.__check_weight_cols(cols, truth=is_truth, reco=is_reco)
+                    )
         else:
             __build_df = True
 
@@ -280,15 +288,15 @@ class DatasetBuilder:
         # POST-PROCESSING
         # ===============================
         # calculate variables
-        if __calculate_vars:
+        if __calculate_vars or self.force_recalc_vars:
             self.__calculate_vars(df, vars_to_calc)
 
         # calculate cut columns
-        if __create_cut_cols:
+        if __create_cut_cols or self.force_recalc_cuts:
             self.__create_cut_columns(df, cutfile)
 
         # calculate weights
-        if __create_weight_cols:
+        if __create_weight_cols or self.force_recalc_weights:
             if is_truth:
                 self.logger.info(f"Calculating truth weight for {self.name}...")
                 df['truth_weight'] = self.__event_weight_truth(df)
