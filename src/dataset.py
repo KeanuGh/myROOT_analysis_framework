@@ -257,46 +257,37 @@ class Dataset:
                  If False returns DataFrame with cuts applied and associated cut columns removed.
                  Raises ValueError if cuts do not exist in dataframe
         """
-
-        def __check_cut_cols(c: List[str]) -> None:
-            """Check if columns exist in dataframe"""
-            if missing_cut_cols := [
-                label for label in c
-                if label not in self.df.columns
-            ]:
-                raise ValueError(f"No cut(s) {missing_cut_cols} in dataset {self.name}...")
-
-        if not labels:
-            if inplace:
-                return
-            else:
-                return self.df
-
-        elif isinstance(labels, list):
+        if isinstance(labels, list):
             self.logger.debug(f"Applying cuts: {labels} to {self.name}...")
-            cut_cols = [label + config.cut_label for label in labels]
-            __check_cut_cols(cut_cols)
+            cut_cols = [label for label in labels]
 
         elif isinstance(labels, str):
             self.logger.debug(f"Applying cut: {labels} to {self.name}...")
-            cut_cols = [labels + config.cut_label]
-            __check_cut_cols(cut_cols)
+            cut_cols = [labels]
 
         elif labels is True:
             self.logger.debug(f"Applying all cuts to {self.name}...")
             cut_cols = [str(col) for col in self.df.columns if config.cut_label in col]
-            __check_cut_cols(cut_cols)
 
         else:
             raise TypeError("'labels' must be a bool, a string or a list of strings")
 
         # apply cuts
+        self.__check_cut_cols(cut_cols)
         if inplace:
             self.df = self.df.loc[self.df[cut_cols].all(1)]
             self.df.drop(columns=cut_cols, inplace=True)
 
         else:
             return self.df.loc[self.df[cut_cols].all(1)].drop(columns=cut_cols)
+
+    def __check_cut_cols(self, cuts: List[str]) -> None:
+        """Check if cut columns exist in dataframe"""
+        if missing_cut_cols := [
+            label + config.cut_label for label in cuts
+            if label not in self.df.columns
+        ]:
+            raise ValueError(f"No cut(s) {missing_cut_cols} in dataset {self.name}...")
 
     # ===========================================
     # =========== PLOTING FUNCTIONS =============
@@ -310,7 +301,7 @@ class Dataset:
             yerr: Union[ArrayLike, str] = None,
             normalise: Union[float, bool] = False,
             logbins: bool = False,
-            apply_cuts: Union[bool, str, List[str]] = True,
+            apply_cuts: Union[bool, str, List[str]] = False,
             **kwargs
     ) -> Histogram1D:
         """
@@ -342,7 +333,8 @@ class Dataset:
         if not ax:
             _, ax = plt.subplots()
 
-        df = self.apply_cuts(apply_cuts)
+        df = self.apply_cuts(apply_cuts) if apply_cuts else self.df
+
         weights = (
             df[weight]
             if isinstance(weight, str)
