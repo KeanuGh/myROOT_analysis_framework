@@ -19,7 +19,6 @@ class Analysis:
     single datasets or across multiple datasets.
     Access datasets in class with analysis.dataset_name or analsis['dataset_name']. Can set by key but not by attribute
     When calling a method that applies to only one dataset, naming the dataset in argument ds_name is optional.
-    TODO: apply method to ALL datasets if ds_name not provided?
     """
 
     def __init__(
@@ -161,16 +160,16 @@ class Analysis:
     # ===============================
     # ========== BUILTINS ===========
     # ===============================
-    def __getitem__(self, key):
+    def __getitem__(self, key: str):
         self.__check_ds(key)
         return self.datasets[key]
 
-    def __setitem__(self, ds_name, dataset: Dataset):
+    def __setitem__(self, ds_name: str, dataset: Dataset):
         if not isinstance(dataset, Dataset):
             raise ValueError(f"Analysis dataset must be of type {Dataset}")
         self.datasets[ds_name] = dataset
 
-    def __delitem__(self, key):
+    def __delitem__(self, key: str):
         self.__check_ds(key)
         del self.datasets[key]
 
