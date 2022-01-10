@@ -257,7 +257,10 @@ class Dataset:
                  If False returns DataFrame with cuts applied and associated cut columns removed.
                  Raises ValueError if cuts do not exist in dataframe
         """
-        if isinstance(labels, list):
+        if not labels:
+            raise ValueError("No cuts supplied")
+
+        elif isinstance(labels, list):
             self.logger.debug(f"Applying cuts: {labels} to {self.name}...")
             cut_cols = [label for label in labels]
 
