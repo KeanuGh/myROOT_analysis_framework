@@ -53,7 +53,6 @@ class Analysis:
 
         # SET OUTPUT DIRECTORIES
         # ===========================
-        # TODO: change how this is done
         if not output_dir:
             # root in the directory above this one
             output_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -185,7 +184,13 @@ class Analysis:
     def __str__(self):
         return f'"{self.name}",Datasets:{{{", ".join([f"{name}: {len(d)}, {list(d.df.columns)}" for name, d in self.datasets.items()])}}}'
 
-    def __iadd__(self, other):
+    def __or__(self, other):
+        return self.datasets | other.datasets
+
+    def __ror__(self, other):
+        return other.datasets | self.datasets
+
+    def __ior__(self, other):
         self.datasets |= other.datasets
 
     # ===============================
