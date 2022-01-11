@@ -1,6 +1,6 @@
 import logging
 from dataclasses import dataclass, field
-from typing import Union, List, Tuple, Iterable
+from typing import Union, List, Tuple, Iterable, OrderedDict
 
 import matplotlib.pyplot as plt
 import mplhep as hep
@@ -9,7 +9,7 @@ from numpy.typing import ArrayLike
 
 import src.config as config
 import utils.plotting_utils as plt_utils
-from src.cutfile import Cutfile
+from src.cutfile import Cutfile, Cut
 from src.cutflow import Cutflow
 from src.histogram import Histogram1D
 from src.logger import get_logger
@@ -20,7 +20,6 @@ from utils.axis_labels import labels_xs
 class Dataset:
     """
     Dataset class. Contains/will contain all the variables needed for a singular analysis dataset.
-    TODO: migrate all plotting functions to new histogram
 
     :param name: Name of Dataset
     :param df: pandas DataFrame containing data
@@ -39,7 +38,7 @@ class Dataset:
     cutflow: Cutflow
     lumi: float = 139.
     label: str = 'data'
-    logger: logging.Logger = get_logger(log_out='console', log_level=10)
+    logger: logging.Logger = field(default_factory=get_logger)
     lepton: str = 'lepton'
     plot_dir: str = '.'
     pkl_file: str = field(init=False)
@@ -51,7 +50,7 @@ class Dataset:
     # ===================
     def __len__(self):
         """Return number of rows in dataframe"""
-        return len(self.df.index)
+        return self.df.index.__len__()
 
     def __getitem__(self, col):
         return self.df[col]
@@ -93,10 +92,13 @@ class Dataset:
     def cut_cols(self) -> set:
         """Column names that contain a cut label"""
         return {
-            col - config.cut_label
-            for col in self.df.columns
+            col for col in self.df.columns
             if config.cut_label in col
         }
+
+    @property
+    def cuts(self) -> OrderedDict[str, Cut]:
+        return self.cutfile.cuts
 
     @property
     def is_truth(self) -> bool:
@@ -389,17 +391,17 @@ class Dataset:
 
         # PLOT CUTS
         # ================
-        for cut in self.cutfile.cut_dicts:
+        for cut in self.cutfile.cuts.values():
             h_cut = self.plot_hist(
                 var=var,
                 bins=bins,
                 weight=weight,
                 ax=fig_ax,
-                apply_cuts=cut['name'],
+                apply_cuts=cut.name,
                 yerr=yerr,
                 normalise=normalise,
                 logbins=logbins,
-                label=cut['name'],
+                label=cut.name,
                 w2=w2,
                 linewidth=2,
                 **kwargs
@@ -408,7 +410,7 @@ class Dataset:
             # RATIO PLOT
             # ================
             h_cut.plot_ratio(h_inclusive, ax=accept_ax, yerr=yerr,
-                             label=cut['name'], color=fig_ax.get_lines()[-1].get_color())
+                             label=cut.name, color=fig_ax.get_lines()[-1].get_color())
 
         # AXIS FORMATTING
         # ==================

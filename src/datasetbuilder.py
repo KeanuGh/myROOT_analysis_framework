@@ -2,7 +2,7 @@ import logging
 import operator as op
 import time
 from dataclasses import dataclass, field
-from typing import Optional, Union, List, Dict, Iterable, Set, overload
+from typing import Optional, Union, List, Dict, OrderedDict, Set, Iterable, overload
 
 import pandas as pd
 import uproot
@@ -10,7 +10,7 @@ from awkward import to_pandas
 
 import src.config as config
 import utils.file_utils as file_utils
-from src.cutfile import Cutfile, CutDict
+from src.cutfile import Cutfile, Cut
 from src.cutflow import Cutflow
 from src.dataset import Dataset
 from src.logger import get_logger
@@ -106,7 +106,7 @@ class DatasetBuilder:
             data_path: str,
             tree_dict: Dict[str, Set[str]],
             vars_to_calc: Set[str],
-            cut_list: Optional[List[CutDict]] = None,
+            cuts: Optional[OrderedDict[str, Cut]] = None,
     ) -> Dataset:
         ...
 
@@ -118,7 +118,7 @@ class DatasetBuilder:
             pkl_path: str = None,
             tree_dict: Dict[str, Set[str]] = None,
             vars_to_calc: Set[str] = None,
-            cut_dicts: Optional[List[CutDict]] = None,
+            cut_dicts: OrderedDict[str, Cut] = None,
     ) -> Dataset:
         """
         Builds a dataframe from cutfile inputs.
@@ -178,7 +178,6 @@ class DatasetBuilder:
             # get tree dictionary, set of variables to calculate, and whether the dataset will contain truth, reco data
             tree_dict, vars_to_calc = cutfile.extract_var_data(derived_vars, self.TTree_name)
             is_truth, is_reco = cutfile.truth_reco(tree_dict)
-            cut_dicts = cutfile.cut_dicts
         elif tree_dict:
             if (vars_to_calc is None) or (cut_dicts is None):
                 raise ValueError("Must provide variables to cut and cut dictionary list if not building from cutfile")
@@ -190,7 +189,7 @@ class DatasetBuilder:
         # check if vars are contained in label dictionary
         self.__check_axis_labels(tree_dict, vars_to_calc)
 
-        # check if hard cut(s) exists in cutfile. If not, skip
+        # check if hard cut(s) exists in cutfile. If not, skip them
         self.__check_hard_cuts(cutfile)
 
         # print debug information
@@ -314,17 +313,6 @@ class DatasetBuilder:
                     assert (~df['reco_weight'].isna()).sum() == (~df['weight_leptonSF'].isna()).sum(), \
                         "Different number of events for reco weight and lepton scale factors!"
 
-        # GENERATE CUTFLOW
-        # remove hard cut from cutflow:
-        cut_dicts = [cut_dict for cut_dict in cut_dicts
-                     if cut_dict['name'] not in self.hard_cut]
-
-        cutflow = Cutflow(
-            df,
-            cut_dicts,
-            self.logger,
-        )
-
         # apply hard cut(s) if it exists in cut columns
         hard_cuts_to_apply = []
         for h_cut in self.hard_cut:
@@ -342,6 +330,16 @@ class DatasetBuilder:
             cut_cols = [cut + config.cut_label for cut in cuts]
             df = df.loc[df[cut_cols].all(1)]
             df.drop(columns=cut_cols, inplace=True)
+            # remove cut from cutflow as well
+            for cut in self.hard_cut:
+                cutfile.cuts.pop(cut)
+
+        # GENERATE CUTFLOW
+        cutflow = Cutflow(
+            df,
+            cutfile.cuts,
+            self.logger,
+        )
 
         # BUILD DATASET
         # ===============================
@@ -434,9 +432,9 @@ class DatasetBuilder:
                     return False
         return True
 
-    def __check_cut_cols(self, df_cols: Iterable, cut_dicts: List[CutDict], raise_error: bool = False) -> bool:
+    def __check_cut_cols(self, df_cols: Iterable, cuts: OrderedDict[str, Cut], raise_error: bool = False) -> bool:
         """Check whether all necessary cut columns exist in DataFrame columns not including any hard cut"""
-        cut_cols = {cut['name'] + config.cut_label for cut in cut_dicts}
+        cut_cols = {cut_name + config.cut_label for cut_name in cuts}
         cut_cols -= {h_cut + config.cut_label for h_cut in self.hard_cut}
         if missing_vars := {var for var in cut_cols
                             if var not in df_cols}:
@@ -666,7 +664,7 @@ class DatasetBuilder:
         Creates boolean columns in dataframe corresponding to each cut
         """
         label = config.cut_label  # get cut label from config
-        self.logger.info(f"Calculating {len(cutfile.cut_dicts)} cut columns...")
+        self.logger.info(f"Calculating {len(cutfile.cuts)} cut columns...")
 
         # use functions of compariton operators in dictionary to make life easier
         # (but maybe a bit harder to read)
@@ -679,13 +677,13 @@ class DatasetBuilder:
             '>=': op.ge,
         }
 
-        for cut in cutfile.cut_dicts:
-            if cut['relation'] not in op_dict:
-                raise ValueError(f"Unexpected comparison operator: {cut['relation']}.")
-            if not cut['is_symmetric']:
-                df[cut['name'] + label] = op_dict[cut['relation']](df[cut['cut_var']], cut['cut_val'])
+        for cut in cutfile.cuts.values():
+            if cut.op not in op_dict:
+                raise ValueError(f"Unexpected comparison operator: {cut.op}.")
+            if not cut.is_symmetric:
+                df[cut.name + label] = op_dict[cut.op](df[cut.var], cut.val)
             else:  # take absolute value instead
-                df[cut['name'] + label] = op_dict[cut['relation']](df[cut['cut_var']].abs(), cut['cut_val'])
+                df[cut.name + label] = op_dict[cut.op](df[cut.var].abs(), cut.val)
 
     def __event_weight_reco(self,
                             df: pd.DataFrame,

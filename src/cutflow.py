@@ -1,29 +1,30 @@
 import logging
-from typing import Dict, List
+from typing import OrderedDict
 
 import matplotlib.pyplot as plt
 import mplhep as hep
 import pandas as pd
 
 import src.config as config
+from src.cutfile import Cut
 
 
 class Cutflow:
     def __init__(self, df: pd.DataFrame,
-                 cut_dicts: List[Dict],
+                 cuts: OrderedDict[str, Cut],
                  logger: logging.Logger,
                  ):
         """
         Generates cutflow object that keeps track of various properties and ratios of selections made on given dataset
 
         :param df: Input analysis dataframe with boolean cut rows.
-        :param cut_dicts: Dictionary of cufts made.
+        :param cuts: Ordered of cuts made.
         :param logger: logger to output to
         """
         if missing_cuts := {
-            cut['name']
-            for cut in cut_dicts
-            if cut['name'] + config.cut_label not in df.columns
+            cut_name
+            for cut_name in cuts
+            if cut_name + config.cut_label not in df.columns
         }:
             raise ValueError(f"Missing cut(s) {missing_cuts} in DataFrame")
 
@@ -33,10 +34,10 @@ class Cutflow:
         self._n_events_tot = len(df.index)
 
         # set input fields
-        self._cut_dicts = cut_dicts
+        self._cuts = cuts
 
         # list of cutflow labels (necessary for all cutflows)
-        self.cutflow_labels = ['Inclusive'] + [cut['name'] for cut in self._cut_dicts]
+        self.cutflow_labels = ['Inclusive'] + [cut_name for cut_name in self._cuts]
         self.cutflow_ratio = [1.]  # contains ratio of each separate cut to inclusive sample
         self.cutflow_n_events = [self._n_events_tot]  # contains number of events passing each cut
 
@@ -125,8 +126,8 @@ class Cutflow:
                     "\\hline\n")
             f.write(f"Cut & Events & Ratio & Cumulative \\\\\\hline\n"
                     f"Inclusive & {self.cutflow_n_events[0]} & — & — \\\\\n")
-            for i, cutname in enumerate(self.cutflow_labels[1:]):
-                f.write(f"{cutname} & "
+            for i, cut in enumerate(self._cuts.values()):
+                f.write(f"{cut.string} & "
                         f"{self.cutflow_n_events[i + 1]} & "
                         f"{self.cutflow_ratio[i + 1]:.3f} & "
                         f"{self.cutflow_cum[i + 1]:.3f} "

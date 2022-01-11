@@ -1,27 +1,42 @@
 import logging
 import time
+from collections import OrderedDict
+from dataclasses import dataclass
 from distutils.util import strtobool
 from shutil import copyfile
-from typing import Tuple, List, Dict, Set, TypedDict
+from typing import Tuple, Dict, Set
 
 from utils.file_utils import identical_to_backup, get_last_backup, get_filename
 from utils.var_helpers import OtherVar
 
 
-class CutDict(TypedDict):
+@dataclass
+class Cut:
     """Define type hint for cut dictionary"""
     name: str
-    cut_var: str
-    relation: str
-    cut_val: float
+    var: str
+    op: str
+    val: float
     is_symmetric: bool
     tree: str
+
+    def __str__(self) -> str:
+        if self.is_symmetric:
+            return f"{self.name}: {'|' + self.var}| {self.op} {self.val}"
+        else:
+            return f"{self.name}: {self.var} {self.op} {self.val}"
+
+    @property
+    def string(self) -> str:
+        if self.is_symmetric:
+            return f"{'|' + self.var}| {self.op} {self.val}"
+        else:
+            return f"{self.var} {self.op} {self.val}"
 
 
 class Cutfile:
     """
     Handles importing cutfiles and extracting variables
-    # TODO: create Cut class (will simpify getting cuts SO much)
     """
     def __init__(self, file_path: str, logger: logging.Logger, backup_path: str = None, sep='\t'):
         self.sep = sep
@@ -30,12 +45,12 @@ class Cutfile:
         self.name = get_filename(file_path)
         self._path = file_path
         self.backup_path = backup_path
-        self.cut_dicts, self.vars_to_cut = self.parse_cutfile()
+        self.cuts, self.vars_to_cut = self.parse_cutfile()
 
     def __repr__(self):
         return f'Cutfile("{self._path}")'
 
-    def parse_cutline(self, cutline: str) -> CutDict:
+    def parse_cutline(self, cutline: str) -> Cut:
         """
         Processes each line of cuts into dictionary of cut options. with separator sep
         """
@@ -77,18 +92,18 @@ class Cutfile:
             raise SyntaxError(f"Unexpected comparison operator: {cutline_split[2]}")
 
         # fill dictionary
-        cut_dict = {
-            'name': name,
-            'cut_var': cut_var,
-            'relation': relation,
-            'cut_val': cut_val,
-            'is_symmetric': is_symmetric,
-            'tree': tree
-        }
+        cut = Cut(
+            name=name,
+            var=cut_var,
+            op=relation,
+            val=cut_val,
+            is_symmetric=is_symmetric,
+            tree=tree
+        )
 
-        return cut_dict
+        return cut
 
-    def parse_cutfile(self, path: str = None, sep='\t') -> Tuple[List[CutDict], Set[Tuple[str, str]]]:
+    def parse_cutfile(self, path: str = None, sep='\t') -> Tuple[OrderedDict[str, Cut], Set[Tuple[str, str]]]:
         """
         | Generates pythonic outputs from input cutfile
         | Cutfile should be formatted with headers [CUTS] and [OUTPUTS]
@@ -111,11 +126,14 @@ class Cutfile:
             lines = [line.rstrip('\n') for line in f.readlines()]
 
             # get cut lines
-            cuts_list_of_dicts = []
+            cuts = OrderedDict()
             for cutline in lines[lines.index('[CUTS]') + 1: lines.index('[OUTPUTS]')]:
                 if cutline.startswith('#') or len(cutline) < 2:
                     continue
-                cuts_list_of_dicts.append(self.parse_cutline(cutline))
+                cut = self.parse_cutline(cutline)
+                if cut.name in cuts:
+                    raise ValueError(f"Duplicate cut name in cutfile: {cut.name}")
+                cuts[cut.name] = cut
 
             # get output variables
             output_vars = set()
@@ -134,11 +152,11 @@ class Cutfile:
                 else:
                     raise Exception("This should never happen")
 
-        return cuts_list_of_dicts, output_vars
+        return cuts, output_vars
 
     def extract_variables(self,
                           derived_vars: Dict[str, OtherVar],
-                          list_of_cut_dicts: List[CutDict]
+                          cuts: OrderedDict[str, Cut]
                           ) -> Tuple[Dict[str, Set[str]], Set[str]]:
         """
         Get which variables are needed to extract from root file based on cutfile parser output
@@ -148,15 +166,15 @@ class Cutfile:
         """
         # generate initial dict. Fill 'blank' tree with self.__na_tree to avoid possible tree name overlap
         tree_dict = {self.__na_tree: set()}
-        for cut_dict in list_of_cut_dicts:
-            if cut_dict['tree'] not in tree_dict:
-                tree_dict[cut_dict['tree']] = {cut_dict['cut_var']}
+        for cut in cuts.values():
+            if cut.tree not in tree_dict:
+                tree_dict[cut.tree] = {cut.tree}
             else:
-                tree_dict[cut_dict['tree']].add(cut_dict['cut_var'])
+                tree_dict[cut.tree].add(cut.var)
 
         # work out which variables to calculate and which to extract from ROOT file
         calc_vars = {  # cut variables that are in derived vars
-            (var, tree) for var, tree in {(_['cut_var'], _['tree']) for _ in self.cut_dicts}
+            (var, tree) for var, tree in {(cut.var, cut.tree) for cut in self.cuts.values()}
             if var in derived_vars
         }
         calc_vars |= {  # add output variables in derived vars
@@ -168,8 +186,8 @@ class Cutfile:
             if var in derived_vars
         }
         tree_dict[self.__na_tree] = {  # get default tree variables and remove variables to calculate from default tree
-            cut_dict['cut_var'] for cut_dict in self.cut_dicts
-            if cut_dict['tree'] == self.__na_tree
+            cut.var for cut in self.cuts.values()
+            if cut.tree == self.__na_tree
         } - {var for var, _ in calc_vars}
 
         for var, tree in self.vars_to_cut:
@@ -191,9 +209,9 @@ class Cutfile:
         return tree_dict, {var for var, _ in calc_vars}
 
     @classmethod
-    def all_vars(cls, cut_dicts: List[CutDict], vars_set: Set[Tuple[str, str]]) -> Set[str]:
+    def all_vars(cls, cuts: OrderedDict[str, Cut], vars_set: Set[Tuple[str, str]]) -> Set[str]:
         """Return all variables mentioned in cutfile"""
-        return {cut_dict['cut_var'] for cut_dict in cut_dicts} | {var for var, _ in vars_set}
+        return {cut.var for cut in cuts.values()} | {var for var, _ in vars_set}
 
     def extract_var_data(self,
                          derived_vars: Dict[str, OtherVar],
@@ -204,7 +222,7 @@ class Cutfile:
         returns the tree dictionary, set of variables to calculate,
         and whether the dataset will contain truth, reco data
         """
-        tree_dict, vars_to_calc = self.extract_variables(derived_vars, self.cut_dicts)
+        tree_dict, vars_to_calc = self.extract_variables(derived_vars, self.cuts)
 
         # get set unlabeled variables in cutfile as being in default tree
         if default_tree_name in tree_dict:
@@ -257,27 +275,27 @@ class Cutfile:
             return 'None'
 
         # get cut dict with name cut_label
-        cut_dict = next((d for d in self.cut_dicts if d['name'] == cut_label), None)
-        if cut_dict is None:
+        cut = next((c for c in self.cuts.values() if c.name == cut_label), None)
+        if cut is None:
             raise ValueError(f"No cut named '{cut_label}' in cutfile {self.name}")
 
-        name_len = max([len(cut['name']) for cut in self.cut_dicts]) if align else 0
-        var_len = max([len(cut['cut_var']) for cut in self.cut_dicts]) if align else 0
+        name_len = max([len(cut_name) for cut_name in self.cuts]) if align else 0
+        var_len = max([len(cut.var) for cut in self.cuts.values()]) if align else 0
 
-        if not cut_dict['is_symmetric']:
-            return (f"{cut_dict['name']:<{name_len}}: " if name else '') + \
-                   f"{cut_dict['cut_var']:>{var_len}} {cut_dict['relation']} {cut_dict['cut_val']}"
+        if not cut.is_symmetric:
+            return (f"{cut.name:<{name_len}}: " if name else '') + \
+                   f"{cut.var:>{var_len}} {cut.op} {cut.val}"
         else:
-            return (f"{cut_dict['name']:<{name_len}}: " if name else '') + \
-                   f"{'|' + cut_dict['cut_var']:>{max(var_len - 1, 0)}}| {cut_dict['relation']} {cut_dict['cut_val']}"
+            return (f"{cut.name:<{name_len}}: " if name else '') + \
+                   f"{'|' + cut.var:>{max(var_len - 1, 0)}}| {cut.op} {cut.val}"
 
     def cut_exists(self, cut_name: str) -> bool:
         """check if cut exists in cutfile"""
-        return cut_name in [cut['name'] for cut in self.cut_dicts]
+        return cut_name in self.cuts
 
     def log_cuts(self, name: bool = True, debug: bool = False) -> None:
         """send list of cuts in cutfile to logger"""
-        for cut_name in [cut['name'] for cut in self.cut_dicts]:
+        for cut_name in self.cuts:
             if debug:
                 self.logger.debug(self.get_cut_string(cut_name, name=name, align=True))
             else:
