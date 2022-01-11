@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 from dataclasses import dataclass, field
 from typing import Union, List, Tuple, Iterable, OrderedDict
@@ -20,6 +22,7 @@ from utils.variable_names import variable_data
 class Dataset:
     """
     Dataset class. Contains/will contain all the variables needed for a singular analysis dataset.
+    # TODO: methods that subset Datasets should return new datasets so methods can be applied
 
     :param name: Name of Dataset
     :param df: pandas DataFrame containing data
@@ -259,6 +262,30 @@ class Dataset:
                     (f"{df_id['reco_weight'].notna().mean():<11.5e}  " if print_reco else "")
                 )
             self.logger.info("-" * len(header))
+
+    # ===============================
+    # ========== SUBSETS ============
+    # ===============================
+    def subset(self, args) -> Dataset:
+        """Create new dataset that is subset of this dataset"""
+        return Dataset(
+            name=self.name,
+            df=self.df.loc[args],
+            cutfile=self.cutfile,
+            cutflow=self.cutflow,
+            logger=self.logger,
+            lumi=self.lumi,
+            label=self.label,
+            lepton=self.lepton
+        )
+
+    def subset_dsid(self, dsid: Union[str, int]) -> Dataset:
+        """Get DSID subset of Dataset"""
+        return self.subset(dsid)
+
+    def subset_cut(self, cut_name: str) -> Dataset:
+        """Get cut subset of Dataset"""
+        return self.subset(self.df[[cut_name + config.cut_label]].all(1))
 
     # ===============================
     # ========= PRINTOUTS ===========
