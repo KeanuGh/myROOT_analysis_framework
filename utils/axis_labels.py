@@ -1,5 +1,7 @@
 from typing import Dict, TypedDict
 
+# TODO: change to just variable info, whether variable is truth reco weight other etc
+
 
 class BranchLabel(TypedDict):
     xlabel: str

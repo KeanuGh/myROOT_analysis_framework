@@ -243,15 +243,6 @@ class Cutfile:
                 is_truth = True
         return is_truth, is_reco
 
-    def if_make_cutfile_backup(self) -> bool:
-        """Decides if a backup cutfile should be made"""
-        if self.backup_path is None:
-            self.logger.info("No backup path given. Skipping backup check")
-        elif get_last_backup(self.backup_path, self.name):
-            return not identical_to_backup(self._path, backup_dir=self.backup_path, name=self.name, logger=self.logger)
-        else:
-            return True
-
     def get_cut_string(self, cut_label: str, name: bool = False, align: bool = False) -> str:
         """
         Get displayed string of cut.
@@ -291,6 +282,16 @@ class Cutfile:
                 self.logger.debug(self.get_cut_string(cut_name, name=name, align=True))
             else:
                 self.logger.info(self.get_cut_string(cut_name, name=name, align=True))
+
+    # LEGACY FUNCTIONS (no longer used)
+    def if_make_cutfile_backup(self) -> bool:
+        """Decides if a backup cutfile should be made"""
+        if self.backup_path is None:
+            self.logger.info("No backup path given. Skipping backup check")
+        elif get_last_backup(self.backup_path, self.name):
+            return not identical_to_backup(self._path, backup_dir=self.backup_path, name=self.name, logger=self.logger)
+        else:
+            return True
 
     def backup_cutfile(self, name: str) -> None:
         if self.backup_path is None:
