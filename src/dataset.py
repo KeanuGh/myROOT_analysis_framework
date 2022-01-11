@@ -13,7 +13,7 @@ from src.cutfile import Cutfile, Cut
 from src.cutflow import Cutflow
 from src.histogram import Histogram1D
 from src.logger import get_logger
-from utils.axis_labels import labels_xs
+from utils.variable_names import variable_data
 
 
 @dataclass
@@ -103,12 +103,63 @@ class Dataset:
     @property
     def is_truth(self) -> bool:
         """Does dataset contain truth data?"""
-        return 'truth_weight' in self.df.columns
+        return bool('reco' in self.__var_tags)
 
     @property
     def is_reco(self) -> bool:
         """Does dataset contain reco data?"""
-        return 'reco_weight' in self.df.columns
+        return bool('reco' in self.__var_tags)
+
+    @property
+    def meta_vars(self) -> list[str]:
+        """Get meta variables in dataset"""
+        return [
+            col for col in self.df.columns
+            if col in variable_data
+            and variable_data[col]['tag'] == 'meta'
+        ]
+
+    @property
+    def truth_vars(self) -> list[str]:
+        """Get truth variables in dataset"""
+        return [
+            col for col in self.df.columns
+            if col in variable_data
+            and variable_data[col]['tag'] == 'truth'
+        ]
+
+    @property
+    def reco_vars(self) -> list[str]:
+        """Get reconstructed variables in dataset"""
+        return [
+            col for col in self.df.columns
+            if col in variable_data
+            and variable_data[col]['tag'] == 'reco'
+        ]
+
+    @property
+    def meta_cols(self) -> pd.DataFrame:
+        """Get meta columns in dataset"""
+        return self.df.loc[:, self.meta_vars]
+
+    @property
+    def truth_cols(self) -> pd.DataFrame:
+        """Get truth columns in dataset"""
+        return self.df.loc[:, self.truth_vars]
+
+    @property
+    def reco_cols(self) -> pd.DataFrame:
+        """Get reconstructed variables in dataset"""
+        return self.df.loc[:, self.reco_vars]
+
+    def get_dsid(self, dsid: Union[str, int]) -> pd.DataFrame:
+        """Get events from partcular DSID"""
+        return self.df.loc[dsid, :]
+
+    @property
+    def __var_tags(self) -> list[str]:
+        """Get tags for all variables"""
+        return [variable_data[col]['tag'] for col in self.df.columns if col in variable_data]
 
     @property
     def n_truth_events(self) -> int:
@@ -420,13 +471,14 @@ class Dataset:
         # figure plot
         plt_utils.set_axis_options(fig_ax, var, bins, lepton, xlabel, ylabel, title, logx, logy)
         fig_ax.legend()
-        fig_ax.axes.xaxis.set_visible(False)
+        fig_ax.get_xaxis().set_visible(False)
 
         # ratio plot
         plt_utils.set_axis_options(accept_ax, var, bins, lepton, xlabel, ylabel, title, logx, False, label=False)
         accept_ax.set_ylabel("Acceptance")
+        accept_ax.get_xaxis().set_visible(True)
 
-        out_png_file = f"{self.plot_dir}{var}_cuts_{'_NORMED' if normalise else ''}.png"
+        out_png_file = f"{self.plot_dir}{var}_CUTS{'_NORMED' if normalise else ''}.png"
         fig.savefig(out_png_file, bbox_inches='tight')
         self.logger.info(f"Figure saved to {out_png_file}")
 
@@ -526,6 +578,7 @@ class Dataset:
             ylim: Tuple[float, float] = None,
             logx: bool = False,
             logy: bool = False,
+            lepton: str = 'lepton',
             **kwargs
     ) -> None:
         if not ax:
@@ -533,8 +586,8 @@ class Dataset:
 
         ax.scatter(self.df[varx], self.df[vary], **kwargs)
 
-        ax.set_xlabel(xlabel if xlabel else labels_xs[varx]['xlabel'])
-        ax.set_ylabel(ylabel if ylabel else labels_xs[vary]['xlabel'])
+        ax.set_xlabel(xlabel if xlabel else plt_utils.get_axis_labels(varx, lepton)[0])
+        ax.set_ylabel(ylabel if ylabel else plt_utils.get_axis_labels(vary, lepton)[0])
         if xlim: ax.set_xlim(*xlim)
         if ylim: ax.set_ylim(*ylim)
         if logx: ax.semilogx()

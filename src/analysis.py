@@ -104,7 +104,7 @@ class Analysis:
                 'cutfile',
                 'tree_dict',
                 'vars_to_calc',
-                'cut_dicts'
+                'cuts'
             ]:
                 build_args[arg] = data_args.pop(arg, None)
 
@@ -135,15 +135,15 @@ class Analysis:
                 **kwargs
             )
             dataset = builder.build(**build_args)
-            dataset.dsid_metadata_printout()
-
-            dataset.set_plot_dir(self.paths['plot_dir'])
-            dataset.set_pkl_path(build_args['pkl_path'])
-
             if separate_loggers:
                 # set new logger to append to analysis logger
                 dataset.logger = self.logger
                 dataset.logger.debug(f"{name} log handler returned to analysis.")  # test
+
+            dataset.dsid_metadata_printout()
+
+            dataset.set_plot_dir(self.paths['plot_dir'])
+            dataset.set_pkl_path(build_args['pkl_path'])
 
             # save dataset no matter what
             dataset.save_pkl_file()
@@ -395,6 +395,8 @@ class Analysis:
         if ratio_plot:
             fig.tight_layout()
             fig.subplots_adjust(hspace=0.1, wspace=0)
+            ax.get_xaxis().set_visible(False)
+            ratio_ax.get_xaxis().set_visible(True)
             ratio_ax.legend(fontsize=10)
 
             if len(hists) == 2:

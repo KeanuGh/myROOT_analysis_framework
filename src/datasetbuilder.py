@@ -14,8 +14,8 @@ from src.cutfile import Cutfile, Cut
 from src.cutflow import Cutflow
 from src.dataset import Dataset
 from src.logger import get_logger
-from utils.axis_labels import labels_xs
 from utils.var_helpers import derived_vars
+from utils.variable_names import variable_data
 
 # total dataset luminosity per year (pb-1)
 lumi_year = {
@@ -118,7 +118,7 @@ class DatasetBuilder:
             pkl_path: str = None,
             tree_dict: Dict[str, Set[str]] = None,
             vars_to_calc: Set[str] = None,
-            cut_dicts: OrderedDict[str, Cut] = None,
+            cuts: OrderedDict[str, Cut] = None,
     ) -> Dataset:
         """
         Builds a dataframe from cutfile inputs.
@@ -132,7 +132,7 @@ class DatasetBuilder:
         :param tree_dict: If cutfile or cutfile_path not passed,
                           can pass dictionary of tree: variables to extract from Datapath
         :param vars_to_calc: list of variables to calculate to pass to add to DataFrame
-        :param cut_dicts: list of cut dictionaries if cuts are to be applied but no cutfile is given
+        :param cuts: OrderedDict of Cut objects if cuts are to be applied but no cutfile is given
         :return: full built Dataset object
         """
         __build_df = False
@@ -178,8 +178,9 @@ class DatasetBuilder:
             # get tree dictionary, set of variables to calculate, and whether the dataset will contain truth, reco data
             tree_dict, vars_to_calc = cutfile.extract_var_data(derived_vars, self.TTree_name)
             is_truth, is_reco = cutfile.truth_reco(tree_dict)
+            cuts = cutfile.cuts
         elif tree_dict:
-            if (vars_to_calc is None) or (cut_dicts is None):
+            if (vars_to_calc is None) or (cuts is None):
                 raise ValueError("Must provide variables to cut and cut dictionary list if not building from cutfile")
             else:
                 is_truth, is_reco = Cutfile.truth_reco(tree_dict)
@@ -190,7 +191,7 @@ class DatasetBuilder:
         self.__check_axis_labels(tree_dict, vars_to_calc)
 
         # check if hard cut(s) exists in cutfile. If not, skip them
-        self.__check_hard_cuts(cutfile)
+        self.__check_hard_cuts(cuts)
 
         # print debug information
         self.logger.debug("")
@@ -255,7 +256,7 @@ class DatasetBuilder:
                     __build_df = False
                     __create_cut_cols = (
                         True if self.force_recalc_cuts
-                        else not self.__check_cut_cols(cols, cut_dicts)
+                        else not self.__check_cut_cols(cols, cuts)
                     )
                     __create_weight_cols = (
                         True if self.force_recalc_weights
@@ -290,7 +291,7 @@ class DatasetBuilder:
 
         # calculate cut columns
         if __create_cut_cols or self.force_recalc_cuts:
-            self.__create_cut_columns(df, cutfile)
+            self.__create_cut_columns(df, cuts)
 
         # calculate weights
         if __create_weight_cols or self.force_recalc_weights:
@@ -348,6 +349,7 @@ class DatasetBuilder:
             df=df,
             cutfile=cutfile,
             cutflow=cutflow,
+            logger=self.logger,
             lumi=self.lumi,
             label=self.label,
             lepton=self.lepton
@@ -367,11 +369,11 @@ class DatasetBuilder:
         """Check whether variables exist in """
         all_vars = {var for var_set in tree_dict.values() for var in var_set} | calc_vars
         if unexpected_vars := [unexpected_var for unexpected_var in all_vars
-                               if unexpected_var not in labels_xs]:
+                               if unexpected_var not in variable_data]:
             self.logger.warning(f"Variable(s) {unexpected_vars} not contained in labels dictionary. "
                                 "Some unexpected behaviour may occur.")
 
-    def __check_hard_cuts(self, cutfile: Cutfile, error: bool = False) -> None:
+    def __check_hard_cuts(self, cuts: OrderedDict[str, Cut], error: bool = False) -> None:
         """
         Check whether cuts passed as hard cuts exist in cutfile. If not, ignore.
         Raise ValueError if 'error' is True
@@ -383,7 +385,7 @@ class DatasetBuilder:
             elif isinstance(self.hard_cut, str):
                 self.hard_cut = [self.hard_cut]
             for i, cut in enumerate(self.hard_cut):
-                if not cutfile.cut_exists(cut):
+                if not cut not in cuts:
                     if error:
                         raise ValueError(f"No cut named '{self.hard_cut}' in cutfile")
                     else:
@@ -641,7 +643,7 @@ class DatasetBuilder:
         """rescales to GeV because athena's default output is in MeV for some reason"""
         if GeV_columns := [
             column for column in df.columns
-            if (column in labels_xs) and ('[GeV]' in labels_xs[column]['xlabel'])
+            if (column in variable_data) and (variable_data[column]['units'] == 'GeV')
         ]:
             df[GeV_columns] /= 1000
             self.logger.debug(f"Rescaled columns {GeV_columns} to GeV.")
@@ -659,12 +661,12 @@ class DatasetBuilder:
             self.logger.info(f"Computing '{var}' column from {temp_cols}...")
             df[var] = func(df, *str_args)
 
-    def __create_cut_columns(self, df: pd.DataFrame, cutfile: Cutfile) -> None:
+    def __create_cut_columns(self, df: pd.DataFrame, cuts: OrderedDict[str, Cut]) -> None:
         """
         Creates boolean columns in dataframe corresponding to each cut
         """
         label = config.cut_label  # get cut label from config
-        self.logger.info(f"Calculating {len(cutfile.cuts)} cut columns...")
+        self.logger.info(f"Calculating {len(cuts)} cut columns...")
 
         # use functions of compariton operators in dictionary to make life easier
         # (but maybe a bit harder to read)
@@ -677,7 +679,7 @@ class DatasetBuilder:
             '>=': op.ge,
         }
 
-        for cut in cutfile.cuts.values():
+        for cut in cuts.values():
             if cut.op not in op_dict:
                 raise ValueError(f"Unexpected comparison operator: {cut.op}.")
             if not cut.is_symmetric:

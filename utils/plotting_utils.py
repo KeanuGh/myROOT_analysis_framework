@@ -8,7 +8,7 @@ import pandas as pd
 from matplotlib.colors import LogNorm
 
 import src.config as config
-from utils.axis_labels import labels_xs
+from utils.variable_names import variable_data
 
 # set plot style
 plt.style.use([hep.style.ATLAS])
@@ -19,21 +19,31 @@ plt.style.use([hep.style.ATLAS])
 # ===============================
 def get_axis_labels(var_name: str, lepton: str = 'lepton') -> Tuple[Optional[str], Optional[str]]:
     """Gets label for corresponding variable in axis labels dictionary"""
-    if var_name in labels_xs:
-        xlabel = labels_xs[var_name]['xlabel']
-        ylabel = labels_xs[var_name]['ylabel']
+    if var_name in variable_data:
+        name = variable_data[var_name]['name']
+        units = variable_data[var_name]['units']
+
+        # just the symbol(s) in latex math format if it exists
+        symbol = name.split('$')[1] if len(name.split('$')) > 1 else name
 
         # convert x label string for correct lepton if applicable
+        xlabel = name + (f" [{units}]" if units else '')
         try:
             xlabel %= lepton
         except TypeError:
             pass
 
+        if variable_data[var_name]['tag'] == 'truth':
+            # weird but it does the job
+            ylabel = r'$\frac{d\sigma}{' + symbol + r'}$ [fb' + (f" {units}" + "$^{-1}$]" if units else ']')
+        else:
+            ylabel = 'Entries'
+
     else:
         warn(f"Axis labels for {var_name} not found in label lookup dictionary. "
-             f"They will be left blank.", UserWarning)
-        xlabel = None
-        ylabel = None
+             f"Falling back to default", UserWarning)
+        xlabel = var_name
+        ylabel = 'Entries'
     return xlabel, ylabel
 
 
@@ -89,23 +99,17 @@ def set_axis_options(
     :param label: whether to add ATLAS label
     :return: changed axis (also works in place)
     """
-    # get axis labels (x label, y label)
-    _xlabel, _ylabel = get_axis_labels(str(var_name), lepton)
+    if logx: axis.semilogx()
+    if logy: axis.semilogy()
 
-    if logy:
-        axis.semilogy()
-
-    if isinstance(bins, tuple):
-        axis.set_xlim(bins[1], bins[2])
-    elif isinstance(bins, list):
-        axis.set_xlim(bins[0], bins[-1])
+    if isinstance(bins, tuple):  axis.set_xlim(bins[1], bins[2])
+    elif isinstance(bins, list): axis.set_xlim(bins[0], bins[-1])
     else:
         raise TypeError("Bins must be formatted as either tuple (n_bins, start, stop) or a list of bin edges. "
                         f"Given input was {bins}")
-    if logx:
-        axis.semilogx()
 
     # set axis labels
+    _xlabel, _ylabel = get_axis_labels(str(var_name), lepton)
     axis.set_xlabel(xlabel if xlabel else _xlabel)
     axis.set_ylabel(ylabel if ylabel else _ylabel)
     if label:

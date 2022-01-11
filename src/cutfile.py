@@ -8,6 +8,7 @@ from typing import Tuple, Dict, Set
 
 from utils.file_utils import identical_to_backup, get_last_backup, get_filename
 from utils.var_helpers import OtherVar
+from utils.variable_names import variable_data
 
 
 @dataclass
@@ -254,11 +255,13 @@ class Cutfile:
     def truth_reco(tree_dict: Dict[str, Set[str]]) -> Tuple[bool, bool]:
         """Does cutfile ask for truth data? Does cutfile ask for reco data?"""
         is_truth = is_reco = False
-        for tree in tree_dict.keys():
-            if 'nominal' in tree:
-                is_reco = True
-            elif 'truth' in tree:
-                is_truth = True
+        for var_ls in tree_dict.values():
+            for var in var_ls:
+                if var in variable_data:
+                    if variable_data[var] == 'truth':
+                        is_truth = True
+                    elif variable_data[var] == 'reco':
+                        is_reco = True
         return is_truth, is_reco
 
     def get_cut_string(self, cut_label: str, name: bool = False, align: bool = False) -> str:
