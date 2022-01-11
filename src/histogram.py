@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Union, List, Tuple, overload
 
 import boost_histogram as bh
@@ -115,6 +117,11 @@ class Histogram1D(bh.Histogram):
         return self.axes[0].edges
 
     @property
+    def bin_centres(self) -> np.array:
+        """get bin centres"""
+        return self.axes[0].centers
+
+    @property
     def bin_values(self) -> np.array:
         """get bin values"""
         return self.values()
@@ -179,7 +186,7 @@ class Histogram1D(bh.Histogram):
             else:
                 raise ValueError(f"Valid yerrs: 'rsumw2', 'sqrtN'. Got {yerr}")
         elif not hasattr(yerr, '__len__'):
-            raise TypeError(f"Valid yerrs: 'rsumw2', 'sqrtN' or iterable of values. Got {yerr}")
+            raise TypeError(f"Valid yerr string values: 'rsumw2', 'sqrtN' or iterable of values. Got {yerr}")
 
         if scale_by_bin_width:
             bin_vals /= hist.bin_widths
@@ -187,3 +194,68 @@ class Histogram1D(bh.Histogram):
                 yerr /= hist.bin_widths
 
         hep.histplot(bin_vals, bins=hist.bin_edges, ax=ax, yerr=yerr, w2=sumw2, **kwargs)
+
+    def plot_ratio(
+            self,
+            other: Histogram1D,
+            ax: plt.Axes,
+            yerr: Union[ArrayLike, str] = 'rsumw2',
+            normalise: bool = False,
+            label: str = None,
+            **kwargs
+    ) -> None:
+        """
+        Plot (and properly format) ratio between this histogram and another.
+
+        :param other: Other histogram
+        :param ax: Axis to plot on
+        :param yerr: Histogram uncertainties. Following modes are supported:
+                     - 'rsumw2', sqrt(SumW2) errors
+                     - 'sqrtN', sqrt(N) errors or poissonian interval when w2 is specified
+                     - shape(N) array of for one-sided errors or list thereof
+                     - shape(Nx2) array of for two-sided errors or list thereof
+        :param normalise: Whether histograms are normalised before taking ratio
+        :param label: Legend label
+        :param kwargs: Args to pass to ax.errorbar()
+        :return: None
+        """
+        if normalise:
+            vals = (self.bin_values / self.integral) / (other.bin_values / other.integral)
+        else:
+            vals = self.bin_values / other.bin_values
+
+        if not np.array_equal(self.bin_edges, other.bin_edges):
+            raise ValueError("Bins do not match!")
+
+        if yerr is None:
+            pass
+        elif isinstance(yerr, str):
+            # propagate errors
+            if yerr == 'rsumw2':
+                yerr = vals * np.sqrt((self.root_sumw2 / self.bin_values) ** 2
+                                      + (other.root_sumw2 / other.bin_values) ** 2)
+            elif yerr == 'sqrtN':
+                yerr = vals * np.sqrt((1 / self.bin_values) + (1 / other.bin_values))
+            else:
+                raise ValueError(f"Valid yerr string values: 'rsumw2', 'sqrtN'. Got {yerr}")
+        elif not hasattr(yerr, '__len__'):
+            raise TypeError(f"Valid yerrs: 'rsumw2', 'sqrtN' or iterable of values. Got {yerr}")
+
+        ax.errorbar(self.bin_centres, vals, xerr=self.bin_widths / 2, yerr=yerr,
+                    linestyle='None', label=label, **kwargs)
+
+        ax.grid(visible=True, which='both', axis='y')
+        ax.axes.xaxis.set_visible(False)
+
+        # POSSIBLY NOT NEEDED BUT IT TOOK ME A WHOLE DAY TO FIGURE THIS OUT SO I'M KEEPING IT
+        # relimit y axes
+        # ymax = ymin = 1
+        # for i, line in enumerate(ax.lines):
+        #     data = line.get_ydata()
+        #     if len(data) < 1: continue  # why is there a line with no data appearing??
+        #     ymax = np.max(np.ma.masked_invalid(np.append(data, ymax)))
+        #     ymin = np.min(np.ma.masked_invalid(np.append(data, ymin)))
+        # vspace = (ymax - ymin) * 0.1
+        # ax.set_ylim(bottom=ymin - vspace, top=ymax + vspace)
+
+        ax.axhline(1., linestyle='--', linewidth=1., c='k')

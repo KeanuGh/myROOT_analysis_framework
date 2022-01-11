@@ -310,8 +310,9 @@ class Analysis:
             ylabel: str = '',
             title: str = '',
             lepton: str = 'lepton',
+            ratio_plot: bool = True,
             **kwargs
-    ) -> None:
+    ) -> plt.Figure:
         """
         Plot same variable from different datasets
 
@@ -342,9 +343,12 @@ class Analysis:
         :param ylabel: y label
         :param title: plot title
         :param lepton: lepton to fill variable label
+        :param ratio_plot: If True, adds ratio of the first plot with each subseqent plot below
         :param kwargs: keyword arguments to pass to mplhep.histplot()
         """
         self.logger.info(f'Plotting {var} in as overlay in {datasets}...')
+
+        if len(datasets) == 1: ratio_plot = False
 
         if isinstance(normalise, str):
             if normalise == 'lumi':
@@ -356,30 +360,54 @@ class Analysis:
             assert len(labels) == len(datasets), \
                 f"Labels iterable (length: {len(labels)}) must be of same length as number of datasets ({len(datasets)})"
 
-        fig, ax = plt.subplots()
+        if ratio_plot:
+            fig, (ax, ratio_ax) = plt.subplots(2, 1, gridspec_kw={'height_ratios': [3, 1]})
+        else:
+            fig, ax = plt.subplots()
+            ratio_ax = None  # just so IDE doesn't complain
+
         if isinstance(datasets, str):
             datasets = [datasets]
+        hists = []
         for i, dataset in enumerate(datasets):
-            self[dataset].plot_hist(
-                var=var,
-                bins=bins,
-                weight=weight,
-                ax=ax,
-                yerr=yerr,
-                normalise=normalise,
-                logbins=logbins,
-                label=labels[i] if labels else self[dataset].label,
-                apply_cuts=apply_cuts,
-                w2=w2,
-                **kwargs
+            hists.append(
+                self[dataset].plot_hist(
+                    var=var,
+                    bins=bins,
+                    weight=weight,
+                    ax=ax,
+                    yerr=yerr,
+                    normalise=normalise,
+                    logbins=logbins,
+                    label=labels[i] if labels else self[dataset].label,
+                    apply_cuts=apply_cuts,
+                    w2=w2,
+                    **kwargs
+                )
             )
+            if ratio_plot and len(hists) > 1:
+                label = f"{labels[0]}/{labels[-1]}" if labels else f"{self[datasets[0]].label}/{self[dataset].label}"
+                hists[0].plot_ratio(hists[-1], ax=ratio_ax, yerr=yerr, label=label, normalise=bool(normalise),
+                                    color='k' if len(datasets) == 2 else None)
 
         ax.legend(fontsize=10)
         plotting_utils.set_axis_options(ax, var, bins, lepton, xlabel, ylabel, title, logx, logy)
+        if ratio_plot:
+            fig.tight_layout()
+            fig.subplots_adjust(hspace=0.1, wspace=0)
+            ratio_ax.legend(fontsize=10)
+
+            if len(hists) == 2:
+                plotting_utils.set_axis_options(ratio_ax,
+                                                var, bins, lepton, xlabel, 'Ratio', '', logx, False, label=False)
+            else:
+                plotting_utils.set_axis_options(ratio_ax,
+                                                var, bins, lepton, xlabel, 'Ratio', '', logx, False, label=False)
 
         filename = f"{self.paths['plot_dir']}{'_'.join(datasets)}_{var}{'_NORMED' if normalise else ''}.png"
         fig.savefig(filename, bbox_inches='tight')
         self.logger.info(f'Saved overlay plot of {var} to {filename}')
+        return fig
 
     @check_single_dataset
     def gen_cutflow_hist(self, ds_name: Optional[str], **kwargs) -> None:

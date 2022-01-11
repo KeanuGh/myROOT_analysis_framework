@@ -14,8 +14,6 @@ from utils.axis_labels import labels_xs
 plt.style.use([hep.style.ATLAS])
 
 
-# TODO: migrate all these to use new histogram
-
 # ===============================
 # ===== HISTOGRAM VARIABLES =====
 # ===============================
@@ -74,6 +72,7 @@ def set_axis_options(
         title: str = '',
         logx: bool = False,
         logy: bool = False,
+        label: bool = True
 ) -> plt.axes:
     """
     Sets my default axis options
@@ -87,6 +86,7 @@ def set_axis_options(
     :param title: plot title
     :param logx: bool whether to set log axis
     :param logy: whether to set logarithmic bins where appropriate
+    :param label: whether to add ATLAS label
     :return: changed axis (also works in place)
     """
     # get axis labels (x label, y label)
@@ -108,7 +108,8 @@ def set_axis_options(
     # set axis labels
     axis.set_xlabel(xlabel if xlabel else _xlabel)
     axis.set_ylabel(ylabel if ylabel else _ylabel)
-    hep.atlas.label(italic=(True, True), ax=axis, loc=0, llabel='Internal', rlabel=title)
+    if label:
+        hep.atlas.label(italic=(True, True), ax=axis, loc=0, llabel='Internal', rlabel=title)
 
     return axis
 

@@ -171,7 +171,7 @@ class Dataset:
             xs = cls.get_cross_section(df)
         return df[weight_col].sum() / xs
 
-    def dsid_metadata_printout(self):
+    def dsid_metadata_printout(self) -> None:
         """print some dataset ID metadata"""
         if self.df.index.names != ['DSID', 'eventNumber']:
             raise ValueError("Incorrect index")
@@ -265,7 +265,7 @@ class Dataset:
             cut_cols = [label for label in labels]
 
         elif isinstance(labels, str):
-            self.logger.debug(f"Applying cut: {labels} to {self.name}...")
+            self.logger.debug(f"Applying cut: '{labels}' to {self.name}...")
             cut_cols = [labels]
 
         elif labels is True:
@@ -277,6 +277,7 @@ class Dataset:
 
         # apply cuts
         self.__check_cut_cols(cut_cols)
+        cut_cols = [cutname + config.cut_label for cutname in cut_cols]
         if inplace:
             self.df = self.df.loc[self.df[cut_cols].all(1)]
             self.df.drop(columns=cut_cols, inplace=True)
@@ -288,7 +289,7 @@ class Dataset:
         """Check if cut columns exist in dataframe"""
         if missing_cut_cols := [
             label + config.cut_label for label in cuts
-            if label not in self.df.columns
+            if label + config.cut_label not in self.df.columns
         ]:
             raise ValueError(f"No cut(s) {missing_cut_cols} in dataset {self.name}...")
 
@@ -357,7 +358,7 @@ class Dataset:
             var: str,
             bins: Union[List[float], Tuple[int, float, float]],
             weight: Union[str, float] = 1.,
-            yerr: Union[ArrayLike, str] = None,
+            yerr: Union[ArrayLike, str] = 'rsumw2',
             w2: bool = False,
             normalise: Union[float, bool, str] = 'lumi',
             logbins: bool = False,
@@ -393,18 +394,17 @@ class Dataset:
 
         # PLOT CUTS
         # ================
-        for cutgroup in self.cutfile.cutgroups.keys():
-            self.logger.debug(f"    - generating cutgroup '{cutgroup}'")
+        for cut in self.cutfile.cut_dicts:
             h_cut = self.plot_hist(
                 var=var,
                 bins=bins,
                 weight=weight,
                 ax=fig_ax,
-                apply_cuts=cutgroup,
+                apply_cuts=cut['name'],
                 yerr=yerr,
                 normalise=normalise,
                 logbins=logbins,
-                label=cutgroup,
+                label=cut['name'],
                 w2=w2,
                 linewidth=2,
                 **kwargs
@@ -412,14 +412,13 @@ class Dataset:
 
             # RATIO PLOT
             # ================
-            hep.histplot(h_cut.bin_values / h_inclusive.bin_values,
-                         bins=h_cut.bin_edgesn, ax=accept_ax, label=cutgroup,
-                         color=fig_ax.get_lines()[-1].get_color())
+            h_cut.plot_ratio(h_inclusive, ax=accept_ax, yerr=yerr,
+                             label=cut['name'], color=fig_ax.get_lines()[-1].get_color())
 
         # AXIS FORMATTING
         # ==================
         fig.tight_layout()
-        fig.subplots_adjust(hspace=0, wspace=0)
+        fig.subplots_adjust(hspace=0.1, wspace=0)
 
         # figure plot
         plt_utils.set_axis_options(fig_ax, var, bins, lepton, xlabel, ylabel, title, logx, logy)
@@ -427,7 +426,7 @@ class Dataset:
         fig_ax.axes.xaxis.set_visible(False)
 
         # ratio plot
-        plt_utils.set_axis_options(accept_ax, var, bins, lepton, xlabel, ylabel, title, logx, logy)
+        plt_utils.set_axis_options(accept_ax, var, bins, lepton, xlabel, ylabel, title, logx, False, label=False)
         accept_ax.set_ylabel("Acceptance")
 
         out_png_file = f"{self.plot_dir}{var}_cuts_{'_NORMED' if normalise else ''}.png"
