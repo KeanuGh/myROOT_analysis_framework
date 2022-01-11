@@ -198,6 +198,36 @@ class Analysis:
     # ===============================
     # ====== DATASET FUNCTIONS ======
     # ===============================
+    def create_subdataset(self, dataset: str, name: str, args) -> None:
+        """
+        Create new dataset from subset of other dataset
+
+        :param dataset: Dataset to subset
+        :param name: Name of new dataset
+        :param args: argument to pass to pd.DataFrame.loc[]
+        """
+        self[name] = self[dataset].subset(args)
+
+    def create_dsid_subdataset(self, dataset: str, name: str, dsid: Union[str, int]) -> None:
+        """
+        Create new dataset from DSID of other dataset
+
+        :param dataset: Dataset to subset
+        :param name: Name of new dataset
+        :param dsid: Dataset ID
+        """
+        self[name] = self[dataset].subset_dsid(dsid)
+
+    def create_cut_subdataset(self, dataset: str, name: str, cut: str) -> None:
+        """
+        Create new dataset from cut in other dataset
+
+        :param dataset: Dataset to subset
+        :param name: Name of new dataset
+        :param cut: name of cut
+        """
+        self[name] = self[dataset].subset_cut(cut)
+
     def __check_ds(self, key: str) -> None:
         """Does dataset exist?"""
         if key not in self.datasets:
