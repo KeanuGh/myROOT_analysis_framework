@@ -1,11 +1,11 @@
 [CUTS]
 # Name	Variable	</>	Cut (in GeV if applicable)	Group Symmetric tree
 # !!REMEMBER DEFAULT ANALYSISTOP OUTPUT IS IN MeV NOT GeV!!
-Tight muon	mu_isTight	=	1	tight muon cut	false	nominal_Loose
-eta	mu_eta	<	2.4	eta	true	nominal_Loose
-E_{T}^{MISS}	met_met	>	85	met	false	nominal_Loose
-p_T	mu_pt	>	65	mu pt	false	nominal_Loose
-M_T	mu_mt_reco	>	200	muon mt	false	nominal_Loose
+Tight muon	mu_isTight	=	1	tight	false	nominal_Loose
+eta	mu_eta	<	2.4	true	nominal_Loose
+E_{T}^{MISS}	met_met	>	85	false	nominal_Loose
+p_T	mu_pt	>	65	false	nominal_Loose
+M_T	mu_mt_reco	>	200	false	nominal_Loose
 
 [OUTPUTS]
 # truth
@@ -20,8 +20,3 @@ mt_born	truth
 mu_d0sig	nominal_Loose
 mu_delta_z0_sintheta	nominal_Loose
 primaryVertices	nominal_Loose
-
-[OPTIONS]
-# case-insensitive
-sequential	true
-grouped cutflow	false

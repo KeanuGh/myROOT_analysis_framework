@@ -1,5 +1,4 @@
 import logging
-import pickle as pkl
 from dataclasses import dataclass, field
 from typing import Union, List, Tuple, Iterable
 
@@ -239,10 +238,6 @@ class Dataset:
     # ===============================
     # ========== CUTTING ============
     # ===============================
-    def cut_on_cutgroup(self, group: str) -> pd.DataFrame:
-        """Cuts on cutgroup on input dataframe or series"""
-        return self.df.loc[self.df[self.cutfile.get_cutgroup(group)].all(1)]
-
     def apply_cuts(self,
                    labels: Union[bool, str, List[str]] = True,
                    inplace: bool = False
@@ -370,7 +365,7 @@ class Dataset:
             lepton: str = 'lepton',
             **kwargs
     ) -> None:
-        """Plots overlay of cutgroups and acceptance (ratio) plots"""
+        """Plots overlay of cut and acceptance (ratio) plots"""
         self.logger.info(f"Plotting cuts on {var}...")
 
         fig, (fig_ax, accept_ax) = plt.subplots(2, 1, gridspec_kw={'height_ratios': [3, 1]})
@@ -432,93 +427,6 @@ class Dataset:
         out_png_file = f"{self.plot_dir}{var}_cuts_{'_NORMED' if normalise else ''}.png"
         fig.savefig(out_png_file, bbox_inches='tight')
         self.logger.info(f"Figure saved to {out_png_file}")
-
-    def plot_2d_cutgroups(self,
-                          x_var: str, y_var: str,
-                          xbins: Union[tuple, list], ybins: Union[tuple, list],
-                          weight: str,
-                          plot_label: str = '',
-                          is_logz: bool = True,
-                          to_pkl: bool = False,
-                          ) -> None:
-        """
-        Runs over cutgroups in dictrionary and plots 2d histogram for each group
-
-        :param x_var: column in dataframe to plot on x-axis
-        :param y_var: column in dataframe to plot on y-axis
-        :param weight: weight column
-        :param xbins: binning in x
-        :param ybins: binning in y
-        :param plot_label: plot title
-        :param is_logz: whether display z-axis logarithmically
-        :param to_pkl: whether to save histograms as pickle file
-        """
-        hists = dict()
-
-        # INCLUSIVE
-        fig, ax = plt.subplots(figsize=(7, 7))
-        x_vars = self.df[x_var]
-        y_vars = self.df[y_var]
-
-        out_path = self.plot_dir + f"2d_{x_var}-{y_var}_inclusive.png"
-        hist = plt_utils.histplot_2d(
-            var_x=x_vars, var_y=y_vars,
-            xbins=xbins, ybins=ybins,
-            ax=ax, fig=fig,
-            weights=self.df[weight],
-            is_z_log=is_logz,
-        )
-        if to_pkl:
-            hists['inclusive'] = hist
-
-        # get axis labels
-        xlabel, _ = plt_utils.get_axis_labels(str(x_var), self.lepton)
-        ylabel, _ = plt_utils.get_axis_labels(str(y_var), self.lepton)
-
-        hep.atlas.label(italic=(True, True), ax=ax, llabel='Internal', rlabel=plot_label + ' - inclusive', loc=0)
-        ax.set_xlabel(xlabel)
-        ax.set_ylabel(ylabel)
-
-        fig.savefig(out_path, bbox_inches='tight')
-        self.logger.info(f"printed 2d histogram to {out_path}")
-        plt.close(fig)
-
-        for cutgroup in self.cutfile.cutgroups:
-            self.logger.info(f"    - generating cutgroup '{cutgroup}'")
-            fig, ax = plt.subplots(figsize=(7, 7))
-
-            cut_df = self.cut_on_cutgroup(cutgroup)
-            weight_cut = cut_df[weight]
-            x_vars = cut_df[x_var]
-            y_vars = cut_df[y_var]
-
-            out_path = self.plot_dir + f"2d_{x_var}-{y_var}_{cutgroup}.png"
-            hist = plt_utils.histplot_2d(
-                var_x=x_vars, var_y=y_vars,
-                xbins=xbins, ybins=ybins,
-                ax=ax, fig=fig,
-                weights=weight_cut,
-                is_z_log=is_logz,
-            )
-            if to_pkl:
-                hists[cutgroup] = hist
-
-            # get axis labels
-            xlabel, _ = plt_utils.get_axis_labels(str(x_var), self.lepton)
-            ylabel, _ = plt_utils.get_axis_labels(str(y_var), self.lepton)
-
-            hep.atlas.label(italic=(True, True), ax=ax, llabel='Internal', rlabel=plot_label + ' - ' + cutgroup, loc=0)
-            ax.set_xlabel(xlabel)
-            ax.set_ylabel(ylabel)
-
-            fig.savefig(out_path, bbox_inches='tight')
-            self.logger.info(f"printed 2d histogram to {out_path}")
-            plt.close(fig)
-
-        if to_pkl:
-            with open(self.plot_dir + plot_label + f"_{x_var}-{y_var}_2d.pkl", 'wb') as f:
-                pkl.dump(hists, f)
-                self.logger.info(f"Saved pickle file to {f.name}")
 
     def plot_mass_slices(
             self,

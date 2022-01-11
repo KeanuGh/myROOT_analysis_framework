@@ -1,5 +1,5 @@
 import logging
-from typing import Dict, List, OrderedDict, Optional
+from typing import Dict, List
 
 import matplotlib.pyplot as plt
 import mplhep as hep
@@ -12,7 +12,6 @@ class Cutflow:
     def __init__(self, df: pd.DataFrame,
                  cut_dicts: List[Dict],
                  logger: logging.Logger,
-                 cutgroups: Optional[OrderedDict[str, List[str]]] = None
                  ):
         """
         Generates cutflow object that keeps track of various properties and ratios of selections made on given dataset
@@ -20,8 +19,6 @@ class Cutflow:
         :param df: Input analysis dataframe with boolean cut rows.
         :param cut_dicts: Dictionary of cufts made.
         :param logger: logger to output to
-        :param cutgroups: Optional ordered dictionary of cut groups. If suppled, will organise cutflow in terms of
-                          cutgroups rather than individual cuts.
         """
         if missing_cuts := {
             cut['name']
@@ -35,18 +32,11 @@ class Cutflow:
         # generate cutflow
         self._n_events_tot = len(df.index)
 
-        # if cutgroups are supplied, apply cutflow over groups rather than individual cuts
-        # FIXME: Remove cutgroups
-        self._cutgroups = cutgroups
-
         # set input fields
         self._cut_dicts = cut_dicts
 
         # list of cutflow labels (necessary for all cutflows)
-        if self._cutgroups:
-            self.cutflow_labels = ['Inclusive'] + [group for group in self._cutgroups.keys()]
-        else:
-            self.cutflow_labels = ['Inclusive'] + [cut['name'] for cut in self._cut_dicts]
+        self.cutflow_labels = ['Inclusive'] + [cut['name'] for cut in self._cut_dicts]
         self.cutflow_ratio = [1.]  # contains ratio of each separate cut to inclusive sample
         self.cutflow_n_events = [self._n_events_tot]  # contains number of events passing each cut
 
@@ -59,61 +49,41 @@ class Cutflow:
         # generate cutflow
         prev_n = self._n_events_tot  # saves the last cut in loop
         curr_cut_columns = []  # which cuts have already passed
-        if self._cutgroups:
-            # loop over groups
-            for group in self._cutgroups.values():
-                if missing_cuts := {
-                    cut
-                    for cut in group
-                    if cut + config.cut_label not in df.columns
-                }:
-                    raise ValueError(f"Missing cut(s) {missing_cuts} in DataFrame")
 
-                curr_cut_columns += [cut + config.cut_label for cut in group]
-                # number of events passing current cut & all previous cuts
-                n_events_left = len(df.loc[df[curr_cut_columns].all(1)].index)
-                # append calculations to cutflow arrays
-                self.cutflow_n_events.append(n_events_left)
-                self.cutflow_ratio.append(n_events_left / prev_n)
-                self.cutflow_cum.append(n_events_left / self._n_events_tot)
-                self.cutflow_a_ratio.append(
-                    len(df[df[[cut + config.cut_label for cut in group]].all(1)].index) / self._n_events_tot)
-                prev_n = n_events_left
-        else:
-            # loop over individual cuts
-            for cut in self.cutflow_labels[1:]:
-                curr_cut_columns += [cut + config.cut_label]
-                # number of events passing current cut & all previous cuts
-                n_events_left = len(df.loc[df[curr_cut_columns].all(1)].index)
-                self.cutflow_n_events.append(n_events_left)
-                self.cutflow_ratio.append(n_events_left / prev_n)
-                self.cutflow_cum.append(n_events_left / self._n_events_tot)
-                self.cutflow_a_ratio.append(len(df[df[[cut + config.cut_label]].all(1)].index) / self._n_events_tot)
-                prev_n = n_events_left
+        # loop over individual cuts
+        for cut in self.cutflow_labels[1:]:
+            curr_cut_columns += [cut + config.cut_label]
+            # number of events passing current cut & all previous cuts
+            n_events_left = len(df.loc[df[curr_cut_columns].all(1)].index)
+            self.cutflow_n_events.append(n_events_left)
+            self.cutflow_ratio.append(n_events_left / prev_n)
+            self.cutflow_cum.append(n_events_left / self._n_events_tot)
+            self.cutflow_a_ratio.append(len(df[df[[cut + config.cut_label]].all(1)].index) / self._n_events_tot)
+            prev_n = n_events_left
 
-            # assign histogram options for each type
-            self._cuthist_options = {
-                'ratio': {
-                    'filepath': '{}cutflow_ratio.png',
-                    'y_ax_vals': self.cutflow_ratio,
-                    'ylabel': 'Cutflow ratio',
-                },
-                'cummulative': {
-                    'filepath': '{}cutflow_cummulative.png',
-                    'y_ax_vals': self.cutflow_cum,
-                    'ylabel': 'Cummulative cutflow ratio',
-                },
-                'a_ratio': {
-                    'filepath': '{}cutflow_acceptance_ratio.png',
-                    'y_ax_vals': self.cutflow_a_ratio,
-                    'ylabel': 'Cut ratio to accpetance',
-                },
-                'event': {
-                    'filepath': '{}cutflow.png',
-                    'y_ax_vals': self.cutflow_n_events,
-                    'ylabel': 'Events',
-                },
-            }
+        # assign histogram options for each type
+        self._cuthist_options = {
+            'ratio': {
+                'filepath': '{}cutflow_ratio.png',
+                'y_ax_vals': self.cutflow_ratio,
+                'ylabel': 'Cutflow ratio',
+            },
+            'cummulative': {
+                'filepath': '{}cutflow_cummulative.png',
+                'y_ax_vals': self.cutflow_cum,
+                'ylabel': 'Cummulative cutflow ratio',
+            },
+            'a_ratio': {
+                'filepath': '{}cutflow_acceptance_ratio.png',
+                'y_ax_vals': self.cutflow_a_ratio,
+                'ylabel': 'Cut ratio to accpetance',
+            },
+            'event': {
+                'filepath': '{}cutflow.png',
+                'y_ax_vals': self.cutflow_n_events,
+                'ylabel': 'Events',
+            },
+        }
 
         if logger.level == logging.DEBUG:
             self.printout()

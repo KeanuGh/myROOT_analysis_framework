@@ -1,7 +1,6 @@
 import logging
 import operator as op
 import time
-from collections import OrderedDict
 from dataclasses import dataclass, field
 from typing import Optional, Union, List, Dict, Iterable, Set, overload
 
@@ -204,7 +203,6 @@ class DatasetBuilder:
         if cutfile_path:
             self.logger.debug(f"Cutfile: {cutfile_path}")
         if cutfile:
-            self.logger.debug(f"grouped cutflow: {cutfile.options['grouped cutflow']}")
             self.logger.debug("Cuts from cutfile:")
             cutfile.log_cuts(debug=True)
         hard_cuts_str = '\n\t'.join([f"{cut}: {cutfile.get_cut_string(cut)}" for cut in self.hard_cut]) \
@@ -320,17 +318,11 @@ class DatasetBuilder:
         # remove hard cut from cutflow:
         cut_dicts = [cut_dict for cut_dict in cut_dicts
                      if cut_dict['name'] not in self.hard_cut]
-        cutgroups = OrderedDict()
-        for n, group in cutfile.cutgroups.items():
-            group = [cut for cut in group if cut not in self.hard_cut]
-            if group:
-                cutgroups[n] = group
 
         cutflow = Cutflow(
             df,
             cut_dicts,
             self.logger,
-            cutgroups if cutfile.options['grouped cutflow'] else None
         )
 
         # apply hard cut(s) if it exists in cut columns

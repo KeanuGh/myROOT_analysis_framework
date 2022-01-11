@@ -1,9 +1,9 @@
 [CUTS]
 # Name	Variable	</>	Cut (in GeV if applicable)	Group Symmetric
 # !!REMEMBER DEFAULT ANALYSISTOP OUTPUT IS IN MeV NOT GeV!!
-Muon $|#eta|$	MC_WZmu_el_eta_born	<	2.4	$\eta$ cut	true
-Muon $p_{T}$	MC_WZmu_el_pt_born	>	25	$p_T$ cut	false
-Neutrino $p_{T}$	MC_WZneutrino_pt_born	>	25	$p_T$ cut	false
+Muon $|#eta|$	MC_WZmu_el_eta_born	<	2.4	true
+Muon $p_{T}$	MC_WZmu_el_pt_born	>	25	false
+Neutrino $p_{T}$	MC_WZneutrino_pt_born	>	25	false
 
 [OUTPUTS]
 # variables to process
@@ -17,7 +17,3 @@ mu_pt	nominal_Loose
 mu_eta	nominal_Loose
 met_met	nominal_Loose
 met_phi	nominal_Loose
-
-[OPTIONS]
-# case-insensitive
-grouped cutflow	false

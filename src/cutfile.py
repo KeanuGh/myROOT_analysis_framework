@@ -1,11 +1,9 @@
-import collections
 import logging
 import time
 from distutils.util import strtobool
 from shutil import copyfile
-from typing import Tuple, List, OrderedDict, Dict, Set, TypedDict
+from typing import Tuple, List, Dict, Set, TypedDict
 
-import src.config as config
 from utils.file_utils import identical_to_backup, get_last_backup, get_filename
 from utils.var_helpers import OtherVar
 
@@ -16,7 +14,6 @@ class CutDict(TypedDict):
     cut_var: str
     relation: str
     cut_val: float
-    group: str
     is_symmetric: bool
     tree: str
 
@@ -33,8 +30,7 @@ class Cutfile:
         self.name = get_filename(file_path)
         self._path = file_path
         self.backup_path = backup_path
-        self.cut_dicts, self.vars_to_cut, self.options = self.parse_cutfile()
-        self.cutgroups = self.gen_cutgroups(self.cut_dicts)
+        self.cut_dicts, self.vars_to_cut = self.parse_cutfile()
 
     def __repr__(self):
         return f'Cutfile("{self._path}")'
@@ -46,7 +42,7 @@ class Cutfile:
         cutline_split = cutline.split(self.sep)
 
         # if badly formatted
-        if len(cutline_split) not in (6, 7):
+        if len(cutline_split) not in (5, 6):
             raise SyntaxError(f"Check cutfile. Line {cutline} is badly formatted. Got {cutline_split}.")
         for v in cutline_split:
             if len(v) == 0:
@@ -62,16 +58,14 @@ class Cutfile:
         except ValueError:  # make sure the cut value is actually a number
             raise SyntaxError(f"Check 'cut_val' argument in line {cutline}. Got '{cutline_split[3]}'.")
 
-        group = cutline_split[4]
-
         try:
-            is_symmetric = bool(strtobool(cutline_split[5].lower()))  # converts string to boolean
+            is_symmetric = bool(strtobool(cutline_split[4].lower()))  # converts string to boolean
         except ValueError as e:
             raise ValueError(f"Incorrect formatting for 'is_symmetric' in line {cutline} \n"
                              f"Got: {e}")
 
         try:
-            tree = cutline_split[6]  # if an alternate TTree is given
+            tree = cutline_split[5]  # if an alternate TTree is given
         except IndexError:
             tree = self.__na_tree
 
@@ -88,28 +82,23 @@ class Cutfile:
             'cut_var': cut_var,
             'relation': relation,
             'cut_val': cut_val,
-            'group': group,
             'is_symmetric': is_symmetric,
             'tree': tree
         }
 
         return cut_dict
 
-    def parse_cutfile(self, path: str = None, sep='\t') -> Tuple[List[CutDict], Set[Tuple[str, str]], Dict[str, bool]]:
+    def parse_cutfile(self, path: str = None, sep='\t') -> Tuple[List[CutDict], Set[Tuple[str, str]]]:
         """
         | Generates pythonic outputs from input cutfile
-        | Cutfile should be formatted with headers [CUTS], [OUTPUTS] and [OPTIONS]
+        | Cutfile should be formatted with headers [CUTS] and [OUTPUTS]
         | Each line under [CUTS] header contains the 'sep'-separated values (detault: tab):
         | - name: name of cut to be printed and used in plot labels
         | - cut_var: variable in root file to cut on
         | - relation: '<' or '>'
         | - cut_val: value of cut on variable
-        | - group: each cut with same group number will be applied all at once.
-        |          !!!SUFFIXES FOR CUTS IN GROUP MUST BE THE SAME!!!
         |
         | Each line under [OUTPUTS] should be a variable in root file
-        |
-        | Each line under [OPTIONS] header should be '[option]<sep>[value]'
 
         :param path: path to an alternative cutfile
         :param sep: cutfile separator. Default is TAB
@@ -130,7 +119,7 @@ class Cutfile:
 
             # get output variables
             output_vars = set()
-            for output_var in lines[lines.index('[OUTPUTS]') + 1: lines.index('[OPTIONS]')]:
+            for output_var in lines[lines.index('[OUTPUTS]') + 1:]:
                 if output_var.startswith('#') or len(output_var) < 2:
                     continue
                 elif len(var_tree := output_var.split(sep)) > 2:
@@ -145,27 +134,7 @@ class Cutfile:
                 else:
                     raise Exception("This should never happen")
 
-            # global cut options
-            options_dict = {}
-            for option in lines[lines.index('[OPTIONS]') + 1:]:
-                if option.startswith('#') or len(option) < 2:
-                    continue
-                option = option.split(sep)
-
-                # options should be formatted as '[option]<sep>[value]'
-                if len(option) != 2:
-                    raise Exception(f'Badly Formatted option: {option}')
-
-                options_dict[option[0]] = bool(strtobool(option[1].lower()))  # converts string to boolean
-
-            # Options necessary for the analysis to run (remember to add to this when adding new options)
-            necessary_options = [
-                'grouped cutflow',
-            ]
-            if missing_options := [opt for opt in necessary_options if opt not in options_dict.keys()]:
-                raise Exception(f"Missing option(s) in cutfile: {', '.join(missing_options)}")
-
-        return cuts_list_of_dicts, output_vars, options_dict
+        return cuts_list_of_dicts, output_vars
 
     def extract_variables(self,
                           derived_vars: Dict[str, OtherVar],
@@ -225,29 +194,6 @@ class Cutfile:
     def all_vars(cls, cut_dicts: List[CutDict], vars_set: Set[Tuple[str, str]]) -> Set[str]:
         """Return all variables mentioned in cutfile"""
         return {cut_dict['cut_var'] for cut_dict in cut_dicts} | {var for var, _ in vars_set}
-
-    @classmethod
-    def gen_cutgroups(cls, cut_list_of_dicts: List[CutDict]) -> OrderedDict[str, List[str]]:
-        """
-        Creates an ordererd dictionary, where the keys are strings containing the name of the group,
-        and the values are a list of all the cuts to be applied at once (the cutgroup)
-        """
-        cutgroups = []
-
-        for cut_dict in cut_list_of_dicts:
-            # if group exists, add cut name to group
-            curr_groups = [group[0] for group in cutgroups]
-            if cut_dict['group'] in curr_groups:
-                cutgroups[curr_groups.index(cut_dict['group'])][1].append(cut_dict['name'])
-            # else make new group and add group label as first element
-            else:
-                cutgroups.append((cut_dict['group'], [cut_dict['name']]))
-
-        return collections.OrderedDict(cutgroups)
-
-    def get_cutgroup(self, group: str):
-        """Get names of cuts within group"""
-        return [cut_name + config.cut_label for cut_name in self.cutgroups[group]]
 
     def extract_var_data(self,
                          derived_vars: Dict[str, OtherVar],
