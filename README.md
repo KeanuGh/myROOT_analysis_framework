@@ -15,7 +15,7 @@ So far it is able to:
 - Logging: as soon as I get around to learning how to use the python logging library.
 - Batch jobs: Need to look into using Dask for parallel processing to work with large ROOT files.
 
-## Quickstart
+# Quickstart
 Initialise analysis with :
 
 ```
@@ -55,6 +55,8 @@ convert_pkl_to_root(conv_all=True)
 `Analysis` class also contains methods to apply across multiple datasets. eg:
 - `.merge_datasets('dataset1'. 'dataset2')` merges given datasets into the first one passed
 - `.plot_hist(['dataset1', 'dataset2'], 'mu_pt', 'reco_weight')` plot same variable in multiple datasets overlayed. Optional ratio plot underneath
+- Can use methods like `.create_subdataset(old, new, args)`, to create a new dataset based on subset of a dataset currently in analysis
+
 
 # Cutfile
 Example cutfile:
@@ -145,6 +147,9 @@ In `utils.var_helpers` I've definied a few variables aren't in AnalysisTop outpu
 So far the defined variables are:
 - `mu_mt` & `e_mt` (actually boson transverse mass for different W/Z decays)
 - `w_y`, `z_y`, `v_y` (W/Z rapidity. They all do the same thing)
+
+## Subsetting
+Can use methods `.subset()`, `.subset_dsid()` and `.subset_cut()` to create a new dataset based on subset of current dataset
 
 ## Command-line script
 in `run/` directory is provided the `build_dataset.py` script which can generate a single Dataset from the command line and print cutflow and pickled DataFrame
