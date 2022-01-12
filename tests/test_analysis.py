@@ -38,6 +38,16 @@ if __name__ == '__main__':
                           logbins=True, logx=True, normalise='lumi', lepton='muon', yerr='rsumw2')
     my_analysis.plot_hist(['wminmunu', 'wmintaunu'], 'MC_WZmu_el_pt_born', bins=(50, 1, 5000), weight='truth_weight',
                           logbins=True, logx=True, normalise='lumi', lepton='muon', yerr='rsumw2')
+
+    my_analysis.plot_hist(['wminmunu', 'wmintaunu'], 'MC_WZmu_el_eta_born', bins=(30, -5, 5), weight='truth_weight',
+                          normalise=False, lepton='muon', yerr='rsumw2', ratio_plot=True)
+    my_analysis.plot_hist(['wminmunu', 'wmintaunu'], 'MC_WZ_dilep_m_born', bins=(50, 120, 5000), weight='truth_weight',
+                          lepton='muon', title='test plot', normalise=False, yerr='rsumw2', ratio_plot=True)
+    my_analysis.plot_hist(['wminmunu', 'wmintaunu'], 'mu_pt', bins=(50, 1, 5000), weight='reco_weight',
+                          logbins=True, logx=True, normalise=False, lepton='muon', yerr='rsumw2')
+    my_analysis.plot_hist(['wminmunu', 'wmintaunu'], 'MC_WZmu_el_pt_born', bins=(50, 1, 5000), weight='truth_weight',
+                          logbins=True, logx=True, normalise=False, lepton='muon', yerr='rsumw2')
+
     my_analysis['wminmunu'].plot_cut_overlays('MC_WZ_dilep_m_born', bins=(50, 120, 5000), weight='truth_weight',
                                               lepton='muon', title='test plot', normalise=True, yerr='rsumw2')
     # my_analysis.plot_mass_slices('wmintaunu', 'mt_born', weight='truth_weight', bins=(50, 200, 5000))

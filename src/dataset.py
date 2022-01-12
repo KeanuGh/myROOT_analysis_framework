@@ -353,7 +353,7 @@ class Dataset:
 
         # apply cuts
         self.__check_cut_cols(cut_cols)
-        cut_cols = [cutname for cutname in cut_cols]
+        cut_cols = [cutname + config.cut_label for cutname in cut_cols]
         if inplace:
             self.df = self.df.loc[self.df[cut_cols].all(1)]
             self.df.drop(columns=cut_cols, inplace=True)
@@ -365,7 +365,7 @@ class Dataset:
         """Check if cut columns exist in dataframe"""
         if missing_cut_cols := [
             label for label in cuts
-            if label not in self.df.columns
+            if label + config.cut_label not in self.df.columns
         ]:
             raise ValueError(f"No cut(s) {missing_cut_cols} in dataset {self.name}...")
 

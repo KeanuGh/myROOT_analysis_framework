@@ -5,6 +5,7 @@ from typing import Union, List, Tuple, overload
 import boost_histogram as bh
 import mplhep as hep
 import numpy as np
+from boost_histogram._core.hist import any_weight
 from matplotlib import pyplot as plt
 from numpy.typing import ArrayLike
 
@@ -26,17 +27,17 @@ class Histogram1D(bh.Histogram):
 
     @overload
     def __init__(self,
-                 bins: Union[List[float], Tuple[int, float, float]],
+                 var: ArrayLike = ...,
+                 bins: Union[List[float], Tuple[int, float, float], bh.axis.Axis] = (10, 0, 10),
                  logbins: bool = ...,
                  weight: Union[ArrayLike, int] = ...,
-                 var: ArrayLike = ...,
                  **kwargs
                  ) -> None:
         ...
 
     def __init__(self,
-                 bins: Union[List[float], Tuple[int, float, float]],
                  var: ArrayLike = None,
+                 bins: Union[List[float], Tuple[int, float, float], bh.axis.Axis] = (10, 0, 10),
                  weight: Union[ArrayLike, float] = None,
                  logbins: bool = False,
                  **kwargs
@@ -50,13 +51,24 @@ class Histogram1D(bh.Histogram):
         :param logbins: whether logarithmic binnings
         :param kwargs: keyword arguments that would be passed to boost_histogram.Histogram()
         """
-        super().__init__(
-            self._get_axis(bins, logbins),
-            storage=bh.storage.Weight(),
-            **kwargs
-        )
-        if var is not None:
-            self.fill(var, weight=weight, threads=0)
+        if isinstance(var, any_weight):
+            # to avoid issues with copying
+            super().__init__(var)
+
+        else:
+            # get axis
+            axis = (
+                self._get_axis(bins, logbins)
+                if not isinstance(bins, bh.axis.Axis) else bins
+            )
+
+            super().__init__(
+                axis,
+                storage=bh.storage.Weight(),
+                **kwargs
+            )
+            if var is not None:
+                self.fill(var, weight=weight, threads=0)
 
     @staticmethod
     @overload
@@ -94,7 +106,7 @@ class Histogram1D(bh.Histogram):
 
         else:
             raise TypeError(f"Bins must be formatted as either tuple (n_bins, start, stop) or a list of bin edges. "
-                            f"Got {bins}")
+                            f"Got {bins} of type {type(bins)}")
 
     @property
     def sumw2(self) -> np.array:
@@ -131,8 +143,16 @@ class Histogram1D(bh.Histogram):
         """get integral of histogram"""
         return sum(self.bin_values)
 
+    def normalised(self) -> Histogram1D:
+        """Return histogram normalised to area"""
+        return self.rescaled(self.integral)
+
+    def rescaled(self, scale_factor: float) -> Histogram1D:
+        """Return rescaled histogram"""
+        return self.copy() / scale_factor
+
     def plot(self,
-             ax: plt.Axes,
+             ax: plt.Axes = None,
              yerr: Union[ArrayLike, str] = 'rsumw2',
              w2: bool = False,
              normalise: Union[float, bool] = False,
@@ -142,7 +162,7 @@ class Histogram1D(bh.Histogram):
         """
         Plot histogram on axis ax
 
-        :param ax: matplotlib Axes object to plot on
+        :param ax: matplotlib Axes object to plot on. Will create new axis if not given
         :param yerr: Histogram uncertainties. Following modes are supported:
                      - 'rsumw2', sqrt(SumW2) errors
                      - 'sqrtN', sqrt(N) errors or poissonian interval when w2 is specified
@@ -156,21 +176,18 @@ class Histogram1D(bh.Histogram):
         :param kwargs: keyword arguments to pass to mplhep.histplot()
         :return: None
         """
-        hist = self
-
         # normalise to value or unity
         if not normalise:
-            bin_vals = hist.bin_values
-        elif isinstance(normalise, (float, int, bool)):
-            bin_vals = (normalise if normalise else 1.) * hist.bin_values / hist.integral
+            hist = self.copy()
+        elif normalise is True:
+            hist = self.normalised()
+        elif isinstance(normalise, (float, int)):
+            hist = self.rescaled(normalise)
         else:
             raise TypeError("'normalise' must be a float, int or boolean")
 
         if w2:
             sumw2 = hist.sumw2
-            if normalise:
-                # scale sumw2 if normalising
-                sumw2 /= sumw2 * normalise / hist.integral
         else: sumw2 = None
 
         if yerr is None:
@@ -178,9 +195,6 @@ class Histogram1D(bh.Histogram):
         elif isinstance(yerr, str):
             if yerr == 'rsumw2':
                 yerr = hist.root_sumw2
-                if normalise:
-                    # scale errors for normalisation factor
-                    yerr = yerr * normalise / hist.integral
             elif yerr == 'sqrtN':
                 yerr = True
             else:
@@ -188,6 +202,7 @@ class Histogram1D(bh.Histogram):
         elif not hasattr(yerr, '__len__'):
             raise TypeError(f"Valid yerr string values: 'rsumw2', 'sqrtN' or iterable of values. Got {yerr}")
 
+        bin_vals = hist.bin_values
         if scale_by_bin_width:
             bin_vals /= hist.bin_widths
             if hasattr(yerr, '__len__'):
@@ -198,7 +213,7 @@ class Histogram1D(bh.Histogram):
     def plot_ratio(
             self,
             other: Histogram1D,
-            ax: plt.Axes,
+            ax: plt.Axes = None,
             yerr: Union[ArrayLike, str] = 'rsumw2',
             normalise: bool = False,
             label: str = None,
@@ -208,7 +223,7 @@ class Histogram1D(bh.Histogram):
         Plot (and properly format) ratio between this histogram and another.
 
         :param other: Other histogram
-        :param ax: Axis to plot on
+        :param ax: Axis to plot on. will create new if not given
         :param yerr: Histogram uncertainties. Following modes are supported:
                      - 'rsumw2', sqrt(SumW2) errors
                      - 'sqrtN', sqrt(N) errors or poissonian interval when w2 is specified
@@ -221,27 +236,32 @@ class Histogram1D(bh.Histogram):
         """
         if not np.array_equal(self.bin_edges, other.bin_edges):
             raise ValueError("Bins do not match!")
+        if not ax:
+            _, ax = plt.subplots()
 
         if normalise:
-            vals = (self.bin_values / self.integral) / (other.bin_values / other.integral)
+            h = self.normalised()
+            o = other.normalised()
         else:
-            vals = self.bin_values / other.bin_values
+            h = self.copy()
+            o = other.copy()
+        vals = h.bin_values / o.bin_values
 
         if yerr is None:
             pass
         elif isinstance(yerr, str):
             # propagate errors
             if yerr == 'rsumw2':
-                yerr = vals * np.sqrt((self.root_sumw2 / self.bin_values) ** 2
-                                      + (other.root_sumw2 / other.bin_values) ** 2)
+                yerr = vals * np.sqrt((h.root_sumw2 / h.bin_values) ** 2
+                                      + (o.root_sumw2 / o.bin_values) ** 2)
             elif yerr == 'sqrtN':
-                yerr = vals * np.sqrt((1 / self.bin_values) + (1 / other.bin_values))
+                yerr = vals * np.sqrt((1 / h.bin_values) + (1 / o.bin_values))
             else:
                 raise ValueError(f"Valid yerr string values: 'rsumw2', 'sqrtN'. Got {yerr}")
         elif not hasattr(yerr, '__len__'):
             raise TypeError(f"Valid yerrs: 'rsumw2', 'sqrtN' or iterable of values. Got {yerr}")
 
-        ax.errorbar(self.bin_centres, vals, xerr=self.bin_widths / 2, yerr=yerr,
+        ax.errorbar(h.bin_centres, vals, xerr=h.bin_widths / 2, yerr=yerr,
                     linestyle='None', label=label, **kwargs)
         ax.axhline(1., linestyle='--', linewidth=1., c='k')
 
