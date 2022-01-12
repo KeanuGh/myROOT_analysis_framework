@@ -219,13 +219,13 @@ class Histogram1D(bh.Histogram):
         :param kwargs: Args to pass to ax.errorbar()
         :return: None
         """
+        if not np.array_equal(self.bin_edges, other.bin_edges):
+            raise ValueError("Bins do not match!")
+
         if normalise:
             vals = (self.bin_values / self.integral) / (other.bin_values / other.integral)
         else:
             vals = self.bin_values / other.bin_values
-
-        if not np.array_equal(self.bin_edges, other.bin_edges):
-            raise ValueError("Bins do not match!")
 
         if yerr is None:
             pass
@@ -243,9 +243,9 @@ class Histogram1D(bh.Histogram):
 
         ax.errorbar(self.bin_centres, vals, xerr=self.bin_widths / 2, yerr=yerr,
                     linestyle='None', label=label, **kwargs)
+        ax.axhline(1., linestyle='--', linewidth=1., c='k')
 
         ax.grid(visible=True, which='both', axis='y')
-        ax.axes.xaxis.set_visible(False)
 
         # POSSIBLY NOT NEEDED BUT IT TOOK ME A WHOLE DAY TO FIGURE THIS OUT SO I'M KEEPING IT
         # relimit y axes
@@ -257,5 +257,3 @@ class Histogram1D(bh.Histogram):
         #     ymin = np.min(np.ma.masked_invalid(np.append(data, ymin)))
         # vspace = (ymax - ymin) * 0.1
         # ax.set_ylim(bottom=ymin - vspace, top=ymax + vspace)
-
-        ax.axhline(1., linestyle='--', linewidth=1., c='k')

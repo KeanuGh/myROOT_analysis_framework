@@ -426,7 +426,6 @@ class Analysis:
             fig.tight_layout()
             fig.subplots_adjust(hspace=0.1, wspace=0)
             ax.get_xaxis().set_visible(False)
-            ratio_ax.get_xaxis().set_visible(True)
             ratio_ax.legend(fontsize=10)
 
             if len(hists) == 2:

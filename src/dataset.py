@@ -77,14 +77,14 @@ class Dataset:
 
     # Variable setting/getting
     # ===================
-    def set_plot_dir(self, path: str):
+    def set_plot_dir(self, path: str) -> None:
         self.plot_dir = path
 
-    def set_pkl_path(self, filepath: str):
+    def set_pkl_path(self, filepath: str) -> None:
         self.pkl_file = filepath
 
     @property
-    def variables(self):
+    def variables(self) -> set:
         """Column names that do not contain a cut label"""
         return {
             col for col in self.df.columns
@@ -503,7 +503,6 @@ class Dataset:
         # ratio plot
         plt_utils.set_axis_options(accept_ax, var, bins, lepton, xlabel, ylabel, title, logx, False, label=False)
         accept_ax.set_ylabel("Acceptance")
-        accept_ax.get_xaxis().set_visible(True)
 
         out_png_file = f"{self.plot_dir}{var}_CUTS{'_NORMED' if normalise else ''}.png"
         fig.savefig(out_png_file, bbox_inches='tight')
