@@ -92,8 +92,7 @@ class Cutfile:
         if relation not in ('>', '<', '<=', '>=', '=', '!='):
             raise SyntaxError(f"Unexpected comparison operator: {cutline_split[2]}")
 
-        # fill dictionary
-        cut = Cut(
+        return Cut(
             name=name,
             var=cut_var,
             op=relation,
@@ -101,8 +100,6 @@ class Cutfile:
             is_symmetric=is_symmetric,
             tree=tree
         )
-
-        return cut
 
     def parse_cutfile(self, path: str = None, sep='\t') -> Tuple[OrderedDict[str, Cut], Set[Tuple[str, str]]]:
         """
@@ -258,9 +255,9 @@ class Cutfile:
         for var_ls in tree_dict.values():
             for var in var_ls:
                 if var in variable_data:
-                    if variable_data[var] == 'truth':
+                    if variable_data[var]['tag'] == 'truth':
                         is_truth = True
-                    elif variable_data[var] == 'reco':
+                    elif variable_data[var]['tag'] == 'reco':
                         is_reco = True
         return is_truth, is_reco
 
