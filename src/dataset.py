@@ -168,7 +168,7 @@ class Dataset:
     def n_truth_events(self) -> int:
         """How many truth events in dataset"""
         if self.is_truth:
-            return df['truth_weight'].notna().sum()
+            return self.df['truth_weight'].notna().sum()
         else:
             return 0
 
@@ -293,6 +293,7 @@ class Dataset:
     def save_pkl_file(self, path: str = None) -> None:
         """Saves pickle"""
         if not path: path = self.pkl_file
+        self.logger.info(f"Saving pickle file...")
         self.df.to_pickle(path)
         self.logger.info(f"Saved pickled DataFrame to {path}")
 
@@ -352,7 +353,7 @@ class Dataset:
 
         # apply cuts
         self.__check_cut_cols(cut_cols)
-        cut_cols = [cutname + config.cut_label for cutname in cut_cols]
+        cut_cols = [cutname for cutname in cut_cols]
         if inplace:
             self.df = self.df.loc[self.df[cut_cols].all(1)]
             self.df.drop(columns=cut_cols, inplace=True)
@@ -363,8 +364,8 @@ class Dataset:
     def __check_cut_cols(self, cuts: List[str]) -> None:
         """Check if cut columns exist in dataframe"""
         if missing_cut_cols := [
-            label + config.cut_label for label in cuts
-            if label + config.cut_label not in self.df.columns
+            label for label in cuts
+            if label not in self.df.columns
         ]:
             raise ValueError(f"No cut(s) {missing_cut_cols} in dataset {self.name}...")
 

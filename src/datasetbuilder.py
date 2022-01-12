@@ -319,6 +319,8 @@ class DatasetBuilder:
         for h_cut in self.hard_cut:
             if h_cut + config.cut_label not in df.columns:
                 self.logger.debug(f"No cut {h_cut} in DataFrame. Assuming hard cut has already been applied")
+                self.hard_cut.remove(h_cut)
+                cutfile.cuts.pop(h_cut)
             else:
                 hard_cuts_to_apply.append(h_cut)
         # apply hard cuts
@@ -332,8 +334,8 @@ class DatasetBuilder:
             df = df.loc[df[cut_cols].all(1)]
             df.drop(columns=cut_cols, inplace=True)
             # remove cut from cutflow as well
-            for cut in self.hard_cut:
-                cutfile.cuts.pop(cut)
+            for h_cut in self.hard_cut:
+                cutfile.cuts.pop(h_cut)
 
         # GENERATE CUTFLOW
         cutflow = Cutflow(

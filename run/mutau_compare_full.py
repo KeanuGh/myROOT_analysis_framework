@@ -100,11 +100,11 @@ if __name__ == '__main__':
                        bins=(30, 50, 5000), logbins=True, logx=True, 
                        lepton='muon', normalise='lumi', yerr='rsumw2', scale_by_bin_width=True)
     
-    analysis.plot_hist(['wplusmunu', 'wplusmunu'], 'MC_WZneutrino_pt_born', weight='truth_weight', title='truth - 139fb$^{-1}$',
+    analysis.plot_hist(['wplusmunu', 'wplustaunu'], 'MC_WZneutrino_pt_born', weight='truth_weight', title='truth - 139fb$^{-1}$',
                        bins=(30, 50, 5000), logbins=True, logx=True, 
                        lepton='muon', normalise='lumi', yerr='rsumw2', scale_by_bin_width=True)
     
-    analysis.plot_hist(['wminmunu', 'wplustaunu'], 'MC_WZmu_el_eta_born', weight='truth_weight', title='truth - 139fb$^{-1}$',
+    analysis.plot_hist(['wminmunu', 'wmintaunu'], 'MC_WZmu_el_eta_born', weight='truth_weight', title='truth - 139fb$^{-1}$',
                        bins=(30, -4, 4), lepton='muon', 
                        normalise='lumi', yerr='rsumw2', scale_by_bin_width=True)
 
@@ -112,19 +112,19 @@ if __name__ == '__main__':
                        bins=(30, -4, 4), lepton='muon', 
                        normalise='lumi', yerr='rsumw2', scale_by_bin_width=True)
     
-    analysis.plot_hist(['wminmunu', 'wminmunu'], 'MC_WZmu_el_pt_born', weight='truth_weight', title='truth - 139fb$^{-1}$',
+    analysis.plot_hist(['wminmunu', 'wmintaunu'], 'MC_WZmu_el_pt_born', weight='truth_weight', title='truth - 139fb$^{-1}$',
                        bins=(30, 50, 5000), logbins=True, logx=True, 
                        lepton='muon', normalise='lumi', yerr='rsumw2', scale_by_bin_width=True)
     
-    analysis.plot_hist(['wplusmunu', 'wplusmunu'], 'MC_WZmu_el_pt_born', weight='truth_weight', title='truth - 139fb$^{-1}$',
+    analysis.plot_hist(['wplusmunu', 'wplustaunu'], 'MC_WZmu_el_pt_born', weight='truth_weight', title='truth - 139fb$^{-1}$',
                        bins=(30, 50, 5000), logbins=True, logx=True, 
                        lepton='muon', normalise='lumi', yerr='rsumw2', scale_by_bin_width=True)
     
-    analysis.plot_hist(['wminmunu', 'wminmunu'], 'mt_born', weight='truth_weight', title='truth - 139fb$^{-1}$',
+    analysis.plot_hist(['wminmunu', 'wmintaunu'], 'mt_born', weight='truth_weight', title='truth - 139fb$^{-1}$',
                        bins=(30, 50, 5000), logbins=True, logx=True, 
                        lepton='muon', normalise='lumi', yerr='rsumw2', scale_by_bin_width=True)
 
-    analysis.plot_hist(['wplusmunu', 'wplusmunu'], 'mt_born', weight='truth_weight', title='truth - 139fb$^{-1}$',
+    analysis.plot_hist(['wplusmunu', 'wplustaunu'], 'mt_born', weight='truth_weight', title='truth - 139fb$^{-1}$',
                        bins=(30, 50, 5000), logbins=True, logx=True, 
                        lepton='muon', normalise='lumi', yerr='rsumw2', scale_by_bin_width=True)
     
