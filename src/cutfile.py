@@ -166,7 +166,7 @@ class Cutfile:
         tree_dict = {self.__na_tree: set()}
         for cut in cuts.values():
             if cut.tree not in tree_dict:
-                tree_dict[cut.tree] = {cut.tree}
+                tree_dict[cut.tree] = {cut.var}
             else:
                 tree_dict[cut.tree].add(cut.var)
 

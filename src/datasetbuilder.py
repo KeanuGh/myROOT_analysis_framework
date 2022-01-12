@@ -147,7 +147,7 @@ class DatasetBuilder:
         if not data_path and not pkl_path:
             raise ValueError("Either ROOT data or a pickled dataframe must be provided")
         elif not data_path and pkl_path:
-            logger.warning("No ROOT data provided so pickled DataFrame cannot be checked")
+            self.logger.warning("No ROOT data provided so pickled DataFrame cannot be checked")
             __build_df = False
             __error_at_rebuild = True
             __create_weight_cols = False
@@ -384,12 +384,12 @@ class DatasetBuilder:
                                 f"Got type {type(self.hard_cut)}")
             elif isinstance(self.hard_cut, str):
                 self.hard_cut = [self.hard_cut]
-            for i, cut in enumerate(self.hard_cut):
-                if not cut not in cuts:
+            for cut in self.hard_cut:
+                if cut not in cuts:
                     if error:
                         raise ValueError(f"No cut named '{self.hard_cut}' in cutfile")
                     else:
-                        self.logger.debug(f"No cut named '{self.hard_cut}' in cutfile; skipping")
+                        self.logger.debug(f"No cut named '{self.hard_cut}' in cutfile; skipping this hard cut")
                         self.hard_cut.remove(cut)
 
     def __check_var_cols(self, df_cols: Iterable, tree_dict: Dict[str, Set[str]], raise_error: bool = False) -> bool:
