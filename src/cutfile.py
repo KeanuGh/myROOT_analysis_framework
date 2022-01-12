@@ -13,7 +13,7 @@ from utils.variable_names import variable_data
 
 @dataclass
 class Cut:
-    """Define type hint for cut dictionary"""
+    """Cut class containing info for each cut"""
     name: str
     var: str
     op: str
