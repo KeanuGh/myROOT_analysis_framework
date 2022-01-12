@@ -22,7 +22,6 @@ from utils.variable_names import variable_data
 class Dataset:
     """
     Dataset class. Contains/will contain all the variables needed for a singular analysis dataset.
-    # TODO: methods that subset Datasets should return new datasets so methods can be applied
 
     :param name: Name of Dataset
     :param df: pandas DataFrame containing data
