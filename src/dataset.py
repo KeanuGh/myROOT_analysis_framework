@@ -127,7 +127,7 @@ class Dataset:
         """Get reconstructed variables in dataset"""
         return self.__get_var_tag('reco')
 
-    def __get_var_tag(self, tag: str) -> list[str]:
+    def _get_var_tag(self, tag: str) -> list[str]:
         """Get all variables in dataset with given tag"""
         if tag not in ('meta', 'truth', 'reco'):
             raise ValueError(f"Unknown tag '{tag}'")
@@ -350,7 +350,7 @@ class Dataset:
 
         # apply cuts
         self.__check_cut_cols(cut_cols)
-        cut_cols = [cutname for cutname in cut_cols]
+        cut_cols = [cutname + config.cut_label for cutname in cut_cols]
         if inplace:
             self.df = self.df.loc[self.df[cut_cols].all(1)]
             self.df.drop(columns=cut_cols, inplace=True)
