@@ -115,28 +115,26 @@ class Dataset:
     @property
     def meta_vars(self) -> list[str]:
         """Get meta variables in dataset"""
-        return [
-            col for col in self.df.columns
-            if col in variable_data
-            and variable_data[col]['tag'] == 'meta'
-        ]
+        return self.__get_var_tag('meta')
 
     @property
     def truth_vars(self) -> list[str]:
         """Get truth variables in dataset"""
-        return [
-            col for col in self.df.columns
-            if col in variable_data
-            and variable_data[col]['tag'] == 'truth'
-        ]
+        return self.__get_var_tag('truth')
 
     @property
     def reco_vars(self) -> list[str]:
         """Get reconstructed variables in dataset"""
+        return self.__get_var_tag('reco')
+
+    def _get_var_tag(self, tag: str) -> list[str]:
+        """Get all variables in dataset with given tag"""
+        if tag not in ('meta', 'truth', 'reco'):
+            raise ValueError(f"Unknown tag '{tag}'")
         return [
             col for col in self.df.columns
             if col in variable_data
-            and variable_data[col]['tag'] == 'reco'
+            and variable_data[col]['tag'] == tag
         ]
 
     @property
@@ -182,12 +180,12 @@ class Dataset:
     def get_truth_events(self, df: pd.DataFrame = None) -> pd.DataFrame:
         """Retrun view of truth events"""
         if df is None: df = self.df
-        return df.loc[self.df['truth_weight'].notna()]
+        return df.loc[df['truth_weight'].notna()]
 
     def get_reco_events(self, df: pd.DataFrame = None) -> pd.DataFrame:
         """Retrun view of reco events"""
         if df is None: df = self.df
-        return df.loc[self.df['reco_weight'].notna()]
+        return df.loc[df['reco_weight'].notna()]
 
     @property
     def cross_section(self) -> float:
@@ -337,11 +335,11 @@ class Dataset:
 
         elif isinstance(labels, list):
             self.logger.debug(f"Applying cuts: {labels} to {self.name}...")
-            cut_cols = [label for label in labels]
+            cut_cols = [label + config.cut_label for label in labels]
 
         elif isinstance(labels, str):
             self.logger.debug(f"Applying cut: '{labels}' to {self.name}...")
-            cut_cols = [labels]
+            cut_cols = [labels + config.cut_label]
 
         elif labels is True:
             self.logger.debug(f"Applying all cuts to {self.name}...")
@@ -364,9 +362,9 @@ class Dataset:
         """Check if cut columns exist in dataframe"""
         if missing_cut_cols := [
             label for label in cuts
-            if label + config.cut_label not in self.df.columns
+            if label not in self.df.columns
         ]:
-            raise ValueError(f"No cut(s) {missing_cut_cols} in dataset {self.name}...")
+            raise ValueError(f"No cut(s) {missing_cut_cols} in dataset {self.name}")
 
     # ===========================================
     # =========== PLOTING FUNCTIONS =============
@@ -419,7 +417,7 @@ class Dataset:
             if isinstance(weight, str)
             else weight
         )
-        hist = Histogram1D(bins, df[var], weights, logbins)
+        hist = Histogram1D(df[var], bins, weights, logbins)
         hist.plot(
             ax=ax,
             yerr=yerr,
