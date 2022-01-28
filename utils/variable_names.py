@@ -149,7 +149,7 @@ variable_data: Dict[str, Branch] = {
     },
     'mu_pt': {
         'name': r'Muon $p_{T}$',
-        'units': '',
+        'units': 'GeV',
         'tag': 'reco',
     },
     'mu_eta': {
