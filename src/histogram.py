@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-from typing import Union, List, Tuple, overload
+from typing import Union, List, Tuple, Any, overload
 
 import boost_histogram as bh
 import mplhep as hep
 import numpy as np
-from boost_histogram._core.hist import any_weight
 from matplotlib import pyplot as plt
 from numpy.typing import ArrayLike
 
@@ -13,7 +12,7 @@ plt.style.use(hep.style.ATLAS)
 
 
 # TODO: 2D hist
-class Histogram1D(bh.Histogram):
+class Histogram1D(bh.Histogram, family=None):
     """
     Wrapper around boost-histogram histogram for 1D
     """
@@ -51,17 +50,16 @@ class Histogram1D(bh.Histogram):
         :param logbins: whether logarithmic binnings
         :param kwargs: keyword arguments that would be passed to boost_histogram.Histogram()
         """
-        if isinstance(var, any_weight):
-            # to avoid issues with copying
+        # to avoid issues with copying
+        if isinstance(var, bh._core.hist.any_weight):
             super().__init__(var)
 
         else:
             # get axis
             axis = (
-                self._get_axis(bins, logbins)
-                if not isinstance(bins, bh.axis.Axis) else bins
+                bins if isinstance(bins, bh.axis.Axis)
+                else self.__gen_axis(bins, logbins)
             )
-
             super().__init__(
                 axis,
                 storage=bh.storage.Weight(),
@@ -70,20 +68,58 @@ class Histogram1D(bh.Histogram):
             if var is not None:
                 self.fill(var, weight=weight, threads=0)
 
+    def __truediv__(self: Histogram1D, other: Union["bh.Histogram", "np.typing.NDArray[Any]", float]) -> Histogram1D:
+        result = self.copy(deep=False)
+        return result.__itruediv__(other)
+
+    def __itruediv__(self: Histogram1D, other: Union["bh.Histogram", "np.typing.NDArray[Any]", float]) -> Histogram1D:
+        if isinstance(other, Histogram1D):
+            # Scale variances. See https://root.cern.ch/doc/master/TH1_8cxx_source.html#l02929
+            c0 = self.view(flow=True).value
+            c1 = other.view(flow=True).value
+            clsq = c1 * c1
+            variance = (self.view(flow=True).variance * clsq + other.view(flow=True).variance * c0 * c0) / (clsq * clsq)
+
+            self.view(flow=True).variance = variance
+            self.view(flow=True).value /= other.view(flow=True).value
+            return self
+        else:
+            return self._compute_inplace_op("__itruediv__", other)
+
+    def __mul__(self: Histogram1D, other: Union["bh.Histogram", "np.typing.NDArray[Any]", float]) -> Histogram1D:
+        result = self.copy(deep=False)
+        return result.__imul__(other)
+
+    def __rmul__(self: Histogram1D, other: Union["bh.Histogram", "np.typing.NDArray[Any]", float]) -> Histogram1D:
+        return self * other
+
+    def __imul__(self: Histogram1D, other: Union["bh.Histogram", "np.typing.NDArray[Any]", float]) -> Histogram1D:
+        if isinstance(other, Histogram1D):
+            # Scale variances. See https://root.cern.ch/doc/master/TH1_8cxx_source.html#l06116
+            c0 = self.view(flow=True).value
+            c1 = other.view(flow=True).value
+            variance = self.view(flow=True).variance * c1 * c1 + other.view(flow=True).variance * c0 * c0
+
+            self.view(flow=True).variance = variance
+            self.view(flow=True).value *= other.view(flow=True).value
+            return self
+        else:
+            return self._compute_inplace_op("__imul__", other)
+
     @staticmethod
     @overload
-    def _get_axis(bins: List[float]) -> bh.axis.Axis:
+    def __gen_axis(bins: List[float]) -> bh.axis.Axis:
         ...
 
     @staticmethod
     @overload
-    def _get_axis(bins: Tuple[int, float, float], logbins: bool = False) -> bh.axis.Axis:
+    def __gen_axis(bins: Tuple[int, float, float], logbins: bool = False) -> bh.axis.Axis:
         ...
 
     @staticmethod
-    def _get_axis(bins: Union[List[float], Tuple[int, float, float]],
-                  logbins: bool = False
-                  ) -> bh.axis.Axis:
+    def __gen_axis(bins: Union[List[float], Tuple[int, float, float]],
+                   logbins: bool = False
+                   ) -> bh.axis.Axis:
         """
         Returns the correct type of boost-histogram axis based on the input bins.
 
@@ -139,21 +175,31 @@ class Histogram1D(bh.Histogram):
         return self.values()
 
     @property
+    def areas(self) -> np.array:
+        """get bin areas"""
+        return self.bin_values * self.bin_widths
+
+    @property
     def integral(self) -> float:
         """get integral of histogram"""
+        return sum(self.areas)
+
+    @property
+    def bin_sum(self) -> float:
+        """Get sum of bin contents"""
         return sum(self.bin_values)
 
     def normalised(self) -> Histogram1D:
         """Return histogram normalised to area"""
-        return self.rescaled(self.integral)
+        return self.scaled(1 / self.bin_sum)
 
-    def rescaled(self, scale_factor: float) -> Histogram1D:
+    def scaled(self, scale_factor: float) -> Histogram1D:
         """Return rescaled histogram"""
-        return self.copy() / scale_factor
+        return self.copy() * scale_factor
 
     def plot(self,
              ax: plt.Axes = None,
-             yerr: Union[ArrayLike, str] = 'rsumw2',
+             yerr: Union[ArrayLike, bool] = True,
              w2: bool = False,
              normalise: Union[float, bool] = False,
              scale_by_bin_width: bool = False,
@@ -182,25 +228,14 @@ class Histogram1D(bh.Histogram):
         elif normalise is True:
             hist = self.normalised()
         elif isinstance(normalise, (float, int)):
-            hist = self.rescaled(normalise)
+            hist = self.scaled(normalise)
         else:
             raise TypeError("'normalise' must be a float, int or boolean")
 
-        if w2:
-            sumw2 = hist.sumw2
-        else: sumw2 = None
-
-        if yerr is None:
-            pass
-        elif isinstance(yerr, str):
-            if yerr == 'rsumw2':
-                yerr = hist.root_sumw2
-            elif yerr == 'sqrtN':
-                yerr = True
-            else:
-                raise ValueError(f"Valid yerrs: 'rsumw2', 'sqrtN'. Got {yerr}")
+        if yerr is True:
+            yerr = hist.root_sumw2
         elif not hasattr(yerr, '__len__'):
-            raise TypeError(f"Valid yerr string values: 'rsumw2', 'sqrtN' or iterable of values. Got {yerr}")
+            raise TypeError(f"yerr should be a bool or iterable of values. Got {yerr}")
 
         bin_vals = hist.bin_values
         if scale_by_bin_width:
@@ -208,13 +243,13 @@ class Histogram1D(bh.Histogram):
             if hasattr(yerr, '__len__'):
                 yerr /= hist.bin_widths
 
-        hep.histplot(bin_vals, bins=hist.bin_edges, ax=ax, yerr=yerr, w2=sumw2, **kwargs)
+        hep.histplot(bin_vals, bins=hist.bin_edges, ax=ax, yerr=yerr, w2=hist.sumw2 if w2 else None, **kwargs)
 
     def plot_ratio(
             self,
             other: Histogram1D,
             ax: plt.Axes = None,
-            yerr: Union[ArrayLike, str] = 'rsumw2',
+            yerr: Union[ArrayLike, bool] = True,
             normalise: bool = False,
             label: str = None,
             **kwargs
@@ -239,29 +274,14 @@ class Histogram1D(bh.Histogram):
         if not ax:
             _, ax = plt.subplots()
 
+        h_ratio = self / other
         if normalise:
-            h = self.normalised()
-            o = other.normalised()
-        else:
-            h = self.copy()
-            o = other.copy()
-        vals = h.bin_values / o.bin_values
+            h_ratio = h_ratio.normalised()
 
-        if yerr is None:
-            pass
-        elif isinstance(yerr, str):
-            # propagate errors
-            if yerr == 'rsumw2':
-                yerr = vals * np.sqrt((h.root_sumw2 / h.bin_values) ** 2
-                                      + (o.root_sumw2 / o.bin_values) ** 2)
-            elif yerr == 'sqrtN':
-                yerr = vals * np.sqrt((1 / h.bin_values) + (1 / o.bin_values))
-            else:
-                raise ValueError(f"Valid yerr string values: 'rsumw2', 'sqrtN'. Got {yerr}")
-        elif not hasattr(yerr, '__len__'):
-            raise TypeError(f"Valid yerrs: 'rsumw2', 'sqrtN' or iterable of values. Got {yerr}")
+        if yerr is True:
+            yerr = h_ratio.sumw2
 
-        ax.errorbar(h.bin_centres, vals, xerr=h.bin_widths / 2, yerr=yerr,
+        ax.errorbar(h_ratio.bin_centres, h_ratio.bin_values, xerr=h_ratio.bin_widths / 2, yerr=yerr,
                     linestyle='None', label=label, **kwargs)
         ax.axhline(1., linestyle='--', linewidth=1., c='k')
 

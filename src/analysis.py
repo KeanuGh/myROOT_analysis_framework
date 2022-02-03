@@ -328,7 +328,7 @@ class Analysis:
             var: str,
             bins: Union[List[float], Tuple[int, float, float]],
             weight: Union[str, float] = 1.,
-            yerr: Union[ArrayLike, str] = None,
+            yerr: Union[ArrayLike, str] = True,
             labels: List[str] = None,
             w2: bool = False,
             normalise: Union[float, bool, str] = 'lumi',

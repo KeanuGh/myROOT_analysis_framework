@@ -377,7 +377,7 @@ class Dataset:
             bins: Union[tuple, list],
             weight: Union[str, float] = 1.,
             ax: plt.Axes = None,
-            yerr: Union[ArrayLike, str] = None,
+            yerr: Union[ArrayLike, bool] = False,
             normalise: Union[float, bool] = False,
             logbins: bool = False,
             apply_cuts: Union[bool, str, List[str]] = False,
@@ -419,7 +419,7 @@ class Dataset:
             if isinstance(weight, str)
             else weight
         )
-        hist = Histogram1D(bins, df[var], weights, logbins)
+        hist = Histogram1D(df[var], bins, weights, logbins)
         hist.plot(
             ax=ax,
             yerr=yerr,
@@ -433,7 +433,7 @@ class Dataset:
             var: str,
             bins: Union[List[float], Tuple[int, float, float]],
             weight: Union[str, float] = 1.,
-            yerr: Union[ArrayLike, str] = 'rsumw2',
+            yerr: Union[ArrayLike, bool] = True,
             w2: bool = False,
             normalise: Union[float, bool, str] = 'lumi',
             logbins: bool = False,
