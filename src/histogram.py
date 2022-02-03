@@ -2,15 +2,13 @@ from __future__ import annotations
 
 from typing import Union, List, Tuple, Any, overload
 
-import ROOT
 import boost_histogram as bh
 import mplhep as hep
 import numpy as np
 from matplotlib import pyplot as plt
 from numpy.typing import ArrayLike
 
-plt.style.use(hep.style.ATLAS)  # set atlas-style plots
-np.seterr(invalid='ignore')  # ignore division by zero errors
+plt.style.use(hep.style.ATLAS)
 
 
 # TODO: 2D hist
@@ -146,16 +144,15 @@ class Histogram1D(bh.Histogram, family=None):
             raise TypeError(f"Bins must be formatted as either tuple (n_bins, start, stop) or a list of bin edges. "
                             f"Got {bins} of type {type(bins)}")
 
-    # Variables
-    # ===================
     @property
-    def n_bins(self) -> int:
-        """Get number of bins"""
-        return self.axes[0].size
+    def sumw2(self) -> np.array:
+        """get squared sum of weights"""
+        return self.view().variance
 
     @property
-    def extent(self) -> int:
-        return self.axes[0].extent
+    def root_sumw2(self) -> np.array:
+        """get squared sum of weights"""
+        return np.sqrt(self.sumw2)
 
     @property
     def bin_widths(self) -> np.array:
@@ -163,7 +160,7 @@ class Histogram1D(bh.Histogram, family=None):
         return self.axes[0].widths
 
     @property
-    def bin_edges(self,) -> np.array:
+    def bin_edges(self) -> np.array:
         """get bin edges"""
         return self.axes[0].edges
 
@@ -172,22 +169,15 @@ class Histogram1D(bh.Histogram, family=None):
         """get bin centres"""
         return self.axes[0].centers
 
-    def sumw2(self, flow: bool = False) -> np.array:
-        """get squared sum of weights"""
-        return self.view(flow).variance
-
-    def root_sumw2(self, flow: bool = False) -> np.array:
-        """get squared sum of weights"""
-        return np.sqrt(self.sumw2(flow))
-
-    def bin_values(self, flow: bool = False) -> np.array:
+    @property
+    def bin_values(self) -> np.array:
         """get bin values"""
-        return self.values(flow)
+        return self.values()
 
     @property
     def areas(self) -> np.array:
         """get bin areas"""
-        return self.bin_values() * self.bin_widths
+        return self.bin_values * self.bin_widths
 
     @property
     def integral(self) -> float:
@@ -197,10 +187,8 @@ class Histogram1D(bh.Histogram, family=None):
     @property
     def bin_sum(self) -> float:
         """Get sum of bin contents"""
-        return sum(self.bin_values())
+        return sum(self.bin_values)
 
-    # Scaling
-    # ===================
     def normalised(self) -> Histogram1D:
         """Return histogram normalised to area"""
         return self.scaled(1 / self.bin_sum)
@@ -209,48 +197,14 @@ class Histogram1D(bh.Histogram, family=None):
         """Return rescaled histogram"""
         return self.copy() * scale_factor
 
-    # Fitting
-    # ===================
-    def chi_square_fit(self, other: Union[ROOT.TF1, ROOT.TH1, Histogram1D]) -> Tuple[float, float]:
-        """Perform chi-squared test. Retun chi2 per degree of freedom, pvalue"""
-        h1 = self.to_TH1()
-        if isinstance(other, ROOT.TH1):
-            return h1.Chi2Test(other, "WWCHI2/NDF"), h1.Chi2Test(other, "WW")
-        elif isinstance(other, Histogram1D):
-            h2 = other.to_TH1()
-            return h1.Chi2Test(h2, "WWCHI2/NDF"), h1.Chi2Test(h2, "WW")
-        elif isinstance(other, ROOT.TF1):
-            return h1.Chisquare(other, "WWCHI2/NDF"), h1.Chisquare(other, "WW")
-        else:
-            raise TypeError(f"{type(other)} is an incorrect type for a chi-square test")
-
-    # Conversion
-    # ===================
-    def to_TH1(self, name: str = 'name', title: str = 'title') -> ROOT.TH1F:
-        """Convert Histogram to ROOT TH1F"""
-        try:
-            h_root = ROOT.TH1F(name, title, self.n_bins, self.bin_edges)
-        except TypeError as e:
-            raise e
-
-        # fill TH1
-        for idx, bin_cont in np.ndenumerate(self.view(flow=True)):
-            h_root.SetBinContent(*idx, bin_cont[0])  # bin value
-            h_root.SetBinError(*idx, np.sqrt(bin_cont[1]))  # root sum of weights
-
-        return h_root
-
-    # Plotting
-    # ===================
-    def plot(
-            self,
-            ax: plt.Axes = None,
-            yerr: Union[ArrayLike, bool] = True,
-            w2: bool = False,
-            normalise: Union[float, bool] = False,
-            scale_by_bin_width: bool = False,
-            **kwargs
-    ) -> None:
+    def plot(self,
+             ax: plt.Axes = None,
+             yerr: Union[ArrayLike, bool] = True,
+             w2: bool = False,
+             normalise: Union[float, bool] = False,
+             scale_by_bin_width: bool = False,
+             **kwargs
+             ) -> None:
         """
         Plot histogram on axis ax
 
@@ -279,7 +233,7 @@ class Histogram1D(bh.Histogram, family=None):
             raise TypeError("'normalise' must be a float, int or boolean")
 
         if yerr is True:
-            yerr = hist.root_sumw2()
+            yerr = hist.root_sumw2
         elif not hasattr(yerr, '__len__'):
             raise TypeError(f"yerr should be a bool or iterable of values. Got {yerr}")
 
@@ -289,7 +243,7 @@ class Histogram1D(bh.Histogram, family=None):
             if hasattr(yerr, '__len__'):
                 yerr /= hist.bin_widths
 
-        hep.histplot(bin_vals, bins=hist.bin_edges, ax=ax, yerr=yerr, w2=hist.sumw2() if w2 else None, **kwargs)
+        hep.histplot(bin_vals, bins=hist.bin_edges, ax=ax, yerr=yerr, w2=hist.sumw2 if w2 else None, **kwargs)
 
     def plot_ratio(
             self,
@@ -325,9 +279,9 @@ class Histogram1D(bh.Histogram, family=None):
             h_ratio = h_ratio.normalised()
 
         if yerr is True:
-            yerr = h_ratio.root_sumw2()
+            yerr = h_ratio.sumw2
 
-        ax.errorbar(h_ratio.bin_centres, h_ratio.bin_values(), xerr=h_ratio.bin_widths / 2, yerr=yerr,
+        ax.errorbar(h_ratio.bin_centres, h_ratio.bin_values, xerr=h_ratio.bin_widths / 2, yerr=yerr,
                     linestyle='None', label=label, **kwargs)
         ax.axhline(1., linestyle='--', linewidth=1., c='k')
 
