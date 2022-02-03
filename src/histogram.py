@@ -18,7 +18,6 @@ class Histogram1D(bh.Histogram, family=None):
     """
     Wrapper around boost-histogram histogram for 1D
     """
-
     @overload
     def __init__(self, bins: List[float]) -> None:
         ...
@@ -216,12 +215,12 @@ class Histogram1D(bh.Histogram, family=None):
         """Perform chi-squared test. Retun chi2 per degree of freedom, pvalue"""
         h1 = self.to_TH1()
         if isinstance(other, ROOT.TH1):
-            return h1.Chi2Test(other, "CHI2/NDF"), h1.Chi2Test(other, "WW")
+            return h1.Chi2Test(other, "WWCHI2/NDF"), h1.Chi2Test(other, "WW")
         elif isinstance(other, Histogram1D):
             h2 = other.to_TH1()
-            return h1.Chi2Test(h2, "CHI2/NDF"), h1.Chi2Test(h2, "WW")
+            return h1.Chi2Test(h2, "WWCHI2/NDF"), h1.Chi2Test(h2, "WW")
         elif isinstance(other, ROOT.TF1):
-            return h1.Chisquare(other, "CHI2/NDF"), h1.Chisquare(other, "WW")
+            return h1.Chisquare(other, "WWCHI2/NDF"), h1.Chisquare(other, "WW")
         else:
             raise TypeError(f"{type(other)} is an incorrect type for a chi-square test")
 
