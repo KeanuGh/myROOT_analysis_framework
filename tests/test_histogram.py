@@ -66,28 +66,59 @@ root_h_prod.Multiply(root_h2)
 )
 class TestHistogram1D:
     def test_bin_edges(self, my_hist: Histogram1D, root_hist: ROOT.TH1F):
-        TH1_edges = [root_hist.GetBinLowEdge(i + 1) for i in range(root_hist.GetNbinsX())]
-        TH1_edges.append(TH1_edges[-1] + root_hist.GetBinWidth(root_hist.GetNbinsX()))
-        np.testing.assert_almost_equal(my_hist.bin_edges, TH1_edges, decimal=4)
-
-    def test_bin_values(self, my_hist: Histogram1D, root_hist: ROOT.TH1F):
-        TH1_values = [root_hist.GetBinContent(i + 1) for i in range(root_hist.GetNbinsX())]
-        np.testing.assert_almost_equal(my_hist.bin_values, TH1_values, decimal=4)
+        TH1_edges = [root_hist.GetBinLowEdge(i + 1) for i in range(root_hist.GetNbinsX() + 1)]
+        np.testing.assert_allclose(my_hist.bin_edges, TH1_edges, rtol=1e-06)
 
     def test_bin_widths(self, my_hist: Histogram1D, root_hist: ROOT.TH1F):
         TH1_widths = [root_hist.GetBinWidth(i + 1) for i in range(root_hist.GetNbinsX())]
-        np.testing.assert_almost_equal(my_hist.bin_widths, TH1_widths, decimal=4)
+        np.testing.assert_allclose(my_hist.bin_widths, TH1_widths, rtol=1e-06)
 
     def test_bin_centres(self, my_hist: Histogram1D, root_hist: ROOT.TH1F):
         TH1_centres = [root_hist.GetBinCenter(i + 1) for i in range(root_hist.GetNbinsX())]
-        np.testing.assert_almost_equal(my_hist.bin_centres, TH1_centres, decimal=4)
+        np.testing.assert_allclose(my_hist.bin_centres, TH1_centres, rtol=1e-06)
+
+    def test_bin_values(self, my_hist: Histogram1D, root_hist: ROOT.TH1F):
+        TH1_values = [root_hist.GetBinContent(i) for i in range(root_hist.GetNbinsX() + 2)]
+        np.testing.assert_allclose(my_hist.bin_values(flow=True), TH1_values, rtol=1e-06)
 
     def test_bin_errors(self, my_hist: Histogram1D, root_hist: ROOT.TH1F):
-        TH1_errors = [root_hist.GetBinError(i + 1) for i in range(root_hist.GetNbinsX())]
-        np.testing.assert_almost_equal(my_hist.root_sumw2, TH1_errors, decimal=4)
+        TH1_errors = [root_hist.GetBinError(i) for i in range(root_hist.GetNbinsX() + 2)]
+        np.testing.assert_allclose(my_hist.root_sumw2(flow=True), TH1_errors, rtol=1e-06)
 
     def test_integral(self, my_hist: Histogram1D, root_hist: ROOT.TH1F):
-        np.testing.assert_almost_equal(my_hist.integral, root_hist.Integral("width"), decimal=4)
+        np.testing.assert_allclose(my_hist.integral, root_hist.Integral("width"), rtol=1e-06)
 
     def test_bin_sum(self, my_hist: Histogram1D, root_hist: ROOT.TH1F):
-        np.testing.assert_almost_equal(my_hist.bin_sum, root_hist.Integral(), decimal=4)
+        np.testing.assert_allclose(my_hist.bin_sum, root_hist.Integral(), rtol=1e-06)
+
+    def test_convert(self, my_hist: Histogram1D, root_hist: ROOT.TH1F):
+        new_th1 = my_hist.to_TH1()
+
+        # Edges
+        TH1_edges = [root_hist.GetBinLowEdge(i) for i in range(root_hist.GetNbinsX() + 2)]
+        new_TH1_edges = [new_th1.GetBinLowEdge(i) for i in range(new_th1.GetNbinsX() + 2)]
+        np.testing.assert_allclose(new_TH1_edges, TH1_edges, rtol=1e-06)
+
+        # values
+        TH1_values = [root_hist.GetBinContent(i + 1) for i in range(root_hist.GetNbinsX())]
+        new_TH1_values = [new_th1.GetBinContent(i + 1) for i in range(new_th1.GetNbinsX())]
+        np.testing.assert_allclose(new_TH1_values, TH1_values, rtol=1e-06)
+
+        # Centres
+        TH1_centres = [root_hist.GetBinCenter(i + 1) for i in range(root_hist.GetNbinsX())]
+        new_TH1_centres = [new_th1.GetBinCenter(i + 1) for i in range(new_th1.GetNbinsX())]
+        np.testing.assert_allclose(new_TH1_centres, TH1_centres, rtol=1e-06)
+
+        # widths
+        TH1_widths = [root_hist.GetBinWidth(i + 1) for i in range(root_hist.GetNbinsX())]
+        new_TH1_widths = [new_th1.GetBinWidth(i + 1) for i in range(new_th1.GetNbinsX())]
+        np.testing.assert_allclose(new_TH1_widths, TH1_widths, rtol=1e-06)
+
+        # errors
+        TH1_errors = [root_hist.GetBinError(i + 1) for i in range(root_hist.GetNbinsX())]
+        new_TH1_errors = [new_th1.GetBinError(i + 1) for i in range(new_th1.GetNbinsX())]
+        np.testing.assert_allclose(new_TH1_errors, TH1_errors, rtol=1e-06)
+
+        # integral
+        np.testing.assert_allclose(new_th1.Integral("width"), root_hist.Integral("width"), rtol=1e-06)
+        np.testing.assert_allclose(new_th1.Integral(), root_hist.Integral(), rtol=1e-06)

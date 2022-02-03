@@ -59,17 +59,9 @@ def bh_to_TH1(h_bh: bh.Histogram, name: str, title: str, hist_type: str = 'F') -
     except TypeError as e:
         raise e
 
-    # filling bins contents n-dimensionally for different storage types
-    # not very pythonic but shouldn't take too long as long as the histogram isn't too big
-    if hasattr(h_bh.view(), 'value'):
-        # for Weighted/Mean/WeightedMean Accumulator storages
-        for idx, bin_cont in np.ndenumerate(h_bh.view(flow=True)):
-            h_root.SetBinContent(*idx, bin_cont[0])  # bin value
-            h_root.SetBinError(*idx, np.sqrt(bin_cont[1]))  # root sum of weights
-    else:
-        # Sum storage
-        for idx, bin_cont in np.ndenumerate(h_bh.view(flow=True)):
-            h_root.SetBinContent(*idx, bin_cont)  # bin value
+    for idx, bin_cont in np.ndenumerate(h_bh.view(flow=True)):
+        h_root.SetBinContent(*idx, bin_cont[0])  # bin value
+        h_root.SetBinError(*idx, np.sqrt(bin_cont[1]))  # root sum of weights
 
     return h_root
 
