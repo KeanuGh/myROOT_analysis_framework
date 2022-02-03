@@ -127,7 +127,7 @@ class Dataset:
         """Get reconstructed variables in dataset"""
         return self.__get_var_tag('reco')
 
-    def _get_var_tag(self, tag: str) -> list[str]:
+    def __get_var_tag(self, tag: str) -> list[str]:
         """Get all variables in dataset with given tag"""
         if tag not in ('meta', 'truth', 'reco'):
             raise ValueError(f"Unknown tag '{tag}'")
