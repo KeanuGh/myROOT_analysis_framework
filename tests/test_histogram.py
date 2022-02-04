@@ -4,8 +4,8 @@ import pytest
 
 from src.histogram import Histogram1D
 
-ROOT.TH1.SetDefaultSumw2()
-ROOT.gROOT.SetBatch()
+ROOT.TH1.SetDefaultSumw2()  # default to weighted TH1s
+ROOT.TH1.AddDirectory(False)  # avoid TH1 overwrite warning
 np.random.seed(42)
 
 nbins = 20
@@ -68,31 +68,40 @@ class TestHistogram1D:
     def test_bin_edges(self, my_hist: Histogram1D, root_hist: ROOT.TH1F):
         TH1_edges = [root_hist.GetBinLowEdge(i + 1) for i in range(root_hist.GetNbinsX() + 1)]
         np.testing.assert_allclose(my_hist.bin_edges, TH1_edges, rtol=1e-06)
+        assert isinstance(my_hist, Histogram1D)
 
     def test_bin_widths(self, my_hist: Histogram1D, root_hist: ROOT.TH1F):
         TH1_widths = [root_hist.GetBinWidth(i + 1) for i in range(root_hist.GetNbinsX())]
         np.testing.assert_allclose(my_hist.bin_widths, TH1_widths, rtol=1e-06)
+        assert isinstance(my_hist, Histogram1D)
 
     def test_bin_centres(self, my_hist: Histogram1D, root_hist: ROOT.TH1F):
         TH1_centres = [root_hist.GetBinCenter(i + 1) for i in range(root_hist.GetNbinsX())]
         np.testing.assert_allclose(my_hist.bin_centres, TH1_centres, rtol=1e-06)
+        assert isinstance(my_hist, Histogram1D)
 
     def test_bin_values(self, my_hist: Histogram1D, root_hist: ROOT.TH1F):
         TH1_values = [root_hist.GetBinContent(i) for i in range(root_hist.GetNbinsX() + 2)]
         np.testing.assert_allclose(my_hist.bin_values(flow=True), TH1_values, rtol=1e-06)
+        assert isinstance(my_hist, Histogram1D)
 
     def test_bin_errors(self, my_hist: Histogram1D, root_hist: ROOT.TH1F):
         TH1_errors = [root_hist.GetBinError(i) for i in range(root_hist.GetNbinsX() + 2)]
         np.testing.assert_allclose(my_hist.root_sumw2(flow=True), TH1_errors, rtol=1e-06)
+        assert isinstance(my_hist, Histogram1D)
 
     def test_integral(self, my_hist: Histogram1D, root_hist: ROOT.TH1F):
         np.testing.assert_allclose(my_hist.integral, root_hist.Integral("width"), rtol=1e-06)
+        assert isinstance(my_hist, Histogram1D)
 
     def test_bin_sum(self, my_hist: Histogram1D, root_hist: ROOT.TH1F):
         np.testing.assert_allclose(my_hist.bin_sum, root_hist.Integral(), rtol=1e-06)
+        assert isinstance(my_hist, Histogram1D)
 
     def test_convert(self, my_hist: Histogram1D, root_hist: ROOT.TH1F):
         new_th1 = my_hist.to_TH1()
+
+        assert isinstance(new_th1, ROOT.TH1)
 
         # Edges
         TH1_edges = [root_hist.GetBinLowEdge(i) for i in range(root_hist.GetNbinsX() + 2)]

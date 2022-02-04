@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from typing import Union, List, Tuple, Any, overload
 
 import ROOT
@@ -50,7 +51,7 @@ class Histogram1D(bh.Histogram, family=None):
         :param var: iterable of values to fill histogram 
         :param weight: iterable of weights corresponding to each variable value or value to weight by
         :param logbins: whether logarithmic binnings
-        :param kwargs: keyword arguments that would be passed to boost_histogram.Histogram()
+        :param kwargs: keyword arguments to pass to boost_histogram.Histogram()
         """
         # to avoid issues with copying
         if isinstance(var, bh._core.hist.any_weight):
@@ -70,40 +71,41 @@ class Histogram1D(bh.Histogram, family=None):
             if var is not None:
                 self.fill(var, weight=weight, threads=0)
 
-    def __truediv__(self: Histogram1D, other: Union["bh.Histogram", "np.typing.NDArray[Any]", float]) -> Histogram1D:
+    def __truediv__(self, other: Union["bh.Histogram", "np.typing.NDArray[Any]", float]) -> Histogram1D:
+        """boost-histogram doesn't allow dividing weighted histograms so implement that here"""
         result = self.copy(deep=False)
         return result.__itruediv__(other)
 
-    def __itruediv__(self: Histogram1D, other: Union["bh.Histogram", "np.typing.NDArray[Any]", float]) -> Histogram1D:
+    def __itruediv__(self, other: Union["bh.Histogram", "np.typing.NDArray[Any]", float]) -> Histogram1D:
+        """boost-histogram doesn't allow dividing weighted histograms so implement that here"""
         if isinstance(other, Histogram1D):
-            # Scale variances. See https://root.cern.ch/doc/master/TH1_8cxx_source.html#l02929
+            # Scale variances based on ROOT method. See https://root.cern.ch/doc/master/TH1_8cxx_source.html#l02929
             c0 = self.view(flow=True).value
             c1 = other.view(flow=True).value
             clsq = c1 * c1
             variance = (self.view(flow=True).variance * clsq + other.view(flow=True).variance * c0 * c0) / (clsq * clsq)
 
             self.view(flow=True).variance = variance
-            self.view(flow=True).value /= other.view(flow=True).value
+            self.view(flow=True).value.__itruediv__(other.view(flow=True).value)
             return self
         else:
             return self._compute_inplace_op("__itruediv__", other)
 
-    def __mul__(self: Histogram1D, other: Union["bh.Histogram", "np.typing.NDArray[Any]", float]) -> Histogram1D:
+    def __mul__(self, other: Union["bh.Histogram", "np.typing.NDArray[Any]", float]) -> Histogram1D:
+        """boost-histogram doesn't allow multiplying weighted histograms so implement that here"""
         result = self.copy(deep=False)
         return result.__imul__(other)
 
-    def __rmul__(self: Histogram1D, other: Union["bh.Histogram", "np.typing.NDArray[Any]", float]) -> Histogram1D:
-        return self * other
-
-    def __imul__(self: Histogram1D, other: Union["bh.Histogram", "np.typing.NDArray[Any]", float]) -> Histogram1D:
+    def __imul__(self, other: Union["bh.Histogram", "np.typing.NDArray[Any]", float]) -> Histogram1D:
+        """boost-histogram doesn't allow multiplying weighted histograms so implement that here"""
         if isinstance(other, Histogram1D):
-            # Scale variances. See https://root.cern.ch/doc/master/TH1_8cxx_source.html#l06116
+            # Scale variances based on ROOT method. See https://root.cern.ch/doc/master/TH1_8cxx_source.html#l06116
             c0 = self.view(flow=True).value
             c1 = other.view(flow=True).value
             variance = self.view(flow=True).variance * c1 * c1 + other.view(flow=True).variance * c0 * c0
 
             self.view(flow=True).variance = variance
-            self.view(flow=True).value *= other.view(flow=True).value
+            self.view(flow=True).value.__imul__(other.view(flow=True).value)
             return self
         else:
             return self._compute_inplace_op("__imul__", other)
@@ -119,16 +121,14 @@ class Histogram1D(bh.Histogram, family=None):
         ...
 
     @staticmethod
-    def __gen_axis(bins: Union[List[float], Tuple[int, float, float]],
-                   logbins: bool = False
-                   ) -> bh.axis.Axis:
+    def __gen_axis(bins: Union[List[float], Tuple[int, float, float]], logbins: bool = False) -> bh.axis.Axis:
         """
         Returns the correct type of boost-histogram axis based on the input bins.
 
         :param bins: tuple of bins in x (n_bins, start, stop) or list of bin edges.
                      In the first case returns an axis of type Regular(), otherwise of type Variable().
                      Raises error if not formatted in one of these ways.
-        :param logbins: whether logarithmic binnins
+        :param logbins: whether logarithmic bins
         """
         transform = bh.axis.transform.log if logbins else None
 
@@ -139,7 +139,7 @@ class Histogram1D(bh.Histogram, family=None):
 
         elif isinstance(bins, list):
             if transform is not None:
-                raise ValueError("Transforms cannot be passed to variable bin types")
+                logging.warning("Log transform tried to be applied to variable bins. Ignoring")
             return bh.axis.Variable(bins)
 
         else:
