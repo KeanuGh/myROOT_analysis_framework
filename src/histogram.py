@@ -5,9 +5,10 @@ from typing import Union, List, Tuple, Any, overload
 
 import ROOT
 import boost_histogram as bh
+import matplotlib.pyplot as plt
 import mplhep as hep
 import numpy as np
-from matplotlib import pyplot as plt
+from matplotlib.offsetbox import AnchoredText
 from numpy.typing import ArrayLike
 
 plt.style.use(hep.style.ATLAS)  # set atlas-style plots
@@ -58,6 +59,8 @@ class Histogram1D(bh.Histogram, family=None):
             super().__init__(var)
 
         else:
+            self.n_entries = 0
+
             # get axis
             axis = (
                 bins if isinstance(bins, bh.axis.Axis)
@@ -69,7 +72,15 @@ class Histogram1D(bh.Histogram, family=None):
                 **kwargs
             )
             if var is not None:
-                self.fill(var, weight=weight, threads=0)
+                self.fill(var, weight=weight)
+
+        # for storing the TH1
+        self.TH1: ROOT.TH1 = None
+
+    def fill(self, var: ArrayLike, weight: ArrayLike = None) -> Histogram1D:
+        self.n_entries += len(var)
+        super().fill(var, weight=weight, threads=0)
+        return self
 
     def __truediv__(self, other: Union["bh.Histogram", "np.typing.NDArray[Any]", float]) -> Histogram1D:
         """boost-histogram doesn't allow dividing weighted histograms so implement that here"""
@@ -163,6 +174,11 @@ class Histogram1D(bh.Histogram, family=None):
         return self.axes[0].widths
 
     @property
+    def bin_range(self) -> np.array:
+        """get histogram range"""
+        return self.bin_edges[-1] - self.bin_edges[0]
+
+    @property
     def bin_edges(self,) -> np.array:
         """get bin edges"""
         return self.axes[0].edges
@@ -171,6 +187,10 @@ class Histogram1D(bh.Histogram, family=None):
     def bin_centres(self) -> np.array:
         """get bin centres"""
         return self.axes[0].centers
+
+    def eff_entries(self, flow: bool = False) -> np.array:
+        """Get effective number of entries"""
+        return self.bin_sum(flow) * self.bin_sum(flow) / sum(self.sumw2(flow))
 
     def sumw2(self, flow: bool = False) -> np.array:
         """get squared sum of weights"""
@@ -194,16 +214,61 @@ class Histogram1D(bh.Histogram, family=None):
         """get integral of histogram"""
         return sum(self.areas)
 
-    @property
-    def bin_sum(self) -> float:
+    def bin_sum(self, flow: bool = False) -> float:
         """Get sum of bin contents"""
-        return sum(self.bin_values())
+        return sum(self.bin_values(flow))
+
+    # Stats
+    # ===================
+    # properties beginning with 'R' are calculated using ROOT
+    @property
+    def Rmean(self) -> float:
+        """Return mean value of histogram - ROOT"""
+        return self.to_TH1().GetMean()
+
+    @property
+    def mean(self) -> float:
+        """Return mean value of histogram"""
+        return sum(self.bin_values() * self.bin_centres) / self.bin_sum()
+
+    @property
+    def Rmean_error(self) -> float:
+        """Return standard error of mean - ROOT"""
+        return self.to_TH1().GetMeanError()
+
+    @property
+    def mean_error(self) -> float:
+        """Return standard error of mean"""
+        return self.std / np.sqrt(self.eff_entries())
+
+    @property
+    def Rstd(self) -> float:
+        """Return standard deviation - ROOT"""
+        return self.to_TH1().GetStdDev()
+
+    @property
+    def std(self) -> float:
+        """Return standard deviation"""
+        # m = self.mean
+        return np.sqrt((sum(self.bin_values() * (self.bin_centres - self.Rmean) ** 2) / self.bin_sum()))
+        # return np.sqrt(np.sum(self.bin_values() * self.bin_centres * self.bin_centres) - m * m)
+
+    @property
+    def Rstd_error(self) -> float:
+        """Return standard deviation - ROOT"""
+        return self.to_TH1().GetStdDev()
+
+    @property
+    def std_error(self) -> float:
+        """Return standard deviation - ROOT"""
+        m = self.mean
+        return np.sqrt((sum(self.bin_values() * self.bin_centres * self.bin_centres) - m * m) / 2 * self.eff_entries())
 
     # Scaling
     # ===================
     def normalised(self) -> Histogram1D:
         """Return histogram normalised to area"""
-        return self.scaled(1 / self.bin_sum)
+        return self.scaled(1 / self.bin_sum())
 
     def scaled(self, scale_factor: float) -> Histogram1D:
         """Return rescaled histogram"""
@@ -228,15 +293,17 @@ class Histogram1D(bh.Histogram, family=None):
     # ===================
     def to_TH1(self, name: str = 'name', title: str = 'title') -> ROOT.TH1F:
         """Convert Histogram to ROOT TH1F"""
-        try:
+        if self.TH1:
+            h_root = self.TH1
+        else:
             h_root = ROOT.TH1F(name, title, self.n_bins, self.bin_edges)
-        except TypeError as e:
-            raise e
 
         # fill TH1
         for idx, bin_cont in np.ndenumerate(self.view(flow=True)):
             h_root.SetBinContent(*idx, bin_cont[0])  # bin value
             h_root.SetBinError(*idx, np.sqrt(bin_cont[1]))  # root sum of weights
+
+        self.TH1 = h_root
 
         return h_root
 
@@ -249,6 +316,7 @@ class Histogram1D(bh.Histogram, family=None):
             w2: bool = False,
             normalise: Union[float, bool] = False,
             scale_by_bin_width: bool = False,
+            stats_box: bool = False,
             **kwargs
     ) -> None:
         """
@@ -265,6 +333,7 @@ class Histogram1D(bh.Histogram, family=None):
                           - int or float
                           - True for normalisation of unity
         :param scale_by_bin_width: whether to scale histogram by bin widths
+        :param stats_box: whether to add a stats box to the plot
         :param kwargs: keyword arguments to pass to mplhep.histplot()
         :return: None
         """
@@ -289,7 +358,15 @@ class Histogram1D(bh.Histogram, family=None):
             if hasattr(yerr, '__len__'):
                 yerr /= hist.bin_widths
 
-        hep.histplot(bin_vals, bins=hist.bin_edges, ax=ax, yerr=yerr, w2=hist.sumw2() if w2 else None, **kwargs)
+        hep.histplot(self, ax=ax, yerr=yerr, w2=hist.sumw2() if w2 else None, **kwargs)
+
+        if stats_box:
+            textstr = '\n'.join((
+                r'$\mu=%.2f\pm%.2f$' % (self.mean, self.mean_error),
+                r'$\sigma=%.2f\pm%.2f$' % (self.Rstd, self.Rstd_error),
+                r'$\mathrm{eff\_entries}=%.0f$' % self.n_entries))
+            stats_box = AnchoredText(textstr, loc='upper right', fontsize='small')
+            ax.add_artist(stats_box)
 
     def plot_ratio(
             self,

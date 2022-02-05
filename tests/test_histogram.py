@@ -22,6 +22,8 @@ for ia, iw in zip(a, w):
 
 # extra histograms for operations
 b = np.random.normal(0.5, 1.1, 1000)
+# b = [-.9, -.7, -.5, -.3, -.1, .1, .3, .5, .7, .9]
+# w2 = np.ones(20)
 w2 = np.random.random(1000)
 mine_h2 = Histogram1D(b, (nbins, xmin, xmax), weight=w2)
 root_h2 = ROOT.TH1F('test', 'test;test', nbins, xmin, xmax)
@@ -46,11 +48,13 @@ root_h_normed.Scale(1 / root_h.Integral())
 mine_h_ratio = mine_h / mine_h2
 root_h_ratio = root_h.Clone()
 root_h_ratio.Divide(root_h2)
+root_h_ratio.ResetStats()
 
 # product
 mine_h_prod = mine_h * mine_h2
 root_h_prod = root_h.Clone()
 root_h_prod.Multiply(root_h2)
+root_h_ratio.ResetStats()
 
 
 @pytest.mark.parametrize(
@@ -95,8 +99,24 @@ class TestHistogram1D:
         assert isinstance(my_hist, Histogram1D)
 
     def test_bin_sum(self, my_hist: Histogram1D, root_hist: ROOT.TH1F):
-        np.testing.assert_allclose(my_hist.bin_sum, root_hist.Integral(), rtol=1e-06)
+        np.testing.assert_allclose(my_hist.bin_sum(), root_hist.Integral(), rtol=1e-06)
         assert isinstance(my_hist, Histogram1D)
+
+    def test_entries(self, my_hist: Histogram1D, root_hist: ROOT.TH1F):
+        assert my_hist.n_entries == root_hist.GetEntries()
+
+    def test_mean(self, my_hist: Histogram1D, root_hist: ROOT.TH1F):
+        # print(my_hist.mean, root_hist.GetMean())
+        np.testing.assert_allclose(my_hist.Rmean, root_hist.GetMean(), rtol=1e-06)
+
+    # def test_std(self, my_hist: Histogram1D, root_hist: ROOT.TH1F):
+    #     np.testing.assert_allclose(my_hist.std, root_hist.GetStdDev(), rtol=1e-06)
+
+    # def test_mean_error(self, my_hist: Histogram1D, root_hist: ROOT.TH1F):
+    #     np.testing.assert_allclose(my_hist.mean_error, root_hist.GetMeanError(), rtol=1e-06)
+    #
+    # def test_std_error(self, my_hist: Histogram1D, root_hist: ROOT.TH1F):
+    #     np.testing.assert_allclose(my_hist.std_error, root_hist.GetStdDevError(), rtol=1e-06)
 
     def test_convert(self, my_hist: Histogram1D, root_hist: ROOT.TH1F):
         new_th1 = my_hist.to_TH1()
@@ -131,3 +151,6 @@ class TestHistogram1D:
         # integral
         np.testing.assert_allclose(new_th1.Integral("width"), root_hist.Integral("width"), rtol=1e-06)
         np.testing.assert_allclose(new_th1.Integral(), root_hist.Integral(), rtol=1e-06)
+
+        # mean
+        np.testing.assert_allclose(new_th1.GetMean(), root_hist.GetMean(), rtol=1e-06)

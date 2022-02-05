@@ -350,7 +350,7 @@ class Dataset:
 
         # apply cuts
         self.__check_cut_cols(cut_cols)
-        cut_cols = [cutname + config.cut_label for cutname in cut_cols]
+        cut_cols = [cutname for cutname in cut_cols]
         if inplace:
             self.df = self.df.loc[self.df[cut_cols].all(1)]
             self.df.drop(columns=cut_cols, inplace=True)
