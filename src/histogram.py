@@ -10,6 +10,10 @@ import numpy as np
 from matplotlib.offsetbox import AnchoredText
 from numpy.typing import ArrayLike
 
+# settings
+ROOT.TH1.AddDirectory(False)  # stops TH1s from being saved and prevents overwrite warnings
+ROOT.TH1.SetDefaultSumw2()  # Sets weighted binning in all ROOT histograms by default
+ROOT.gROOT.SetBatch()  # Prevents TCanvas popups
 plt.style.use(hep.style.ATLAS)  # set atlas-style plots
 np.seterr(invalid='ignore')  # ignore division by zero errors
 
@@ -20,19 +24,21 @@ class Histogram1D(bh.Histogram, family=None):
     Wrapper around boost-histogram histogram for 1D
     """
     @overload
-    def __init__(self, bins: List[float]) -> None:
+    def __init__(self, bins: List[float], name: str = '', title: str = '') -> None:
         ...
 
     @overload
-    def __init__(self, bins: Tuple[int, float, float], logbins: ...) -> None:
+    def __init__(self, bins: Tuple[int, float, float], logbins: bool = False, name: str = '', title: str = '') -> None:
         ...
 
     @overload
     def __init__(self,
-                 var: ArrayLike = ...,
+                 var: ArrayLike = None,
                  bins: Union[List[float], Tuple[int, float, float], bh.axis.Axis] = (10, 0, 10),
-                 logbins: bool = ...,
-                 weight: Union[ArrayLike, int] = ...,
+                 logbins: bool = False,
+                 weight: Union[ArrayLike, int] = None,
+                 name: str = '',
+                 title: str = '',
                  **kwargs
                  ) -> None:
         ...
@@ -42,6 +48,8 @@ class Histogram1D(bh.Histogram, family=None):
                  bins: Union[List[float], Tuple[int, float, float], bh.axis.Axis] = (10, 0, 10),
                  weight: Union[ArrayLike, float] = None,
                  logbins: bool = False,
+                 name: str = '',
+                 title: str = '',
                  **kwargs
                  ):
         """
@@ -58,7 +66,8 @@ class Histogram1D(bh.Histogram, family=None):
             super().__init__(var)
 
         else:
-            self.n_entries = 0
+            # TH1
+            self.TH1 = ROOT.TH1F(name, title, *self.__get_TH1_bins(bins))
 
             # get axis
             axis = (
@@ -73,17 +82,18 @@ class Histogram1D(bh.Histogram, family=None):
             if var is not None:
                 self.fill(var, weight=weight)
 
-        # for storing the TH1
-        self.TH1: ROOT.TH1 = None
-
     def fill(self, var: ArrayLike, weight: ArrayLike = None) -> Histogram1D:
-        self.n_entries += len(var)
         super().fill(var, weight=weight, threads=0)
+
+        if weight is None:
+            weight = np.ones(len(var))
+        for v, w in zip(var, weight):
+            self.TH1.Fill(v, w)
         return self
 
     def __truediv__(self, other: Union["bh.Histogram", "np.typing.NDArray[Any]", float]) -> Histogram1D:
         """boost-histogram doesn't allow dividing weighted histograms so implement that here"""
-        result = self.copy(deep=False)
+        result = self.copy()
         return result.__itruediv__(other)
 
     def __itruediv__(self, other: Union["bh.Histogram", "np.typing.NDArray[Any]", float]) -> Histogram1D:
@@ -97,14 +107,22 @@ class Histogram1D(bh.Histogram, family=None):
 
             self.view(flow=True).variance = variance
             self.view(flow=True).value.__itruediv__(other.view(flow=True).value)
-            self.n_entries = self.eff_entries
+            self.TH1.Divide(other.TH1)
             return self
         else:
+            # scale TH1 properly
+            if hasattr(other, '__iter__'):
+                for i, val in enumerate(other):
+                    self.TH1.SetBinContent(i, self.TH1.GetBinContent(i) / val)
+                    self.TH1.SetBinError(i, self.TH1.GetBinError(i) / val)
+            else:
+                self.TH1.Scale(1 / other)
+            # let boost-histogram handle return
             return self._compute_inplace_op("__itruediv__", other)
 
     def __mul__(self, other: Union["bh.Histogram", "np.typing.NDArray[Any]", float]) -> Histogram1D:
         """boost-histogram doesn't allow multiplying weighted histograms so implement that here"""
-        result = self.copy(deep=False)
+        result = self.copy()
         return result.__imul__(other)
 
     def __imul__(self, other: Union["bh.Histogram", "np.typing.NDArray[Any]", float]) -> Histogram1D:
@@ -117,9 +135,16 @@ class Histogram1D(bh.Histogram, family=None):
 
             self.view(flow=True).variance = variance
             self.view(flow=True).value.__imul__(other.view(flow=True).value)
-            self.n_entries = self.eff_entries
+            self.TH1.Multiply(other.TH1)
             return self
         else:
+            # scale TH1 properly
+            if hasattr(other, '__iter__'):
+                for i, val in enumerate(other):
+                    self.TH1.SetBinValue(i, self.TH1.GetBinContent(i) * val)
+                    self.TH1.SetBinError(i, self.TH1.GetBinError(i) * val)
+            else:
+                self.TH1.Scale(other)
             return self._compute_inplace_op("__imul__", other)
 
     @staticmethod
@@ -153,6 +178,19 @@ class Histogram1D(bh.Histogram, family=None):
             raise TypeError(f"Bins must be formatted as either tuple (n_bins, start, stop) or a list of bin edges. "
                             f"Got {bins} of type {type(bins)}")
 
+    @staticmethod
+    def __get_TH1_bins(bins: Union[List[float], Tuple[int, float, float], bh.axis.Axis]
+                       ) -> Union[Tuple[int, list], Tuple[int, float, float]]:
+        """Format bins for TH1 constructor"""
+        if isinstance(bins, list):
+            return len(bins), bins
+        elif isinstance(bins, tuple):
+            if len(bins) != 3:
+                raise ValueError("Tuple of bins should be formatted like (n_bins, start, stop).")
+            return bins
+        elif isinstance(bins, bh.axis.Axis):
+            return bins.size, bins.edges
+
     # Variables
     # ===================
     @property
@@ -183,6 +221,11 @@ class Histogram1D(bh.Histogram, family=None):
     def bin_centres(self) -> np.array:
         """get bin centres"""
         return self.axes[0].centers
+
+    @property
+    def n_entries(self) -> float:
+        """Get number of entries"""
+        return self.TH1.GetEntries()
 
     @property
     def eff_entries(self) -> float:
@@ -219,45 +262,24 @@ class Histogram1D(bh.Histogram, family=None):
     # ===================
     # properties beginning with 'R' are calculated using ROOT
     @property
-    def Rmean(self) -> float:
-        """Return mean value of histogram - ROOT"""
-        return self.to_TH1().GetMean()
-
-    @property
     def mean(self) -> float:
-        """Return mean value of histogram"""
-        return sum(self.bin_values() * self.bin_centres) / self.bin_sum()
-
-    @property
-    def Rmean_error(self) -> float:
-        """Return standard error of mean - ROOT"""
-        return self.to_TH1().GetMeanError()
+        """Return mean value of histogram - ROOT"""
+        return self.TH1.GetMean()
 
     @property
     def mean_error(self) -> float:
-        """Return standard error of mean"""
-        return self.std / np.sqrt(self.eff_entries)
-
-    @property
-    def Rstd(self) -> float:
-        """Return standard deviation - ROOT"""
-        return self.to_TH1().GetStdDev()
+        """Return standard error of mean - ROOT"""
+        return self.TH1.GetMeanError()
 
     @property
     def std(self) -> float:
-        """Return standard deviation"""
-        return np.sqrt((sum(self.bin_values() * (self.bin_centres - self.Rmean) ** 2) / self.bin_sum()))
-
-    @property
-    def Rstd_error(self) -> float:
-        """Return standard deviation error - ROOT"""
-        return self.to_TH1().GetStdDevError()
+        """Return standard deviation - ROOT"""
+        return self.TH1.GetStdDev()
 
     @property
     def std_error(self) -> float:
-        """Return standard deviation error"""
-        m = self.mean
-        return np.sqrt((sum(self.bin_values() * self.bin_centres * self.bin_centres) - m * m) / 2 * self.eff_entries)
+        """Return standard deviation error - ROOT"""
+        return self.TH1.GetStdDevError()
 
     # Scaling
     # ===================
@@ -273,11 +295,11 @@ class Histogram1D(bh.Histogram, family=None):
     # ===================
     def chi_square(self, other: Union[ROOT.TF1, ROOT.TH1, Histogram1D]) -> Tuple[float, float]:
         """Perform chi-squared test. Retun chi2 per degree of freedom, pvalue"""
-        h1 = self.to_TH1()
+        h1 = self.TH1
         if isinstance(other, ROOT.TH1):
             return h1.Chi2Test(other, "WWCHI2/NDF"), h1.Chi2Test(other, "WW")
         elif isinstance(other, Histogram1D):
-            h2 = other.to_TH1()
+            h2 = other.TH1
             return h1.Chi2Test(h2, "WWCHI2/NDF"), h1.Chi2Test(h2, "WW")
         elif isinstance(other, ROOT.TF1):
             return h1.Chisquare(other, "WWCHI2/NDF"), h1.Chisquare(other, "WW")
