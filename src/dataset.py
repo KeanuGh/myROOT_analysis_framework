@@ -105,7 +105,7 @@ class Dataset:
     @property
     def is_truth(self) -> bool:
         """Does dataset contain truth data?"""
-        return bool('reco' in self.__var_tags)
+        return bool('truth' in self.__var_tags)
 
     @property
     def is_reco(self) -> bool:
@@ -127,7 +127,12 @@ class Dataset:
         """Get reconstructed variables in dataset"""
         return self.__get_var_tag('reco')
 
-    def _get_var_tag(self, tag: str) -> list[str]:
+    @property
+    def __var_tags(self) -> list[str]:
+        """Get tags for all variables"""
+        return [variable_data[col]['tag'] for col in self.df.columns if col in variable_data]
+
+    def __get_var_tag(self, tag: str) -> list[str]:
         """Get all variables in dataset with given tag"""
         if tag not in ('meta', 'truth', 'reco'):
             raise ValueError(f"Unknown tag '{tag}'")
@@ -155,11 +160,6 @@ class Dataset:
     def get_dsid(self, dsid: Union[str, int]) -> pd.DataFrame:
         """Get events from partcular DSID"""
         return self.df.loc[dsid, :]
-
-    @property
-    def __var_tags(self) -> list[str]:
-        """Get tags for all variables"""
-        return [variable_data[col]['tag'] for col in self.df.columns if col in variable_data]
 
     @property
     def n_truth_events(self) -> int:

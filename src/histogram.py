@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import logging
 from typing import Union, List, Tuple, Any, overload
 
 import ROOT
@@ -98,6 +97,7 @@ class Histogram1D(bh.Histogram, family=None):
 
             self.view(flow=True).variance = variance
             self.view(flow=True).value.__itruediv__(other.view(flow=True).value)
+            self.n_entries = self.eff_entries
             return self
         else:
             return self._compute_inplace_op("__itruediv__", other)
@@ -117,6 +117,7 @@ class Histogram1D(bh.Histogram, family=None):
 
             self.view(flow=True).variance = variance
             self.view(flow=True).value.__imul__(other.view(flow=True).value)
+            self.n_entries = self.eff_entries
             return self
         else:
             return self._compute_inplace_op("__imul__", other)
@@ -138,19 +139,14 @@ class Histogram1D(bh.Histogram, family=None):
 
         :param bins: tuple of bins in x (n_bins, start, stop) or list of bin edges.
                      In the first case returns an axis of type Regular(), otherwise of type Variable().
-                     Raises error if not formatted in one of these ways.
-        :param logbins: whether logarithmic bins
+        :param logbins: whether logarithmic bins. Silently ignored if using variable bins.
         """
-        transform = bh.axis.transform.log if logbins else None
-
         if isinstance(bins, tuple):
             if len(bins) != 3:
                 raise ValueError("Tuple of bins should be formatted like (n_bins, start, stop).")
-            return bh.axis.Regular(*bins, transform=transform)
+            return bh.axis.Regular(*bins, transform=bh.axis.transform.log if logbins else None)
 
         elif isinstance(bins, list):
-            if transform is not None:
-                logging.warning("Log transform tried to be applied to variable bins. Ignoring")
             return bh.axis.Variable(bins)
 
         else:
@@ -188,9 +184,10 @@ class Histogram1D(bh.Histogram, family=None):
         """get bin centres"""
         return self.axes[0].centers
 
-    def eff_entries(self, flow: bool = False) -> np.array:
-        """Get effective number of entries"""
-        return self.bin_sum(flow) * self.bin_sum(flow) / sum(self.sumw2(flow))
+    @property
+    def eff_entries(self) -> float:
+        """get effective number of entries"""
+        return self.bin_sum() * self.bin_sum() / sum(self.sumw2())
 
     def sumw2(self, flow: bool = False) -> np.array:
         """get squared sum of weights"""
@@ -239,7 +236,7 @@ class Histogram1D(bh.Histogram, family=None):
     @property
     def mean_error(self) -> float:
         """Return standard error of mean"""
-        return self.std / np.sqrt(self.eff_entries())
+        return self.std / np.sqrt(self.eff_entries)
 
     @property
     def Rstd(self) -> float:
@@ -249,20 +246,18 @@ class Histogram1D(bh.Histogram, family=None):
     @property
     def std(self) -> float:
         """Return standard deviation"""
-        # m = self.mean
         return np.sqrt((sum(self.bin_values() * (self.bin_centres - self.Rmean) ** 2) / self.bin_sum()))
-        # return np.sqrt(np.sum(self.bin_values() * self.bin_centres * self.bin_centres) - m * m)
 
     @property
     def Rstd_error(self) -> float:
-        """Return standard deviation - ROOT"""
-        return self.to_TH1().GetStdDev()
+        """Return standard deviation error - ROOT"""
+        return self.to_TH1().GetStdDevError()
 
     @property
     def std_error(self) -> float:
-        """Return standard deviation - ROOT"""
+        """Return standard deviation error"""
         m = self.mean
-        return np.sqrt((sum(self.bin_values() * self.bin_centres * self.bin_centres) - m * m) / 2 * self.eff_entries())
+        return np.sqrt((sum(self.bin_values() * self.bin_centres * self.bin_centres) - m * m) / 2 * self.eff_entries)
 
     # Scaling
     # ===================
@@ -276,7 +271,7 @@ class Histogram1D(bh.Histogram, family=None):
 
     # Fitting
     # ===================
-    def chi_square_fit(self, other: Union[ROOT.TF1, ROOT.TH1, Histogram1D]) -> Tuple[float, float]:
+    def chi_square(self, other: Union[ROOT.TF1, ROOT.TH1, Histogram1D]) -> Tuple[float, float]:
         """Perform chi-squared test. Retun chi2 per degree of freedom, pvalue"""
         h1 = self.to_TH1()
         if isinstance(other, ROOT.TH1):
@@ -293,10 +288,10 @@ class Histogram1D(bh.Histogram, family=None):
     # ===================
     def to_TH1(self, name: str = 'name', title: str = 'title') -> ROOT.TH1F:
         """Convert Histogram to ROOT TH1F"""
-        if self.TH1:
-            h_root = self.TH1
-        else:
+        if self.TH1 is None:
             h_root = ROOT.TH1F(name, title, self.n_bins, self.bin_edges)
+        else:
+            h_root = self.TH1
 
         # fill TH1
         for idx, bin_cont in np.ndenumerate(self.view(flow=True)):

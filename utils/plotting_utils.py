@@ -35,7 +35,7 @@ def get_axis_labels(var_name: str, lepton: str = 'lepton') -> Tuple[Optional[str
 
         if variable_data[var_name]['tag'] == 'truth':
             # weird but it does the job
-            ylabel = r'$\frac{d\sigma}{' + symbol + r'}$ [fb' + (f" {units}" + "$^{-1}$]" if units else ']')
+            ylabel = r'$\frac{d\sigma}{d' + symbol + r'}$ [fb' + (f' {units}' + '$^{-1}$]' if units else ']')
         else:
             ylabel = 'Entries'
 

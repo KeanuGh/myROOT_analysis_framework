@@ -9,10 +9,9 @@ So far it is able to:
 - Plot 2D histograms of multiple variables with cuts applied.
 - Read in mass slices and normalise all to a specific luminosity.
 - Many methods to apply across datasets
-- Convert boost-histograms to ROOT TH1 histograms and back
+- Convert boost-histograms to ROOT TH1 histograms to access ROOT functions
 
 ### In the works:
-- Logging: as soon as I get around to learning how to use the python logging library.
 - Batch jobs: Need to look into using Dask for parallel processing to work with large ROOT files.
 
 # Quickstart
