@@ -72,7 +72,7 @@ root_h_prod.Multiply(root_h2)
         pytest.param(mine_h_prod, mine_h_prod.TH1, id='product - bh-selfTH1'),
     ]
 )
-class TestHistogram1D:
+class TestHistogram1DTH1Comparison:
     def test_bin_edges(self, my_hist: Histogram1D, root_hist: ROOT.TH1F):
         TH1_edges = [root_hist.GetBinLowEdge(i + 1) for i in range(root_hist.GetNbinsX() + 1)]
         np.testing.assert_allclose(my_hist.bin_edges, TH1_edges, rtol=1e-05)

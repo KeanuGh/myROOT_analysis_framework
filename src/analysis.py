@@ -261,7 +261,6 @@ class Analysis:
             self.apply_cuts(list(datasets), labels=apply_cuts)
 
         self.logger.info(f"Merging dataset(s) {datasets[1:]} into dataset {datasets[0]}...")
-
         self[datasets[0]].df = pd.concat([self[n].df for n in datasets],
                                          verify_integrity=verify, copy=False)
 
@@ -340,7 +339,9 @@ class Analysis:
             ylabel: str = '',
             title: str = '',
             lepton: str = 'lepton',
+            stats_box: bool = False,
             ratio_plot: bool = True,
+            ratio_fit: bool = False,
             **kwargs
     ) -> plt.Figure:
         """
@@ -373,7 +374,9 @@ class Analysis:
         :param ylabel: y label
         :param title: plot title
         :param lepton: lepton to fill variable label
+        :param stats_box: display stats box
         :param ratio_plot: If True, adds ratio of the first plot with each subseqent plot below
+        :param ratio_fit: If True, fits ratio plot to a 0-degree polynomial and display line, chi-square and p-value
         :param kwargs: keyword arguments to pass to mplhep.histplot()
         """
         self.logger.info(f'Plotting {var} in as overlay in {datasets}...')
@@ -396,6 +399,10 @@ class Analysis:
             fig, ax = plt.subplots()
             ratio_ax = None  # just so IDE doesn't complain
 
+        if len(datasets) > 2:
+            self.logger.warning("Not enough space to display stats box. Ignoring")
+            stats_box = False
+
         if isinstance(datasets, str):
             datasets = [datasets]
         hists = []
@@ -412,15 +419,24 @@ class Analysis:
                     label=labels[i] if labels else self[dataset].label,
                     apply_cuts=apply_cuts,
                     w2=w2,
+                    stats_box=stats_box,
+                    name=self[dataset].name,
                     **kwargs
                 )
             )
             if ratio_plot and len(hists) > 1:
                 label = f"{labels[0]}/{labels[-1]}" if labels else f"{self[datasets[0]].label}/{self[dataset].label}"
-                hists[0].plot_ratio(hists[-1], ax=ratio_ax, yerr=yerr, label=label, normalise=bool(normalise),
-                                    color='k' if len(datasets) == 2 else None)
+                hists[0].plot_ratio(
+                    hists[-1],
+                    ax=ratio_ax,
+                    yerr=yerr,
+                    label=label,
+                    normalise=bool(normalise),
+                    color='k' if len(datasets) == 2 else None,
+                    fit=ratio_fit,
+                )
 
-        ax.legend(fontsize=10)
+        ax.legend(fontsize=10, loc='upper right')
         plotting_utils.set_axis_options(ax, var, bins, lepton, xlabel, ylabel, title, logx, logy)
         if ratio_plot:
             fig.tight_layout()

@@ -69,6 +69,8 @@ class Histogram1D(bh.Histogram, family=None):
             # TH1
             self.TH1 = ROOT.TH1F(name, title, *self.__get_TH1_bins(bins))
 
+            self.name = name
+
             # get axis
             axis = (
                 bins if isinstance(bins, bh.axis.Axis)
@@ -105,8 +107,11 @@ class Histogram1D(bh.Histogram, family=None):
             clsq = c1 * c1
             variance = (self.view(flow=True).variance * clsq + other.view(flow=True).variance * c0 * c0) / (clsq * clsq)
 
+            # set division by zero to zero
+            self.view(flow=True).value = np.divide(self.view(flow=True).value, other.view(flow=True).value,
+                                                   out=np.zeros_like(self.view(flow=True).value),
+                                                   where=other.view(flow=True).value != 0)
             self.view(flow=True).variance = variance
-            self.view(flow=True).value.__itruediv__(other.view(flow=True).value)
             self.TH1.Divide(other.TH1)
             return self
         else:
@@ -133,8 +138,8 @@ class Histogram1D(bh.Histogram, family=None):
             c1 = other.view(flow=True).value
             variance = self.view(flow=True).variance * c1 * c1 + other.view(flow=True).variance * c0 * c0
 
-            self.view(flow=True).variance = variance
             self.view(flow=True).value.__imul__(other.view(flow=True).value)
+            self.view(flow=True).variance = variance
             self.TH1.Multiply(other.TH1)
             return self
         else:
@@ -378,12 +383,19 @@ class Histogram1D(bh.Histogram, family=None):
         hep.histplot(self, ax=ax, yerr=yerr, w2=hist.sumw2() if w2 else None, **kwargs)
 
         if stats_box:
+            # dumb workaround to avoid the stats boxes from overlapping eachother
+            xy = (.75, .61)
+            for artist in ax.get_children():
+                if isinstance(artist, plt.Text):
+                    if r'$\mu=' in artist.get_text():
+                        xy = (.75, .38)
+
             textstr = '\n'.join((
+                r"$\mathbf{" + self.name + "}$",
                 r'$\mu=%.2f\pm%.2f$' % (self.mean, self.mean_error),
-                r'$\sigma=%.2f\pm%.2f$' % (self.Rstd, self.Rstd_error),
-                r'$\mathrm{eff\_entries}=%.0f$' % self.n_entries))
-            stats_box = AnchoredText(textstr, loc='upper right', fontsize='small')
-            ax.add_artist(stats_box)
+                r'$\sigma=%.2f\pm%.2f$' % (self.std, self.std_error),
+                r'$\mathrm{Entries}: %.0f$' % self.n_entries))
+            ax.text(x=xy[0], y=xy[1], s=textstr, transform=ax.transAxes, fontsize='small')
 
     def plot_ratio(
             self,
@@ -392,6 +404,7 @@ class Histogram1D(bh.Histogram, family=None):
             yerr: Union[ArrayLike, bool] = True,
             normalise: bool = False,
             label: str = None,
+            fit: bool = True,
             **kwargs
     ) -> None:
         """
@@ -406,6 +419,7 @@ class Histogram1D(bh.Histogram, family=None):
                      - shape(Nx2) array of for two-sided errors or list thereof
         :param normalise: Whether histograms are normalised before taking ratio
         :param label: Legend label
+        :param fit: whether to fit to a 0-degree polynomial and display line, chi-square and p-value
         :param kwargs: Args to pass to ax.errorbar()
         :return: None
         """
@@ -421,10 +435,22 @@ class Histogram1D(bh.Histogram, family=None):
         if yerr is True:
             yerr = h_ratio.root_sumw2()
 
+        if fit:
+            fit_results = h_ratio.TH1.Fit('pol0', 'QSN0')
+            c = fit_results.Parameters()[0]
+            err = fit_results.Errors()[0]
+            ax.fill_between([self.bin_edges[0], self.bin_edges[-1]], [c - err], [c + err], color='r', alpha=0.3)
+            ax.axhline(c, color='r')
+            textstr = '\n'.join((
+                r'$\chi^2=%.2f$' % fit_results.Chi2(),
+                r'$\mathrm{NDf}=%.2f$' % fit_results.Ndf(),
+                r'$c=%.2f\pm%.2f$' % (c, err)))
+            stats_box = AnchoredText(textstr, loc='upper left', frameon=False, prop=dict(fontsize="small"))
+            ax.add_artist(stats_box)
+
+        ax.axhline(1., linestyle='--', linewidth=1., c='k')
         ax.errorbar(h_ratio.bin_centres, h_ratio.bin_values(), xerr=h_ratio.bin_widths / 2, yerr=yerr,
                     linestyle='None', label=label, **kwargs)
-        ax.axhline(1., linestyle='--', linewidth=1., c='k')
-
         ax.grid(visible=True, which='both', axis='y')
 
         # POSSIBLY NOT NEEDED BUT IT TOOK ME A WHOLE DAY TO FIGURE THIS OUT SO I'M KEEPING IT

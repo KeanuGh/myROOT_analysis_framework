@@ -379,6 +379,7 @@ class Dataset:
             normalise: Union[float, bool] = False,
             logbins: bool = False,
             apply_cuts: Union[bool, str, List[str]] = False,
+            name: str = '',
             **kwargs
     ) -> Histogram1D:
         """
@@ -399,9 +400,10 @@ class Dataset:
                           - int or float
                           - True for normalisation of unity
                           - False (default) for no normalisation
+        :param logbins: whether logarithmic binnings
         :param apply_cuts: True to apply all cuts to dataset before plotting or False for no cuts
                            pass a string or list of strings of the cut label(s) to apply just those cuts
-        :param logbins: whether logarithmic binnings
+        :param name: histogram name
         :param kwargs: keyword arguments to pass to mplhep.histplot()
         :return: Histgoram
         """
@@ -417,7 +419,7 @@ class Dataset:
             if isinstance(weight, str)
             else weight
         )
-        hist = Histogram1D(df[var], bins, weights, logbins)
+        hist = Histogram1D(df[var], bins, weights, logbins, name=name)
         hist.plot(
             ax=ax,
             yerr=yerr,

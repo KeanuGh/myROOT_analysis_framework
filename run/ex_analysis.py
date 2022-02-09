@@ -31,13 +31,13 @@ if __name__ == '__main__':
     # my_analysis.merge_datasets('wminmunu', 'wmintaunu', apply_cuts=r'Muon $|#eta|$')
 
     my_analysis.plot_hist(['wminmunu', 'wmintaunu'], 'MC_WZmu_el_eta_born', bins=(30, -5, 5), weight='truth_weight',
-                          normalise='lumi', lepton='muon', ratio_plot=True, stats_box=True)
+                          normalise='lumi', lepton='muon', ratio_plot=True, stats_box=True, ratio_fit=True)
     my_analysis.plot_hist(['wminmunu', 'wmintaunu'], 'MC_WZ_dilep_m_born', bins=(50, 120, 5000), weight='truth_weight',
-                          lepton='muon', title='test plot', normalise=True, ratio_plot=True, stats_box=True)
+                          lepton='muon', title='test plot', normalise=True, ratio_plot=True, stats_box=True, ratio_fit=True)
     my_analysis.plot_hist(['wminmunu', 'wmintaunu'], 'mu_pt', bins=(50, 1, 5000), weight='reco_weight',
-                          logbins=True, logx=True, normalise='lumi', lepton='muon', stats_box=True)
+                          logbins=True, logx=True, normalise='lumi', lepton='muon', stats_box=True, ratio_fit=True)
     my_analysis.plot_hist(['wminmunu', 'wmintaunu'], 'MC_WZmu_el_pt_born', bins=(50, 1, 5000), weight='truth_weight',
-                          logbins=True, logx=True, normalise='lumi', lepton='muon', stats_box=True)
+                          logbins=True, logx=True, normalise='lumi', lepton='muon', stats_box=True, ratio_fit=True)
 
     my_analysis.plot_hist(['wminmunu', 'wmintaunu'], 'MC_WZmu_el_eta_born', bins=(30, -5, 5), weight='truth_weight',
                           normalise=False, lepton='muon', ratio_plot=True)
