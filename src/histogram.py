@@ -374,7 +374,7 @@ class Histogram1D(bh.Histogram, family=None):
         elif not hasattr(yerr, '__len__'):
             raise TypeError(f"yerr should be a bool or iterable of values. Got {yerr}")
 
-        bin_vals = hist.bin_values
+        bin_vals = hist.bin_values()
         if scale_by_bin_width:
             bin_vals /= hist.bin_widths
             if hasattr(yerr, '__len__'):

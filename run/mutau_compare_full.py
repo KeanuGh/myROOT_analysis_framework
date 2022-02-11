@@ -64,7 +64,7 @@ if __name__ == '__main__':
         log_out='both',
         timedatelog=True,
         year='2015+2016',
-        force_rebuild=False,
+        force_rebuild=True,
         TTree_name='truth',
         hard_cut='M_W'
     )
