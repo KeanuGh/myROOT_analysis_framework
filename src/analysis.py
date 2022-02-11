@@ -441,7 +441,8 @@ class Analysis:
         if ratio_plot:
             fig.tight_layout()
             fig.subplots_adjust(hspace=0.1, wspace=0)
-            ax.get_xaxis().set_visible(False)
+            ax.set_xticklabels([])
+            ax.set_xlabel(None)
             ratio_ax.legend(fontsize=10)
 
             if len(hists) == 2:

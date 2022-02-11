@@ -112,6 +112,7 @@ def set_axis_options(
     _xlabel, _ylabel = get_axis_labels(str(var_name), lepton)
     axis.set_xlabel(xlabel if xlabel else _xlabel)
     axis.set_ylabel(ylabel if ylabel else _ylabel)
+    axis.minorticks_on()
     if label:
         hep.atlas.label(italic=(True, True), ax=axis, loc=0, llabel='Internal', rlabel=title)
 
