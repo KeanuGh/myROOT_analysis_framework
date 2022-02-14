@@ -10,7 +10,7 @@ from src.dataset import Dataset
 from src.datasetbuilder import DatasetBuilder
 from src.logger import get_logger
 from utils import file_utils, plotting_utils
-from utils.decorators import check_single_dataset, handle_dataset_arg
+from utils.context import check_single_dataset, handle_dataset_arg
 
 
 class Analysis:

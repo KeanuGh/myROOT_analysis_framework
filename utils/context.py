@@ -1,5 +1,13 @@
+import ctypes
+import io
+import os
+import sys
+from contextlib import contextmanager
 from functools import wraps
 from typing import Callable
+
+libc = ctypes.CDLL(None)
+c_stdout = ctypes.c_void_p.in_dll(libc, 'stdout')
 
 
 def check_single_dataset(func) -> Callable:
@@ -62,3 +70,52 @@ def handle_dataset_arg(func: Callable) -> Callable:
                 func(self, *args, **kwargs, datasets=dataset)
 
     return wrapper
+
+
+# https://stackoverflow.com/questions/24277488/in-python-how-to-capture-the-stdout-from-a-c-shared-library-to-a-variable
+@contextmanager
+def redirect_stdout(out_stream=None, in_stream=None):
+    """Capture standard output"""
+    # in order to know when to stop reading from stdout
+    escape_char = '\b'
+
+    if out_stream is None:
+        out_stream = io.StringIO()
+
+    if in_stream is None:
+        in_stream = sys.stdout
+
+    og_streamfd = in_stream.fileno()
+    captured_output = ""
+    # Create a pipe so the stream can be captured:
+    pipe_out, pipe_in = os.pipe()
+    # Save a copy of the stream:
+    streamfd = os.dup(og_streamfd)
+
+    try:
+        # Replace the original stream with our write pipe:
+        os.dup2(pipe_in, og_streamfd)
+        # yield string that will contained captured output
+        yield out_stream
+
+    finally:
+        # Print escape character to make the readOutput method stop:
+        in_stream.write(escape_char)
+        # Flush the stream to make sure all our data goes in before the escape character:
+        in_stream.flush()
+
+        # Read the stream data
+        while True:
+            char = os.read(pipe_out, 1).decode(in_stream.encoding)
+            if not char or escape_char in char:
+                break
+            captured_output += char
+        out_stream.write(captured_output)
+
+        # Close the pipe:
+        os.close(pipe_in)
+        os.close(pipe_out)
+        # Restore the original stream:
+        os.dup2(streamfd, og_streamfd)
+        # Close the duplicate stream:
+        os.close(streamfd)

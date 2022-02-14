@@ -419,7 +419,7 @@ class Dataset:
             if isinstance(weight, str)
             else weight
         )
-        hist = Histogram1D(df[var], bins, weights, logbins, name=name)
+        hist = Histogram1D(df[var], bins, weights, logbins, name=name, logger=self.logger)
         hist.plot(
             ax=ax,
             yerr=yerr,
@@ -548,11 +548,11 @@ class Dataset:
         # per dsid
         for dsid, dsid_df in self.df.groupby(level='DSID'):
             weights = dsid_df[weight] if isinstance(weight, str) else weight
-            hist = Histogram1D(bins, dsid_df[var], weights, logbins)
+            hist = Histogram1D(bins, dsid_df[var], weights, logbins, logger=self.logger)
             hist.plot(ax=ax, label=dsid, **kwargs)
         # inclusive
         weights = df[weight] if isinstance(weight, str) else weight
-        hist = Histogram1D(bins, df[var], weights, logbins)
+        hist = Histogram1D(bins, df[var], weights, logbins, logger=self.logger)
         hist.plot(ax=ax, label='Inclusive', color='k', **kwargs)
 
         ax.legend(fontsize=10, ncol=2)
