@@ -473,10 +473,8 @@ class Histogram1D(bh.Histogram, family=None):
             with redirect_stdout() as output:
                 fit_results = h_ratio.TH1.Fit('pol0', 'VSN0')
             fit_output = output.getvalue()
-            # fit_output = output.capturedtext
             self.logger.debug("ROOT fit output: \n" + fit_output)
 
-            c = fit_results.Parameters()[0]
             err = fit_results.Errors()[0]
             ax.fill_between([self.bin_edges[0], self.bin_edges[-1]], [c - err], [c + err], color='r', alpha=0.3)
             ax.axhline(c, color='r', linewidth=1.)

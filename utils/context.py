@@ -1,13 +1,9 @@
-import ctypes
 import io
 import os
 import sys
 from contextlib import contextmanager
 from functools import wraps
 from typing import Callable
-
-libc = ctypes.CDLL(None)
-c_stdout = ctypes.c_void_p.in_dll(libc, 'stdout')
 
 
 def check_single_dataset(func) -> Callable:
@@ -76,9 +72,6 @@ def handle_dataset_arg(func: Callable) -> Callable:
 @contextmanager
 def redirect_stdout(out_stream=None, in_stream=None):
     """Capture standard output"""
-    # in order to know when to stop reading from stdout
-    escape_char = '\b'
-
     if out_stream is None:
         out_stream = io.StringIO()
 
@@ -100,6 +93,7 @@ def redirect_stdout(out_stream=None, in_stream=None):
 
     finally:
         # Print escape character to make the readOutput method stop:
+        escape_char = '\b'
         in_stream.write(escape_char)
         # Flush the stream to make sure all our data goes in before the escape character:
         in_stream.flush()
