@@ -395,10 +395,15 @@ class Histogram1D(bh.Histogram, family=None):
         :return: None
         """
         # normalise to value or unity
-        hist = (
-            self.copy() if not normalise
-            else self.normalised_to(normalise)
-        )
+        if not normalise:
+            self.logger.debug(f"Plotting histogram {self.name}...")
+            hist = self.copy()
+        elif normalise is True:
+            self.logger.debug(f"Plotting histogram {self.name} normalised to unity...")
+            hist = self.normalised()
+        else:
+            self.logger.debug(f"Plotting normalised histogram {self.name} normalised to {normalise}...")
+            hist = self.normalised_to(normalise)
 
         # set error
         if yerr is True:
@@ -412,7 +417,7 @@ class Histogram1D(bh.Histogram, family=None):
             if hasattr(yerr, '__len__'):
                 yerr /= hist.bin_widths
 
-        hep.histplot(self, ax=ax, yerr=yerr, w2=hist.sumw2() if w2 else None, **kwargs)
+        hep.histplot(hist, ax=ax, yerr=yerr, w2=hist.sumw2() if w2 else None, **kwargs)
 
         if stats_box:
             # dumb workaround to avoid the stats boxes from overlapping eachother
@@ -436,7 +441,7 @@ class Histogram1D(bh.Histogram, family=None):
             yerr: Union[ArrayLike, bool] = True,
             normalise: bool = False,
             label: str = None,
-            fit: bool = True,
+            fit: bool = False,
             **kwargs
     ) -> None:
         """
@@ -470,11 +475,12 @@ class Histogram1D(bh.Histogram, family=None):
 
         if fit:
             self.logger.info("Performing fit on ratio..")
-            with redirect_stdout() as output:
-                fit_results = h_ratio.TH1.Fit('pol0', 'VSN0')
-            fit_output = output.getvalue()
-            self.logger.debug("ROOT fit output: \n" + fit_output)
-
+            with redirect_stdout() as fit_output:
+                fit_results = h_ratio.TH1.Fit('pol0', 'VFSN0')
+            self.logger.debug(f"ROOT fit output: \n"
+                              f"==========================================================================\n"
+                              f"{fit_output.getvalue()}"
+                              f"==========================================================================\n")
             c = fit_results.Parameters()[0]
             err = fit_results.Errors()[0]
             ax.fill_between([self.bin_edges[0], self.bin_edges[-1]], [c - err], [c + err], color='r', alpha=0.3)

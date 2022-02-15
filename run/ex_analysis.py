@@ -50,6 +50,7 @@ if __name__ == '__main__':
 
     my_analysis['wminmunu'].plot_cut_overlays('MC_WZ_dilep_m_born', bins=(50, 120, 5000), weight='truth_weight',
                                               lepton='muon', title='test plot', normalise=True)
+
     # my_analysis.plot_mass_slices('wmintaunu', 'mt_born', weight='truth_weight', bins=(50, 200, 5000))
     # my_analysis.plot_mass_slices('wmintaunu', 'MC_WZ_dilep_m_born', weight='truth_weight', bins=(50, 200, 10000), logbins=True, logx=True)
     # my_analysis.plot_mass_slices('wmintaunu', 'mu_pt', weight='reco_weight', bins=(50, 200, 5000), logbins=True, logx=True)
