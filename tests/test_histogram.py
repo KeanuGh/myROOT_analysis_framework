@@ -42,6 +42,11 @@ mine_h_normed = mine_h.normalised()
 root_h_normed = root_h.Clone()
 root_h_normed.Scale(1 / root_h.Integral())
 
+# normalised to
+mine_h_normed_10 = mine_h.normalised_to(10)
+root_h_normed_10 = root_h.Clone()
+root_h_normed_10.Scale(10 / root_h.Integral())
+
 # ratio
 mine_h_ratio = mine_h / mine_h2
 root_h_ratio = root_h.Clone()
@@ -61,6 +66,7 @@ root_h_prod.Multiply(root_h2)
         pytest.param(mine_h_10, root_h_10, id='* 10'),
         pytest.param(mine_h_01, root_h_01, id='/ 10'),
         pytest.param(mine_h_normed, root_h_normed, id='normalised'),
+        pytest.param(mine_h_normed_10, root_h_normed_10, id='normalised to 10'),
         pytest.param(mine_h_ratio, root_h_ratio, id='ratio'),
         pytest.param(mine_h_prod, root_h_prod, id='product'),
 
@@ -68,6 +74,7 @@ root_h_prod.Multiply(root_h2)
         pytest.param(mine_h_10, mine_h_10.TH1, id='* 10 - bh-selfTH1'),
         pytest.param(mine_h_01, mine_h_01.TH1, id='/ 10 - bh-selfTH1'),
         pytest.param(mine_h_normed, mine_h_normed.TH1, id='normalised - bh-selfTH1'),
+        pytest.param(mine_h_normed_10, mine_h_normed_10.TH1, id='normalised to 10 - bh-selfTH1'),
         pytest.param(mine_h_ratio, mine_h_ratio.TH1, id='ratio - bh-selfTH1'),
         pytest.param(mine_h_prod, mine_h_prod.TH1, id='product - bh-selfTH1'),
     ]
