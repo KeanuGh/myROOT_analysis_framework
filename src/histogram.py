@@ -475,12 +475,13 @@ class Histogram1D(bh.Histogram, family=None):
             fit_output = output.getvalue()
             self.logger.debug("ROOT fit output: \n" + fit_output)
 
+            c = fit_results.Parameters()[0]
             err = fit_results.Errors()[0]
             ax.fill_between([self.bin_edges[0], self.bin_edges[-1]], [c - err], [c + err], color='r', alpha=0.3)
             ax.axhline(c, color='r', linewidth=1.)
             textstr = '\n'.join((
                 r'$\chi^2=%.2f$' % fit_results.Chi2(),
-                r'$\mathrm{NDf}=%.2f$' % fit_results.Ndf(),
+                r'$\mathrm{NDF}=%.2f$' % fit_results.Ndf(),
                 r'$c=%.2f\pm%.2f$' % (c, err))
             )
             stats_box = AnchoredText(textstr, loc='upper left', frameon=False, prop=dict(fontsize="small"))
