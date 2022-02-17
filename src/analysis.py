@@ -108,7 +108,7 @@ class Analysis:
             ]:
                 build_args[arg] = data_args.pop(arg, None)
 
-            # set correct pickle path if passed as a build argument
+            # set correct pickle path if not passed as a build argument
             if build_args['pkl_path'] is None:
                 build_args['pkl_path'] = f"{self.paths['pkl_df_dir']}{name}_df.pkl"
 
@@ -144,9 +144,6 @@ class Analysis:
 
             dataset.set_plot_dir(self.paths['plot_dir'])
             dataset.set_pkl_path(build_args['pkl_path'])
-
-            # save dataset no matter what
-            dataset.save_pkl_file()
 
             self[name] = dataset  # save to analysis
 
@@ -400,7 +397,7 @@ class Analysis:
             ratio_ax = None  # just so IDE doesn't complain
 
         if len(datasets) > 2:
-            self.logger.warning("Not enough space to display stats box. Ignoring")
+            self.logger.warning("Not enough space to display stats box. Will not display")
             stats_box = False
 
         if isinstance(datasets, str):
@@ -443,7 +440,8 @@ class Analysis:
             fig.subplots_adjust(hspace=0.1, wspace=0)
             ax.set_xticklabels([])
             ax.set_xlabel(None)
-            ratio_ax.legend(fontsize=10)
+            if len(datasets) > 2:  # don't show legend if there's only two datasets
+                ratio_ax.legend(fontsize=10)
 
             if len(hists) == 2:
                 plotting_utils.set_axis_options(ratio_ax,

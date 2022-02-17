@@ -346,7 +346,7 @@ class DatasetBuilder:
 
         # BUILD DATASET
         # ===============================
-        return Dataset(
+        dataset = Dataset(
             name=self.name,
             df=df,
             cutfile=cutfile,
@@ -356,6 +356,19 @@ class DatasetBuilder:
             label=self.label,
             lepton=self.lepton
         )
+
+        # print pickle file if anything is new/changed
+        if pkl_path and (
+            __build_df |
+            __create_cut_cols |
+            __create_weight_cols |
+            __calculate_vars
+        ):
+            dataset.save_pkl_file(pkl_path)
+        else:
+            self.logger.debug("Pickle file not saved, no changes made.")
+
+        return dataset
 
     def __read_pkl_df(self, pkl_path: str) -> pd.DataFrame:
         self.logger.info(f"Reading data from {pkl_path}...")

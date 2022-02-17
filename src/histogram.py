@@ -477,18 +477,18 @@ class Histogram1D(bh.Histogram, family=None):
             self.logger.info("Performing fit on ratio..")
             with redirect_stdout() as fit_output:
                 fit_results = h_ratio.TH1.Fit('pol0', 'VFSN0')
-            self.logger.debug(f"ROOT fit output: \n"
+            self.logger.debug(f"ROOT fit output:\n"
                               f"==========================================================================\n"
                               f"{fit_output.getvalue()}"
-                              f"==========================================================================\n")
+                              f"==========================================================================")
             c = fit_results.Parameters()[0]
             err = fit_results.Errors()[0]
             ax.fill_between([self.bin_edges[0], self.bin_edges[-1]], [c - err], [c + err], color='r', alpha=0.3)
             ax.axhline(c, color='r', linewidth=1.)
             textstr = '\n'.join((
-                r'$\chi^2=%.2f$' % fit_results.Chi2(),
-                r'$\mathrm{NDF}=%.2f$' % fit_results.Ndf(),
-                r'$c=%.2f\pm%.2f$' % (c, err))
+                r'$\chi^2=%.3f$' % fit_results.Chi2(),
+                r'$\mathrm{NDF}=%.3f$' % fit_results.Ndf(),
+                r'$c=%.2f\pm%.3f$' % (c, err))
             )
             stats_box = AnchoredText(textstr, loc='upper left', frameon=False, prop=dict(fontsize="small"))
             ax.add_artist(stats_box)

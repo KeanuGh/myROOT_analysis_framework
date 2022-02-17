@@ -41,7 +41,7 @@ class Cutfile:
     """
     def __init__(self, file_path: str, logger: logging.Logger, backup_path: str = None, sep='\t'):
         self.sep = sep
-        self.__na_tree = '0:NONE'
+        self.__na_tree = '0:NONE' # internal name for when TTree is not given. To avoid overlap with possible TStrings
         self.logger = logger
         self.name = get_filename(file_path)
         self._path = file_path
@@ -69,6 +69,8 @@ class Cutfile:
         name = cutline_split[0]
         cut_var = cutline_split[1]
         relation = cutline_split[2]
+
+        # checks
         try:
             cut_val = float(cutline_split[3])
         except ValueError:  # make sure the cut value is actually a number
@@ -78,7 +80,7 @@ class Cutfile:
             is_symmetric = bool(strtobool(cutline_split[4].lower()))  # converts string to boolean
         except ValueError as e:
             raise ValueError(f"Incorrect formatting for 'is_symmetric' in line {cutline} \n"
-                             f"Got: {e}")
+                             f"{e}")
 
         try:
             tree = cutline_split[5]  # if an alternate TTree is given
@@ -88,18 +90,10 @@ class Cutfile:
         if tree == '':
             raise SyntaxError(f"Check cutfile. Line {cutline} is badly formatted. Got {cutline_split}.")
 
-        # check values
         if relation not in ('>', '<', '<=', '>=', '=', '!='):
             raise SyntaxError(f"Unexpected comparison operator: {cutline_split[2]}")
 
-        return Cut(
-            name=name,
-            var=cut_var,
-            op=relation,
-            val=cut_val,
-            is_symmetric=is_symmetric,
-            tree=tree
-        )
+        return Cut(name, cut_var, relation, cut_val, is_symmetric, tree)
 
     def parse_cutfile(self, path: str = None, sep='\t') -> Tuple[OrderedDict[str, Cut], Set[Tuple[str, str]]]:
         """
