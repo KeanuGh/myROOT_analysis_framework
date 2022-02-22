@@ -475,6 +475,7 @@ class Histogram1D(bh.Histogram, family=None):
 
         if fit:
             self.logger.info("Performing fit on ratio..")
+
             with redirect_stdout() as fit_output:
                 fit_results = h_ratio.TH1.Fit('pol0', 'VFSN0')
             self.logger.debug(f"ROOT fit output:\n"
@@ -483,6 +484,7 @@ class Histogram1D(bh.Histogram, family=None):
                               f"==========================================================================")
             c = fit_results.Parameters()[0]
             err = fit_results.Errors()[0]
+
             ax.fill_between([self.bin_edges[0], self.bin_edges[-1]], [c - err], [c + err], color='r', alpha=0.3)
             ax.axhline(c, color='r', linewidth=1.)
             textstr = '\n'.join((

@@ -359,9 +359,9 @@ class DatasetBuilder:
 
         # print pickle file if anything is new/changed
         if pkl_path and (
-            __build_df |
-            __create_cut_cols |
-            __create_weight_cols |
+            __build_df or
+            __create_cut_cols or
+            __create_weight_cols or
             __calculate_vars
         ):
             dataset.save_pkl_file(pkl_path)
@@ -371,6 +371,7 @@ class DatasetBuilder:
         return dataset
 
     def __read_pkl_df(self, pkl_path: str) -> pd.DataFrame:
+        """Read in a dataset pickle file and check its type and index"""
         self.logger.info(f"Reading data from {pkl_path}...")
         df: pd.DataFrame = pd.read_pickle(pkl_path)
         assert type(df) == pd.DataFrame, f"Pickle file does not contain a pandas DataFrame. Found type {type(df)}"
@@ -426,9 +427,7 @@ class DatasetBuilder:
             return True
 
     def __check_calc_var_cols(self, df_cols: Iterable, calc_vars: set) -> bool:
-        """
-        Check whether calculated variables exist in DataFrame
-        """
+        """Check whether calculated variables exist in DataFrame"""
         if missing_vars := {var for var in calc_vars
                             if var not in df_cols}:
             self.logger.info(f"Calculated variable(s) {missing_vars} missing from DataFrame. "
@@ -515,6 +514,9 @@ class DatasetBuilder:
         default_tree_truth = 'truth' in TTree_name
 
         t1 = time.time()
+
+        # Extract main tree and event weights
+        # ---------------------------------------------------------------------------------
         self.logger.debug(f"Extracting {tree_dict[TTree_name]} from {TTree_name} tree...")
         df = to_pandas(uproot.concatenate(data_path + ':' + TTree_name, tree_dict[TTree_name],
                                           num_workers=config.n_threads, begin_chunk_size=chunksize))
@@ -541,8 +543,10 @@ class DatasetBuilder:
         else:
             validation = 'm:m'
             self.logger.info("Skipping duplicted events validation")
+        # -----------------------------------------------------------------------------------
 
-        # iterate over TTrees and merge
+        # iterate over other TTrees, merge & validate
+        # -----------------------------------------------------------------------------------
         for tree in tree_dict:
             if tree == TTree_name:
                 continue
@@ -585,6 +589,7 @@ class DatasetBuilder:
             self.logger.debug("Merging with rest of dataframe...")
             df = pd.merge(df, alt_df, how='left', left_index=True, right_index=True, sort=False, copy=False,
                           validate=validation)
+        # -------------------------------------------------------------------------------------
 
         if validate_sumofweights:
             # sanity check to make sure totalEventsWeighted really is what it says it is
@@ -607,6 +612,7 @@ class DatasetBuilder:
             self.logger.info("Skipping sum of weights validation")
 
         # CLEANUP
+        # ---------------------------------------------------------------------------------------
         self.__rescale_to_gev(df)  # properly scale GeV columns
 
         # output number of truth and reco events
