@@ -12,20 +12,20 @@ nbins = 20
 xmin = -1.
 xmax = 1.
 
-# regular
 a = np.random.normal(0, 1, 100000)
-w = np.random.random(100000)
+b = np.random.normal(0.5, 1.1, 100000)
+w = .4 * np.random.random(100000) + 0.8
+
+# regular
 mine_h = Histogram1D(a, (nbins, xmin, xmax), weight=w)
 root_h = ROOT.TH1F('test', 'test;test', nbins, xmin, xmax)
 for ia, iw in zip(a, w):
     root_h.Fill(ia, iw)
 
 # extra histograms for operations
-b = np.random.normal(0.5, 1.1, 100000)
-w2 = np.random.random(100000)
-mine_h2 = Histogram1D(b, (nbins, xmin, xmax), weight=w2)
+mine_h2 = Histogram1D(b, (nbins, xmin, xmax), weight=w)
 root_h2 = ROOT.TH1F('test', 'test;test', nbins, xmin, xmax)
-for ib, iw2 in zip(b, w2):
+for ib, iw2 in zip(b, w):
     root_h2.Fill(ib, iw2)
 
 # multiply by 10
@@ -63,6 +63,7 @@ root_h_prod.Multiply(root_h2)
     'my_hist,root_hist',
     [
         pytest.param(mine_h, root_h, id='regular'),
+        pytest.param(mine_h2, root_h2, id='regular2'),
         pytest.param(mine_h_10, root_h_10, id='* 10'),
         pytest.param(mine_h_01, root_h_01, id='/ 10'),
         pytest.param(mine_h_normed, root_h_normed, id='normalised'),
@@ -71,6 +72,7 @@ root_h_prod.Multiply(root_h2)
         pytest.param(mine_h_prod, root_h_prod, id='product'),
 
         pytest.param(mine_h, mine_h.TH1, id='regular - bh-selfTH1'),
+        pytest.param(mine_h2, mine_h2.TH1, id='regular2 - bh-selfTH1'),
         pytest.param(mine_h_10, mine_h_10.TH1, id='* 10 - bh-selfTH1'),
         pytest.param(mine_h_01, mine_h_01.TH1, id='/ 10 - bh-selfTH1'),
         pytest.param(mine_h_normed, mine_h_normed.TH1, id='normalised - bh-selfTH1'),

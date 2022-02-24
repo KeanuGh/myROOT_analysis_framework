@@ -44,19 +44,16 @@ derived_vars: Dict[str, OtherVar] = {
         'func': calc_mt,
     },
     'mt_born': {  # boson mt
-        # 'var_args': ['e_pt', 'met_met', 'e_phi', 'met_phi'],
         'var_args': ['MC_WZmu_el_pt_born', 'MC_WZneutrino_pt_born', 'MC_WZmu_el_phi_born', 'MC_WZneutrino_phi_born'],
         'tree': 'truth',
         'func': calc_mt,
     },
     'mt_bare': {  # boson mt
-        # 'var_args': ['e_pt', 'met_met', 'e_phi', 'met_phi'],
         'var_args': ['MC_WZmu_el_pt_bare', 'MC_WZneutrino_pt_bare', 'MC_WZmu_el_phi_bare', 'MC_WZneutrino_phi_bare'],
         'tree': 'truth',
         'func': calc_mt,
     },
     'mt_dres': {  # boson mt
-        # 'var_args': ['e_pt', 'met_met', 'e_phi', 'met_phi'],
         'var_args': ['MC_WZmu_el_pt_dres', 'MC_WZneutrino_pt_dres', 'MC_WZmu_el_phi_dres', 'MC_WZneutrino_phi_dres'],
         'tree': 'truth',
         'func': calc_mt,

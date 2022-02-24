@@ -17,12 +17,12 @@ from src.logger import get_logger
 from utils.var_helpers import derived_vars
 from utils.variable_names import variable_data
 
-# total dataset luminosity per year (pb-1)
+# total dataset luminosity per year (fb-1)
 lumi_year = {
-    '2015': 3219.56,
-    '2017': 44307.4,
-    '2018': 58450.1,
-    '2015+2016': 32988.1 + 3219.56
+    '2015': 3.21956,
+    '2017': 44.3074,
+    '2018': 58.4501,
+    '2015+2016': 32.9881 + 3.21956
 }
 
 

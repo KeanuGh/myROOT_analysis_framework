@@ -12,12 +12,16 @@ from matplotlib.offsetbox import AnchoredText
 from numpy.typing import ArrayLike
 
 from src.logger import get_logger
+from utils.AtlasStyle import set_atlas_style
 from utils.context import redirect_stdout
 
 # settings
+ROOT.gROOT.SetBatch(True)  # Prevents TCanvas popups
+ROOT.PyConfig.StartGUIThread = False  # disables polling for ROOT GUI events
 ROOT.TH1.AddDirectory(False)  # stops TH1s from being saved and prevents overwrite warnings
 ROOT.TH1.SetDefaultSumw2()  # Sets weighted binning in all ROOT histograms by default
-ROOT.gROOT.SetBatch()  # Prevents TCanvas popups
+ROOT.EnableImplicitMT()  # enable multithreading
+set_atlas_style()  # set ATLAS plotting style to ROOT plots
 plt.style.use(hep.style.ATLAS)  # set atlas-style plots
 np.seterr(invalid='ignore')  # ignore division by zero errors
 
@@ -105,6 +109,9 @@ class Histogram1D(bh.Histogram, family=None):
     def Fill(self, var: ArrayLike, weight: ArrayLike = None) -> Histogram1D:
         self.logger.debug(f"Filling histogram {self.name} with {len(var)} events..")
         super().fill(var, weight=weight, threads=0)
+
+        if hasattr(weight, '__len__'):
+            assert len(weight) == len(var), "Number of weight values do not match!"
 
         if weight is None:
             weight = np.ones(len(var))
@@ -374,8 +381,9 @@ class Histogram1D(bh.Histogram, family=None):
             normalise: Union[float, bool] = False,
             scale_by_bin_width: bool = False,
             stats_box: bool = False,
+            out_filename: str = None,
             **kwargs
-    ) -> None:
+    ) -> plt.Axes:
         """
         Plot histogram on axis ax
 
@@ -392,7 +400,8 @@ class Histogram1D(bh.Histogram, family=None):
         :param scale_by_bin_width: whether to scale histogram by bin widths
         :param stats_box: whether to add a stats box to the plot
         :param kwargs: keyword arguments to pass to mplhep.histplot()
-        :return: None
+        :param out_filename: provide filename to print. If not given, nothing is saved
+        :return: matplotlib axis object with plot
         """
         # normalise to value or unity
         if not normalise:
@@ -417,6 +426,9 @@ class Histogram1D(bh.Histogram, family=None):
             if hasattr(yerr, '__len__'):
                 yerr /= hist.bin_widths
 
+        if not ax:
+            fig, ax = plt.subplots()
+
         hep.histplot(hist, ax=ax, yerr=yerr, w2=hist.sumw2() if w2 else None, **kwargs)
 
         if stats_box:
@@ -434,6 +446,39 @@ class Histogram1D(bh.Histogram, family=None):
                 r'$\mathrm{Entries}: %.0f$' % self.n_entries))
             ax.text(x=xy[0], y=xy[1], s=textstr, transform=ax.transAxes, fontsize='small')
 
+        if out_filename:
+            plt.savefig(out_filename, bbox_inches='tight')
+            self.logger.info(f'image saved in {out_filename}')
+
+        return ax
+
+    def Rplot(
+        self,
+        normalise: Union[float, bool] = False,
+        plot_option: str = '',
+        stats_box: bool = False,
+        out_filename: str = True
+    ) -> None:
+        """
+        ROOT plot
+
+        :param normalise: whether to normalise
+        :param plot_option: option(s) to pass to Draw()
+        :param stats_box: whether to print stats box
+        :param out_filename: filename to print if necessary
+        """
+        if normalise:
+            self.normalise_to(normalise)
+
+        if stats_box:
+            self.TH1.SetStats(True)
+
+        c = ROOT.TCanvas()
+        self.TH1.Draw("E Hist" + plot_option)
+
+        if out_filename:
+            c.Print(out_filename)
+
     def plot_ratio(
             self,
             other: Histogram1D,
@@ -442,8 +487,9 @@ class Histogram1D(bh.Histogram, family=None):
             normalise: bool = False,
             label: str = None,
             fit: bool = False,
+            out_filename: str = None,
             **kwargs
-    ) -> None:
+    ) -> plt.Axes:
         """
         Plot (and properly format) ratio between this histogram and another.
 
@@ -457,8 +503,9 @@ class Histogram1D(bh.Histogram, family=None):
         :param normalise: Whether histograms are normalised before taking ratio
         :param label: Legend label
         :param fit: whether to fit to a 0-degree polynomial and display line, chi-square and p-value
+        :param out_filename: provide filename to print. If not given, nothing is saved
         :param kwargs: Args to pass to ax.errorbar()
-        :return: None
+        :return: axis object with plot
         """
         if not np.array_equal(self.bin_edges, other.bin_edges):
             raise ValueError("Bins do not match!")
@@ -510,3 +557,9 @@ class Histogram1D(bh.Histogram, family=None):
         #     ymin = np.min(np.ma.masked_invalid(np.append(data, ymin)))
         # vspace = (ymax - ymin) * 0.1
         # ax.set_ylim(bottom=ymin - vspace, top=ymax + vspace)
+
+        if out_filename:
+            plt.savefig(out_filename, bbox_inches='tight')
+            self.logger.info(f'image saved in {out_filename}')
+
+        return ax

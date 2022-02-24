@@ -27,24 +27,25 @@ def get_logger(
     :return: logging.Logger object
     """
     if log_out not in ('file', 'both', 'console', None):
-        raise ValueError("Accaptable values for 'log_out' parameter: 'file', 'both', 'console', None.")
+        raise ValueError("Acceptable values for 'log_out' parameter: 'file', 'both', 'console', None")
 
     logger = logging.getLogger(name)
     logger.setLevel(log_level)
     logger.propagate = False
 
-    if log_out.lower() in ('file', 'both'):
-        if (log_dir and log_file) or (log_dir == log_file is None):
-            raise ValueError("Pass either 'log_dir' or 'logfile'")
+    if not logger.hasHandlers():  # In case the same logger is called multiple times, don't attach new handlers
+        if log_out.lower() in ('file', 'both'):
+            if (log_dir and log_file) or (log_dir == log_file is None):
+                raise ValueError("Pass either 'log_dir' or 'logfile'")
 
-        filename = log_file if log_file \
-            else f"{log_dir}/" \
-                 f"{name}{'_' + time.strftime('%Y-%m-%d_%H-%M-%S') if timedatelog else ''}.log"
-        filehandler = logging.FileHandler(filename, mode=mode)
-        filehandler.setFormatter(logging.Formatter('%(asctime)s %(name)s %(levelname)-10s %(message)s'))
-        logger.addHandler(filehandler)
+            filename = log_file if log_file \
+                else f"{log_dir}/" \
+                     f"{name}{'_' + time.strftime('%Y-%m-%d_%H-%M-%S') if timedatelog else ''}.log"
+            filehandler = logging.FileHandler(filename, mode=mode)
+            filehandler.setFormatter(logging.Formatter('%(asctime)s %(name)s %(levelname)-10s %(message)s'))
+            logger.addHandler(filehandler)
 
-    if log_out.lower() in ('console', 'both'):
-        logger.addHandler(logging.StreamHandler(sys.stdout))
+        if log_out.lower() in ('console', 'both'):
+            logger.addHandler(logging.StreamHandler(sys.stdout))
 
     return logger
