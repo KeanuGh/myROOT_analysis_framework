@@ -403,7 +403,7 @@ class Histogram1D(bh.Histogram, family=None):
         :param out_filename: provide filename to print. If not given, nothing is saved
         :return: matplotlib axis object with plot
         """
-        # normalise to value or unity
+        # normalise/scale
         if not normalise:
             self.logger.debug(f"Plotting histogram {self.name}...")
             hist = self.copy()
@@ -413,6 +413,9 @@ class Histogram1D(bh.Histogram, family=None):
         else:
             self.logger.debug(f"Plotting normalised histogram {self.name} normalised to {normalise}...")
             hist = self.normalised_to(normalise)
+        
+        if scale_by_bin_width:
+            hist /= hist.bin_widths
 
         # set error
         if yerr is True:
@@ -420,31 +423,25 @@ class Histogram1D(bh.Histogram, family=None):
         elif not hasattr(yerr, '__len__'):
             raise TypeError(f"yerr should be a bool or iterable of values. Got {yerr}")
 
-        bin_vals = hist.bin_values()
-        if scale_by_bin_width:
-            bin_vals /= hist.bin_widths
-            if hasattr(yerr, '__len__'):
-                yerr /= hist.bin_widths
-
         if not ax:
-            fig, ax = plt.subplots()
+            _, ax = plt.subplots()
 
         hep.histplot(hist, ax=ax, yerr=yerr, w2=hist.sumw2() if w2 else None, **kwargs)
 
         if stats_box:
             # dumb workaround to avoid the stats boxes from overlapping eachother
-            xy = (.75, .61)
+            box_xpos, box_ypos = (.75, .61)
             for artist in ax.get_children():
                 if isinstance(artist, plt.Text):
                     if r'$\mu=' in artist.get_text():
-                        xy = (.75, .38)
+                        box_ypos = .38
 
             textstr = '\n'.join((
                 r"$\mathbf{" + self.name + "}$",
                 r'$\mu=%.2f\pm%.2f$' % (self.mean, self.mean_error),
                 r'$\sigma=%.2f\pm%.2f$' % (self.std, self.std_error),
                 r'$\mathrm{Entries}: %.0f$' % self.n_entries))
-            ax.text(x=xy[0], y=xy[1], s=textstr, transform=ax.transAxes, fontsize='small')
+            ax.text(x=box_xpos, y=box_ypos, s=textstr, transform=ax.transAxes, fontsize='small')
 
         if out_filename:
             plt.savefig(out_filename, bbox_inches='tight')
