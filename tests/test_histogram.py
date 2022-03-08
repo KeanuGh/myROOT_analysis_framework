@@ -14,7 +14,7 @@ xmax = 1.
 
 a = np.random.normal(0, 1, 100000)
 b = np.random.normal(0.5, 1.1, 100000)
-w = .4 * np.random.random(100000) + 0.8
+w = .4 * np.random.random(100000) + 0.8  # between 0.8 and 0.2
 
 # regular
 mine_h = Histogram1D(a, (nbins, xmin, xmax), weight=w)

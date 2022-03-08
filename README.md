@@ -61,14 +61,14 @@ convert_pkl_to_root(conv_all=True)
 Example cutfile:
 ```
 [CUTS]
-# Name	Variable	</>	Cut (in GeV if applicable) Symmetric Alt TTree
+# Name	cutstring	tree
 # !!REMEMBER DEFAULT ANALYSISTOP OUTPUT IS IN MeV NOT GeV!!
-Tight muon	mu_isTight	=	1	tight	false
-eta	mu_eta	<	2.4	true
-E_{T}^{MISS}	met_met	>	65	false
-p_T	mu_pt	>	65	false
-M_T	mu_mt	>	55	false
-M_W	MC_WZ_m <	120	false	truth
+Tight muon	mu_isTight = 1
+eta	mu_eta.abs() < 2.4 and (mu_eta < 1.57 or mu_eta > 1.34)	true
+E_{T}^{MISS}	met_met > 5
+p_T	mu_pt > 65 and neutrino_pt > 65
+M_T	mu_mt >	55
+M_W	MC_WZ_m < 120	truth
 
 [OUTPUTS]
 # variables to process
@@ -78,10 +78,7 @@ Cutfile contains lists of tab-separated values.
 
 For **[CUTS]** The columns are:
 - **Name**: name of cut. This will be the label added to plots and cutflow for that cut
-- **Variable**: variable in root file to cut on
-- **Comparison**: relational operator (=, !=, <, <=, >, >=)
-- **Cut**: value to cut variable at (in GeV)
-- **Symmetric**: whether the cut is symmetric. Eg in the example the cut on `MC_WZmu_el_eta_born` will actually be `|MC_WZmu_el_eta_born| < 2.4`
+- **Cut String**: a boolean query to be evaluated by pandas.
 - **Alt TTree**: if the given variable is in a different tree, imports and matches by including the 'eventNumber' TBranch
 
 **[OUTPUTS]** 

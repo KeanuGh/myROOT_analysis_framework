@@ -1,99 +1,89 @@
 import logging
-import time
+import re
 from collections import OrderedDict
-from dataclasses import dataclass
-from distutils.util import strtobool
-from shutil import copyfile
-from typing import Tuple, Dict, Set
+from dataclasses import dataclass, field
+from typing import Tuple, Dict, Set, Union
 
-from utils.file_utils import identical_to_backup, get_last_backup, get_filename
-from utils.var_helpers import OtherVar
+from utils.file_utils import get_filename
+from utils.var_helpers import derived_vars
 from utils.variable_names import variable_data
+from src.logger import get_logger
+
+# all variables known by this framework
+all_vars = set(derived_vars.keys()) | set(variable_data.keys())
 
 
 @dataclass
 class Cut:
     """Cut class containing info for each cut"""
     name: str
-    var: str
-    op: str
-    val: float
-    is_symmetric: bool
+    cutstr: str
     tree: str
+    var: Union[str, Set[str]] = field(init=False)
+
+    def __post_init__(self):
+        """Find the variables in the cut"""
+        split_string = set(re.findall(r"[\w]+|[.,!?;]", self.cutstr))
+        cutvars = all_vars & split_string
+
+        if len(cutvars) == 1:
+            self.var = cutvars.pop()
+        elif len(cutvars) > 1:
+            self.var = cutvars
+        else:
+            raise ValueError(f"No known variable in string '{self.cutstr}'")
 
     def __str__(self) -> str:
-        if self.is_symmetric:
-            return f"{self.name}: {'|' + self.var}| {self.op} {self.val}"
-        else:
-            return f"{self.name}: {self.var} {self.op} {self.val}"
-
-    @property
-    def string(self) -> str:
-        if self.is_symmetric:
-            return f"{'|' + self.var}| {self.op} {self.val}"
-        else:
-            return f"{self.var} {self.op} {self.val}"
+        return f"{self.name}: {self.cutstr}"
 
 
 class Cutfile:
-    """
-    Handles importing cutfiles and extracting variables
-    """
-    def __init__(self, file_path: str, logger: logging.Logger, backup_path: str = None, sep='\t'):
+    """Handles importing cutfiles and extracting variables"""
+    def __init__(self, file_path: str, default_tree: str = '0:NONE', logger: logging.Logger = None, sep='\t'):
+        """
+        Read and pull variables and cuts from cutfile.
+
+        :param file_path: cutfile
+        :param default_tree: name of TTree to assume if not given in file path. default value is to avoid overlap with
+                             any possible TTree names
+        :param logger: logger to output messages to. Will default to console output if not given
+        :param sep: separator for values in cutfile. Default is TAB
+        """
         self.sep = sep
-        self.__na_tree = '0:NONE' # internal name for when TTree is not given. To avoid overlap with possible TStrings
-        self.logger = logger
+        self.logger = logger if logger is not None else get_logger()
         self.name = get_filename(file_path)
         self._path = file_path
-        self.backup_path = backup_path
-        self.cuts, self.vars_to_cut = self.parse_cutfile()
+        self.given_tree = default_tree
+        self.cuts, self.__vars_to_cut = self.parse_cutfile()
+        self.tree_dict, self.vars_to_calc = self.extract_variables()
 
     def __repr__(self):
         return f'Cutfile("{self._path}")'
 
     def parse_cutline(self, cutline: str) -> Cut:
-        """
-        Processes each line of cuts into dictionary of cut options. with separator sep
-        """
-        cutline_split = cutline.split(self.sep)
+        """Processes each line of cuts into dictionary of cut options. with separator <sep>"""
+        # strip trailing and leading spaces
+        cutline_split = [i.strip() for i in cutline.split(self.sep)]
 
         # if badly formatted
-        if len(cutline_split) not in (5, 6):
+        if len(cutline_split) not in (2, 3):
             raise SyntaxError(f"Check cutfile. Line {cutline} is badly formatted. Got {cutline_split}.")
         for v in cutline_split:
             if len(v) == 0:
                 raise SyntaxError(f"Check cutfile. Blank value given in line {cutline}. Got {cutline_split}.")
-            if v[0] == ' ' or v[-1] == ' ':
-                self.logger.warning(f"Found trailing space in option cutfile line {cutline}: Variable '{v}'.")
 
         name = cutline_split[0]
-        cut_var = cutline_split[1]
-        relation = cutline_split[2]
-
-        # checks
-        try:
-            cut_val = float(cutline_split[3])
-        except ValueError:  # make sure the cut value is actually a number
-            raise SyntaxError(f"Check 'cut_val' argument in line {cutline}. Got '{cutline_split[3]}'.")
+        cut_str = cutline_split[1]
 
         try:
-            is_symmetric = bool(strtobool(cutline_split[4].lower()))  # converts string to boolean
-        except ValueError as e:
-            raise ValueError(f"Incorrect formatting for 'is_symmetric' in line {cutline} \n"
-                             f"{e}")
-
-        try:
-            tree = cutline_split[5]  # if an alternate TTree is given
+            tree = cutline_split[2]  # if an alternate TTree is given
         except IndexError:
-            tree = self.__na_tree
+            tree = self.given_tree
 
         if tree == '':
             raise SyntaxError(f"Check cutfile. Line {cutline} is badly formatted. Got {cutline_split}.")
 
-        if relation not in ('>', '<', '<=', '>=', '=', '!='):
-            raise SyntaxError(f"Unexpected comparison operator: {cutline_split[2]}")
-
-        return Cut(name, cut_var, relation, cut_val, is_symmetric, tree)
+        return Cut(name, cut_str, tree)
 
     def parse_cutfile(self, path: str = None, sep='\t') -> Tuple[OrderedDict[str, Cut], Set[Tuple[str, str]]]:
         """
@@ -132,7 +122,9 @@ class Cutfile:
             for output_var in lines[lines.index('[OUTPUTS]') + 1:]:
                 if output_var.startswith('#') or len(output_var) < 2:
                     continue
-                elif len(var_tree := output_var.split(sep)) > 2:
+
+                var_tree = [i.strip() for i in output_var.split(sep)]
+                if len(var_tree) > 2:
                     raise SyntaxError(f"Check line '{output_var}'. Should be variable and tree (optional). "
                                       f"Got '{var_tree}'.")
                 elif len(var_tree) == 2:
@@ -140,62 +132,67 @@ class Cutfile:
                     output_vars.add((out_var, tree))
                 elif len(var_tree) == 1:
                     out_var = var_tree[0]
-                    output_vars.add((out_var, self.__na_tree))
+                    output_vars.add((out_var, self.given_tree))
                 else:
                     raise Exception("This should never happen")
 
         return cuts, output_vars
 
-    def extract_variables(self,
-                          derived_vars: Dict[str, OtherVar],
-                          cuts: OrderedDict[str, Cut]
-                          ) -> Tuple[Dict[str, Set[str]], Set[str]]:
+    def extract_variables(self) -> Tuple[Dict[str, Set[str]], Set[str]]:
         """
         Get which variables are needed to extract from root file based on cutfile parser output
         uses outputs from parse_cutfile()
 
         :return Tuple[{Dictionary of trees and its variables to extract}, {set of variables to calculate}]
         """
-        # generate initial dict. Fill 'blank' tree with self.__na_tree to avoid possible tree name overlap
-        tree_dict = {self.__na_tree: set()}
-        for cut in cuts.values():
-            if cut.tree not in tree_dict:
-                tree_dict[cut.tree] = {cut.var}
+        # generate initial dict with given (default) TTree
+        tree_dict = {self.given_tree: set()}
+        extracted_vars = dict()  # keep all extracted variables here
+
+        for cut in self.cuts.values():
+            # cut could have multiple variables in it
+            if isinstance(cut.var, str):
+                the_var = {cut.var}
+                extracted_vars[cut.var] = cut.tree
+            elif isinstance(cut.var, set):
+                the_var = cut.var
+                for var in the_var:
+                    extracted_vars[var] = cut.tree
+
             else:
-                tree_dict[cut.tree].add(cut.var)
+                raise ValueError("This should never happen")
 
-        # work out which variables to calculate and which to extract from ROOT file
-        calc_vars = {  # cut variables that are in derived vars
-            (var, tree) for var, tree in {(cut.var, cut.tree) for cut in self.cuts.values()}
-            if var in derived_vars
-        }
-        calc_vars |= {  # add output variables in derived vars
-            (var, tree) for var, tree in self.vars_to_cut
-            if var in derived_vars
-        }
-        self.vars_to_cut -= {  # remove derived variables from variables to cut on
-            (var, tree) for var, tree in self.vars_to_cut
-            if var in derived_vars
-        }
-        tree_dict[self.__na_tree] = {  # get default tree variables and remove variables to calculate from default tree
-            cut.var for cut in self.cuts.values()
-            if cut.tree == self.__na_tree
-        } - {var for var, _ in calc_vars}
+            if cut.tree not in tree_dict:
+                tree_dict[cut.tree] = the_var
+            else:
+                tree_dict[cut.tree] |= the_var
 
-        for var, tree in self.vars_to_cut:
+        # add variables not cut on to tree dict
+        for var, tree in self.__vars_to_cut:
+            extracted_vars[var] = tree
             if tree in tree_dict:
                 tree_dict[tree] |= {var}
             else:
                 tree_dict[tree] = {var}
 
+        # work out which variables to calculate and which to extract from ROOT file
+        calc_vars = {  # cut variables that are in derived vars
+            (var, tree) for var, tree in extracted_vars.items()
+            if var in derived_vars
+        }
+
+        # remove variables to calculate from tree dict
+        for tree in tree_dict:
+            tree_dict[tree] -= {var for var, _ in calc_vars}
+
         # add any variables needed from which trees for calculating derived variables
-        for calc_var, alt_tree in calc_vars:
-            if alt_tree == self.__na_tree:  # if no tree provided use the one in the derived_vars dictionary
-                alt_tree = derived_vars[calc_var]['tree']
-            if alt_tree in tree_dict:
-                tree_dict[alt_tree] |= set(derived_vars[calc_var]['var_args'])
+        for calc_var, tree in calc_vars:
+            if tree == self.given_tree:
+                tree = derived_vars[calc_var]['tree']
+            if tree in tree_dict:
+                tree_dict[tree] |= set(derived_vars[calc_var]['var_args'])
             else:
-                tree_dict[alt_tree] = set(derived_vars[calc_var]['var_args'])
+                tree_dict[tree] = set(derived_vars[calc_var]['var_args'])
 
         # only return the actual variable names to calculate. Which tree to extract from will be handled by tree_dict
         return tree_dict, {var for var, _ in calc_vars}
@@ -204,43 +201,6 @@ class Cutfile:
     def all_vars(cls, cuts: OrderedDict[str, Cut], vars_set: Set[Tuple[str, str]]) -> Set[str]:
         """Return all variables mentioned in cutfile"""
         return {cut.var for cut in cuts.values()} | {var for var, _ in vars_set}
-
-    def extract_var_data(self,
-                         derived_vars: Dict[str, OtherVar],
-                         default_tree_name: str,
-                         ) -> Tuple[Dict[str, Set[str]], Set[str]]:
-        """
-        generate full tree dictionary that a Dataset object might need
-        returns the tree dictionary, set of variables to calculate,
-        and whether the dataset will contain truth, reco data
-        """
-        tree_dict, vars_to_calc = self.extract_variables(derived_vars, self.cuts)
-
-        # get set unlabeled variables in cutfile as being in default tree
-        if default_tree_name in tree_dict:
-            tree_dict[default_tree_name] |= tree_dict.pop(self.__na_tree, set())
-        else:
-            tree_dict[default_tree_name] = tree_dict.pop(self.__na_tree, set())
-
-        # only add these to 'main tree' to avoid merge issues
-        tree_dict[default_tree_name] |= {'weight_mc', 'weight_pileup'}
-
-        for tree in tree_dict:
-            # add necessary metadata to all trees
-            tree_dict[tree] |= {'mcChannelNumber', 'eventNumber'}
-            tree_dict[tree] -= vars_to_calc
-            if 'nominal' in tree.lower():
-                self.logger.info(f"Detected {tree} as reco tree, "
-                                 f"adding 'weight_leptonSF' and 'weight_KFactor' to tree variables")
-                tree_dict[tree] |= {'weight_leptonSF', 'weight_KFactor'}
-            elif 'truth' in tree.lower():
-                self.logger.info(f"Detected {tree} as truth tree, "
-                                 f"adding 'KFactor_weight_truth' to tree variables")
-                tree_dict[tree].add('KFactor_weight_truth')
-            else:
-                self.logger.info(f"Neither {tree} as truth nor reco dataset detected.")
-
-        return tree_dict, vars_to_calc
 
     @staticmethod
     def truth_reco(tree_dict: Dict[str, Set[str]]) -> Tuple[bool, bool]:
@@ -274,14 +234,8 @@ class Cutfile:
             raise ValueError(f"No cut named '{cut_label}' in cutfile {self.name}")
 
         name_len = max([len(cut_name) for cut_name in self.cuts]) if align else 0
-        var_len = max([len(cut.var) for cut in self.cuts.values()]) if align else 0
 
-        if not cut.is_symmetric:
-            return (f"{cut.name:<{name_len}}: " if name else '') + \
-                   f"{cut.var:>{var_len}} {cut.op} {cut.val}"
-        else:
-            return (f"{cut.name:<{name_len}}: " if name else '') + \
-                   f"{'|' + cut.var:>{max(var_len - 1, 0)}}| {cut.op} {cut.val}"
+        return (f"{cut.name:<{name_len}}: " if name else '') + cut.cutstr
 
     def cut_exists(self, cut_name: str) -> bool:
         """check if cut exists in cutfile"""
@@ -294,20 +248,3 @@ class Cutfile:
                 self.logger.debug(self.get_cut_string(cut_name, name=name, align=True))
             else:
                 self.logger.info(self.get_cut_string(cut_name, name=name, align=True))
-
-    # LEGACY FUNCTIONS (no longer used)
-    def if_make_cutfile_backup(self) -> bool:
-        """Decides if a backup cutfile should be made"""
-        if self.backup_path is None:
-            self.logger.info("No backup path given. Skipping backup check")
-        elif get_last_backup(self.backup_path, self.name):
-            return not identical_to_backup(self._path, backup_dir=self.backup_path, name=self.name, logger=self.logger)
-        else:
-            return True
-
-    def backup_cutfile(self, name: str) -> None:
-        if self.backup_path is None:
-            self.logger.info("No cutfile backup path, skipping backup")
-        cutfile_backup_filepath = f"{self.backup_path}{self.name}_{name}_{time.strftime('%Y-%m-%d_%H-%M-%S')}.txt"
-        copyfile(self._path, cutfile_backup_filepath)
-        self.logger.info(f"Backup cutfile saved in {cutfile_backup_filepath}")

@@ -1,3 +1,3 @@
 .PHONY: test
 test:
-	python -m pytest -v
+	python -m pytest -vv

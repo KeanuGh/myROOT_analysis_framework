@@ -382,6 +382,7 @@ class Histogram1D(bh.Histogram, family=None):
             scale_by_bin_width: bool = False,
             stats_box: bool = False,
             out_filename: str = None,
+            show: bool = False,
             **kwargs
     ) -> plt.Axes:
         """
@@ -401,6 +402,7 @@ class Histogram1D(bh.Histogram, family=None):
         :param stats_box: whether to add a stats box to the plot
         :param kwargs: keyword arguments to pass to mplhep.histplot()
         :param out_filename: provide filename to print. If not given, nothing is saved
+        :param show: whether to display the plot (plt.show())
         :return: matplotlib axis object with plot
         """
         # normalise/scale
@@ -420,7 +422,7 @@ class Histogram1D(bh.Histogram, family=None):
         # set error
         if yerr is True:
             yerr = hist.root_sumw2()
-        elif not hasattr(yerr, '__len__'):
+        elif not isinstance(yerr, bool) and not hasattr(yerr, '__len__'):
             raise TypeError(f"yerr should be a bool or iterable of values. Got {yerr}")
 
         if not ax:
@@ -446,6 +448,9 @@ class Histogram1D(bh.Histogram, family=None):
         if out_filename:
             plt.savefig(out_filename, bbox_inches='tight')
             self.logger.info(f'image saved in {out_filename}')
+
+        if show:
+            plt.show()
 
         return ax
 

@@ -1,5 +1,4 @@
 import logging
-import operator as op
 import time
 from dataclasses import dataclass, field
 from typing import Optional, Union, List, Dict, OrderedDict, Set, Iterable, overload
@@ -164,7 +163,7 @@ class DatasetBuilder:
         # Parsing cutfile
         if cutfile_path:
             self.logger.info(f"Parsting cutfile '{cutfile_path}'...")
-            cutfile = Cutfile(cutfile_path, logger=self.logger)
+            cutfile = Cutfile(cutfile_path, self.TTree_name, logger=self.logger)
 
             if self.logger.level == logging.DEBUG:
                 # log contents of cutfile
@@ -176,7 +175,8 @@ class DatasetBuilder:
                 self.logger.debug('---------------------------')
         if cutfile:
             # get tree dictionary, set of variables to calculate, and whether the dataset will contain truth, reco data
-            tree_dict, vars_to_calc = cutfile.extract_var_data(derived_vars, self.TTree_name)
+            tree_dict = cutfile.tree_dict
+            vars_to_calc = cutfile.vars_to_calc
             is_truth, is_reco = cutfile.truth_reco(tree_dict)
             cuts = cutfile.cuts
         elif tree_dict:
@@ -186,6 +186,9 @@ class DatasetBuilder:
                 is_truth, is_reco = Cutfile.truth_reco(tree_dict)
         else:
             raise ValueError("Must provide cutfile or tree dict to build DataFrame")
+
+        # add necessary variables to tree dictionary
+        tree_dict, vars_to_calc = self.__add_necessary_variables(tree_dict, vars_to_calc)
 
         # check if vars are contained in label dictionary
         self.__check_axis_labels(tree_dict, vars_to_calc)
@@ -369,6 +372,28 @@ class DatasetBuilder:
             self.logger.debug("Pickle file not saved, no changes made.")
 
         return dataset
+
+    def __add_necessary_variables(self, tree_dict: OrderedDict[str, Set[str]], vars_to_calc: Set[str]):
+        """Add variables necessary to extract"""
+        # only add these to 'main tree' to avoid merge issues
+        tree_dict[self.TTree_name] |= {'weight_mc', 'weight_pileup'}
+
+        for tree in tree_dict:
+            # add necessary metadata to all trees
+            tree_dict[tree] |= {'mcChannelNumber', 'eventNumber'}
+            tree_dict[tree] -= vars_to_calc
+            if 'nominal' in tree.lower():
+                self.logger.info(f"Detected {tree} as reco tree, "
+                                 f"adding 'weight_leptonSF' and 'weight_KFactor' to tree variables")
+                tree_dict[tree] |= {'weight_leptonSF', 'weight_KFactor'}
+            elif 'truth' in tree.lower():
+                self.logger.info(f"Detected {tree} as truth tree, "
+                                 f"adding 'KFactor_weight_truth' to tree variables")
+                tree_dict[tree].add('KFactor_weight_truth')
+            else:
+                self.logger.info(f"Neither {tree} as truth nor reco dataset detected.")
+
+        return tree_dict, vars_to_calc
 
     def __read_pkl_df(self, pkl_path: str) -> pd.DataFrame:
         """Read in a dataset pickle file and check its type and index"""
@@ -683,30 +708,12 @@ class DatasetBuilder:
             df[var] = func(df, *str_args)
 
     def __create_cut_columns(self, df: pd.DataFrame, cuts: OrderedDict[str, Cut]) -> None:
-        """
-        Creates boolean columns in dataframe corresponding to each cut
-        """
+        """Creates boolean columns in dataframe corresponding to each cut"""
         label = config.cut_label  # get cut label from config
         self.logger.info(f"Calculating {len(cuts)} cut columns...")
 
-        # use functions of compariton operators in dictionary to make life easier
-        # (but maybe a bit harder to read)
-        op_dict = {
-            '<': op.lt,
-            '<=': op.le,
-            '=': op.eq,
-            '!=': op.ne,
-            '>': op.gt,
-            '>=': op.ge,
-        }
-
         for cut in cuts.values():
-            if cut.op not in op_dict:
-                raise ValueError(f"Unexpected comparison operator: {cut.op}.")
-            if not cut.is_symmetric:
-                df[cut.name + label] = op_dict[cut.op](df[cut.var], cut.val)
-            else:  # take absolute value instead
-                df[cut.name + label] = op_dict[cut.op](df[cut.var].abs(), cut.val)
+            df.eval(f"`{cut.name} + {label}` = {cut.cutstr}", inplace=True)
 
     def __event_weight_reco(self,
                             df: pd.DataFrame,

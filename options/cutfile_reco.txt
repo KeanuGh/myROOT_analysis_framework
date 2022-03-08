@@ -1,9 +1,9 @@
 [CUTS]
-# Name	Variable	</>	Cut (in GeV if applicable)	Group Symmetric
+# Name	cutstring	tree
 # !!REMEMBER DEFAULT ANALYSISTOP OUTPUT IS IN MeV NOT GeV!!
-Muon $|\eta|$	mu_eta	<	2.4	muon	true
-Muon $p_{T}$	mu_pt	>	25	lepton	false
-Missing $E_{T}$	met_met	>	25	lepton	false
+Muon $|\eta|$	mu_eta.abs() < 2.5
+Muon $p_{T}$	mu_pt > 25
+Missing $E_{T}$	met_met > 25
 
 [OUTPUTS]
 # variables to process
