@@ -127,7 +127,7 @@ class Cutflow:
             f.write(f"Cut & Events & Ratio & Cumulative \\\\\\hline\n"
                     f"Inclusive & {self.cutflow_n_events[0]} & — & — \\\\\n")
             for i, cut in enumerate(self._cuts.values()):
-                f.write(f"{str(cut)} & "
+                f.write(f"{cut.cutstr} & "
                         f"{self.cutflow_n_events[i + 1]} & "
                         f"{self.cutflow_ratio[i + 1]:.3f} & "
                         f"{self.cutflow_cum[i + 1]:.3f} "

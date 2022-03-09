@@ -713,7 +713,7 @@ class DatasetBuilder:
         self.logger.info(f"Calculating {len(cuts)} cut columns...")
 
         for cut in cuts.values():
-            df.eval(f"`{cut.name} + {label}` = {cut.cutstr}", inplace=True)
+            df.eval(f"`{cut.name + label}` = {cut.cutstr}", inplace=True)
 
     def __event_weight_reco(self,
                             df: pd.DataFrame,

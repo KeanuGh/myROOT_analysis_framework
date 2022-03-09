@@ -64,7 +64,7 @@ Example cutfile:
 # Name	cutstring	tree
 # !!REMEMBER DEFAULT ANALYSISTOP OUTPUT IS IN MeV NOT GeV!!
 Tight muon	mu_isTight = 1
-eta	mu_eta.abs() < 2.4 and (mu_eta < 1.57 or mu_eta > 1.34)	true
+eta	mu_eta.abs() < 2.4 and (mu_eta < 1.57 or mu_eta > 1.34)
 E_{T}^{MISS}	met_met > 5
 p_T	mu_pt > 65 and neutrino_pt > 65
 M_T	mu_mt >	55
