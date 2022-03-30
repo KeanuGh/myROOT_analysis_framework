@@ -22,7 +22,7 @@ ROOT.TH1.AddDirectory(False)  # stops TH1s from being saved and prevents overwri
 ROOT.TH1.SetDefaultSumw2()  # Sets weighted binning in all ROOT histograms by default
 ROOT.EnableImplicitMT()  # enable multithreading
 set_atlas_style()  # set ATLAS plotting style to ROOT plots
-plt.style.use(hep.style.ATLAS)  # set atlas-style plots
+plt.style.use(hep.style.ATLAS)  # set atlas-style plots in matplotilb
 np.seterr(invalid='ignore')  # ignore division by zero errors
 
 
@@ -470,13 +470,15 @@ class Histogram1D(bh.Histogram, family=None):
         :param out_filename: filename to print if necessary
         """
         if normalise:
-            self.normalise_to(normalise)
+            h = self.normalised_to(normalise)
+        else:
+            h = self.copy()
 
         if stats_box:
-            self.TH1.SetStats(True)
+            h.TH1.SetStats(True)
 
         c = ROOT.TCanvas()
-        self.TH1.Draw("E Hist" + plot_option)
+        h.TH1.Draw("E Hist" + plot_option)
 
         if out_filename:
             c.Print(out_filename)

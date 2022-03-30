@@ -4,10 +4,10 @@ from collections import OrderedDict
 from dataclasses import dataclass, field
 from typing import Tuple, Dict, Set, Union
 
+from src.logger import get_logger
 from utils.file_utils import get_filename
 from utils.var_helpers import derived_vars
 from utils.variable_names import variable_data
-from src.logger import get_logger
 
 # all variables known by this framework
 all_vars = set(derived_vars.keys()) | set(variable_data.keys())
@@ -24,7 +24,7 @@ class Cut:
     def __post_init__(self):
         """Find the variables in the cut"""
         split_string = set(re.findall(r"[\w]+|[.,!?;]", self.cutstr))
-        cutvars = all_vars & split_string
+        cutvars = all_vars & split_string  # find all known variables in cutstring
 
         if len(cutvars) == 1:
             self.var = cutvars.pop()
@@ -158,7 +158,6 @@ class Cutfile:
                 the_var = cut.var
                 for var in the_var:
                     extracted_vars[var] = cut.tree
-
             else:
                 raise ValueError("This should never happen")
 

@@ -193,8 +193,8 @@ if __name__ == '__main__':
                        lepton='muon', normalise=True, scale_by_bin_width=True)
 
     analysis.plot_hist(['wminmunu', 'wmintaunu'], 'met_met', weight='reco_weight', title='reco - 139fb$^{-1}$',
-                       bins=(30, 50, 5000), logbins=True, logx=True, lepton='muon',
-                       normalise=True, scale_by_bin_width=True)
+                       bins=(30, 50, 5000), logbins=True, logx=True, ratio_fit=True, stats_box=True,
+                       lepton='muon', normalise=True, scale_by_bin_width=True)
 
     analysis.plot_hist(['wplusmunu', 'wplustaunu'], 'met_met', weight='reco_weight', title='reco - 139fb$^{-1}$',
                        bins=(30, 50, 5000), logbins=True, logx=True, ratio_fit=True, stats_box=True,
