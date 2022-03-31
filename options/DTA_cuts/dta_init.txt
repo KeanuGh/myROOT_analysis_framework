@@ -1,0 +1,20 @@
+[CUTS]
+# Name	Variable	</>	Cut (in GeV if applicable) Symmetric tree
+# truth
+Tau p_T	TruthTauPt	>	20	false
+Tau eta	TruthTauEta	<	2.47	true
+Tau eta crack1 TruthTauEta <
+
+[OUTPUTS]
+# truth
+MC_WZ_dilep_m_born	truth
+MC_WZneutrino_eta_born	truth
+MC_WZneutrino_pt_born	truth
+MC_WZmu_el_eta_born	truth
+MC_WZmu_el_pt_born	truth
+mt_born	truth
+
+# reco
+mu_d0sig	nominal_Loose
+mu_delta_z0_sintheta	nominal_Loose
+primaryVertices	nominal_Loose

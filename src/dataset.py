@@ -343,7 +343,8 @@ class Dataset:
 
         elif labels is True:
             self.logger.debug(f"Applying all cuts to {self.name}...")
-            cut_cols = [str(col) for col in self.df.columns if config.cut_label in col]
+            cut_cols = [str(col) for col in self.df.columns
+                        if config.cut_label in col]
 
         else:
             raise TypeError("'labels' must be a bool, a string or a list of strings")

@@ -16,6 +16,11 @@ variable_data: Dict[str, Branch] = {
         'units': '',
         'tag': 'meta',
     },
+    'weight': {
+        'name': r'weight',
+        'units': '',
+        'tag': 'meta',
+    },
     'weight_KFactor': {
         'name': r'KFactor weight',
         'units': '',
@@ -71,6 +76,22 @@ variable_data: Dict[str, Branch] = {
         'units': '',
         'tag': 'reco'
     },
+    # DTA-specific
+    'passTruth': {
+        'name': 'pass truth',
+        'units': '',
+        'tag': 'meta',
+    },
+    'passReco': {
+        'name': 'pass reco',
+        'units': '',
+        'tag': 'meta',
+    },
+    'nVtx': {
+        'name': 'number of vertices',
+        'units': '',
+        'tag': 'truth'
+    },
 
     # DERIVED KINEMATIC VARIABLES
     # =======================================================
@@ -117,6 +138,7 @@ variable_data: Dict[str, Branch] = {
 
     # RECO-LEVEL KINEMATIC VARIABLES
     # =======================================================
+    # analysistop
     'el_pt': {
         'name': r'Electron $p_{T}$',
         'units': 'GeV',
@@ -207,9 +229,136 @@ variable_data: Dict[str, Branch] = {
         'units': '',
         'tag': 'reco'
     },
+    # from DTA
+    'ElePt': {
+        'name': r'Electron $p_{T}$',
+        'units': 'GeV',
+        'tag': 'reco',
+    },
+    'EleEta': {
+        'name': r'Electron $\eta$',
+        'units': '',
+        'tag': 'reco',
+    },
+    'ElePhi': {
+        'name': r'Electron $\phi$',
+        'units': '',
+        'tag': 'reco',
+    },
+    'EleE': {
+        'name': r'Electron $E$',
+        'units': 'GeV',
+        'tag': 'reco',
+    },
+    'Ele_d0sig': {
+        'xlabel': r'Electron $d_0$ significance',
+        'units': '',
+        'tag': 'reco',
+    },
+    'Ele_delta_z0': {
+        'name': r'Electron $\Delta z_0$',
+        'units': '',
+        'tag': 'reco',
+    },
+    'MuonPt': {
+        'name': r'Muon $p_{T}$',
+        'units': 'GeV',
+        'tag': 'reco',
+    },
+    'MuonEta': {
+        'name': r'Muon $\eta$',
+        'units': '',
+        'tag': 'reco',
+    },
+    'MuonPhi': {
+        'name': r'Muon $\phi$',
+        'units': '',
+        'tag': 'reco',
+    },
+    'MuonE': {
+        'name': r'Muon $E$',
+        'units': 'GeV',
+        'tag': 'reco',
+    },
+    'Muon_d0sig': {
+        'name': r'Muon $d_0$ significance',
+        'units': '',
+        'tag': 'reco'
+    },
+    'Muon_delta_z0': {
+        'name': r'Muon $\Delta z_0$',
+        'units': '',
+        'tag': 'reco'
+    },
+    'JetPt': {
+        'name': r'Jet $p_{T}$',
+        'units': 'GeV',
+        'tag': 'reco',
+    },
+    'JetEta': {
+        'name': r'Jet $\eta$',
+        'units': '',
+        'tag': 'reco',
+    },
+    'JetPhi': {
+        'name': r'Jet $\phi$',
+        'units': '',
+        'tag': 'reco'
+    },
+    'JetE': {
+        'name': r'Jet $E$',
+        'units': '',
+        'tag': 'reco'
+    },
+    'Jet_btag': {
+        'name': r'Jet b-tag',
+        'units': '',
+        'tag': 'reco'
+    },
+    'PhotonPt': {
+        'name': r'Photon $p_{T}$',
+        'units': 'GeV',
+        'tag': 'reco',
+    },
+    'PhotonEta': {
+        'name': r'Photon $\eta$',
+        'units': '',
+        'tag': 'reco',
+    },
+    'PhotonPhi': {
+        'name': r'Photon $\phi$',
+        'units': '',
+        'tag': 'reco',
+    },
+    'PhotonE': {
+        'name': r'Photon $E$',
+        'units': 'GeV',
+        'tag': 'reco',
+    },
+    'MET_etx': {
+        'name': r'$E_{Tx}^{\mathrm{miss}}$',
+        'units': 'GeV',
+        'tag': 'reco',
+    },
+    'MET_ety': {
+        'name': r'$E_{Ty}^{\mathrm{miss}}$',
+        'units': 'GeV',
+        'tag': 'reco',
+    },
+    'MET_met': {
+        'name': r'$E_{T}^{\mathrm{miss}}$',
+        'units': 'GeV',
+        'tag': 'reco',
+    },
+    'MET_phi': {
+        'name': r'$\phi^{\mathrm{miss}$',
+        'units': '',
+        'tag': 'reco'
+    },
 
     # TRUTH-LEVEL KINEMATIC VARIABLES
     # =======================================================
+    # analysistop
     'PDFinfo_X1': {
         'name': r'$x$',
         'units': '',
@@ -424,6 +573,107 @@ variable_data: Dict[str, Branch] = {
         'name': r'dressed $m^W$',
         'units': 'GeV',
         'tag': 'truth',
+    },
+    # for DTA
+    'TruthJetEta': {
+        'name': r'Truth jet $\eta$',
+        'units': '',
+        'tag': 'truth'
+    },
+    'TruthJetPhi': {
+        'name': r'Truth jet $\phi$',
+        'units': '',
+        'tag': 'truth'
+    },
+    'TruthJetPt': {
+        'name': r'Truth jet $p_{T}$',
+        'units': 'GeV',
+        'tag': 'truth'
+    },
+    'TruthJetE': {
+        'name': r'Truth jet $E$',
+        'units': 'GeV',
+        'tag': 'truth'
+    },
+    'TruthNeutrinoEta': {
+        'name': r'Truth neutrino $\eta$',
+        'units': '',
+        'tag': 'truth'
+    },
+    'TruthNeutrinoPhi': {
+        'name': r'Truth neutrino $\phi$',
+        'units': '',
+        'tag': 'truth'
+    },
+    'TruthNeutrinoPt': {
+        'name': r'Truth neutrino $p_{T}$',
+        'units': 'GeV',
+        'tag': 'truth'
+    },
+    'TruthNeutrinoE': {
+        'name': r'Truth neutrino $E$',
+        'units': 'GeV',
+        'tag': 'truth'
+    },
+    'TruthMuonEta': {
+        'name': r'Truth muon $\eta$',
+        'units': '',
+        'tag': 'truth'
+    },
+    'TruthMuonPhi': {
+        'name': r'Truth muon $\phi$',
+        'units': '',
+        'tag': 'truth'
+    },
+    'TruthMuonPt': {
+        'name': r'Truth muon $p_{T}$',
+        'units': 'GeV',
+        'tag': 'truth'
+    },
+    'TruthMuonE': {
+        'name': r'Truth muon $E$',
+        'units': 'GeV',
+        'tag': 'truth'
+    },
+    'TruthEleEta': {
+        'name': r'Truth electron $\eta$',
+        'units': '',
+        'tag': 'truth'
+    },
+    'TruthElePhi': {
+        'name': r'Truth electron $\phi$',
+        'units': '',
+        'tag': 'truth'
+    },
+    'TruthElePt': {
+        'name': r'Truth electron $p_{T}$',
+        'units': 'GeV',
+        'tag': 'truth'
+    },
+    'TruthEleE': {
+        'name': r'Truth electron $E$',
+        'units': 'GeV',
+        'tag': 'truth'
+    },
+    'TruthTauEta': {
+        'name': r'Truth tau $\eta$',
+        'units': '',
+        'tag': 'truth'
+    },
+    'TruthTauPhi': {
+        'name': r'Truth tau $\phi$',
+        'units': '',
+        'tag': 'truth'
+    },
+    'TruthTauPt': {
+        'name': r'Truth tau $p_{T}$',
+        'units': 'GeV',
+        'tag': 'truth'
+    },
+    'TruthTauE': {
+        'name': r'Truth tau $E$',
+        'units': 'GeV',
+        'tag': 'truth'
     },
 
     # DEFAULT & TESTING
