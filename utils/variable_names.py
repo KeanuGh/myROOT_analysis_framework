@@ -290,6 +290,26 @@ variable_data: Dict[str, Branch] = {
         'units': '',
         'tag': 'reco'
     },
+    'TauPt': {
+        'name': r'Tau $p_{T}$',
+        'units': 'GeV',
+        'tag': 'reco',
+    },
+    'TauEta': {
+        'name': r'Tau $\eta$',
+        'units': '',
+        'tag': 'reco',
+    },
+    'TauPhi': {
+        'name': r'Tau $\phi$',
+        'units': '',
+        'tag': 'reco',
+    },
+    'TauE': {
+        'name': r'Tau $E$',
+        'units': 'GeV',
+        'tag': 'reco',
+    },
     'JetPt': {
         'name': r'Jet $p_{T}$',
         'units': 'GeV',
