@@ -9,6 +9,7 @@ import src.config as config
 from src.cutfile import Cut
 
 
+# TODO: Separate reco and truth cuts
 class Cutflow:
     def __init__(self, df: pd.DataFrame,
                  cuts: OrderedDict[str, Cut],

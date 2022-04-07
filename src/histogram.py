@@ -459,7 +459,7 @@ class Histogram1D(bh.Histogram, family=None):
         normalise: Union[float, bool] = False,
         plot_option: str = '',
         stats_box: bool = False,
-        out_filename: str = True
+        out_filename: str = False
     ) -> None:
         """
         ROOT plot

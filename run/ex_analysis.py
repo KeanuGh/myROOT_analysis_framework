@@ -7,7 +7,6 @@ if __name__ == '__main__':
             # 'data_path': '/data/atlas/HighMassDrellYan/test_mc16a/wminmunu_*/*.root',
             'cutfile_path': '../options/cutfile_EXAMPLE.txt',
             'TTree_name': 'truth',
-            'year': '2015+2016',
             'lepton': 'muon',
             'label': r'$W^-\rightarrow\mu\nu$',
         },
@@ -16,15 +15,14 @@ if __name__ == '__main__':
             # 'data_path': '/data/atlas/HighMassDrellYan/test_mc16a/wmintaunu_*/*.root',
             'cutfile_path': '../options/cutfile_EXAMPLE.txt',
             'TTree_name': 'truth',
-            'year': '2015+2016',
             'hard_cut': r'Muon $|#eta|$',
             'lepton': 'tau',
             'label': r'$W^-\rightarrow\tau\nu\rightarrow\mu\nu$',
         }
     }
 
-    my_analysis = Analysis(datasets, analysis_label='test_analysis', force_rebuild=False,
-                           log_level=10, log_out='both', timedatelog=False, separate_loggers=False)
+    my_analysis = Analysis(datasets, analysis_label='test_analysis', force_rebuild=True, dataset_type='analysistop',
+                           log_level=10, log_out='both', timedatelog=False, separate_loggers=False, year='2015+2016')
     my_analysis.print_latex_table(['wminmunu', 'wmintaunu'])
 
     # my_analysis.apply_cuts()

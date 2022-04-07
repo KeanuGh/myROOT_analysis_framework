@@ -11,6 +11,7 @@ filepath = '/mnt/D/data/DTA_outputs/user.kghorban.Sh_2211_Wtaunu_H_maxHTpTV2_CVe
 treename = 'T_s1thv_NOMINAL'
 wanted_cols = [
     'weight',
+    'mcWeight',
     'mcChannel',
     'mcWeight',
     'runNumber',
@@ -32,8 +33,12 @@ wanted_cols = [
     'TruthTau_isHadronic',
     'MET_etx', 'MET_ety', 'MET_met', 'MET_phi',
 ]
-bins = (30, 20, 1000)
+bins = (30, 20, 3000)
 
+Rdf = ROOT.RDataFrame(treename, filepath)
+Rdf = Rdf.Filter("(passTruth == true) & (passReco == true)")
+
+# routine to separate vector branches into separate variables
 ROOT.gInterpreter.Declare("""
 float getVecVal(ROOT::VecOps::RVec<float> x, int i = 0);
 
@@ -42,10 +47,6 @@ float getVecVal(ROOT::VecOps::RVec<float> x, int i) {
     else               return NAN;
 }
 """)
-
-Rdf = ROOT.RDataFrame(treename, filepath)
-Rdf = Rdf.Filter("(passTruth == true) & (passReco == true)")
-
 badcols = set()  # save old column names to avoid extracting them later
 for col_name in list(Rdf.GetColumnNames()):
     col_type = Rdf.GetColumnType(col_name)
@@ -77,6 +78,9 @@ df = pd.DataFrame(Rdf.AsNumpy(columns=[c for c in list(Rdf.GetColumnNames()) if 
 df.set_index(['mcChannel', 'eventNumber'], inplace=True)
 df.index.names = ['DSID', 'eventNumber']
 
+# filter events with nan weight values
+df = df.loc[df['weight'].notna()]
+
 # rescale GeV columns
 GeV_columns = [
     column for column in df.columns
@@ -85,10 +89,11 @@ GeV_columns = [
 df[GeV_columns] /= 1000
 
 # calc weights
-weight = df['weight'] * lumi_year['2015+2016'] / df['mcWeight'].sum()
+reco_weight = df['weight'] * lumi_year['2015+2016'] / df['mcWeight'].sum()
+truth_weight = df['mcWeight'] * lumi_year['2015+2016'] / df['mcWeight'].sum()
 
 # plot
-hTauPt = Histogram1D(df['TauPt'], bins, weight, logbins=True)
-ax = hTauPt.plot()
+hTauPt = Histogram1D(df['TauPt'], bins, reco_weight, logbins=True)
+ax = hTauPt.plot(normalise=True)
 plotting_utils.set_axis_options(ax, 'TauPt', bins, lepton='Tau', logx=True, logy=True)
 plt.show()

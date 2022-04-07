@@ -1,7 +1,7 @@
 import logging
 import re
 from collections import OrderedDict
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Tuple, Dict, Set, Union
 
 from src.logger import get_logger
@@ -18,20 +18,8 @@ class Cut:
     """Cut class containing info for each cut"""
     name: str
     cutstr: str
+    var: Union[str, Set[str]]
     tree: str
-    var: Union[str, Set[str]] = field(init=False)
-
-    def __post_init__(self):
-        """Find the variables in the cut"""
-        split_string = set(re.findall(r"[\w]+|[.,!?;]", self.cutstr))
-        cutvars = all_vars & split_string  # find all known variables in cutstring
-
-        if len(cutvars) == 1:
-            self.var = cutvars.pop()
-        elif len(cutvars) > 1:
-            self.var = cutvars
-        else:
-            raise ValueError(f"No known variable in string '{self.cutstr}'")
 
     def __str__(self) -> str:
         return f"{self.name}: {self.cutstr}"
@@ -83,7 +71,19 @@ class Cutfile:
         if tree == '':
             raise SyntaxError(f"Check cutfile. Line {cutline} is badly formatted. Got {cutline_split}.")
 
-        return Cut(name, cut_str, tree)
+        # check for variables in the cut string
+        split_string = set(re.findall(r"[\w]+|[.,!?;]", cut_str))
+        cutvars = all_vars & split_string  # find all known variables in cutstring
+
+        if len(cutvars) == 1:
+            var = cutvars.pop()
+        elif len(cutvars) > 1:
+            var = cutvars
+        else:
+            raise ValueError(f"No known variable in string '{cut_str}' for line '{cutline}'\n"
+                             f"Read {cutline_split}")
+
+        return Cut(name=name, cutstr=cut_str, var=var, tree=tree)
 
     def parse_cutfile(self, path: str = None, sep='\t') -> Tuple[OrderedDict[str, Cut], Set[Tuple[str, str]]]:
         """

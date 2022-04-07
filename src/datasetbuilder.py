@@ -3,16 +3,17 @@ import time
 from dataclasses import dataclass, field
 from typing import Optional, Union, List, Dict, OrderedDict, Set, Iterable, overload
 
+import ROOT
 import pandas as pd
 import uproot
 from awkward import to_pandas
 
 import src.config as config
-import utils.file_utils as file_utils
 from src.cutfile import Cutfile, Cut
 from src.cutflow import Cutflow
 from src.dataset import Dataset
 from src.logger import get_logger
+from utils import file_utils
 from utils.var_helpers import derived_vars
 from utils.variable_names import variable_data
 
@@ -23,6 +24,15 @@ lumi_year = {
     '2018': 58.4501,
     '2015+2016': 32.9881 + 3.21956
 }
+# declare helper function to unravel ROOT vector branches
+ROOT.gInterpreter.Declare("""
+float getVecVal(ROOT::VecOps::RVec<float> x, int i = 0);
+
+float getVecVal(ROOT::VecOps::RVec<float> x, int i) {
+    if (x.size() > i)  return x[i];
+    else               return NAN;
+}
+""")
 
 
 @dataclass
@@ -59,8 +69,8 @@ class DatasetBuilder:
     lepton: str = 'lepton'
     logger: logging.Logger = field(default_factory=get_logger)
     hard_cut: Union[str, List[str]] = field(default_factory=list)
+    dataset_type: str = 'DTA'
     force_rebuild: bool = False
-    force_recalc_weights: bool = False
     force_recalc_cuts: bool = False
     force_recalc_vars: bool = False
     skip_verify_pkl: bool = False
@@ -74,6 +84,10 @@ class DatasetBuilder:
             raise ValueError("Pass wither lumi or year")
         elif self.year:
             self.lumi = lumi_year[self.year]
+
+        self.dataset_type = self.dataset_type.lower()
+        if self.dataset_type not in ('dta', 'analysistop'):
+            raise ValueError("Known dataset types: 'DTA', 'AnalysisTop'")
 
     @overload
     def build(self, data_path: str, cutfile_path: str) -> Dataset:
@@ -136,7 +150,6 @@ class DatasetBuilder:
         """
         __build_df = False
         __create_cut_cols = False
-        __create_weight_cols = False
         __calculate_vars = False
         __error_at_rebuild = False
 
@@ -149,7 +162,6 @@ class DatasetBuilder:
             self.logger.warning("No ROOT data provided so pickled DataFrame cannot be checked")
             __build_df = False
             __error_at_rebuild = True
-            __create_weight_cols = False
             __create_cut_cols = False
         elif data_path and not pkl_path:
             __build_df = True
@@ -187,8 +199,9 @@ class DatasetBuilder:
         else:
             raise ValueError("Must provide cutfile or tree dict to build DataFrame")
 
-        # add necessary variables to tree dictionary
-        tree_dict, vars_to_calc = self.__add_necessary_variables(tree_dict, vars_to_calc)
+        # remove variables to calculate from variables to import from ROOT file
+        for tree in tree_dict:
+            tree_dict[tree] - vars_to_calc
 
         # check if vars are contained in label dictionary
         self.__check_axis_labels(tree_dict, vars_to_calc)
@@ -209,11 +222,10 @@ class DatasetBuilder:
             self.logger.debug("Cuts from cutfile:")
             cutfile.log_cuts(debug=True)
         hard_cuts_str = '\n\t'.join([f"{cut}: {cutfile.get_cut_string(cut)}" for cut in self.hard_cut]) \
-                        if self.hard_cut else None
+            if self.hard_cut else None
         self.logger.debug(f"Hard cut(s) applied: {hard_cuts_str}")
         self.logger.debug(f"Forced dataset rebuild: {self.force_rebuild}")
-        self.logger.debug(f"Calculating weights: {__create_weight_cols}")
-        self.logger.debug(f"Calculating cuts: {__create_weight_cols}")
+        self.logger.debug(f"Calculating cuts: {__create_cut_cols}")
         if pkl_path:
             self.logger.debug(f"Pickle datapath: {pkl_path}")
             self.logger.debug(f"Skipping pickle file verification: {self.skip_verify_pkl}")
@@ -236,7 +248,7 @@ class DatasetBuilder:
         df = pd.DataFrame()  # literally just to stop pycharm from complaining
 
         # load dataframe from pickle
-        if pkl_path and not self.force_rebuild:
+        if pkl_path and (file_utils.file_exists(pkl_path)) and (not self.force_rebuild):
             df = self.__read_pkl_df(pkl_path)
 
             # Pickle file checks
@@ -249,21 +261,19 @@ class DatasetBuilder:
                 cols = df.columns
                 if not self.__check_var_cols(cols, tree_dict, raise_error=__error_at_rebuild):
                     __build_df = True
+
                 elif not self.__check_calc_var_cols(cols, vars_to_calc) and not self.force_recalc_vars:
                     if not self.__check_argument_var_cols(cols, vars_to_calc, raise_error=__error_at_rebuild):
                         __build_df = True
                     else:
                         __calculate_vars = True
+
                 else:
                     self.logger.debug("Found all necessary variables. No rebuild necessary")
                     __build_df = False
                     __create_cut_cols = (
                         True if self.force_recalc_cuts
                         else not self.__check_cut_cols(cols, cuts)
-                    )
-                    __create_weight_cols = (
-                        True if self.force_recalc_weights
-                        else not self.__check_weight_cols(cols, truth=is_truth, reco=is_reco)
                     )
         else:
             __build_df = True
@@ -273,16 +283,10 @@ class DatasetBuilder:
         if __build_df:
             df = self.build_dataframe(
                 data_path=data_path,
-                TTree_name=self.TTree_name,
                 tree_dict=tree_dict,
                 is_truth=is_truth,
                 is_reco=is_reco,
-                chunksize=self.chunksize,
-                validate_missing_events=self.validate_missing_events,
-                validate_duplicated_events=self.validate_duplicated_events,
-                validate_sumofweights=self.validate_sumofweights
             )
-            __create_weight_cols = True
             __create_cut_cols = True
             __calculate_vars = True
 
@@ -295,27 +299,6 @@ class DatasetBuilder:
         # calculate cut columns
         if __create_cut_cols or self.force_recalc_cuts:
             self.__create_cut_columns(df, cuts)
-
-        # calculate weights
-        if __create_weight_cols or self.force_recalc_weights:
-            if is_truth:
-                self.logger.info(f"Calculating truth weight for {self.name}...")
-                df['truth_weight'] = self.__event_weight_truth(df)
-                # EVERY event MUST have a truth weight
-                self.logger.info(f"Verifying truth weight for {self.name}...")
-                if df['truth_weight'].isna().any():
-                    raise ValueError("NAN values in truth weights!")
-            if is_reco:
-                self.logger.info(f"Calculating reco weight for {self.name}...")
-                df['reco_weight'] = self.__event_weight_reco(df)
-                # every reco event MUST have a reco weight
-                self.logger.info(f"Verifying reco weight for {self.name}...")
-                if not is_truth:
-                    if df['reco_weight'].isna().any():
-                        raise ValueError("NAN values in reco weights!")
-                else:
-                    assert (~df['reco_weight'].isna()).sum() == (~df['weight_leptonSF'].isna()).sum(), \
-                        "Different number of events for reco weight and lepton scale factors!"
 
         # apply hard cut(s) if it exists in cut columns
         hard_cuts_to_apply = []
@@ -362,38 +345,15 @@ class DatasetBuilder:
 
         # print pickle file if anything is new/changed
         if pkl_path and (
-            __build_df or
-            __create_cut_cols or
-            __create_weight_cols or
-            __calculate_vars
+                __build_df or
+                __create_cut_cols or
+                __calculate_vars
         ):
             dataset.save_pkl_file(pkl_path)
         else:
             self.logger.debug("Pickle file not saved, no changes made.")
 
         return dataset
-
-    def __add_necessary_variables(self, tree_dict: OrderedDict[str, Set[str]], vars_to_calc: Set[str]):
-        """Add variables necessary to extract"""
-        # only add these to 'main tree' to avoid merge issues
-        tree_dict[self.TTree_name] |= {'weight_mc', 'weight_pileup'}
-
-        for tree in tree_dict:
-            # add necessary metadata to all trees
-            tree_dict[tree] |= {'mcChannelNumber', 'eventNumber'}
-            tree_dict[tree] -= vars_to_calc
-            if 'nominal' in tree.lower():
-                self.logger.info(f"Detected {tree} as reco tree, "
-                                 f"adding 'weight_leptonSF' and 'weight_KFactor' to tree variables")
-                tree_dict[tree] |= {'weight_leptonSF', 'weight_KFactor'}
-            elif 'truth' in tree.lower():
-                self.logger.info(f"Detected {tree} as truth tree, "
-                                 f"adding 'KFactor_weight_truth' to tree variables")
-                tree_dict[tree].add('KFactor_weight_truth')
-            else:
-                self.logger.info(f"Neither {tree} as truth nor reco dataset detected.")
-
-        return tree_dict, vars_to_calc
 
     def __read_pkl_df(self, pkl_path: str) -> pd.DataFrame:
         """Read in a dataset pickle file and check its type and index"""
@@ -437,10 +397,6 @@ class DatasetBuilder:
         """Check whether required variables exist in DataFrame columns"""
         var_set = {var for var_set in tree_dict.values() for var in var_set}
         # variables that get renamed or put in index
-        var_set.remove('mcChannelNumber')
-        var_set.remove('eventNumber')
-        var_set.remove('KFactor_weight_truth')
-        var_set.add('weight_KFactor')
         if missing_vars := {var for var in var_set
                             if var not in df_cols}:
             if raise_error:
@@ -487,69 +443,65 @@ class DatasetBuilder:
         else:
             return True
 
-    def __check_weight_cols(self, df_cols: Iterable, truth: bool, reco: bool, raise_error: bool = False) -> bool:
-        """Check if necessary weight columns exist in DataFrame"""
-        if truth and 'truth_weight' not in df_cols:
-            if raise_error:
-                raise ValueError(f"Truth weight missing")
-            else:
-                self.logger.info(f"Truth weight missing, will calculate")
-                return False
-
-        if reco and 'reco_weight' not in df_cols:
-            if raise_error:
-                raise ValueError(f"Reco weight missing")
-            else:
-                self.logger.info(f"Reco weight missing, will calculate")
-                return False
-        return True
-
     # ===============================
     # ===== DATAFRAME FUNCTIONS =====
     # ===============================
     def build_dataframe(
             self,
             data_path: str,
-            TTree_name: str,
             tree_dict: Dict[str, Set[str]],
             is_truth: bool,
             is_reco: bool,
-            chunksize: int = 1024,
-            validate_missing_events: bool = True,
-            validate_duplicated_events: bool = True,
-            validate_sumofweights: bool = True,
+    ) -> pd.DataFrame:
+        if self.dataset_type == 'analysistop':
+            return self.__build_dataframe_analysistop(
+                data_path=data_path,
+                tree_dict=tree_dict,
+                is_truth=is_truth,
+                is_reco=is_reco,
+            )
+        elif self.dataset_type == 'dta':
+            return self.__build_dataframe_dta(
+                data_path=data_path,
+                tree_dict=tree_dict,
+            )
+
+    def __build_dataframe_analysistop(
+            self,
+            data_path: str,
+            tree_dict: Dict[str, Set[str]],
+            is_truth: bool,
+            is_reco: bool,
     ) -> pd.DataFrame:
         """
          Builds a dataframe
 
         :param data_path: path to ROOT datafile(s)
-        :param TTree_name: TTree in datapath to set as default tree
         :param tree_dict: dictionary of tree: variables to extract from Datapath
         :param is_truth: whether dataset contains truth data
         :param is_reco: whether dataset contains reco data
-        :param chunksize: chunksize for uproot concat method
-        :param validate_missing_events: whether to check for missing events
-        :param validate_duplicated_events: whether to check for duplicated events
-        :param validate_sumofweights: whether to check sum of weights against weight_mc
         :return: output dataframe containing columns corresponding to necessary variables
         """
         self.logger.info(f"Building DataFrame from {data_path} ({file_utils.n_files(data_path)} file(s))...")
 
         # is the default tree a truth tree?
-        default_tree_truth = 'truth' in TTree_name
+        default_tree_truth = 'truth' in self.TTree_name
+
+        # add necessary variables to tree dictionary
+        tree_dict = self.__add_necessary_analysistop_variables(tree_dict)
 
         t1 = time.time()
 
         # Extract main tree and event weights
         # ---------------------------------------------------------------------------------
-        self.logger.debug(f"Extracting {tree_dict[TTree_name]} from {TTree_name} tree...")
-        df = to_pandas(uproot.concatenate(data_path + ':' + TTree_name, tree_dict[TTree_name],
-                                          num_workers=config.n_threads, begin_chunk_size=chunksize))
+        self.logger.debug(f"Extracting {tree_dict[self.TTree_name]} from {self.TTree_name} tree...")
+        df = to_pandas(uproot.concatenate(data_path + ':' + self.TTree_name, tree_dict[self.TTree_name],
+                                          num_workers=config.n_threads, begin_chunk_size=self.chunksize))
         self.logger.debug(f"Extracted {len(df)} events.")
 
         self.logger.debug(f"Extracting ['total_EventsWeighted', 'dsid'] from 'sumWeights' tree...")
         sumw = to_pandas(uproot.concatenate(data_path + ':sumWeights', ['totalEventsWeighted', 'dsid'],
-                                            num_workers=config.n_threads, begin_chunk_size=chunksize))
+                                            num_workers=config.n_threads, begin_chunk_size=self.chunksize))
 
         self.logger.debug(f"Calculating sum of weights and merging...")
         sumw = sumw.groupby('dsid').sum()
@@ -559,10 +511,10 @@ class DatasetBuilder:
         df.index.names = ['DSID', 'eventNumber']
         self.logger.debug("Set DSID/eventNumber as index")
 
-        # merge TTrees
-        if validate_duplicated_events:
+        # validate
+        if self.validate_duplicated_events:
             validation = '1:1'
-            self.logger.info(f"Validating duplicated events in tree {TTree_name}...")
+            self.logger.info(f"Validating duplicated events in tree {self.TTree_name}...")
             self.__drop_duplicates(df)
             self.__drop_duplicate_event_numbers(df)
         else:
@@ -573,41 +525,41 @@ class DatasetBuilder:
         # iterate over other TTrees, merge & validate
         # -----------------------------------------------------------------------------------
         for tree in tree_dict:
-            if tree == TTree_name:
+            if tree == self.TTree_name:
                 continue
 
             self.logger.debug(f"Extracting {tree_dict[tree]} from {tree} tree...")
             alt_df = to_pandas(uproot.concatenate(data_path + ":" + tree, tree_dict[tree],
-                                                  num_workers=config.n_threads, begin_chunk_size=chunksize))
+                                                  num_workers=config.n_threads, begin_chunk_size=self.chunksize))
             self.logger.debug(f"Extracted {len(alt_df)} events.")
 
             alt_df.set_index(['mcChannelNumber', 'eventNumber'], inplace=True)
             alt_df.index.names = ['DSID', 'eventNumber']
             self.logger.debug("Set DSID/eventNumber as index")
 
-            if validate_missing_events:
+            if self.validate_missing_events:
                 self.logger.info(f"Checking for missing events in tree '{tree}'..")
                 tree_is_truth = 'truth' in tree
 
                 if tree_is_truth and not default_tree_truth:
                     if n_missing := len(df.index.difference(alt_df.index)):
                         raise Exception(
-                            f"Found {n_missing} events in '{TTree_name}' tree not found in '{tree}' tree")
+                            f"Found {n_missing} events in '{self.TTree_name}' tree not found in '{tree}' tree")
                     else:
-                        self.logger.debug(f"All events in {TTree_name} tree found in {tree} tree")
+                        self.logger.debug(f"All events in {self.TTree_name} tree found in {tree} tree")
                 elif default_tree_truth and not tree_is_truth:
                     if n_missing := len(alt_df.index.difference(df.index)):
                         raise Exception(
-                            f"Found {n_missing} events in '{tree}' tree not found in '{TTree_name}' tree")
+                            f"Found {n_missing} events in '{tree}' tree not found in '{self.TTree_name}' tree")
                     else:
-                        self.logger.debug(f"All events in {tree} tree found in {TTree_name} tree")
+                        self.logger.debug(f"All events in {tree} tree found in {self.TTree_name} tree")
                 else:
                     self.logger.info(f"Skipping missing events check. Not truth/reco tree combination")
 
             else:
                 self.logger.info(f"Skipping missing events check in tree {tree}")
 
-            if validate_duplicated_events:
+            if self.validate_duplicated_events:
                 self.logger.info(f"Validating duplicated events in tree {tree}...")
                 self.__drop_duplicates(alt_df)
 
@@ -616,7 +568,7 @@ class DatasetBuilder:
                           validate=validation)
         # -------------------------------------------------------------------------------------
 
-        if validate_sumofweights:
+        if self.validate_sumofweights:
             # sanity check to make sure totalEventsWeighted really is what it says it is
             # also output DSID metadata
             df_id_sub = df['weight_mc'].groupby(level='DSID').sum()
@@ -635,6 +587,29 @@ class DatasetBuilder:
                         f"'weight_mc' ({dsid_weight}) for DISD {dsid}. Ratio = {totalEventsWeighted / dsid_weight:.2g}")
         else:
             self.logger.info("Skipping sum of weights validation")
+        # ---------------------------------------------------------------------------------------
+
+        # calculate weights
+        # ---------------------------------------------------------------------------------------
+        if is_truth:
+            self.logger.info(f"Calculating truth weight for {self.name}...")
+            df['truth_weight'] = self.__event_weight_truth_analyistop(df)
+            # EVERY event MUST have a truth weight
+            self.logger.info(f"Verifying truth weight for {self.name}...")
+            if df['truth_weight'].isna().any():
+                raise ValueError("NAN values in truth weights!")
+        if is_reco:
+            self.logger.info(f"Calculating reco weight for {self.name}...")
+            df['reco_weight'] = self.__event_weight_reco_analysistop(df)
+            # every reco event MUST have a reco weight
+            self.logger.info(f"Verifying reco weight for {self.name}...")
+            if not is_truth:
+                if df['reco_weight'].isna().any():
+                    raise ValueError("NAN values in reco weights!")
+            else:
+                assert (~df['reco_weight'].isna()).sum() == (~df['weight_leptonSF'].isna()).sum(), \
+                    "Different number of events for reco weight and lepton scale factors!"
+        # ---------------------------------------------------------------------------------------
 
         # CLEANUP
         # ---------------------------------------------------------------------------------------
@@ -656,11 +631,12 @@ class DatasetBuilder:
             f"Length of DataFrame ({len(df.index)}) doesn't match number of truth ({n_truth}) or reco events ({n_reco})"
 
         if is_truth and is_reco:
-            # drop reco KFactor as long as values are the same for reco variables
-            pd.testing.assert_series_equal(df.loc[pd.notna(df['weight_KFactor']), 'KFactor_weight_truth'],
-                                           df['weight_KFactor'].dropna(),
-                                           check_exact=True, check_names=False, check_index=False), \
-                                                "reco and truth KFactors not equal"
+            # make sure KFactor is the same for all reco and truth variables
+            pd.testing.assert_series_equal(
+                df.loc[pd.notna(df['weight_KFactor']), 'KFactor_weight_truth'],
+                df['weight_KFactor'].dropna(),
+                check_exact=True, check_names=False, check_index=False
+            ), "reco and truth KFactors not equal"
             df.drop(columns='weight_KFactor', inplace=True)
             self.logger.debug("Dropped extra KFactor column")
         # ensure there is always only one KFactor column and it is named 'weight_KFactor'
@@ -673,6 +649,133 @@ class DatasetBuilder:
         self.logger.info(f"time to build dataframe: {time.strftime('%H:%M:%S', time.gmtime(time.time() - t1))}")
 
         return df
+
+    def __build_dataframe_dta(
+            self,
+            data_path: str,
+            tree_dict: dict[str, Set[str]],
+    ) -> pd.DataFrame:
+        self.logger.info(f"Building DataFrame from {data_path} ({file_utils.n_files(data_path)} file(s))...")
+        t1 = time.time()
+
+        self.logger.debug("Initialising RDataframe..")
+        Rdf = ROOT.RDataFrame(self.TTree_name, data_path)
+        Rdf = Rdf.Filter("(passTruth == true) & (passReco == true)")
+
+        # check tree(s)
+        for tree in tree_dict:
+            if tree != self.TTree_name:
+                raise ValueError("Don't import more than one DTA tree at once. Got the following trees: ",
+                                 ', '.join(tree_dict.keys()))
+
+        tree_dict = self.__add_necessary_dta_variables(tree_dict)
+
+        # check columns
+        import_cols = tree_dict[self.TTree_name]
+        all_tree_cols = list(Rdf.GetColumnNames())
+        if missing_cols := [
+            col for col in import_cols
+            if col not in all_tree_cols
+        ]:
+            raise ValueError(f"No column(s) {missing_cols} in TTree {self.TTree_name}")
+
+        # routine to separate vector branches into separate variables
+        badcols = set()  # save old vector column names to avoid extracting them later
+        for col_name in import_cols:
+            col_type = Rdf.GetColumnType(col_name)
+
+            # unravel vector-type columns
+            if "ROOT::VecOps::RVec" in col_type:
+                # skip non-numeric vector types
+                if col_type == "ROOT::VecOps::RVec<string>":
+                    badcols.add(col_name)
+
+                elif 'jet' in str(col_name).lower():
+                    # create three new columns for each possible jet
+                    for i in range(3):
+                        Rdf = Rdf.Define(f"{col_name}{i + 1}", f"getVecVal({col_name},{i})")
+                    badcols.add(col_name)
+
+                else:
+                    Rdf = Rdf.Redefine(col_name, f"getVecVal({col_name},0)")
+
+        # import needed columns to pandas dataframe
+        cols_to_extract = [c for c in import_cols
+                           if c not in badcols]
+        self.logger.debug(f"Extracting {tree_dict[self.TTree_name]} from {self.TTree_name} tree...")
+        df = pd.DataFrame(Rdf.AsNumpy(columns=cols_to_extract))
+        self.logger.debug(f"Extracted {len(df)} events.")
+
+        df.set_index(['mcChannel', 'eventNumber'], inplace=True)
+        df.index.names = ['DSID', 'eventNumber']
+        self.logger.debug("Set DSID/eventNumber as index")
+
+        self.logger.info(f"Time to build dataframe: {time.strftime('%H:%M:%S', time.gmtime(time.time() - t1))}")
+
+        # validate
+        if self.validate_duplicated_events:
+            self.logger.info(f"Validating duplicated events in tree {self.TTree_name}...")
+            self.__drop_duplicates(df)
+            self.__drop_duplicate_event_numbers(df)
+        else:
+            self.logger.info("Skipping duplicted events validation")
+
+        # filter events with nan weight values (why do these appear?)
+        if (nbad_rows := len(df['weight'].notna())) > 0:
+            df = df.loc[df['weight'].notna()]
+            self.logger.info(f"Dropped {nbad_rows} rows with missing weight values")
+
+        # rescale GeV columns
+        self.__rescale_to_gev(df)
+
+        # calc weights
+        self.logger.info("Calculating DTA weights...")
+        df['reco_weight'] = df['weight'] * self.lumi / df['mcWeight'].sum()
+        df['truth_weight'] = df['mcWeight'] * self.lumi / df['mcWeight'].sum()
+
+        # rename weight col for consistency
+        df.rename(columns={'mcWeight': 'weight_mc'}, inplace=True)
+
+        return df
+
+    # ===============================
+    # ========== HELPERS ============
+    # ===============================
+    def __add_necessary_analysistop_variables(self, tree_dict: Dict[str, Set[str]]) -> Dict[str, Set[str]]:
+        """Add variables necessary to extract"""
+        # only add these to 'main tree' to avoid merge issues
+        tree_dict[self.TTree_name] |= {'weight_mc', 'weight_pileup'}
+
+        for tree in tree_dict:
+            # add necessary metadata to all trees
+            tree_dict[tree] |= {'mcChannelNumber', 'eventNumber'}
+            if 'nominal' in tree.lower():
+                self.logger.info(f"Detected {tree} as reco tree, "
+                                 f"adding 'weight_leptonSF' and 'weight_KFactor' to tree variables")
+                tree_dict[tree] |= {'weight_leptonSF', 'weight_KFactor'}
+            elif 'truth' in tree.lower():
+                self.logger.info(f"Detected {tree} as truth tree, "
+                                 f"adding 'KFactor_weight_truth' to tree variables")
+                tree_dict[tree].add('KFactor_weight_truth')
+            else:
+                self.logger.info(f"Neither {tree} as truth nor reco dataset detected.")
+
+        return tree_dict
+
+    def __add_necessary_dta_variables(self, tree_dict: Dict[str, Set[str]]) -> Dict[str, Set[str]]:
+        for tree in tree_dict:
+            tree_dict[tree] |= {
+                'weight',
+                'mcWeight',
+                'mcChannel',
+                'mcWeight',
+                'runNumber',
+                'eventNumber',
+                'passTruth',
+                'passReco',
+            }
+        self.logger.debug("Added necessary variables to DTA import")
+        return tree_dict
 
     def __drop_duplicates(self, df: pd.DataFrame) -> None:
         """Checks for and drops duplicated events and events with same event numbers for each dataset ID"""
@@ -713,16 +816,16 @@ class DatasetBuilder:
         self.logger.info(f"Calculating {len(cuts)} cut columns...")
 
         for cut in cuts.values():
-            df.eval(f"`{cut.name + label}` = {cut.cutstr}", inplace=True)
+            df[cut.name + label] = df.eval(cut.cutstr)
 
-    def __event_weight_reco(self,
-                            df: pd.DataFrame,
-                            mc_weight: str = 'weight_mc',
-                            tot_weighted_events: str = 'totalEventsWeighted',
-                            KFactor: str = 'weight_KFactor',
-                            lepton_SF: str = 'weight_leptonSF',
-                            pileup_weight: str = 'weight_pileup',
-                            ) -> pd.Series:
+    def __event_weight_reco_analysistop(self,
+                                        df: pd.DataFrame,
+                                        mc_weight: str = 'weight_mc',
+                                        tot_weighted_events: str = 'totalEventsWeighted',
+                                        KFactor: str = 'weight_KFactor',
+                                        lepton_SF: str = 'weight_leptonSF',
+                                        pileup_weight: str = 'weight_pileup',
+                                        ) -> pd.Series:
         """
         Calculate total reco event weights
 
@@ -741,13 +844,13 @@ class DatasetBuilder:
             self.lumi * df[mc_weight] * abs(df[mc_weight]) / df[tot_weighted_events] * \
             df[KFactor] * df[pileup_weight] * df[lepton_SF]
 
-    def __event_weight_truth(self,
-                             df: pd.DataFrame,
-                             mc_weight: str = 'weight_mc',
-                             tot_weighted_events: str = 'totalEventsWeighted',
-                             KFactor: str = 'weight_KFactor',
-                             pileup_weight: str = 'weight_pileup',
-                             ) -> pd.Series:
+    def __event_weight_truth_analyistop(self,
+                                        df: pd.DataFrame,
+                                        mc_weight: str = 'weight_mc',
+                                        tot_weighted_events: str = 'totalEventsWeighted',
+                                        KFactor: str = 'KFactor_weight_truth',
+                                        pileup_weight: str = 'weight_pileup',
+                                        ) -> pd.Series:
         """
         Calculate total truth event weights
 
