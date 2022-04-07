@@ -1,20 +1,40 @@
 [CUTS]
-# Name	Variable	</>	Cut (in GeV if applicable) Symmetric tree
+# Name	Variable	</>	Cut (in GeV if applicable) tree
 # truth
-Tau p_T	TruthTauPt	>	20	false
-Tau eta	TruthTauEta	<	2.47	true
-Tau eta crack1 TruthTauEta <
+Truth tau p_T	TruthTauPt > 20
+Truth tau eta	TruthTauEta.abs() < 2.47
+Truth tau eta crack	(TruthTauEta.abs() < 1.37) or (TruthTauEta.abs() > 1.52)
+
+# reco
+Tau p_T	TauPt > 65
+Tau eta	TauEta.abs() < 2.4
+E_{T}^{MISS}	MET_met > 85
 
 [OUTPUTS]
 # truth
-MC_WZ_dilep_m_born	truth
-MC_WZneutrino_eta_born	truth
-MC_WZneutrino_pt_born	truth
-MC_WZmu_el_eta_born	truth
-MC_WZmu_el_pt_born	truth
-mt_born	truth
+TruthTauPt
+TruthTauEta
+TruthTauPhi
+TruthTauM
+VisTruthTauPt
+VisTruthTauEta
+VisTruthTauPhi
+VisTruthTauM
+TruthNeutrinoPt
+TruthNeutrinoEta
+TruthNeutrinoPhi
+TruthNeutrinoE
+TruthJetEta
+TruthJetPhi
+TruthJetE
 
 # reco
-mu_d0sig	nominal_Loose
-mu_delta_z0_sintheta	nominal_Loose
-primaryVertices	nominal_Loose
+TauPt
+TauEta
+TauPhi
+TauE
+JetEta
+JetPhi
+JetE
+MET_met
+MET_phi
