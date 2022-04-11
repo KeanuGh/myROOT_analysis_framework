@@ -229,6 +229,11 @@ variable_data: Dict[str, Branch] = {
         'units': '',
         'tag': 'reco'
     },
+    'mu_isTight': {
+        'name': r'Tight Muon',
+        'units': '',
+        'tag': 'reco',
+    },
     # from DTA
     'ElePt': {
         'name': r'Electron $p_{T}$',

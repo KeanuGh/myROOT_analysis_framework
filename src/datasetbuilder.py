@@ -816,7 +816,10 @@ class DatasetBuilder:
         self.logger.info(f"Calculating {len(cuts)} cut columns...")
 
         for cut in cuts.values():
-            df[cut.name + label] = df.eval(cut.cutstr)
+            try:
+                df[cut.name + label] = df.eval(cut.cutstr)
+            except ValueError as e:
+                raise Exception(f"Error in cut {cut.cutstr}:\n {e}")
 
     def __event_weight_reco_analysistop(self,
                                         df: pd.DataFrame,

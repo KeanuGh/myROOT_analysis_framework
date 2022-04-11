@@ -233,7 +233,8 @@ class Analysis:
     def merge_datasets(
             self,
             *datasets: str,
-            apply_cuts: Union[bool, str, Iterable[str]] = False,
+            apply_cuts: Union[bool, str, List[str]] = False,
+            new_name: str = None,
             delete: bool = True,
             to_pkl: bool = False,
             verify: bool = False,
@@ -245,6 +246,7 @@ class Analysis:
         :param datasets: strings of datasets to merge. First dataset will be merged into.
         :param apply_cuts: True to apply all cuts to datasets before merging or False for no cuts
                            pass a string or list of strings of the cut label(s) to apply just those cuts
+        :param new_name: new name to given to merged dataset
         :param delete: whether to delete datasets internally
         :param to_pkl: whether to print new dataset to a pickle file (will replace original pickle file)
         :param verify: whether to check for duplicated events
@@ -258,8 +260,11 @@ class Analysis:
             self.apply_cuts(list(datasets), labels=apply_cuts)
 
         self.logger.info(f"Merging dataset(s) {datasets[1:]} into dataset {datasets[0]}...")
-        self[datasets[0]].df = pd.concat([self[n].df for n in datasets],
-                                         verify_integrity=verify, copy=False)
+
+        self[datasets[0]].df = pd.concat([self[n].df for n in datasets], verify_integrity=verify, copy=False)
+
+        if new_name:
+            self[new_name] = self[datasets[0]]
 
         for n in datasets[1:]:
             if delete:
@@ -320,8 +325,8 @@ class Analysis:
     # ===============================
     def plot_hist(
             self,
-            datasets: Union[str, Iterable[str]],
-            var: str,
+            datasets: Union[str, List[str]],
+            var: Union[str, List[str]],
             bins: Union[List[float], Tuple[int, float, float]],
             weight: Union[str, float] = 1.,
             yerr: Union[ArrayLike, str] = True,
@@ -339,13 +344,15 @@ class Analysis:
             stats_box: bool = False,
             ratio_plot: bool = True,
             ratio_fit: bool = False,
+            filename: str = None,
             **kwargs
     ) -> plt.Figure:
         """
         Plot same variable from different datasets
 
         :param datasets: string or list of strings corresponding to datasets in the analysis
-        :param var: variable name to be plotted. must exist in all datasets
+        :param var: variable name to be plotted. Either a string that exists in all datasets
+                    or a list one for each dataset
         :param bins: tuple of bins in x (n_bins, start, stop) or list of bin edges.
                      In the first case returns an axis of type Regular(), otherwise of type Variable().
                      Raises error if not formatted in one of these ways.
@@ -374,11 +381,14 @@ class Analysis:
         :param stats_box: display stats box
         :param ratio_plot: If True, adds ratio of the first plot with each subseqent plot below
         :param ratio_fit: If True, fits ratio plot to a 0-degree polynomial and display line, chi-square and p-value
+        :param filename: name of output file
         :param kwargs: keyword arguments to pass to mplhep.histplot()
         """
         self.logger.info(f'Plotting {var} in as overlay in {datasets}...')
 
-        if len(datasets) == 1: ratio_plot = False
+        # no ratio if just one thing being plotted
+        if isinstance(datasets, str) or (len(datasets) == 1):
+            ratio_plot = False
 
         if isinstance(normalise, str):
             if normalise == 'lumi':
@@ -406,7 +416,7 @@ class Analysis:
         for i, dataset in enumerate(datasets):
             hists.append(
                 self[dataset].plot_hist(
-                    var=var,
+                    var=var if isinstance(var, str) else var[i],
                     bins=bins,
                     weight=weight,
                     ax=ax,
@@ -439,7 +449,8 @@ class Analysis:
             fig.tight_layout()
             fig.subplots_adjust(hspace=0.1, wspace=0)
             ax.set_xticklabels([])
-            ax.set_xlabel(None)
+            ax.set_xlabel('None')
+
             if len(datasets) > 2:  # don't show legend if there's only two datasets
                 ratio_ax.legend(fontsize=10)
 
@@ -450,7 +461,8 @@ class Analysis:
                 plotting_utils.set_axis_options(ratio_ax,
                                                 var, bins, lepton, xlabel, 'Ratio', '', logx, False, label=False)
 
-        filename = f"{self.paths['plot_dir']}{'_'.join(datasets)}_{var}{'_NORMED' if normalise else ''}.png"
+        if not filename:
+            filename = f"{self.paths['plot_dir']}{'_'.join(datasets)}_{var}{'_NORMED' if normalise else ''}.png"
         fig.savefig(filename, bbox_inches='tight')
         self.logger.info(f'Saved overlay plot of {var} to {filename}')
         return fig
