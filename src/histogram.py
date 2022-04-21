@@ -492,6 +492,7 @@ class Histogram1D(bh.Histogram, family=None):
             label: str = None,
             fit: bool = False,
             out_filename: str = None,
+            yax_lim: float = 1.,
             **kwargs
     ) -> plt.Axes:
         """
@@ -508,6 +509,7 @@ class Histogram1D(bh.Histogram, family=None):
         :param label: Legend label
         :param fit: whether to fit to a 0-degree polynomial and display line, chi-square and p-value
         :param out_filename: provide filename to print. If not given, nothing is saved
+        :param yax_lim: limit y-axis to 1 +/- {yax_lim}
         :param kwargs: Args to pass to ax.errorbar()
         :return: axis object with plot
         """
@@ -550,6 +552,8 @@ class Histogram1D(bh.Histogram, family=None):
         ax.errorbar(h_ratio.bin_centres, h_ratio.bin_values(), xerr=h_ratio.bin_widths / 2, yerr=yerr,
                     linestyle='None', label=label, **kwargs)
         ax.grid(visible=True, which='both', axis='y')
+        if yax_lim:
+            ax.set_ylim(1 - yax_lim, 1 + yax_lim)
 
         # POSSIBLY NOT NEEDED BUT IT TOOK ME A WHOLE DAY TO FIGURE THIS OUT SO I'M KEEPING IT
         # relimit y axes

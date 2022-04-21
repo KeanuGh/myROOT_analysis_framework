@@ -264,7 +264,7 @@ class Analysis:
         self[datasets[0]].df = pd.concat([self[n].df for n in datasets], verify_integrity=verify, copy=False)
 
         if new_name:
-            self[new_name] = self[datasets[0]]
+            self[new_name] = self.datasets.pop(datasets[0])
 
         for n in datasets[1:]:
             if delete:
@@ -344,6 +344,7 @@ class Analysis:
             stats_box: bool = False,
             ratio_plot: bool = True,
             ratio_fit: bool = False,
+            ratio_axlim: float = None,
             filename: str = None,
             **kwargs
     ) -> plt.Figure:
@@ -381,6 +382,7 @@ class Analysis:
         :param stats_box: display stats box
         :param ratio_plot: If True, adds ratio of the first plot with each subseqent plot below
         :param ratio_fit: If True, fits ratio plot to a 0-degree polynomial and display line, chi-square and p-value
+        :param ratio_axlim: pass to yax_lim in rato plotter
         :param filename: name of output file
         :param kwargs: keyword arguments to pass to mplhep.histplot()
         """
@@ -441,6 +443,7 @@ class Analysis:
                     normalise=bool(normalise),
                     color='k' if len(datasets) == 2 else None,
                     fit=ratio_fit,
+                    yax_lim=ratio_axlim
                 )
 
         ax.legend(fontsize=10, loc='upper right')
@@ -461,8 +464,11 @@ class Analysis:
                 plotting_utils.set_axis_options(ratio_ax,
                                                 var, bins, lepton, xlabel, 'Ratio', '', logx, False, label=False)
 
-        if not filename:
+        if filename:
+            filename = self.paths['plot_dir'] + '/' + filename
+        else:
             filename = f"{self.paths['plot_dir']}{'_'.join(datasets)}_{var}{'_NORMED' if normalise else ''}.png"
+
         fig.savefig(filename, bbox_inches='tight')
         self.logger.info(f'Saved overlay plot of {var} to {filename}')
         return fig

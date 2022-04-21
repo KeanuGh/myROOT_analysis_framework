@@ -316,10 +316,7 @@ class Dataset:
     # ===============================
     # ========== CUTTING ============
     # ===============================
-    def apply_cuts(self,
-                   labels: Union[bool, str, List[str]] = True,
-                   inplace: bool = False
-                   ) -> Union[pd.DataFrame, None]:
+    def apply_cuts(self, labels: Union[bool, str, List[str]] = True, inplace: bool = False) -> Union[pd.DataFrame, None]:
         """
         Apply cut(s) to DataFrame.
 
@@ -355,7 +352,6 @@ class Dataset:
         if inplace:
             self.df = self.df.loc[self.df[cut_cols].all(1)]
             self.df.drop(columns=cut_cols, inplace=True)
-
         else:
             return self.df.loc[self.df[cut_cols].all(1)].drop(columns=cut_cols)
 

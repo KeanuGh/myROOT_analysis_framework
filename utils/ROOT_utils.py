@@ -1,3 +1,4 @@
+import glob
 import logging
 import pickle as pkl
 from contextlib import contextmanager
@@ -109,7 +110,7 @@ def convert_pkl_to_root(filename: str, histname: Optional[str] = None) -> None:
 
     if len(TH1s) > 0:
         with ROOT_file(rootfilename):
-            [h.Write() for h in TH1s]
+            for h in TH1s: h.Write()
             logging.info(f"Histograms saved to {rootfilename}")
         return
 
@@ -122,3 +123,22 @@ def ROOT_file(filename: str, TFile_arg='RECREATE'):
         yield file
     finally:
         file.Close()
+
+
+# declare helper function to unravel ROOT vector branches
+ROOT.gInterpreter.Declare("""
+float getVecVal(ROOT::VecOps::RVec<float> x, int i = 0);
+
+float getVecVal(ROOT::VecOps::RVec<float> x, int i) {
+    if (x.size() > i)  return x[i];
+    else               return NAN;
+}
+""")
+
+
+def glob_chain(TTree: str, path: str) -> ROOT.TChain:
+    """Return TChain with glob'd files because ROOT can't glob by itself"""
+    chain = ROOT.TChain(TTree)
+    for file in glob.glob(path):
+        chain.Add(file)
+    return chain

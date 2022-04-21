@@ -7,46 +7,55 @@ import pandas as pd
 
 import src.config as config
 from src.cutfile import Cut
+from src.logger import get_logger
 
 
-# TODO: Separate reco and truth cuts
 class Cutflow:
-    def __init__(self, df: pd.DataFrame,
-                 cuts: OrderedDict[str, Cut],
-                 logger: logging.Logger,
-                 ):
+    def __init__(self, df: pd.DataFrame, cuts: OrderedDict[str, Cut], logger: logging.Logger = None):
         """
         Generates cutflow object that keeps track of various properties and ratios of selections made on given dataset
 
         :param df: Input analysis dataframe with boolean cut rows.
-        :param cuts: Ordered of cuts made.
+        :param cuts: Ordered dict of cuts made.
         :param logger: logger to output to
         """
         if missing_cuts := {
-            cut_name
-            for cut_name in cuts
+            cut_name for cut_name in cuts
             if cut_name + config.cut_label not in df.columns
         }:
             raise ValueError(f"Missing cut(s) {missing_cuts} in DataFrame")
 
-        self.logger = logger
+        self.logger = logger if logger else get_logger()
 
         # generate cutflow
         self._n_events_tot = len(df.index)
+        if self._n_events_tot == 0:
+            self.logger.error("Empty dataset, empty cutflow")
+            self.cutflow_labels = ['Inclusive'] + [cut_name for cut_name in cuts]
+            n = len(self.cutflow_labels)
+            self.cutflow_ratio = [1.] * n
+            self.cutflow_n_events = [0] * n
+            self.cutflow_a_ratio = [1.0] * n
+            self.cutflow_cum = [1.0] * n
+            return
 
-        # set input fields
-        self._cuts = cuts
+        # find first reco cut to separate reco and truth cuts in printout
+        self.first_reco_cut = ''
+        for cut in cuts.values():
+            if self.first_reco_cut and not cut.is_reco:
+                raise ValueError("Truth cut after reco cut!")
+            elif not self.first_reco_cut and cut.is_reco:
+                self.first_reco_cut = cut.name
 
         # list of cutflow labels (necessary for all cutflows)
-        self.cutflow_labels = ['Inclusive'] + [cut_name for cut_name in self._cuts]
+        self.cutflow_labels = ['Inclusive'] + [cut_name for cut_name in cuts]
         self.cutflow_ratio = [1.]  # contains ratio of each separate cut to inclusive sample
         self.cutflow_n_events = [self._n_events_tot]  # contains number of events passing each cut
+        self.cutflow_a_ratio = [1.0]  # contains ratio of each separate cut to inclusive sample
+        self.cutflow_cum = [1.0]  # contains ratio of each cut to inclusive sample
 
         # extract only the cut columns from the dataframe
         df = df[[col for col in df.columns if config.cut_label in col]]
-
-        self.cutflow_a_ratio = [1.0]  # contains ratio of each separate cut to inclusive sample
-        self.cutflow_cum = [1.0]  # contains ratio of each cut to inclusive sample
 
         # generate cutflow
         prev_n = self._n_events_tot  # saves the last cut in loop
@@ -57,10 +66,19 @@ class Cutflow:
             curr_cut_columns += [cut + config.cut_label]
             # number of events passing current cut & all previous cuts
             n_events_left = len(df.loc[df[curr_cut_columns].all(1)].index)
+
             self.cutflow_n_events.append(n_events_left)
-            self.cutflow_ratio.append(n_events_left / prev_n)
+
+            if prev_n == 0:
+                ratio = 0
+            else:
+                ratio = n_events_left / prev_n
+            self.cutflow_ratio.append(ratio)
+
             self.cutflow_cum.append(n_events_left / self._n_events_tot)
+
             self.cutflow_a_ratio.append(len(df[df[[cut + config.cut_label]].all(1)].index) / self._n_events_tot)
+
             prev_n = n_events_left
 
         # assign histogram options for each type
@@ -91,9 +109,7 @@ class Cutflow:
             self.printout()
 
     def printout(self) -> None:
-        """
-        Prints out cutflow table to terminal
-        """
+        """Prints out cutflow table to terminal"""
         # lengths of characters needed to get everything to line up properly
         max_n_len = len(str(self._n_events_tot))
         max_name_len = max([len(cut) for cut in self.cutflow_labels])
@@ -109,7 +125,14 @@ class Cutflow:
         self.logger.info("Inclusive " + " " * (max_name_len - 9) + f"{self._n_events_tot} -     -        -")
 
         # print line
+        if not (self.cutflow_labels[1] == self.first_reco_cut):
+            # truth cuts
+            self.logger.info("TRUTH:")
+            self.logger.info("---------------------------------")
         for i, cutname in enumerate(self.cutflow_labels[1:]):
+            if cutname == self.first_reco_cut:
+                self.logger.info("RECO:")
+                self.logger.info("---------------------------------")
             self.logger.info(f"{cutname:<{max_name_len}} "
                              f"{self.cutflow_n_events[i + 1]:<{max_n_len}} "
                              f"{self.cutflow_ratio[i + 1]:.3f} "
@@ -127,8 +150,8 @@ class Cutflow:
                     "\\hline\n")
             f.write(f"Cut & Events & Ratio & Cumulative \\\\\\hline\n"
                     f"Inclusive & {self.cutflow_n_events[0]} & — & — \\\\\n")
-            for i, cut in enumerate(self._cuts.values()):
-                f.write(f"{cut.cutstr} & "
+            for i, cut_name in enumerate(self.cutflow_labels):
+                f.write(f"{cut_name} & "
                         f"{self.cutflow_n_events[i + 1]} & "
                         f"{self.cutflow_ratio[i + 1]:.3f} & "
                         f"{self.cutflow_cum[i + 1]:.3f} "

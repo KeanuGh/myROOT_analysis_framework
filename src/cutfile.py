@@ -20,6 +20,7 @@ class Cut:
     cutstr: str
     var: Union[str, Set[str]]
     tree: str
+    is_reco: bool
 
     def __str__(self) -> str:
         return f"{self.name}: {self.cutstr}"
@@ -43,12 +44,21 @@ class Cutfile:
         self._path = file_path
         self.given_tree = default_tree
         self.cuts, self.__vars_to_cut = self.parse_cutfile()
+
+        # make sure truth cuts always come first
+        recoflag = False
+        for cut in self.cuts.values():
+            if recoflag and not cut.is_reco:
+                raise ValueError(f"Truth cut after reco cut!\n\t{cut.name}: {cut.cutstr}")
+            elif cut.is_reco:
+                recoflag = True
+
         self.tree_dict, self.vars_to_calc = self.extract_variables()
 
     def __repr__(self):
         return f'Cutfile("{self._path}")'
 
-    def parse_cutline(self, cutline: str) -> Cut:
+    def parse_cut(self, cutline: str) -> Cut:
         """Processes each line of cuts into dictionary of cut options. with separator <sep>"""
         # strip trailing and leading spaces
         cutline_split = [i.strip() for i in cutline.split(self.sep)]
@@ -77,13 +87,24 @@ class Cutfile:
 
         if len(cutvars) == 1:
             var = cutvars.pop()
+            is_reco = (variable_data[var]['tag'] == 'reco')
+
         elif len(cutvars) > 1:
             var = cutvars
+            # make sure all variables have the same tag (truth or reco)
+            tags = {variable_data[v]['tag'] for v in var}
+            if 'meta' in tags:
+                raise Exception(f"Meta variable cut {cutline}")
+            elif len(tags) > 1:
+                raise Exception(f"Mixing reco/truth variables in cut {cutline}")
+            else:
+                is_reco = 'reco' in tags
+
         else:
             raise ValueError(f"No known variable in string '{cut_str}' for line '{cutline}'\n"
                              f"Read {cutline_split}")
 
-        return Cut(name=name, cutstr=cut_str, var=var, tree=tree)
+        return Cut(name=name, cutstr=cut_str, var=var, tree=tree, is_reco=is_reco)
 
     def parse_cutfile(self, path: str = None, sep='\t') -> Tuple[OrderedDict[str, Cut], Set[Tuple[str, str]]]:
         """
@@ -108,11 +129,11 @@ class Cutfile:
             lines = [line.rstrip('\n') for line in f.readlines()]
 
             # get cut lines
-            cuts = OrderedDict()
+            cuts: OrderedDict[str, Cut] = OrderedDict()
             for cutline in lines[lines.index('[CUTS]') + 1: lines.index('[OUTPUTS]')]:
                 if cutline.startswith('#') or len(cutline) < 2:
                     continue
-                cut = self.parse_cutline(cutline)
+                cut = self.parse_cut(cutline)
                 if cut.name in cuts:
                     raise ValueError(f"Duplicate cut name in cutfile: {cut.name}")
                 cuts[cut.name] = cut
@@ -146,7 +167,7 @@ class Cutfile:
         :return Tuple[{Dictionary of trees and its variables to extract}, {set of variables to calculate}]
         """
         # generate initial dict with given (default) TTree
-        tree_dict = {self.given_tree: set()}
+        tree_dict: Dict[str, set] = {self.given_tree: set()}
         extracted_vars = dict()  # keep all extracted variables here
 
         for cut in self.cuts.values():
@@ -186,8 +207,9 @@ class Cutfile:
 
         # add any variables needed from which trees for calculating derived variables
         for calc_var, tree in calc_vars:
-            if tree == self.given_tree:
+            if tree == self.given_tree and derived_vars[calc_var]['tree']:
                 tree = derived_vars[calc_var]['tree']
+
             if tree in tree_dict:
                 tree_dict[tree] |= set(derived_vars[calc_var]['var_args'])
             else:

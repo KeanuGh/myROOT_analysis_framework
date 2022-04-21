@@ -1,10 +1,17 @@
+from enum import Enum
 from typing import Dict, TypedDict
+
+
+class VarTag(str, Enum):
+    META = 'meta'
+    TRUTH = 'truth'
+    RECO = 'reco'
 
 
 class Branch(TypedDict):
     name: str
     units: str
-    tag: str
+    tag: VarTag
 
 
 # labels for cross-sections
@@ -14,83 +21,83 @@ variable_data: Dict[str, Branch] = {
     'weight_mc': {
         'name': r'MC weight',
         'units': '',
-        'tag': 'meta',
+        'tag': VarTag.META,
     },
     'weight': {
         'name': r'weight',
         'units': '',
-        'tag': 'meta',
+        'tag': VarTag.META
     },
     'weight_KFactor': {
         'name': r'KFactor weight',
         'units': '',
-        'tag': 'meta',
+        'tag': VarTag.META,
     },
     'KFactor_weight_truth': {
         'name': r'KFactor weight',
         'units': '',
-        'tag': 'meta',
+        'tag': VarTag.META,
     },
     'weight_pileup': {
         'name': r'Pileup weight',
         'units': '',
-        'tag': 'meta',
+        'tag': VarTag.META,
     },
     'weight_leptonSF': {
         'name': r'Lepton scale factors',
         'units': '',
-        'tag': 'meta'
+        'tag': VarTag.META
     },
     'totalEventsWeighted': {
         'name': r'Total DSID weight',
         'units': '',
-        'tag': 'meta',
+        'tag': VarTag.META,
     },
     'DSID': {
         'name': r'Dataset ID',
         'units': '',
-        'tag': 'meta'
+        'tag': VarTag.META
     },
     'mcChannelNumber': {
         'name': r'Dataset ID',
         'units': '',
-        'tag': 'meta'
+        'tag': VarTag.META
     },
     'eventNumber': {
         'name': r'Event number',
         'units': '',
-        'tag': 'meta'
+        'tag': VarTag.META
     },
     'runNumber': {
         'name': 'Run number',
         'units': '',
-        'tag': 'meta',
+        'tag': VarTag.META,
     },
     'truth_weight': {
         'name': 'Truth event weight',
         'units': '',
-        'tag': 'truth',
+        'tag': VarTag.TRUTH,
     },
     'reco_weight': {
         'name': 'Reconstructed event weight',
         'units': '',
-        'tag': 'reco'
+        'tag': VarTag.META
     },
     # DTA-specific
     'passTruth': {
         'name': 'pass truth',
         'units': '',
-        'tag': 'meta',
+        'tag': VarTag.META,
     },
     'passReco': {
         'name': 'pass reco',
         'units': '',
-        'tag': 'meta',
+        'tag': VarTag.META,
     },
     'nVtx': {
         'name': 'number of vertices',
         'units': '',
-        'tag': 'truth'
+        'tag': VarTag.TRUTH
     },
 
     # DERIVED KINEMATIC VARIABLES
@@ -98,42 +105,52 @@ variable_data: Dict[str, Branch] = {
     'mt_born': {  # boson pt
         'name': r'Born $M^{W}_{T}$',
         'units': 'GeV',
-        'tag': 'truth',
+        'tag': VarTag.TRUTH,
     },
     'mt_bare': {  # boson pt
         'name': r'Bare $M^{W}_{T}$',
         'units': 'GeV',
-        'tag': 'truth',
+        'tag': VarTag.TRUTH,
     },
     'mt_dres': {  # boson pt
         'name': r'Dressed $M^{W}_{T}$',
         'units': 'GeV',
-        'tag': 'truth',
+        'tag': VarTag.TRUTH,
     },
     'mu_mt_reco': {  # boson pt
         'name': r'$M^{W}_{T}$',
         'units': 'GeV',
-        'tag': 'reco',
+        'tag': VarTag.RECO,
     },
     'e_mt_reco': {  # boson pt
         'name': r'$M^{W}_{T}$',
         'units': 'GeV',
-        'tag': 'reco',
+        'tag': VarTag.RECO,
     },
     'w_y': {  # boson rapidity
         'name': r'W rapidity $y$',
         'units': '',
-        'tag': 'truth',
+        'tag': VarTag.TRUTH,
     },
     'z_y': {  # boson rapidity
         'name': r'Z rapidity $y$',
         'units': '',
-        'tag': 'truth',
+        'tag': VarTag.TRUTH,
     },
     'v_y': {  # boson rapidity
         'name': r'Vector boson rapidity $y$',
         'units': '',
-        'tag': 'truth',
+        'tag': VarTag.TRUTH,
+    },
+    'MTW': {
+        'name': r'$M^{W}_{T}$',
+        'units': 'GeV',
+        'tag': VarTag.RECO,
+    },
+    'TruthMTW': {
+        'name': r'$M^{W}_{T}$',
+        'units': 'GeV',
+        'tag': VarTag.TRUTH,
     },
 
     # RECO-LEVEL KINEMATIC VARIABLES
@@ -142,243 +159,243 @@ variable_data: Dict[str, Branch] = {
     'el_pt': {
         'name': r'Electron $p_{T}$',
         'units': 'GeV',
-        'tag': 'reco',
+        'tag': VarTag.RECO,
     },
     'el_eta': {
         'name': r'Electron $\eta$',
         'units': '',
-        'tag': 'reco',
+        'tag': VarTag.RECO,
     },
     'el_phi': {
         'name': r'Electron $\phi$',
         'units': '',
-        'tag': 'reco',
+        'tag': VarTag.RECO,
     },
     'el_e': {
         'name': r'Electron $E$',
         'units': 'GeV',
-        'tag': 'reco',
+        'tag': VarTag.RECO,
     },
     'e_d0sig': {
         'xlabel': r'Electron $d_0$ significance',
         'units': '',
-        'tag': 'reco',
+        'tag': VarTag.RECO,
     },
     'e_delta_z0_sintheta': {
         'name': r'Electron $\Delta z_0\sin\theta$',
         'units': '',
-        'tag': 'reco',
+        'tag': VarTag.RECO,
     },
     'mu_pt': {
         'name': r'Muon $p_{T}$',
         'units': 'GeV',
-        'tag': 'reco',
+        'tag': VarTag.RECO,
     },
     'mu_eta': {
         'name': r'Muon $\eta$',
         'units': '',
-        'tag': 'reco',
+        'tag': VarTag.RECO,
     },
     'mu_phi': {
         'name': r'Muon $\phi$',
         'units': '',
-        'tag': 'reco',
+        'tag': VarTag.RECO,
     },
     'mu_e': {
         'name': r'Muon $E$',
         'units': 'GeV',
-        'tag': 'reco',
+        'tag': VarTag.RECO,
     },
     'mu_d0sig': {
         'name': r'Muon $d_0$ significance',
         'units': '',
-        'tag': 'reco'
+        'tag': VarTag.RECO
     },
     'mu_delta_z0_sintheta': {
         'name': r'Muon $\Delta z_0\sin\theta$',
         'units': '',
-        'tag': 'reco'
+        'tag': VarTag.RECO
     },
     'jet_pt': {
         'name': r'Jet $p_{T}$',
         'units': 'GeV',
-        'tag': 'reco',
+        'tag': VarTag.RECO,
     },
     'jet_eta': {
         'name': r'Jet $\eta$',
         'units': '',
-        'tag': 'reco',
+        'tag': VarTag.RECO,
     },
     'jet_phi': {
         'name': r'Jet $\phi$',
         'units': '',
-        'tag': 'reco'
+        'tag': VarTag.RECO
     },
     'jet_e': {
         'name': r'Jet $E$',
         'units': '',
-        'tag': 'reco'
+        'tag': VarTag.RECO
     },
     'met_met': {
         'name': r'$E_{T}^{\mathrm{miss}}$',
         'units': 'GeV',
-        'tag': 'reco',
+        'tag': VarTag.RECO,
     },
     'met_phi': {
         'name': r'$\phi^{\mathrm{miss}$',
         'units': '',
-        'tag': 'reco'
+        'tag': VarTag.RECO
     },
     'mu_isTight': {
         'name': r'Tight Muon',
         'units': '',
-        'tag': 'reco',
+        'tag': VarTag.RECO,
     },
     # from DTA
     'ElePt': {
         'name': r'Electron $p_{T}$',
         'units': 'GeV',
-        'tag': 'reco',
+        'tag': VarTag.RECO,
     },
     'EleEta': {
         'name': r'Electron $\eta$',
         'units': '',
-        'tag': 'reco',
+        'tag': VarTag.RECO,
     },
     'ElePhi': {
         'name': r'Electron $\phi$',
         'units': '',
-        'tag': 'reco',
+        'tag': VarTag.RECO,
     },
     'EleE': {
         'name': r'Electron $E$',
         'units': 'GeV',
-        'tag': 'reco',
+        'tag': VarTag.RECO,
     },
     'Ele_d0sig': {
         'xlabel': r'Electron $d_0$ significance',
         'units': '',
-        'tag': 'reco',
+        'tag': VarTag.RECO,
     },
     'Ele_delta_z0': {
         'name': r'Electron $\Delta z_0$',
         'units': '',
-        'tag': 'reco',
+        'tag': VarTag.RECO,
     },
     'MuonPt': {
         'name': r'Muon $p_{T}$',
         'units': 'GeV',
-        'tag': 'reco',
+        'tag': VarTag.RECO,
     },
     'MuonEta': {
         'name': r'Muon $\eta$',
         'units': '',
-        'tag': 'reco',
+        'tag': VarTag.RECO,
     },
     'MuonPhi': {
         'name': r'Muon $\phi$',
         'units': '',
-        'tag': 'reco',
+        'tag': VarTag.RECO,
     },
     'MuonE': {
         'name': r'Muon $E$',
         'units': 'GeV',
-        'tag': 'reco',
+        'tag': VarTag.RECO,
     },
     'Muon_d0sig': {
         'name': r'Muon $d_0$ significance',
         'units': '',
-        'tag': 'reco'
+        'tag': VarTag.RECO
     },
     'Muon_delta_z0': {
         'name': r'Muon $\Delta z_0$',
         'units': '',
-        'tag': 'reco'
+        'tag': VarTag.RECO
     },
     'TauPt': {
         'name': r'Tau $p_{T}$',
         'units': 'GeV',
-        'tag': 'reco',
+        'tag': VarTag.RECO,
     },
     'TauEta': {
         'name': r'Tau $\eta$',
         'units': '',
-        'tag': 'reco',
+        'tag': VarTag.RECO,
     },
     'TauPhi': {
         'name': r'Tau $\phi$',
         'units': '',
-        'tag': 'reco',
+        'tag': VarTag.RECO,
     },
     'TauE': {
         'name': r'Tau $E$',
         'units': 'GeV',
-        'tag': 'reco',
+        'tag': VarTag.RECO,
     },
     'JetPt': {
         'name': r'Jet $p_{T}$',
         'units': 'GeV',
-        'tag': 'reco',
+        'tag': VarTag.RECO,
     },
     'JetEta': {
         'name': r'Jet $\eta$',
         'units': '',
-        'tag': 'reco',
+        'tag': VarTag.RECO,
     },
     'JetPhi': {
         'name': r'Jet $\phi$',
         'units': '',
-        'tag': 'reco'
+        'tag': VarTag.RECO
     },
     'JetE': {
         'name': r'Jet $E$',
         'units': '',
-        'tag': 'reco'
+        'tag': VarTag.RECO
     },
     'Jet_btag': {
         'name': r'Jet b-tag',
         'units': '',
-        'tag': 'reco'
+        'tag': VarTag.RECO
     },
     'PhotonPt': {
         'name': r'Photon $p_{T}$',
         'units': 'GeV',
-        'tag': 'reco',
+        'tag': VarTag.RECO,
     },
     'PhotonEta': {
         'name': r'Photon $\eta$',
         'units': '',
-        'tag': 'reco',
+        'tag': VarTag.RECO,
     },
     'PhotonPhi': {
         'name': r'Photon $\phi$',
         'units': '',
-        'tag': 'reco',
+        'tag': VarTag.RECO,
     },
     'PhotonE': {
         'name': r'Photon $E$',
         'units': 'GeV',
-        'tag': 'reco',
+        'tag': VarTag.RECO,
     },
     'MET_etx': {
         'name': r'$E_{Tx}^{\mathrm{miss}}$',
         'units': 'GeV',
-        'tag': 'reco',
+        'tag': VarTag.RECO,
     },
     'MET_ety': {
         'name': r'$E_{Ty}^{\mathrm{miss}}$',
         'units': 'GeV',
-        'tag': 'reco',
+        'tag': VarTag.RECO,
     },
     'MET_met': {
         'name': r'$E_{T}^{\mathrm{miss}}$',
         'units': 'GeV',
-        'tag': 'reco',
+        'tag': VarTag.RECO,
     },
     'MET_phi': {
         'name': r'$\phi^{\mathrm{miss}$',
         'units': '',
-        'tag': 'reco'
+        'tag': VarTag.RECO
     },
 
     # TRUTH-LEVEL KINEMATIC VARIABLES
@@ -387,330 +404,356 @@ variable_data: Dict[str, Branch] = {
     'PDFinfo_X1': {
         'name': r'$x$',
         'units': '',
-        'tag': 'truth'
+        'tag': VarTag.TRUTH
     },
     'PDFinfo_X2': {
         'name': r'$x$',
         'units': '',
-        'tag': 'truth',
+        'tag': VarTag.TRUTH,
     },
     'PDFinfo_Q': {
         'name': r'$Q$',
         'units': 'GeV',
-        'tag': 'truth',
+        'tag': VarTag.TRUTH,
     },
     'MC_WZ_dilep_phi_born': {
         'name': r'Born dilepton $\phi$',
         'units': '',
-        'tag': 'truth',
+        'tag': VarTag.TRUTH,
     },
     'MC_WZ_dilep_phi_bare': {
         'name': r'bare dilepton $\phi$',
         'units': '',
-        'tag': 'truth',
+        'tag': VarTag.TRUTH,
     },
     'MC_WZ_dilep_phi_dres': {
         'name': r'dressed dilepton $\phi$',
         'units': '',
-        'tag': 'truth'
+        'tag': VarTag.TRUTH
     },
     'MC_WZ_dilep_eta_born': {
         'name': r'Born dilepton $\eta$',
         'units': '',
-        'tag': 'truth'
+        'tag': VarTag.TRUTH
     },
     'MC_WZ_dilep_eta_bare': {
         'name': r'bare dilepton $\eta$',
         'units': '',
-        'tag': 'truth',
+        'tag': VarTag.TRUTH,
     },
     'MC_WZ_dilep_eta_dres': {
         'name': r'dressed dilepton $\eta$',
         'units': '',
-        'tag': 'truth',
+        'tag': VarTag.TRUTH,
     },
     'MC_WZ_dilep_pt_born': {
         'name': r'Born dilepton $p_{T}$',
         'units': 'GeV',
-        'tag': 'truth',
+        'tag': VarTag.TRUTH,
     },
     'MC_WZ_dilep_pt_bare': {
         'name': r'bare dilepton $p_{T}$',
         'units' 'GeV'
-        'tag': 'truth',
+        'tag': VarTag.TRUTH,
     },
     'MC_WZ_dilep_pt_dres': {
         'name': r'dressed dilepton $p_{T}$',
         'units': 'GeV',
-        'tag': 'truth',
+        'tag': VarTag.TRUTH,
     },
     'MC_WZ_dilep_m_born': {
         'name': r'Born $m_{ll}$',
         'units': 'GeV',
-        'tag': 'truth'
+        'tag': VarTag.TRUTH
     },
     'MC_WZ_dilep_m_bare': {
         'name': r'bare $m_{ll}$',
         'units': 'GeV',
-        'tag': 'truth'
+        'tag': VarTag.TRUTH
     },
     'MC_WZ_dilep_m_dres': {
         'name': r'dressed $m_{ll}$',
         'units': 'GeV',
-        'tag': 'truth',
+        'tag': VarTag.TRUTH,
     },
     'MC_WZneutrino_phi_born': {
         'name': r'Born neutrino $\phi$',
         'units': '',
-        'tag': 'truth'
+        'tag': VarTag.TRUTH
     },
     'MC_WZneutrino_phi_bare': {
         'name': r'bare neutrino $\phi$',
         'units': '',
-        'tag': 'truth'
+        'tag': VarTag.TRUTH
     },
     'MC_WZneutrino_phi_dres': {
         'name': r'dressed neutrino $\phi$',
         'units': '',
-        'tag': 'truth'
+        'tag': VarTag.TRUTH
     },
     'MC_WZneutrino_eta_born': {
         'name': r'Born neutrino $\eta$',
         'units': '',
-        'tag': 'truth'
+        'tag': VarTag.TRUTH
     },
     'MC_WZneutrino_eta_bare': {
         'name': r'bare neutrino $\eta$',
         'units': '',
-        'tag': 'truth',
+        'tag': VarTag.TRUTH,
     },
     'MC_WZneutrino_eta_dres': {
         'name': r'dressed neutrino $\eta$',
         'units': '',
-        'tag': 'truth',
+        'tag': VarTag.TRUTH,
     },
     'MC_WZneutrino_m_born': {
         'name': r'Born neutrino $m$',
         'units': '',
-        'tag': 'truth',
+        'tag': VarTag.TRUTH,
     },
     'MC_WZneutrino_m_bare': {
         'name': r'bare neutrino $m$',
         'units': 'GeV',
-        'tag': 'truth',
+        'tag': VarTag.TRUTH,
     },
     'MC_WZneutrino_m_dres': {
         'name': r'dressed neutrino $m$',
         'units': 'GeV',
-        'tag': 'truth',
+        'tag': VarTag.TRUTH,
     },
     'MC_WZneutrino_pt_born': {
         'name': r'Born neutrino $p_{T}$',
         'units': 'GeV',
-        'tag': 'truth',
+        'tag': VarTag.TRUTH,
     },
     'MC_WZneutrino_pt_bare': {
         'name': r'bare neutrino $p_{T}$',
         'units': 'GeV',
-        'tag': 'truth',
+        'tag': VarTag.TRUTH,
     },
     'MC_WZneutrino_pt_dres': {
         'name': r'dressed neutrino $p_{T}$',
         'units': 'GeV',
-        'tag': 'truth',
+        'tag': VarTag.TRUTH,
     },
     'MC_WZmu_el_phi_born': {
         'name': r'Born %s $\phi$',
         'units': '',
-        'tag': 'truth',
+        'tag': VarTag.TRUTH,
     },
     'MC_WZmu_el_phi_bare': {
         'name': r'bare %s $\phi$',
         'units': '',
-        'tag': 'truth'
+        'tag': VarTag.TRUTH
     },
     'MC_WZmu_el_phi_dres': {
         'name': r'dressed %s $\phi$',
         'units': '',
-        'tag': 'truth',
+        'tag': VarTag.TRUTH,
     },
     'MC_WZmu_el_eta_born': {
         'name': r'Born %s $\eta$',
         'units': '',
-        'tag': 'truth',
+        'tag': VarTag.TRUTH,
     },
     'MC_WZmu_el_eta_bare': {
         'name': r'bare %s $\eta$',
         'units': '',
-        'tag': 'truth',
+        'tag': VarTag.TRUTH,
     },
     'MC_WZmu_el_eta_dres': {
         'name': r'dressed %s $\eta$',
         'units': '',
-        'tag': 'truth',
+        'tag': VarTag.TRUTH,
     },
     'MC_WZmu_el_pt_born': {
         'name': r'Born %s $p_{T}$',
         'units': 'GeV',
-        'tag': 'truth',
+        'tag': VarTag.TRUTH,
     },
     'MC_WZmu_el_pt_bare': {
         'name': r'bare %s $p_{T}$',
         'units': '',
-        'tag': 'truth',
+        'tag': VarTag.TRUTH,
     },
     'MC_WZmu_el_pt_dres': {
         'name': r'dressed %s $p{T}$',
         'units': 'GeV',
-        'tag': 'truth',
+        'tag': VarTag.TRUTH,
     },
     'MC_WZmu_el_m_born': {
         'name': r'Born %s $m$',
         'units': 'GeV',
-        'tag': 'truth',
+        'tag': VarTag.TRUTH,
     },
     'MC_WZmu_el_m_bare': {
         'name': r'bare %s $m$',
         'units': 'GeV',
-        'tag': 'truth',
+        'tag': VarTag.TRUTH,
     },
     'MC_WZmu_el_m_dres': {
         'name': r'dressed %s $m$',
         'units': 'GeV',
-        'tag': 'truth',
+        'tag': VarTag.TRUTH,
     },
     'MC_WZ_pt': {
         'name': r'dressed W $p_{T}$',
         'units': 'GeV',
-        'tag': 'truth',
+        'tag': VarTag.TRUTH,
     },
     'MC_WZ_phi': {
         'name': r'dressed W $\phi$',
         'units': '',
-        'tag': 'truth',
+        'tag': VarTag.TRUTH,
     },
     'MC_WZ_eta': {
         'name': r'dressed W $\eta$',
         'units': '',
-        'tag': 'truth',
+        'tag': VarTag.TRUTH,
     },
     'MC_WZ_m': {
         'name': r'dressed $m^W$',
         'units': 'GeV',
-        'tag': 'truth',
+        'tag': VarTag.TRUTH,
     },
     # for DTA
     'TruthJetEta': {
         'name': r'Truth jet $\eta$',
         'units': '',
-        'tag': 'truth'
+        'tag': VarTag.TRUTH
     },
     'TruthJetPhi': {
         'name': r'Truth jet $\phi$',
         'units': '',
-        'tag': 'truth'
+        'tag': VarTag.TRUTH
     },
     'TruthJetPt': {
         'name': r'Truth jet $p_{T}$',
         'units': 'GeV',
-        'tag': 'truth'
+        'tag': VarTag.TRUTH
     },
     'TruthJetE': {
         'name': r'Truth jet $E$',
         'units': 'GeV',
-        'tag': 'truth'
+        'tag': VarTag.TRUTH
     },
     'TruthNeutrinoEta': {
         'name': r'Truth neutrino $\eta$',
         'units': '',
-        'tag': 'truth'
+        'tag': VarTag.TRUTH
     },
     'TruthNeutrinoPhi': {
         'name': r'Truth neutrino $\phi$',
         'units': '',
-        'tag': 'truth'
+        'tag': VarTag.TRUTH
     },
     'TruthNeutrinoPt': {
         'name': r'Truth neutrino $p_{T}$',
         'units': 'GeV',
-        'tag': 'truth'
+        'tag': VarTag.TRUTH
     },
     'TruthNeutrinoE': {
         'name': r'Truth neutrino $E$',
         'units': 'GeV',
-        'tag': 'truth'
+        'tag': VarTag.TRUTH
     },
     'TruthMuonEta': {
         'name': r'Truth muon $\eta$',
         'units': '',
-        'tag': 'truth'
+        'tag': VarTag.TRUTH
     },
     'TruthMuonPhi': {
         'name': r'Truth muon $\phi$',
         'units': '',
-        'tag': 'truth'
+        'tag': VarTag.TRUTH
     },
     'TruthMuonPt': {
         'name': r'Truth muon $p_{T}$',
         'units': 'GeV',
-        'tag': 'truth'
+        'tag': VarTag.TRUTH
     },
     'TruthMuonE': {
         'name': r'Truth muon $E$',
         'units': 'GeV',
-        'tag': 'truth'
+        'tag': VarTag.TRUTH
     },
     'TruthEleEta': {
         'name': r'Truth electron $\eta$',
         'units': '',
-        'tag': 'truth'
+        'tag': VarTag.TRUTH
     },
     'TruthElePhi': {
         'name': r'Truth electron $\phi$',
         'units': '',
-        'tag': 'truth'
+        'tag': VarTag.TRUTH
     },
     'TruthElePt': {
         'name': r'Truth electron $p_{T}$',
         'units': 'GeV',
-        'tag': 'truth'
+        'tag': VarTag.TRUTH
     },
     'TruthEleE': {
         'name': r'Truth electron $E$',
         'units': 'GeV',
-        'tag': 'truth'
+        'tag': VarTag.TRUTH
     },
     'TruthTauEta': {
         'name': r'Truth tau $\eta$',
         'units': '',
-        'tag': 'truth'
+        'tag': VarTag.TRUTH
     },
     'TruthTauPhi': {
         'name': r'Truth tau $\phi$',
         'units': '',
-        'tag': 'truth'
+        'tag': VarTag.TRUTH
     },
     'TruthTauPt': {
         'name': r'Truth tau $p_{T}$',
         'units': 'GeV',
-        'tag': 'truth'
+        'tag': VarTag.TRUTH
     },
     'TruthTauE': {
         'name': r'Truth tau $E$',
         'units': 'GeV',
-        'tag': 'truth'
+        'tag': VarTag.TRUTH
     },
+    'TruthTauM': {
+        'name': r'Truth tau mass',
+        'units': 'GeV',
+        'tag': VarTag.TRUTH
+    },
+    'VisTruthTauPhi': {
+        'name': r'Visible truth tau $\phi$',
+        'units': '',
+        'tag': VarTag.TRUTH
+    },
+    'VisTruthTauPt': {
+        'name': r'Visible truth tau $p_{T}$',
+        'units': 'GeV',
+        'tag': VarTag.TRUTH
+    },
+    'VisTruthTauEta': {
+        'name': r'Visible truth tau $\eta$',
+        'units': '',
+        'tag': VarTag.TRUTH
+    },
+    'VisTruthTauM': {
+        'name': r'Visible truth tau mass',
+        'units': 'GeV',
+        'tag': VarTag.TRUTH
+    },
+
 
     # DEFAULT & TESTING
     # =======================================================
     'testvartruth': {
         'name': 'testvar',
         'units': 's',
-        'tag': 'truth',
+        'tag': VarTag.TRUTH,
     },
     'testvarreco': {
         'name': 'testvar',
         'units': 's',
-        'tag': 'reco',
+        'tag': VarTag.RECO,
     },
 }

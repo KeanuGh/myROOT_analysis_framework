@@ -1,0 +1,26 @@
+[CUTS]
+# Name	cutstring	tree
+# truth
+Truth tau p_T	MC_WZmu_el_pt_dres > 20
+Truth tau eta	MC_WZmu_el_eta_dres.abs() < 2.47
+Truth tau eta crack	(MC_WZmu_el_eta_dres.abs() < 1.37) or (MC_WZmu_el_eta_dres.abs() > 1.52)
+
+# reco
+eta	mu_eta.abs() < 2.4	nominal_Loose
+E_{T}^{MISS}	met_met > 85	nominal_Loose
+M_T	mu_mt_reco > 200	nominal_Loose
+# M_W	MC_WZ_m < 120	truth
+
+[OUTPUTS]
+# truth
+MC_WZ_dilep_m_dres	truth
+MC_WZneutrino_eta_dres	truth
+MC_WZneutrino_pt_dres	truth
+MC_WZmu_el_eta_dres	truth
+MC_WZmu_el_pt_dres	truth
+mt_dres	truth
+
+# reco
+mu_d0sig	nominal_Loose
+mu_delta_z0_sintheta	nominal_Loose
+primaryVertices	nominal_Loose

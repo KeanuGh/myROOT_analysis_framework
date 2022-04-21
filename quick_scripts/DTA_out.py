@@ -7,7 +7,7 @@ from src.histogram import Histogram1D
 from utils import plotting_utils
 from utils.variable_names import variable_data
 
-filepath = '/mnt/D/data/DTA_outputs/user.kghorban.Sh_2211_Wtaunu_H_maxHTpTV2_CVetoBVeto.MC16a.v1.2022-04-01_histograms.root/*.root'
+filepath = '/mnt/D/data/DTA_outputs/user.kghorban.Sh_2211_Wtaunu_H_maxHTpTV2_CFilterBVeto.MC16a.v1.2022-04-01_histograms.root/*.root'
 treename = 'T_s1thv_NOMINAL'
 wanted_cols = [
     'weight',
@@ -24,7 +24,7 @@ wanted_cols = [
     'MuonEta', 'MuonPhi', 'MuonPt', 'MuonE', 'Muon_d0sig', 'Muon_delta_z0',
     'EleEta', 'ElePhi', 'ElePt', 'EleE', 'Ele_d0sig', 'Ele_delta_z0',
     'PhotonEta', 'PhotonPhi', 'PhotonPt', 'PhotonE',
-    'TruthJetE', 'TruthJetPhi', 'TruthJetPt', 'TruthJetE',
+    'TruthJetE', 'TruthJetPhi', 'TruthJetPt',
     'TruthNeutrinoEta', 'TruthNeutrinoPhi', 'TruthNeutrinoPt', 'TruthNeutrinoE',
     'TruthMuonEta', 'TruthMuonPhi', 'TruthMuonPt', 'TruthMuonE',
     'TruthEleEta', 'TruthElePhi', 'TruthElePt', 'TruthEleE',
@@ -36,12 +36,10 @@ wanted_cols = [
 bins = (30, 20, 3000)
 
 Rdf = ROOT.RDataFrame(treename, filepath)
-Rdf = Rdf.Filter("(passTruth == true) & (passReco == true)")
+# Rdf = Rdf.Filter("(passTruth == true) & (passReco == true)")
 
 # routine to separate vector branches into separate variables
 ROOT.gInterpreter.Declare("""
-float getVecVal(ROOT::VecOps::RVec<float> x, int i = 0);
-
 float getVecVal(ROOT::VecOps::RVec<float> x, int i) {
     if (x.size() > i)  return x[i];
     else               return NAN;
@@ -67,14 +65,14 @@ for col_name in list(Rdf.GetColumnNames()):
             Rdf = Rdf.Redefine(col_name, f"getVecVal({col_name},0)")
 
 
-cols_to_extract = [c for c in list(Rdf.GetColumnNames())
+cols_to_extract = [c for c in wanted_cols
                    if c not in badcols]
 for c in cols_to_extract:
     if "ROOT::VecOps::RVec" in Rdf.GetColumnType(c):
         print(f"Column {c} is of type {Rdf.GetColumnType(c)}")
 
 # import needed columns to pandas dataframe
-df = pd.DataFrame(Rdf.AsNumpy(columns=[c for c in list(Rdf.GetColumnNames()) if c not in badcols]))
+df = pd.DataFrame(Rdf.AsNumpy(columns=[c for c in wanted_cols if c not in badcols]))
 df.set_index(['mcChannel', 'eventNumber'], inplace=True)
 df.index.names = ['DSID', 'eventNumber']
 

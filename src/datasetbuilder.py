@@ -13,7 +13,7 @@ from src.cutfile import Cutfile, Cut
 from src.cutflow import Cutflow
 from src.dataset import Dataset
 from src.logger import get_logger
-from utils import file_utils
+from utils import file_utils, ROOT_utils
 from utils.var_helpers import derived_vars
 from utils.variable_names import variable_data
 
@@ -24,15 +24,6 @@ lumi_year = {
     '2018': 58.4501,
     '2015+2016': 32.9881 + 3.21956
 }
-# declare helper function to unravel ROOT vector branches
-ROOT.gInterpreter.Declare("""
-float getVecVal(ROOT::VecOps::RVec<float> x, int i = 0);
-
-float getVecVal(ROOT::VecOps::RVec<float> x, int i) {
-    if (x.size() > i)  return x[i];
-    else               return NAN;
-}
-""")
 
 
 @dataclass
@@ -650,17 +641,16 @@ class DatasetBuilder:
 
         return df
 
-    def __build_dataframe_dta(
-            self,
-            data_path: str,
-            tree_dict: dict[str, Set[str]],
-    ) -> pd.DataFrame:
+    def __build_dataframe_dta(self, data_path: str, tree_dict: dict[str, Set[str]]) -> pd.DataFrame:
         self.logger.info(f"Building DataFrame from {data_path} ({file_utils.n_files(data_path)} file(s))...")
         t1 = time.time()
 
         self.logger.debug("Initialising RDataframe..")
-        Rdf = ROOT.RDataFrame(self.TTree_name, data_path)
-        Rdf = Rdf.Filter("(passTruth == true) & (passReco == true)")
+
+        # go through a TChain and globber because ROOT cannot glob directory names by itself
+        chain = ROOT_utils.glob_chain(self.TTree_name, data_path)
+        Rdf = ROOT.RDataFrame(chain)  # segfault happens if you put the chain in here directly (why god why)
+        # Rdf = Rdf.Filter("(passTruth == true) & (passReco == true)")
 
         # check tree(s)
         for tree in tree_dict:
@@ -677,17 +667,17 @@ class DatasetBuilder:
             col for col in import_cols
             if col not in all_tree_cols
         ]:
-            raise ValueError(f"No column(s) {missing_cols} in TTree {self.TTree_name}")
+            raise ValueError(f"No column(s) {missing_cols} in TTree {self.TTree_name} of file(s) {data_path}")
 
         # routine to separate vector branches into separate variables
         badcols = set()  # save old vector column names to avoid extracting them later
         for col_name in import_cols:
-            col_type = Rdf.GetColumnType(col_name)
-
             # unravel vector-type columns
+            col_type = Rdf.GetColumnType(col_name)
             if "ROOT::VecOps::RVec" in col_type:
                 # skip non-numeric vector types
                 if col_type == "ROOT::VecOps::RVec<string>":
+                    self.logger.warning(f"Skipping string vector column {col_name}")
                     badcols.add(col_name)
 
                 elif 'jet' in str(col_name).lower():
@@ -704,7 +694,7 @@ class DatasetBuilder:
                            if c not in badcols]
         self.logger.debug(f"Extracting {tree_dict[self.TTree_name]} from {self.TTree_name} tree...")
         df = pd.DataFrame(Rdf.AsNumpy(columns=cols_to_extract))
-        self.logger.debug(f"Extracted {len(df)} events.")
+        self.logger.debug(f"Extracted {len(df.index)} events.")
 
         df.set_index(['mcChannel', 'eventNumber'], inplace=True)
         df.index.names = ['DSID', 'eventNumber']
@@ -731,10 +721,13 @@ class DatasetBuilder:
         # calc weights
         self.logger.info("Calculating DTA weights...")
         df['reco_weight'] = df['weight'] * self.lumi / df['mcWeight'].sum()
-        df['truth_weight'] = df['mcWeight'] * self.lumi / df['mcWeight'].sum()
+        df['truth_weight'] = df['mcWeight'] * self.lumi * df['prwWeight'] / df['mcWeight'].sum()
 
         # rename weight col for consistency
         df.rename(columns={'mcWeight': 'weight_mc'}, inplace=True)
+
+        self.logger.info("Sorting by DSID...")
+        df.sort_index(level='DSID', inplace=True)
 
         return df
 
@@ -742,7 +735,7 @@ class DatasetBuilder:
     # ========== HELPERS ============
     # ===============================
     def __add_necessary_analysistop_variables(self, tree_dict: Dict[str, Set[str]]) -> Dict[str, Set[str]]:
-        """Add variables necessary to extract"""
+        """Add variables necessary to extract for analysistop output"""
         # only add these to 'main tree' to avoid merge issues
         tree_dict[self.TTree_name] |= {'weight_mc', 'weight_pileup'}
 
@@ -763,18 +756,20 @@ class DatasetBuilder:
         return tree_dict
 
     def __add_necessary_dta_variables(self, tree_dict: Dict[str, Set[str]]) -> Dict[str, Set[str]]:
-        for tree in tree_dict:
-            tree_dict[tree] |= {
+        necc_vars = {
                 'weight',
                 'mcWeight',
                 'mcChannel',
-                'mcWeight',
+                'prwWeight',
                 'runNumber',
                 'eventNumber',
                 'passTruth',
                 'passReco',
             }
-        self.logger.debug("Added necessary variables to DTA import")
+
+        for tree in tree_dict:
+            tree_dict[tree] |= necc_vars
+        self.logger.debug(f"Added {necc_vars} to DTA import")
         return tree_dict
 
     def __drop_duplicates(self, df: pd.DataFrame) -> None:

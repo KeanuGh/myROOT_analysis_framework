@@ -6,9 +6,9 @@ Truth tau eta	TruthTauEta.abs() < 2.47
 Truth tau eta crack	(TruthTauEta.abs() < 1.37) or (TruthTauEta.abs() > 1.52)
 
 # reco
-# Tau p_T	TauPt > 65
-# Tau eta	TauEta.abs() < 2.4
-# E_{T}^{MISS}	MET_met > 85
+Tau eta	TauEta.abs() < 2.4
+E_{T}^{MISS}	MET_met > 85
+M_T	MTW > 200
 
 [OUTPUTS]
 # truth
@@ -24,17 +24,26 @@ TruthNeutrinoPt
 TruthNeutrinoEta
 TruthNeutrinoPhi
 TruthNeutrinoE
-TruthJetEta
-TruthJetPhi
-TruthJetE
+# TruthJetEta
+# TruthJetPhi
+# TruthJetE
+TruthMTW
+TruthMuonPt
+TruthMuonEta
+TruthMuonPhi
+TruthMuonE
 
 # reco
 TauPt
 TauEta
 TauPhi
 TauE
-JetEta
-JetPhi
-JetE
+# JetEta
+# JetPhi
+# JetE
 MET_met
 MET_phi
+MTW
+MuonPt
+MuonEta
+MuonPhi
