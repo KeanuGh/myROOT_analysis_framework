@@ -47,9 +47,7 @@ def get_axis_labels(var_name: str, lepton: str = 'lepton') -> Tuple[Optional[str
     return xlabel, ylabel
 
 
-def get_axis(bins: Union[List[float], Tuple[int, float, float]],
-             logbins: bool = False,
-             ) -> bh.axis.Axis:
+def get_axis(bins: Union[List[float], Tuple[int, float, float]], logbins: bool = False) -> bh.axis.Axis:
     """
     Returns the correct type of boost-histogram axis based on the input bins.
 
@@ -109,9 +107,14 @@ def set_axis_options(
                         f"Given input was {bins}")
 
     # set axis labels
-    _xlabel, _ylabel = get_axis_labels(str(var_name), lepton)
-    axis.set_xlabel(xlabel if xlabel else _xlabel)
-    axis.set_ylabel(ylabel if ylabel else _ylabel)
+    if not xlabel and not ylabel:
+        xlabel, ylabel = get_axis_labels(str(var_name), lepton)
+    elif xlabel and ylabel:
+        xlabel, _ = get_axis_labels(str(var_name), lepton)
+    elif xlabel and not ylabel:
+        ylabel = 'Entries'
+    axis.set_xlabel(xlabel)
+    axis.set_ylabel(ylabel)
     axis.minorticks_on()
     if label:
         hep.atlas.label(italic=(True, True), ax=axis, loc=0, llabel='Internal', rlabel=title)

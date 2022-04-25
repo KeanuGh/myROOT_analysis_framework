@@ -7,7 +7,7 @@ from typing import Tuple, Dict, Set, Union
 from src.logger import get_logger
 from utils.file_utils import get_filename
 from utils.var_helpers import derived_vars
-from utils.variable_names import variable_data
+from utils.variable_names import variable_data, VarTag
 
 # all variables known by this framework
 all_vars = set(derived_vars.keys()) | set(variable_data.keys())
@@ -87,18 +87,18 @@ class Cutfile:
 
         if len(cutvars) == 1:
             var = cutvars.pop()
-            is_reco = (variable_data[var]['tag'] == 'reco')
+            is_reco = (variable_data[var]['tag'] == VarTag.RECO)
 
         elif len(cutvars) > 1:
             var = cutvars
             # make sure all variables have the same tag (truth or reco)
             tags = {variable_data[v]['tag'] for v in var}
-            if 'meta' in tags:
+            if VarTag.META in tags:
                 raise Exception(f"Meta variable cut {cutline}")
             elif len(tags) > 1:
                 raise Exception(f"Mixing reco/truth variables in cut {cutline}")
             else:
-                is_reco = 'reco' in tags
+                is_reco = VarTag.RECO in tags
 
         else:
             raise ValueError(f"No known variable in string '{cut_str}' for line '{cutline}'\n"

@@ -113,8 +113,12 @@ class Histogram1D(bh.Histogram, family=None):
         if hasattr(weight, '__len__'):
             assert len(weight) == len(var), "Number of weight values do not match!"
 
-        if weight is None:
+        # fill vector with weight in order to zip
+        if isinstance(weight, (int, float)):
+            weight = np.full(len(var), weight)
+        elif weight is None:
             weight = np.ones(len(var))
+
         for v, w in zip(var, weight):
             self.TH1.Fill(v, w)
         return self

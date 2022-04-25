@@ -280,12 +280,16 @@ class Analysis:
     def apply_cuts(self,
                    datasets: Union[str, Iterable[str]],
                    labels: Union[bool, str, List[str]] = True,
+                   reco: bool = False,
+                   truth: bool = False,
                    ) -> None:
         """
         Apply cuts to dataset dataframes. Skip cuts that do not exist in dataset, logging in debug.
 
         :param datasets: list of datasets or single dataset name. If not given applies to all datasets.
         :param labels: list of cut labels or single cut label. If True applies all cuts. Skips if logical false.
+        :param reco: cut on reco cuts
+        :param truth: cut on truth cuts
         :return: None if inplace is True.
                  If False returns DataFrame with cuts applied and associated cut columns removed.
                  Raises ValueError if cuts do not exist in dataframe
@@ -308,7 +312,7 @@ class Analysis:
                     if label + config.cut_label not in missing_cuts
                 ]
 
-        self[datasets].apply_cuts(labels, inplace=True)
+        self[datasets].apply_cuts(labels, reco, truth, inplace=True)
 
     @check_single_dataset
     def __delete_dataset(self, ds_name: str) -> None:

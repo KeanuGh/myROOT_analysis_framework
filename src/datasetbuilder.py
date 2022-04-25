@@ -662,10 +662,9 @@ class DatasetBuilder:
 
         # check columns
         import_cols = tree_dict[self.TTree_name]
-        all_tree_cols = list(Rdf.GetColumnNames())
         if missing_cols := [
             col for col in import_cols
-            if col not in all_tree_cols
+            if col not in list(Rdf.GetColumnNames())
         ]:
             raise ValueError(f"No column(s) {missing_cols} in TTree {self.TTree_name} of file(s) {data_path}")
 
@@ -700,8 +699,6 @@ class DatasetBuilder:
         df.index.names = ['DSID', 'eventNumber']
         self.logger.debug("Set DSID/eventNumber as index")
 
-        self.logger.info(f"Time to build dataframe: {time.strftime('%H:%M:%S', time.gmtime(time.time() - t1))}")
-
         # validate
         if self.validate_duplicated_events:
             self.logger.info(f"Validating duplicated events in tree {self.TTree_name}...")
@@ -721,13 +718,15 @@ class DatasetBuilder:
         # calc weights
         self.logger.info("Calculating DTA weights...")
         df['reco_weight'] = df['weight'] * self.lumi / df['mcWeight'].sum()
-        df['truth_weight'] = df['mcWeight'] * self.lumi * df['prwWeight'] / df['mcWeight'].sum()
+        df['truth_weight'] = df['mcWeight'] * self.lumi * df['rwCorr'] * df['prwWeight'] / df['mcWeight'].sum()
 
         # rename weight col for consistency
         df.rename(columns={'mcWeight': 'weight_mc'}, inplace=True)
 
         self.logger.info("Sorting by DSID...")
         df.sort_index(level='DSID', inplace=True)
+
+        self.logger.info(f"time to build dataframe: {time.strftime('%H:%M:%S', time.gmtime(time.time() - t1))}")
 
         return df
 
@@ -761,6 +760,7 @@ class DatasetBuilder:
                 'mcWeight',
                 'mcChannel',
                 'prwWeight',
+                'rwCorr',
                 'runNumber',
                 'eventNumber',
                 'passTruth',

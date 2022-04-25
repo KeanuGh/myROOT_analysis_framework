@@ -15,7 +15,7 @@ from src.cutfile import Cutfile, Cut
 from src.cutflow import Cutflow
 from src.histogram import Histogram1D
 from src.logger import get_logger
-from utils.variable_names import variable_data
+from utils.variable_names import variable_data, VarTag
 
 
 @dataclass
@@ -105,34 +105,34 @@ class Dataset:
     @property
     def is_truth(self) -> bool:
         """Does dataset contain truth data?"""
-        return bool('truth' in self.__var_tags)
+        return bool(VarTag.TRUTH in self.__var_tags)
 
     @property
     def is_reco(self) -> bool:
         """Does dataset contain reco data?"""
-        return bool('reco' in self.__var_tags)
+        return bool(VarTag.RECO in self.__var_tags)
 
     @property
     def meta_vars(self) -> list[str]:
         """Get meta variables in dataset"""
-        return self.__get_var_tag('meta')
+        return self.__get_var_tag(VarTag.META)
 
     @property
     def truth_vars(self) -> list[str]:
         """Get truth variables in dataset"""
-        return self.__get_var_tag('truth')
+        return self.__get_var_tag(VarTag.TRUTH)
 
     @property
     def reco_vars(self) -> list[str]:
         """Get reconstructed variables in dataset"""
-        return self.__get_var_tag('reco')
+        return self.__get_var_tag(VarTag.RECO)
 
     @property
     def __var_tags(self) -> list[str]:
         """Get tags for all variables"""
         return [variable_data[col]['tag'] for col in self.df.columns if col in variable_data]
 
-    def __get_var_tag(self, tag: str) -> list[str]:
+    def __get_var_tag(self, tag: VarTag) -> list[str]:
         """Get all variables in dataset with given tag"""
         if tag not in ('meta', 'truth', 'reco'):
             raise ValueError(f"Unknown tag '{tag}'")
@@ -316,39 +316,66 @@ class Dataset:
     # ===============================
     # ========== CUTTING ============
     # ===============================
-    def apply_cuts(self, labels: Union[bool, str, List[str]] = True, inplace: bool = False) -> Union[pd.DataFrame, None]:
+    def apply_cuts(self,
+                   labels: Union[bool, str, List[str]] = True,
+                   reco: bool = False,
+                   truth: bool = False,
+                   inplace: bool = False,
+                   ) -> Union[pd.DataFrame, None]:
         """
         Apply cut(s) to DataFrame.
 
         :param labels: list of cut labels or single cut label. If True applies all cuts. Skips if logical false.
+        :param reco: cut on reco cuts
+        :param truth: cut on truth cuts
         :param inplace: If True, applies cuts in place to dataframe in self.
                         If False returns DataFrame object
         :return: None if inplace is True.
                  If False returns DataFrame with cuts applied and associated cut columns removed.
                  Raises ValueError if cuts do not exist in dataframe
         """
-        if not labels:
+        if not labels and (not reco) and (not truth):
             raise ValueError("No cuts supplied")
+        if (reco or truth) and isinstance(labels, (str, list)):
+            raise ValueError('Supply either named cut labels, truth or reco')
+        if truth or reco:
+            labels = False
 
-        elif isinstance(labels, list):
+        cut_cols = []
+
+        if truth:
+            self.logger.debug(f"Applying truth cuts to {self.name}...")
+            cut_cols += [
+                cut.name + config.cut_label
+                for cut in self.cuts.values()
+                if cut.is_reco is False
+            ]
+        if reco:
+            self.logger.debug(f"Applying reco cuts to {self.name}...")
+            cut_cols += [
+                cut.name + config.cut_label
+                for cut in self.cuts.values()
+                if cut.is_reco is True
+            ]
+
+        if isinstance(labels, list):
             self.logger.debug(f"Applying cuts: {labels} to {self.name}...")
-            cut_cols = [label + config.cut_label for label in labels]
+            cut_cols += [label + config.cut_label for label in labels]
 
         elif isinstance(labels, str):
             self.logger.debug(f"Applying cut: '{labels}' to {self.name}...")
-            cut_cols = [labels + config.cut_label]
+            cut_cols += [labels + config.cut_label]
 
         elif labels is True:
             self.logger.debug(f"Applying all cuts to {self.name}...")
-            cut_cols = [str(col) for col in self.df.columns
-                        if config.cut_label in col]
+            cut_cols += [str(col) for col in self.df.columns
+                         if config.cut_label in col]
 
-        else:
+        elif labels is not False:
             raise TypeError("'labels' must be a bool, a string or a list of strings")
 
         # apply cuts
         self.__check_cut_cols(cut_cols)
-        cut_cols = [cutname for cutname in cut_cols]
         if inplace:
             self.df = self.df.loc[self.df[cut_cols].all(1)]
             self.df.drop(columns=cut_cols, inplace=True)
@@ -607,7 +634,9 @@ class Dataset:
         if not ax:
             fig, ax = plt.subplots()
 
-        ax.scatter(self.df[varx], self.df[vary], **kwargs)
+        self.logger.debug(f"Making profile plot of {varx}-{vary} in {self.name}...")
+
+        ax.scatter(self.df[varx], self.df[vary], c='k', s=0.2, **kwargs)
 
         ax.set_xlabel(xlabel if xlabel else plt_utils.get_axis_labels(varx, lepton)[0])
         ax.set_ylabel(ylabel if ylabel else plt_utils.get_axis_labels(vary, lepton)[0])
@@ -617,8 +646,11 @@ class Dataset:
         if logy: ax.semilogy()
         hep.atlas.label(italic=(True, True), loc=0, llabel='Internal', ax=ax, rlabel=title if title else self.label)
 
-        plt.show()
         if to_file:
-            plt.savefig(f"{self.plot_dir}{varx}_{vary}_PROFILE.png", bbox_inches='tight')
+            filename = f"{self.plot_dir}{self.name}_{varx}_{vary}_PROFILE.png"
+            plt.savefig(filename, bbox_inches='tight')
+            self.logger.info(f"Figure saved as {filename}")
+        else:
+            plt.show()
 
         return ax

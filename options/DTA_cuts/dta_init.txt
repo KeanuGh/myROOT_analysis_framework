@@ -11,6 +11,19 @@ E_{T}^{MISS}	MET_met > 85
 M_T	MTW > 200
 
 [OUTPUTS]
+rwCorr
+prwWeight
+# Jet_btSF
+# Jet_JVT
+JVT_SF
+FJVT_SF
+TauSF_LooseWP
+TauSF_MediumWP
+TauSF_TightWP
+TauLooseWP
+TauMediumWP
+TauTightWP
+
 # truth
 TruthTauPt
 TruthTauEta
