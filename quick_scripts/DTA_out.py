@@ -7,8 +7,8 @@ from src.histogram import Histogram1D
 from utils import plotting_utils
 from utils.variable_names import variable_data
 
-filepath = '/mnt/D/data/DTA_outputs/user.kghorban.Sh_2211_Wtaunu_H_maxHTpTV2_CFilterBVeto.MC16a.v1.2022-04-01_histograms.root/*.root'
-treename = 'T_s1thv_NOMINAL'
+filepath = '/mnt/D/data/DTA_outputs/user.kghorban.Sh_2211_Wtaunu_L_maxHTpTV2_CVetoBVeto.MC16a.v1.2022-04-01_histograms.root/*.root'
+treename = 'T_s1tlv_NOMINAL'
 wanted_cols = [
     'weight',
     'mcWeight',
@@ -30,7 +30,7 @@ wanted_cols = [
     'TruthEleEta', 'TruthElePhi', 'TruthElePt', 'TruthEleE',
     'TruthTauEta', 'TruthTauPhi', 'TruthTauPt', 'TruthTauM',
     'VisTruthTauEta', 'VisTruthTauPhi', 'VisTruthTauPt', 'VisTruthTauM',
-    'TruthTau_isHadronic',
+    'TruthTau_isHadronic', 'TruthTau_decay_mode',
     'MET_etx', 'MET_ety', 'MET_met', 'MET_phi',
 ]
 bins = (30, 20, 3000)

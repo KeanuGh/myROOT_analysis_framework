@@ -1,14 +1,20 @@
+"""
+This file contains metadata about named branches in NTuples,
+useful for the logic behind cuts and generating axis labels
+"""
 from enum import Enum
 from typing import Dict, TypedDict
 
 
 class VarTag(str, Enum):
+    """Variable tag. A variable should be either truth, reconstructed or 'metadata'"""
     META = 'meta'
     TRUTH = 'truth'
     RECO = 'reco'
 
 
 class Branch(TypedDict):
+    """Formatting for named branches in ROOT NTuples"""
     name: str
     units: str
     tag: VarTag
@@ -98,6 +104,86 @@ variable_data: Dict[str, Branch] = {
         'name': 'number of vertices',
         'units': '',
         'tag': VarTag.TRUTH
+    },
+    'TruthTau_decay_mode': {
+        'name': 'Truth Tau decay mode',
+        'units': '',
+        'tag': VarTag.TRUTH
+    },
+    'TruthTau_isHadronic': {
+        'name': 'Truth Tau is hadronic',
+        'units': '',
+        'tag': VarTag.TRUTH
+    },
+    'TauLooseWP': {
+        'name': 'Tau Loose WP',
+        'units': '',
+        'tag': VarTag.TRUTH
+    },
+    'TauMediumWP': {
+        'name': 'Tau Medium WP',
+        'units': '',
+        'tag': VarTag.TRUTH
+    },
+    'TauTightWP': {
+        'name': 'Tau Tight WP',
+        'units': '',
+        'tag': VarTag.TRUTH
+    },
+    'FJVT_SF': {
+        'name': 'Forward Jet Vertex Tagger Scale Factor',
+        'units': '',
+        'tag': VarTag.META
+    },
+    'JVT_SF': {
+        'name': 'Jet Vertex Tagger Scale Factor',
+        'units': '',
+        'tag': VarTag.META
+    },
+    'TauSF_LooseWP': {
+        'name': 'Tau Loose WP Scale Factor',
+        'units': '',
+        'tag': VarTag.META
+    },
+    'TauSF_MediumWP': {
+        'name': 'Tau Medium WP Scale Factor',
+        'units': '',
+        'tag': VarTag.META
+    },
+    'TauSF_TightWP': {
+        'name': 'Tau Tight WP Scale Factor',
+        'units': '',
+        'tag': VarTag.META
+    },
+    'Muon_isoSF': {
+        'name': 'Muon Isolation Scale Factor',
+        'units': '',
+        'tag': VarTag.META
+    },
+    'Muon_recoSF': {
+        'name': 'Muon Reco Scale Factor',
+        'units': '',
+        'tag': VarTag.META
+    },
+    'Muon_ttvaSF': {
+        'name': 'Muon TTVA Scale Factor',
+        'units': '',
+        'tag': VarTag.META
+    },
+    'Ele_isoSF': {
+        'name': 'Electron Isolation Scale Factor',
+        'units': '',
+        'tag': VarTag.META
+    },
+    'Ele_recoSF': {
+        'name': 'Electron Reco Scale Factor',
+        'units': '',
+        'tag': VarTag.META
+    },
+    'Ele_ttvaSF': {
+        'name': 'Electron TTVA Scale Factor',
+        'units': '',
+        'tag': VarTag.META
     },
 
     # DERIVED KINEMATIC VARIABLES
@@ -242,7 +328,7 @@ variable_data: Dict[str, Branch] = {
         'tag': VarTag.RECO,
     },
     'met_phi': {
-        'name': r'$\phi^{\mathrm{miss}$',
+        'name': r'$E_T^{\mathrm{miss}} \phi$',
         'units': '',
         'tag': VarTag.RECO
     },
@@ -282,6 +368,11 @@ variable_data: Dict[str, Branch] = {
         'units': '',
         'tag': VarTag.RECO,
     },
+    'Ele_delta_z0_sintheta': {
+        'name': r'Electron $\Delta z_0 \sin\theta$',
+        'units': '',
+        'tag': VarTag.RECO
+    },
     'MuonPt': {
         'name': r'Muon $p_{T}$',
         'units': 'GeV',
@@ -309,6 +400,11 @@ variable_data: Dict[str, Branch] = {
     },
     'Muon_delta_z0': {
         'name': r'Muon $\Delta z_0$',
+        'units': '',
+        'tag': VarTag.RECO
+    },
+    'Muon_delta_z0_sintheta': {
+        'name': r'Muon $\Delta z_0 \sin\theta$',
         'units': '',
         'tag': VarTag.RECO
     },
@@ -393,7 +489,7 @@ variable_data: Dict[str, Branch] = {
         'tag': VarTag.RECO,
     },
     'MET_phi': {
-        'name': r'$\phi^{\mathrm{miss}$',
+        'name': r'$E_T^{\mathrm{miss}} \phi$',
         'units': '',
         'tag': VarTag.RECO
     },

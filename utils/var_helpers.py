@@ -21,6 +21,10 @@ def calc_vy(df: pd.DataFrame, x1: str, x2: str) -> pd.Series:
     return .5 * np.log(df[x1] / df[x2])
 
 
+def calc_delta_z0_sintheta(df: pd.DataFrame, z0: str, eta: str) -> pd.Series:
+    return df[z0] * np.sin(2 * np.arctan(np.exp(-df[eta])))
+
+
 # VARIABLE BUILDING DICTIONARY
 # ================================
 class OtherVar(TypedDict):
@@ -86,4 +90,14 @@ derived_vars: Dict[str, OtherVar] = {
         'tree': '',
         'func': calc_mt,
     },
+    'Muon_delta_z0_sintheta': {
+        'var_args': ['Muon_delta_z0', 'MuonEta'],
+        'tree': '',
+        'func': calc_delta_z0_sintheta
+    },
+    'Ele_delta_z0_sintheta': {
+        'var_args': ['Ele_delta_z0', 'EleEta'],
+        'tree': '',
+        'func': calc_delta_z0_sintheta
+    }
 }

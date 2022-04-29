@@ -128,6 +128,11 @@ class Cutfile:
         with open(path, 'r') as f:
             lines = [line.rstrip('\n') for line in f.readlines()]
 
+            if '[CUTS]' not in lines:
+                raise ValueError("Missing [CUTS] section!")
+            if '[OUTPUTS]' not in lines:
+                raise ValueError("Missing [OUTPUTS] section!")
+
             # get cut lines
             cuts: OrderedDict[str, Cut] = OrderedDict()
             for cutline in lines[lines.index('[CUTS]') + 1: lines.index('[OUTPUTS]')]:

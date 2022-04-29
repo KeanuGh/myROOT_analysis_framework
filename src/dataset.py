@@ -132,14 +132,12 @@ class Dataset:
         """Get tags for all variables"""
         return [variable_data[col]['tag'] for col in self.df.columns if col in variable_data]
 
-    def __get_var_tag(self, tag: VarTag) -> list[str]:
+    def __get_var_tag(self, tag: Union[VarTag, str]) -> list[str]:
         """Get all variables in dataset with given tag"""
-        if tag not in ('meta', 'truth', 'reco'):
-            raise ValueError(f"Unknown tag '{tag}'")
         return [
             col for col in self.df.columns
             if col in variable_data
-            and variable_data[col]['tag'] == tag
+            and variable_data[col]['tag'] == VarTag(tag)
         ]
 
     @property

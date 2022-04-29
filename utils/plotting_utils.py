@@ -17,33 +17,48 @@ plt.style.use([hep.style.ATLAS])
 # ===============================
 # ===== HISTOGRAM VARIABLES =====
 # ===============================
-def get_axis_labels(var_name: str, lepton: str = 'lepton') -> Tuple[Optional[str], Optional[str]]:
+def get_axis_labels(var_name: Union[str, List[str]], lepton: str = 'lepton') -> Tuple[Optional[str], Optional[str]]:
     """Gets label for corresponding variable in axis labels dictionary"""
-    if var_name in variable_data:
+    if isinstance(var_name, list):
+        # If a list is passed, check if all variables have the same name, otherwise throw warning and pick first
+        try:
+            names = [variable_data[var]['name'] for var in var_name]
+        except KeyError:
+            warn(f"Axis labels for {var_name} not found in label lookup dictionary. "
+                 f"Falling back to default", UserWarning)
+            return str(var_name), 'Entries'
+
+        name_set = set(names)
+        if len(name_set) > 1:
+            w = f"Variables have different names: {names}. Picking {names[0]} as axis label"
+            warn(w)
+        var_name = var_name[0]
+
+    # get name and units from data dictionary
+    try:
         name = variable_data[var_name]['name']
         units = variable_data[var_name]['units']
-
-        # just the symbol(s) in latex math format if it exists
-        symbol = name.split('$')[1] if len(name.split('$')) > 1 else name
-
-        # convert x label string for correct lepton if applicable
-        xlabel = name + (f" [{units}]" if units else '')
-        try:
-            xlabel %= lepton
-        except TypeError:
-            pass
-
-        if variable_data[var_name]['tag'] == 'truth':
-            # weird but it does the job
-            ylabel = r'$\frac{d\sigma}{d' + symbol + r'}$ [fb' + (f' {units}' + '$^{-1}$]' if units else ']')
-        else:
-            ylabel = 'Entries'
-
-    else:
+    except KeyError:
         warn(f"Axis labels for {var_name} not found in label lookup dictionary. "
              f"Falling back to default", UserWarning)
-        xlabel = var_name
+        return var_name, 'Entries'
+
+    # just the symbol(s) in latex math format if it exists
+    symbol = name.split('$')[1] if len(name.split('$')) > 1 else name
+
+    # convert x label string for correct lepton if applicable
+    xlabel = name + (f" [{units}]" if units else '')
+    try:
+        xlabel %= lepton
+    except TypeError:
+        pass
+
+    if variable_data[var_name]['tag'] == 'truth':
+        # weird but it does the job
+        ylabel = r'$\frac{d\sigma}{d' + symbol + r'}$ [fb' + (f' {units}' + '$^{-1}$]' if units else ']')
+    else:
         ylabel = 'Entries'
+
     return xlabel, ylabel
 
 
@@ -72,7 +87,7 @@ def get_axis(bins: Union[List[float], Tuple[int, float, float]], logbins: bool =
 
 def set_axis_options(
         axis: plt.axes,
-        var_name: str,
+        var_name: Union[List[str], str],
         bins: Union[tuple, list],
         lepton: str = None,
         xlabel: str = '',
@@ -107,14 +122,9 @@ def set_axis_options(
                         f"Given input was {bins}")
 
     # set axis labels
-    if not xlabel and not ylabel:
-        xlabel, ylabel = get_axis_labels(str(var_name), lepton)
-    elif xlabel and ylabel:
-        xlabel, _ = get_axis_labels(str(var_name), lepton)
-    elif xlabel and not ylabel:
-        ylabel = 'Entries'
-    axis.set_xlabel(xlabel)
-    axis.set_ylabel(ylabel)
+    _xlabel, _ylabel = get_axis_labels(var_name, lepton)
+    axis.set_xlabel(xlabel if xlabel else _xlabel)
+    axis.set_ylabel(ylabel if ylabel else _ylabel)
     axis.minorticks_on()
     if label:
         hep.atlas.label(italic=(True, True), ax=axis, loc=0, llabel='Internal', rlabel=title)

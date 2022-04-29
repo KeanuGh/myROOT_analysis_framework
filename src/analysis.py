@@ -332,7 +332,7 @@ class Analysis:
             datasets: Union[str, List[str]],
             var: Union[str, List[str]],
             bins: Union[List[float], Tuple[int, float, float]],
-            weight: Union[str, float] = 1.,
+            weight: Union[List[Union[str, float]], str, float] = 1.,
             yerr: Union[ArrayLike, str] = True,
             labels: List[str] = None,
             w2: bool = False,
@@ -350,6 +350,7 @@ class Analysis:
             ratio_fit: bool = False,
             ratio_axlim: float = None,
             filename: str = None,
+            filename_suffix: str = '',
             **kwargs
     ) -> plt.Figure:
         """
@@ -362,6 +363,7 @@ class Analysis:
                      In the first case returns an axis of type Regular(), otherwise of type Variable().
                      Raises error if not formatted in one of these ways.
         :param weight: variable name in dataset to weight by or numeric value to weight all
+                       can pass list for separate weights to
         :param yerr: Histogram uncertainties. Following modes are supported:
                      - 'rsumw2', sqrt(SumW2) errors
                      - 'sqrtN', sqrt(N) errors or poissonian interval when w2 is specified
@@ -387,7 +389,8 @@ class Analysis:
         :param ratio_plot: If True, adds ratio of the first plot with each subseqent plot below
         :param ratio_fit: If True, fits ratio plot to a 0-degree polynomial and display line, chi-square and p-value
         :param ratio_axlim: pass to yax_lim in rato plotter
-        :param filename: name of output file
+        :param filename: name of output
+        :param filename_suffix: suffix to add at end of automatic filename if 'filename' arg not passed
         :param kwargs: keyword arguments to pass to mplhep.histplot()
         """
         self.logger.info(f'Plotting {var} in as overlay in {datasets}...')
@@ -424,7 +427,7 @@ class Analysis:
                 self[dataset].plot_hist(
                     var=var if isinstance(var, str) else var[i],
                     bins=bins,
-                    weight=weight,
+                    weight=weight[i] if isinstance(weight, list) else weight,
                     ax=ax,
                     yerr=yerr,
                     normalise=normalise,
@@ -461,17 +464,17 @@ class Analysis:
             if len(datasets) > 2:  # don't show legend if there's only two datasets
                 ratio_ax.legend(fontsize=10)
 
-            if len(hists) == 2:
-                plotting_utils.set_axis_options(ratio_ax,
-                                                var, bins, lepton, xlabel, 'Ratio', '', logx, False, label=False)
-            else:
-                plotting_utils.set_axis_options(ratio_ax,
-                                                var, bins, lepton, xlabel, 'Ratio', '', logx, False, label=False)
+            plotting_utils.set_axis_options(axis=ratio_ax, var_name=var, bins=bins, lepton=lepton,
+                                            xlabel=xlabel, ylabel='Ratio', title='', logx=logx, logy=False, label=False)
 
         if filename:
             filename = self.paths['plot_dir'] + '/' + filename
         else:
-            filename = f"{self.paths['plot_dir']}{'_'.join(datasets)}_{var}{'_NORMED' if normalise else ''}.png"
+            if isinstance(var, list):
+                varname = '_'.join(var)
+            else:
+                varname = var
+            filename = f"{self.paths['plot_dir']}{'_'.join(datasets)}_{varname}{'_NORMED' if normalise else ''}{filename_suffix}.png"
 
         fig.savefig(filename, bbox_inches='tight')
         self.logger.info(f'Saved overlay plot of {var} to {filename}')
