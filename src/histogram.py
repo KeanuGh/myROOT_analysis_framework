@@ -534,7 +534,7 @@ class Histogram1D(bh.Histogram, family=None):
             self.logger.info("Performing fit on ratio..")
 
             with redirect_stdout() as fit_output:
-                fit_results = h_ratio.TH1.Fit('pol0', 'VFSN0')
+                fit_results = h_ratio.TH1.Fit('pol0', 'VFSN')
             self.logger.debug(f"ROOT fit output:\n"
                               f"==========================================================================\n"
                               f"{fit_output.getvalue()}"

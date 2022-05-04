@@ -709,7 +709,7 @@ class DatasetBuilder:
 
         # filter events with nan weight values (why do these appear?)
         if (nbad_rows := len(df['weight'].notna())) > 0:
-            df = df.loc[df['weight'].notna()]
+            df.dropna(subset='weight', inplace=True)
             self.logger.info(f"Dropped {nbad_rows} rows with missing weight values")
 
         # rescale GeV columns

@@ -459,7 +459,7 @@ class Analysis:
             fig.tight_layout()
             fig.subplots_adjust(hspace=0.1, wspace=0)
             ax.set_xticklabels([])
-            ax.set_xlabel('None')
+            ax.set_xlabel('')
 
             if len(datasets) > 2:  # don't show legend if there's only two datasets
                 ratio_ax.legend(fontsize=10)
@@ -478,6 +478,7 @@ class Analysis:
 
         fig.savefig(filename, bbox_inches='tight')
         self.logger.info(f'Saved overlay plot of {var} to {filename}')
+        fig.clear()
         return fig
 
     @check_single_dataset
