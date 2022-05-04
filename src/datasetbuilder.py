@@ -707,10 +707,10 @@ class DatasetBuilder:
         else:
             self.logger.info("Skipping duplicted events validation")
 
-        # filter events with nan weight values (why do these appear?)
-        if (nbad_rows := len(df['weight'].notna())) > 0:
-            df.dropna(subset='weight', inplace=True)
-            self.logger.info(f"Dropped {nbad_rows} rows with missing weight values")
+        # # filter events with nan weight values (why do these appear?)
+        # if (nbad_rows := len(df['weight'].notna())) > 0:
+        #     df.dropna(subset='weight', inplace=True)
+        #     self.logger.info(f"Dropped {nbad_rows} rows with missing weight values")
 
         # rescale GeV columns
         self.__rescale_to_gev(df)

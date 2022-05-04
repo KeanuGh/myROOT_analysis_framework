@@ -137,10 +137,7 @@ class Histogram1D(bh.Histogram, family=None):
             clsq = c1 * c1
             variance = (self.view(flow=True).variance * clsq + other.view(flow=True).variance * c0 * c0) / (clsq * clsq)
 
-            # set division by zero to zero
-            self.view(flow=True).value = np.divide(self.view(flow=True).value, other.view(flow=True).value,
-                                                   out=np.zeros_like(self.view(flow=True).value),
-                                                   where=other.view(flow=True).value != 0)
+            self.view(flow=True).value = self.view(flow=True).value / other.view(flow=True).value
             self.view(flow=True).variance = variance
             self.TH1.Divide(other.TH1)
             return self
@@ -496,7 +493,7 @@ class Histogram1D(bh.Histogram, family=None):
             label: str = None,
             fit: bool = False,
             out_filename: str = None,
-            yax_lim: float = 1.,
+            yax_lim: float = False,
             **kwargs
     ) -> plt.Axes:
         """
@@ -556,19 +553,15 @@ class Histogram1D(bh.Histogram, family=None):
         ax.errorbar(h_ratio.bin_centres, h_ratio.bin_values(), xerr=h_ratio.bin_widths / 2, yerr=yerr,
                     linestyle='None', label=label, **kwargs)
         ax.grid(visible=True, which='both', axis='y')
+
         if yax_lim:
             ax.set_ylim(1 - yax_lim, 1 + yax_lim)
-
-        # POSSIBLY NOT NEEDED BUT IT TOOK ME A WHOLE DAY TO FIGURE THIS OUT SO I'M KEEPING IT
-        # relimit y axes
-        # ymax = ymin = 1
-        # for i, line in enumerate(ax.lines):
-        #     data = line.get_ydata()
-        #     if len(data) < 1: continue  # why is there a line with no data appearing??
-        #     ymax = np.max(np.ma.masked_invalid(np.append(data, ymax)))
-        #     ymin = np.min(np.ma.masked_invalid(np.append(data, ymin)))
-        # vspace = (ymax - ymin) * 0.1
-        # ax.set_ylim(bottom=ymin - vspace, top=ymax + vspace)
+        else:
+            # I don't know why the matplotlib automatic yaxis scaling doesn't work but I've done it for them here
+            ymax = np.max(np.ma.masked_invalid(h_ratio.bin_values() + (h_ratio.root_sumw2() / 2)))
+            ymin = np.min(np.ma.masked_invalid(h_ratio.bin_values() - (h_ratio.root_sumw2() / 2)))
+            vspace = (ymax - ymin) * 0.1
+            ax.set_ylim(ymin - vspace, ymax + vspace)
 
         if out_filename:
             plt.savefig(out_filename, bbox_inches='tight')
