@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from typing import Optional, Union, List, Dict, OrderedDict, Set, Iterable, overload
 
 import ROOT
+import numpy as np
 import pandas as pd
 import uproot
 from awkward import to_pandas
@@ -216,7 +217,7 @@ class DatasetBuilder:
             if self.hard_cut else None
         self.logger.debug(f"Hard cut(s) applied: {hard_cuts_str}")
         self.logger.debug(f"Forced dataset rebuild: {self.force_rebuild}")
-        self.logger.debug(f"Calculating cuts: {__create_cut_cols}")
+        self.logger.debug(f"Calculating cuts: {__create_cut_cols or self.force_recalc_cuts}")
         if pkl_path:
             self.logger.debug(f"Pickle datapath: {pkl_path}")
             self.logger.debug(f"Skipping pickle file verification: {self.skip_verify_pkl}")
@@ -707,18 +708,28 @@ class DatasetBuilder:
         else:
             self.logger.info("Skipping duplicted events validation")
 
-        # # filter events with nan weight values (why do these appear?)
-        # if (nbad_rows := len(df['weight'].notna())) > 0:
-        #     df.dropna(subset='weight', inplace=True)
-        #     self.logger.info(f"Dropped {nbad_rows} rows with missing weight values")
+        # filter events with nan/inf weight values (why do these appear?)
+        if nbad_rows := df['weight'].isna().sum():
+            df.dropna(subset='weight', inplace=True)
+            self.logger.info(f"Dropped {nbad_rows} rows with missing weight values")
+
+        inf_rows = np.isinf(df['weight'])
+        if nbad_rows := inf_rows.sum():
+            df = df.loc[~inf_rows]
+            self.logger.info(f"Dropped {nbad_rows} rows with infinite weight values")
 
         # rescale GeV columns
         self.__rescale_to_gev(df)
 
         # calc weights
         self.logger.info("Calculating DTA weights...")
-        df['reco_weight'] = df['weight'] * self.lumi / df['mcWeight'].sum()
-        df['truth_weight'] = df['mcWeight'] * self.lumi * df['rwCorr'] * df['prwWeight'] / df['mcWeight'].sum()
+        df['reco_weight'] = df['weight'] * abs(df['mcWeight']) * self.lumi / df['mcWeight'].sum()
+        if df['reco_weight'].isna().any():
+            raise ValueError("NAN values in truth weights!")
+
+        df['truth_weight'] = df['mcWeight'] * abs(df['mcWeight']) * self.lumi * df['rwCorr'] * df['prwWeight'] / df['mcWeight'].sum()
+        if df['truth_weight'].isna().any():
+            raise ValueError("NAN values in truth weights!")
 
         # rename weight col for consistency
         df.rename(columns={'mcWeight': 'weight_mc'}, inplace=True)

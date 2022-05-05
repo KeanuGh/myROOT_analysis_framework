@@ -388,6 +388,14 @@ class Dataset:
         ]:
             raise ValueError(f"No cut(s) {missing_cut_cols} in dataset {self.name}")
 
+    def dropna(self, col: str) -> None:
+        """Drop missing values in a column with a message"""
+        if nbad_rows := self.df[col].isna().sum():
+            self.df.dropna(subset=col, inplace=True)
+            self.logger.debug(f"Dropped {nbad_rows} rows with missing '{col}' values")
+        else:
+            self.logger.debug(f"No missing values in '{col}' column")
+
     # ===========================================
     # =========== PLOTING FUNCTIONS =============
     # ===========================================

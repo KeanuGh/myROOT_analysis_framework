@@ -2,7 +2,7 @@
 # Name	Variable	</>	Cut (in GeV if applicable) tree
 # truth
 Muonic Tau	TruthTau_decay_mode == 1
-Truth tau p_T	TruthTauPt > 20
+Truth tau p_T	TruthTauPt > 25
 Truth tau eta	TruthTauEta.abs() < 2.47
 Truth tau eta crack	(TruthTauEta.abs() < 1.37) or (TruthTauEta.abs() > 1.52)
 

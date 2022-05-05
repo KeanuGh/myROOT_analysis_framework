@@ -1,41 +1,45 @@
 import ROOT
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 
 from src.datasetbuilder import lumi_year
 from src.histogram import Histogram1D
-from utils import plotting_utils
+from utils import plotting_utils, ROOT_utils
 from utils.variable_names import variable_data
 
-filepath = '/mnt/D/data/DTA_outputs/user.kghorban.Sh_2211_Wtaunu_L_maxHTpTV2_CVetoBVeto.MC16a.v1.2022-04-01_histograms.root/*.root'
+filepath = '/mnt/D/data/DTA_outputs/user.kghorban.Sh_2211_Wtaunu_L_*/*.root'
 treename = 'T_s1tlv_NOMINAL'
 wanted_cols = [
     'weight',
     'mcWeight',
     'mcChannel',
+    'rwCorr',
+    'prwWeight',
     'mcWeight',
     'runNumber',
     'eventNumber',
-    'nVtx',
-    'passTruth',
-    'passReco',
-    'TauEta', 'TauPhi', 'TauPt', 'TauE',
-    'JetEta', 'JetPhi', 'JetE', 'Jet_btag',
+    # 'nVtx',
+    # 'passTruth',
+    # 'passReco',
+    # 'TauEta', 'TauPhi', 'TauPt', 'TauE',
+    # 'JetEta', 'JetPhi', 'JetE', 'Jet_btag',
+    'Muon_recoSF', 'Muon_isoSF', 'Muon_ttvaSF',
     'MuonEta', 'MuonPhi', 'MuonPt', 'MuonE', 'Muon_d0sig', 'Muon_delta_z0',
-    'EleEta', 'ElePhi', 'ElePt', 'EleE', 'Ele_d0sig', 'Ele_delta_z0',
-    'PhotonEta', 'PhotonPhi', 'PhotonPt', 'PhotonE',
-    'TruthJetE', 'TruthJetPhi', 'TruthJetPt',
+    # 'EleEta', 'ElePhi', 'ElePt', 'EleE', 'Ele_d0sig', 'Ele_delta_z0',
+    # 'PhotonEta', 'PhotonPhi', 'PhotonPt', 'PhotonE',
+    # 'TruthJetE', 'TruthJetPhi', 'TruthJetPt',
     'TruthNeutrinoEta', 'TruthNeutrinoPhi', 'TruthNeutrinoPt', 'TruthNeutrinoE',
-    'TruthMuonEta', 'TruthMuonPhi', 'TruthMuonPt', 'TruthMuonE',
-    'TruthEleEta', 'TruthElePhi', 'TruthElePt', 'TruthEleE',
+    # 'TruthMuonEta', 'TruthMuonPhi', 'TruthMuonPt', 'TruthMuonE',
+    # 'TruthEleEta', 'TruthElePhi', 'TruthElePt', 'TruthEleE',
     'TruthTauEta', 'TruthTauPhi', 'TruthTauPt', 'TruthTauM',
-    'VisTruthTauEta', 'VisTruthTauPhi', 'VisTruthTauPt', 'VisTruthTauM',
-    'TruthTau_isHadronic', 'TruthTau_decay_mode',
-    'MET_etx', 'MET_ety', 'MET_met', 'MET_phi',
+    # 'VisTruthTauEta', 'VisTruthTauPhi', 'VisTruthTauPt', 'VisTruthTauM',
+    # 'TruthTau_isHadronic', 'TruthTau_decay_mode',
+    # 'MET_etx', 'MET_ety', 'MET_met', 'MET_phi',
 ]
-bins = (30, 20, 3000)
 
-Rdf = ROOT.RDataFrame(treename, filepath)
+chain = ROOT_utils.glob_chain(treename, filepath)
+Rdf = ROOT.RDataFrame(chain)
 # Rdf = Rdf.Filter("(passTruth == true) & (passReco == true)")
 
 # routine to separate vector branches into separate variables
@@ -72,12 +76,12 @@ for c in cols_to_extract:
         print(f"Column {c} is of type {Rdf.GetColumnType(c)}")
 
 # import needed columns to pandas dataframe
-df = pd.DataFrame(Rdf.AsNumpy(columns=[c for c in wanted_cols if c not in badcols]))
+df = pd.DataFrame(Rdf.AsNumpy(columns=cols_to_extract))
+
 df.set_index(['mcChannel', 'eventNumber'], inplace=True)
 df.index.names = ['DSID', 'eventNumber']
 
-# filter events with nan weight values
-df = df.loc[df['weight'].notna()]
+df.dropna(subset='weight', inplace=True)
 
 # rescale GeV columns
 GeV_columns = [
@@ -87,11 +91,25 @@ GeV_columns = [
 df[GeV_columns] /= 1000
 
 # calc weights
-reco_weight = df['weight'] * lumi_year['2015+2016'] / df['mcWeight'].sum()
-truth_weight = df['mcWeight'] * lumi_year['2015+2016'] / df['mcWeight'].sum()
+df['reco_weight'] = df['weight'] * lumi_year['2015+2016'] / df['mcWeight'].sum()
+df['truth_weight'] = df['mcWeight'] * lumi_year['2015+2016'] * df['rwCorr'] * df['prwWeight'] / df['mcWeight'].sum()
+df['muon_reco_weight'] = df['reco_weight'] * df['Muon_recoSF'] * df['Muon_isoSF'] * df['Muon_ttvaSF']
+
+df.dropna(subset='truth_weight', inplace=True)
+df = df.loc[~np.isinf(df['muon_reco_weight'])]
+
+df = df.loc[df['TruthTauPt'] > 25]
+df = df.loc[df['TruthTauEta'].abs() < 2.47]
+df = df.loc[(df['TruthTauEta'].abs() < 1.37) | (df['TruthTauEta'].abs() > 1.52)]
 
 # plot
-hTauPt = Histogram1D(df['TauPt'], bins, reco_weight, logbins=True)
-ax = hTauPt.plot(normalise=True)
-plotting_utils.set_axis_options(ax, 'TauPt', bins, lepton='Tau', logx=True, logy=True)
+bins = (30, 1, 50000)
+hTauPt = Histogram1D(
+    df['MuonPt'],
+    bins,
+    weight=df['muon_reco_weight'],
+    logbins=True
+)
+ax = hTauPt.plot(normalise=False)
+plotting_utils.set_axis_options(ax, 'MuonPt', bins, lepton='Tau', logx=True, logy=True, title='36.2 fb$^{-1}$')
 plt.show()

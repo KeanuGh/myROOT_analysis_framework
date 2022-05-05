@@ -478,7 +478,7 @@ class Analysis:
 
         fig.savefig(filename, bbox_inches='tight')
         self.logger.info(f'Saved overlay plot of {var} to {filename}')
-        fig.clear()
+        plt.close(fig)
         return fig
 
     @check_single_dataset

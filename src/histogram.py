@@ -88,6 +88,13 @@ class Histogram1D(bh.Histogram, family=None):
 
             self.logger.debug(f"Initialising histogram {name}...")
 
+            # check for invalid entries (nan or inf in weights or values)
+            if weight is not None:
+                inv_bool = np.logical_xor(np.logical_xor(np.isnan(var), np.isnan(weight)),
+                                          np.logical_xor(np.isinf(var), np.isinf(weight)))
+                if n_inv := inv_bool.sum():
+                    self.logger.error(f"{n_inv} invalid entries in histogram!")
+
             # TH1
             self.TH1 = ROOT.TH1F(name, title, *self.__get_TH1_bins(bins))
 
@@ -103,6 +110,7 @@ class Histogram1D(bh.Histogram, family=None):
                 storage=bh.storage.Weight(),
                 **kwargs
             )
+
             if var is not None:
                 self.Fill(var, weight=weight)
 
