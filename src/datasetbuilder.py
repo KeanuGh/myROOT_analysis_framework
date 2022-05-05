@@ -14,7 +14,7 @@ from src.cutfile import Cutfile, Cut
 from src.cutflow import Cutflow
 from src.dataset import Dataset
 from src.logger import get_logger
-from utils import file_utils, ROOT_utils
+from utils import file_utils, ROOT_utils, PMG_tool
 from utils.var_helpers import derived_vars
 from utils.variable_names import variable_data
 
@@ -700,6 +700,9 @@ class DatasetBuilder:
         df.index.names = ['DSID', 'eventNumber']
         self.logger.debug("Set DSID/eventNumber as index")
 
+        self.logger.info("Sorting by DSID...")
+        df.sort_index(level='DSID', inplace=True)
+
         # validate
         if self.validate_duplicated_events:
             self.logger.info(f"Validating duplicated events in tree {self.TTree_name}...")
@@ -708,34 +711,37 @@ class DatasetBuilder:
         else:
             self.logger.info("Skipping duplicted events validation")
 
-        # filter events with nan/inf weight values (why do these appear?)
-        if nbad_rows := df['weight'].isna().sum():
-            df.dropna(subset='weight', inplace=True)
-            self.logger.info(f"Dropped {nbad_rows} rows with missing weight values")
-
-        inf_rows = np.isinf(df['weight'])
-        if nbad_rows := inf_rows.sum():
-            df = df.loc[~inf_rows]
-            self.logger.info(f"Dropped {nbad_rows} rows with infinite weight values")
-
         # rescale GeV columns
         self.__rescale_to_gev(df)
 
         # calc weights
         self.logger.info("Calculating DTA weights...")
-        df['reco_weight'] = df['weight'] * abs(df['mcWeight']) * self.lumi / df['mcWeight'].sum()
-        if df['reco_weight'].isna().any():
-            raise ValueError("NAN values in truth weights!")
+        for dsid in df.index.unique(level='DSID'):
+            self.logger.debug(f"DSID {dsid}..")
+            xs = PMG_tool.get_crosssection(dsid)
+            kFactor = PMG_tool.get_kFactor(dsid)
+            df.loc[dsid, 'truth_weight'] = df['mcWeight'] * self.lumi * df['rwCorr'] * df['prwWeight'] * xs / df['mcWeight'].sum()
+            df.loc[dsid, 'reco_weight'] = df['weight'] * self.lumi * xs * kFactor / df['mcWeight'].sum()
 
-        df['truth_weight'] = df['mcWeight'] * abs(df['mcWeight']) * self.lumi * df['rwCorr'] * df['prwWeight'] / df['mcWeight'].sum()
-        if df['truth_weight'].isna().any():
-            raise ValueError("NAN values in truth weights!")
+        # filter events with nan/inf weight values (why do these appear?)
+        self.logger.info("Filtering invalid weights...")
+        if nbad_rows := df['weight'].isna().sum():
+            df.dropna(subset=['weight', 'truth_weight', 'reco_weight'], inplace=True)
+            self.logger.info(f"Dropped {nbad_rows} rows with missing weight values")
+
+        inf_rows = np.logical_xor(np.isinf(df['truth_weight']), np.isinf(df['reco_weight']))
+        if nbad_rows := inf_rows.sum():
+            df = df.loc[~inf_rows]
+            self.logger.info(f"Dropped {nbad_rows} rows with infinite weight values")
+
+        # self.logger.info("Checking for invalid weights...")
+        # if df['reco_weight'].isna().any() or np.isinf(df['reco_weight']).any():
+        #     raise ValueError("NAN values in truth weights!")
+        # if df['truth_weight'].isna().any() or np.isinf(df['truth_weight']).any():
+        #     raise ValueError("NAN values in reco weights!")
 
         # rename weight col for consistency
         df.rename(columns={'mcWeight': 'weight_mc'}, inplace=True)
-
-        self.logger.info("Sorting by DSID...")
-        df.sort_index(level='DSID', inplace=True)
 
         self.logger.info(f"time to build dataframe: {time.strftime('%H:%M:%S', time.gmtime(time.time() - t1))}")
 
@@ -767,16 +773,16 @@ class DatasetBuilder:
 
     def __add_necessary_dta_variables(self, tree_dict: Dict[str, Set[str]]) -> Dict[str, Set[str]]:
         necc_vars = {
-                'weight',
-                'mcWeight',
-                'mcChannel',
-                'prwWeight',
-                'rwCorr',
-                'runNumber',
-                'eventNumber',
-                'passTruth',
-                'passReco',
-            }
+            'weight',
+            'mcWeight',
+            'mcChannel',
+            'prwWeight',
+            'rwCorr',
+            'runNumber',
+            'eventNumber',
+            'passTruth',
+            'passReco',
+        }
 
         for tree in tree_dict:
             tree_dict[tree] |= necc_vars

@@ -6,15 +6,16 @@ from typing import Union, List, Tuple, Iterable, OrderedDict
 
 import matplotlib.pyplot as plt
 import mplhep as hep
+import numpy as np
 import pandas as pd
 from numpy.typing import ArrayLike
 
 import src.config as config
-import utils.plotting_utils as plt_utils
 from src.cutfile import Cutfile, Cut
 from src.cutflow import Cutflow
 from src.histogram import Histogram1D
 from src.logger import get_logger
+from utils import plotting_utils, PMG_tool
 from utils.variable_names import variable_data, VarTag
 
 
@@ -231,8 +232,29 @@ class Dataset:
 
         if self.logger.level == logging.DEBUG:
             self.logger.info(f"DATASET INFO FOR {self.name}:")
+            # get max length of phys_short to display the table correctly
+            DSIDs = self.df.index.unique(level='DSID')
+            max_len_phys_short = max([len(PMG_tool.get_physics_short(dsid)) for dsid in DSIDs])
+            # per dsid
+            table_str = ''
+            for dsid in self.df.index.unique(level='DSID'):
+                phys_short = PMG_tool.get_physics_short(dsid)
+                table_str += (
+                    f"{dsid:<6} " +
+                    f"{phys_short:<{max_len_phys_short + 1}} " +
+                    f"{len(self.df.loc[dsid]):<10} " +
+                    f"{self.df.loc[dsid, 'weight_mc'].sum():<10.6e} " +
+                    f"{PMG_tool.get_crosssection(dsid):<10.6e} " +
+                    f"{self.lumi:<10.6e} " +
+                    (f"{self.df.loc[dsid, 'truth_weight'].notna().sum():<11}  " if print_truth else "") +
+                    (f"{self.df.loc[dsid, 'truth_weight'].notna().mean():<11.5e}  " if print_truth else "") +
+                    (f"{self.df.loc[dsid, 'reco_weight'].notna().sum():<11}  " if print_reco else "") +
+                    (f"{self.df.loc[dsid, 'reco_weight'].notna().mean():<11.5e}  " if print_reco else "") +
+                    '\n'
+                )
             header = (
                 "DSID   " +
+                f"{'phys_short':<{max_len_phys_short + 2}}" +
                 "n_events   " +
                 "sum_w        " +
                 "x-s fb       " +
@@ -240,23 +262,15 @@ class Dataset:
                 ("truth events " if print_truth else "") +
                 ("avg truth wt " if print_truth else "") +
                 ("reco events  " if print_reco else "") +
-                ("avg reco wt  " if print_reco else "")
+                ("avg reco wt" if print_reco else "")
             )
-            self.logger.info(header)
-            self.logger.info("=" * len(header))
-            for dsid, df_id in self.df.groupby(level='DSID'):
-                self.logger.info(
-                    f"{dsid:<6} " +
-                    f"{len(df_id):<10} " +
-                    f"{df_id['weight_mc'].sum():<10.6e} " +
-                    f"{Dataset.get_cross_section(df_id):<10.6e} " +
-                    f"{self.lumi:<10.6e} " +
-                    (f"{df_id['truth_weight'].notna().sum():<11}  " if print_truth else "") +
-                    (f"{df_id['truth_weight'].notna().mean():<11.5e}  " if print_truth else "") +
-                    (f"{df_id['reco_weight'].notna().sum():<11}  " if print_reco else "") +
-                    (f"{df_id['reco_weight'].notna().mean():<11.5e}  " if print_reco else "")
-                )
-            self.logger.info("-" * len(header))
+            # print it all
+            self.logger.info(
+                f"{header}\n"
+                f"{'-' * len(header)}\n"
+                f"{table_str}\n"
+                f"{'-' * len(header)}"
+            )
 
     # ===============================
     # ========== SUBSETS ============
@@ -388,13 +402,21 @@ class Dataset:
         ]:
             raise ValueError(f"No cut(s) {missing_cut_cols} in dataset {self.name}")
 
-    def dropna(self, col: str) -> None:
-        """Drop missing values in a column with a message"""
+    def dropna(self, col: Union[str, List[str]], drop_inf: bool = False) -> None:
+        """Drop rows with missing (and optionally infinite) values in column(s) with a message"""
         if nbad_rows := self.df[col].isna().sum():
             self.df.dropna(subset=col, inplace=True)
             self.logger.debug(f"Dropped {nbad_rows} rows with missing '{col}' values")
         else:
             self.logger.debug(f"No missing values in '{col}' column")
+
+        if drop_inf:
+            infrows = np.isinf(self.df[col])
+            if nbad_rows := infrows.sum():
+                self.df = self.df.loc[~infrows]
+                self.logger.debug(f"Dropped {nbad_rows} rows with infinite '{col}' values")
+            else:
+                self.logger.debug(f"No infinite values in '{col}' column")
 
     # ===========================================
     # =========== PLOTING FUNCTIONS =============
@@ -526,12 +548,12 @@ class Dataset:
         fig.subplots_adjust(hspace=0.1, wspace=0)
 
         # figure plot
-        plt_utils.set_axis_options(fig_ax, var, bins, lepton, xlabel, ylabel, title, logx, logy)
+        plotting_utils.set_axis_options(fig_ax, var, bins, lepton, xlabel, ylabel, title, logx, logy)
         fig_ax.legend()
         fig_ax.get_xaxis().set_visible(False)
 
         # ratio plot
-        plt_utils.set_axis_options(accept_ax, var, bins, lepton, xlabel, ylabel, title, logx, False, label=False)
+        plotting_utils.set_axis_options(accept_ax, var, bins, lepton, xlabel, ylabel, title, logx, False, label=False)
         accept_ax.set_ylabel("Acceptance")
 
         out_png_file = f"{self.plot_dir}{var}_CUTS{'_NORMED' if normalise else ''}.png"
@@ -587,7 +609,7 @@ class Dataset:
 
         ax.legend(fontsize=10, ncol=2)
         title = self.label if not title else title
-        plt_utils.set_axis_options(ax, var, bins, self.lepton, xlabel, ylabel, title, logx, logy)
+        plotting_utils.set_axis_options(ax, var, bins, self.lepton, xlabel, ylabel, title, logx, logy)
 
         filename = f"{self.plot_dir}{self.name}_{var}_SLICES.png"
         fig.savefig(filename, bbox_inches='tight')
@@ -644,8 +666,8 @@ class Dataset:
 
         ax.scatter(self.df[varx], self.df[vary], c='k', s=0.2, **kwargs)
 
-        ax.set_xlabel(xlabel if xlabel else plt_utils.get_axis_labels(varx, lepton)[0])
-        ax.set_ylabel(ylabel if ylabel else plt_utils.get_axis_labels(vary, lepton)[0])
+        ax.set_xlabel(xlabel if xlabel else plotting_utils.get_axis_labels(varx, lepton)[0])
+        ax.set_ylabel(ylabel if ylabel else plotting_utils.get_axis_labels(vary, lepton)[0])
         if xlim: ax.set_xlim(*xlim)
         if ylim: ax.set_ylim(*ylim)
         if logx: ax.semilogx()

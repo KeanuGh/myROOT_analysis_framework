@@ -13,7 +13,7 @@ if __name__ == '__main__':
             'hard_cut': 'Muonic Tau',
             'lepton': 'tau',
             'dataset_type': 'dta',
-            'force_rebuild': True,
+            'force_rebuild': False,
             'validate_duplicated_events': False,
             'label': r'Sherpa $W\rightarrow\tau\nu\rightarrow l$',
         },
@@ -23,7 +23,7 @@ if __name__ == '__main__':
             'cutfile_path': '../options/DTA_cuts/analysistop.txt',
             'lepton': 'tau',
             'dataset_type': 'analysistop',
-            'force_rebuild': True,
+            'force_rebuild': False,
             'label': r'Powheg $W\rightarrow\tau\nu\rightarrow\mu\nu$',
         },
         # 'wtaunu_analysistop_peak': {
@@ -36,18 +36,10 @@ if __name__ == '__main__':
         # },
     }
 
-    my_analysis = Analysis(datasets, data_dir='/mnt/D/data/dataset_pkl_outputs/',
+    my_analysis = Analysis(datasets, data_dir='/mnt/D/data/dataset_pkl_outputs/', # force_rebuild=True,
                            analysis_label='dta_analysistop_compare', skip_verify_pkl=False,
                            log_level=10, log_out='console', timedatelog=False, separate_loggers=False)
     # my_analysis.merge_datasets('wtaunu_analysistop', 'wtaunu_analysistop_peak')
-
-    # calculate specific weights
-    # my_analysis.logger.info("Calculating weights...")
-    # my_analysis['wtaunu_mu_dta']['weight_loose'] = my_analysis['wtaunu_mu_dta']['truth_weight'] * my_analysis['wtaunu_mu_dta']['TauSF_LooseWP']
-    # my_analysis['wtaunu_mu_dta']['muon_reco_weight'] = my_analysis['wtaunu_mu_dta']['reco_weight'] \
-    #                                                    * my_analysis['wtaunu_mu_dta']['Muon_recoSF'] \
-    #                                                    * my_analysis['wtaunu_mu_dta']['Muon_isoSF'] \
-    #                                                    * my_analysis['wtaunu_mu_dta']['Muon_ttvaSF']
 
     my_analysis.apply_cuts(truth=True)
 
@@ -122,6 +114,13 @@ if __name__ == '__main__':
 
     # # RECO
     # # -----------------------------------
+    # calculate specific weights
+    # my_analysis.logger.info("Calculating weights...")
+    # my_analysis['wtaunu_mu_dta']['muon_reco_weight'] = my_analysis['wtaunu_mu_dta']['reco_weight'] \
+    #                                                    * my_analysis['wtaunu_mu_dta']['Muon_recoSF'] \
+    #                                                    * my_analysis['wtaunu_mu_dta']['Muon_isoSF'] \
+    #                                                    * my_analysis['wtaunu_mu_dta']['Muon_ttvaSF']
+    #
     # # un-normalised
     # my_analysis.plot_hist(['wtaunu_mu_dta', 'wtaunu_analysistop'], ['MuonPt', 'mu_pt'],
     #                       bins=(30, 1, 5000), weight=['muon_reco_weight', 'reco_weight'],
