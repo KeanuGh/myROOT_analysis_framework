@@ -260,9 +260,8 @@ class DatasetBuilder:
                     else:
                         __calculate_vars = True
 
-                else:
+                if not __build_df:
                     self.logger.debug("Found all necessary variables. No rebuild necessary")
-                    __build_df = False
                     __create_cut_cols = (
                         True if self.force_recalc_cuts
                         else not self.__check_cut_cols(cols, cuts)

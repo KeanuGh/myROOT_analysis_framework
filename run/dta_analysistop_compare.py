@@ -25,20 +25,20 @@ if __name__ == '__main__':
             # 'force_rebuild': False,
             'label': r'Powheg $W\rightarrow\tau\nu\rightarrow\mu\nu$',
         },
-        'wtaunu_analysistop_peak': {
-            'data_path': '/mnt/D/data/analysistop_out/mc16a/w*taunu/*.root',
-            'cutfile_path': '../options/DTA_cuts/analysistop_peak.txt',
-            'lepton': 'tau',
-            'dataset_type': 'analysistop',
-            'hard_cut': 'M_W',
-            'label': r'Powheg/Pythia 8 $W\rightarrow\tau\nu\rightarrow\mu\nu$',
-        },
+        # 'wtaunu_analysistop_peak': {
+        #     'data_path': '/mnt/D/data/analysistop_out/mc16a/w*taunu/*.root',
+        #     'cutfile_path': '../options/DTA_cuts/analysistop_peak.txt',
+        #     'lepton': 'tau',
+        #     'dataset_type': 'analysistop',
+        #     'hard_cut': 'M_W',
+        #     'label': r'Powheg/Pythia 8 $W\rightarrow\tau\nu\rightarrow\mu\nu$',
+        # },
     }
 
     my_analysis = Analysis(datasets, data_dir='/mnt/D/data/dataset_pkl_outputs/', year='2015+2016',
                            analysis_label='dta_analysistop_compare', skip_verify_pkl=False, force_rebuild=False,
                            log_level=10, log_out='both', timedatelog=True, separate_loggers=False)
-    my_analysis.merge_datasets('wtaunu_analysistop', 'wtaunu_analysistop_peak')
+    # my_analysis.merge_datasets('wtaunu_analysistop', 'wtaunu_analysistop_peak')
 
     my_analysis.apply_cuts(truth=True)
 
@@ -51,20 +51,20 @@ if __name__ == '__main__':
         'ratio_fit': True
     }
 
-    my_analysis.plot_hist('wtaunu_analysistop', 'mt_born', weight='truth_weight', bins=(30, 1, 5000), logx=True, logy=True, logbins=True)
+    my_analysis.plot_hist('wtaunu_analysistop', 'mt_born', weight='truth_weight', bins=(30, 200, 5000), logx=True, logy=True, logbins=True)
     my_analysis.plot_hist('wtaunu_analysistop', 'MC_WZ_dilep_m_born', weight='truth_weight', bins=(30, 1, 5000), logx=True, logy=True, logbins=True)
     my_analysis.plot_hist('wtaunu_mu_dta', 'TruthMTW', weight='truth_weight', bins=(30, 1, 5000), logx=True, logy=True, logbins=True)
 
-    my_analysis['wtaunu_analysistop'].plot_dsid('mt_born', weight='truth_weight', bins=(30, 1, 5000), logx=True, logy=True, logbins=True)
+    my_analysis['wtaunu_analysistop'].plot_dsid('mt_born', weight='truth_weight', bins=(30, 200, 5000), logx=True, logy=True, logbins=True)
     my_analysis['wtaunu_analysistop'].plot_dsid('MC_WZ_dilep_m_born', weight='truth_weight', bins=(30, 1, 5000), logx=True, logy=True, logbins=True)
     my_analysis['wtaunu_mu_dta'].plot_dsid('TruthMTW', weight='truth_weight', bins=(30, 1, 5000), logx=True, logy=True, logbins=True)
 
     # TRUTH
     # -----------------------------------
     # unnormalised
-    my_analysis.plot_hist(['wtaunu_mu_dta', 'wtaunu_analysistop'], ['DilepM', 'MC_WZ_dilep_m_born'],
-                          bins=(30, 1, 5000), weight='truth_weight', ratio_axlim=1.5,
-                          title='truth - 36.2fb$^{-1}$', normalise=False, logx=True, logbins=True, **ratio_args)
+    # my_analysis.plot_hist(['wtaunu_mu_dta', 'wtaunu_analysistop'], ['DilepM', 'MC_WZ_dilep_m_born'],
+    #                       bins=(30, 1, 5000), weight='truth_weight', ratio_axlim=1.5,
+    #                       title='truth - 36.2fb$^{-1}$', normalise=False, logx=True, logbins=True, **ratio_args)
 
     my_analysis.plot_hist(['wtaunu_mu_dta', 'wtaunu_analysistop'], ['TruthTauPt', 'MC_WZmu_el_pt_born'],
                           bins=(30, 1, 5000), weight='truth_weight', ratio_axlim=1.5,
@@ -91,7 +91,7 @@ if __name__ == '__main__':
                           title='truth - 36.2fb$^{-1}$', normalise=False, **ratio_args)
 
     my_analysis.plot_hist(['wtaunu_mu_dta', 'wtaunu_analysistop'], ['TruthMTW', 'mt_born'],
-                          bins=(30, 1, 5000), weight='truth_weight', ratio_axlim=1.5,
+                          bins=(30, 200, 5000), weight='truth_weight', ratio_axlim=1.5,
                           title='truth - 36.2fb$^{-1}$', normalise=False, logx=True, logbins=True, **ratio_args)
 
     # # normalised
