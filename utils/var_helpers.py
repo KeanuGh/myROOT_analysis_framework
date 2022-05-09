@@ -25,6 +25,10 @@ def calc_delta_z0_sintheta(df: pd.DataFrame, z0: str, eta: str) -> pd.Series:
     return df[z0] * np.sin(2 * np.arctan(np.exp(-df[eta])))
 
 
+def calc_dilep_m(df: pd.DataFrame, m1: str, m2: str) -> pd.Series:
+    return df[m1] + df[m2]
+
+
 # VARIABLE BUILDING DICTIONARY
 # ================================
 class OtherVar(TypedDict):
@@ -99,5 +103,10 @@ derived_vars: Dict[str, OtherVar] = {
         'var_args': ['Ele_delta_z0', 'EleEta'],
         'tree': '',
         'func': calc_delta_z0_sintheta
+    },
+    'DilepM': {
+        'var_args': ['TruthTauE', 'TruthNeutrinoE'],
+        'tree': '',
+        'func': calc_dilep_m
     }
 }

@@ -336,7 +336,7 @@ class Analysis:
             yerr: Union[ArrayLike, str] = True,
             labels: List[str] = None,
             w2: bool = False,
-            normalise: Union[float, bool, str] = 'lumi',
+            normalise: Union[float, bool, str] = False,
             apply_cuts: Union[bool, str, List[str]] = False,
             logbins: bool = False,
             logx: bool = False,
@@ -500,7 +500,7 @@ class Analysis:
         :param xvar: variable in dataframe to plot
         :param kwargs: keyword args to pass to Dataset.plot_mass_slices()
         """
-        self[datasets].plot_mass_slices(var=xvar, **kwargs)
+        self[datasets].plot_dsid(var=xvar, **kwargs)
 
     # ===============================
     # ========= PRINTOUTS ===========

@@ -659,6 +659,7 @@ class DatasetBuilder:
                 raise ValueError("Don't import more than one DTA tree at once. Got the following trees: ",
                                  ', '.join(tree_dict.keys()))
 
+        # add variables necessary to calculate weights etc
         tree_dict = self.__add_necessary_dta_variables(tree_dict)
 
         # check columns
@@ -667,7 +668,7 @@ class DatasetBuilder:
             col for col in import_cols
             if col not in list(Rdf.GetColumnNames())
         ]:
-            raise ValueError(f"No column(s) {missing_cols} in TTree {self.TTree_name} of file(s) {data_path}")
+            raise ValueError(f"No column(s) {', '.join(missing_cols)} in TTree {self.TTree_name} of file(s) {data_path}")
 
         # routine to separate vector branches into separate variables
         badcols = set()  # save old vector column names to avoid extracting them later
@@ -718,9 +719,9 @@ class DatasetBuilder:
         self.logger.info("Calculating DTA weights...")
         for dsid in df.index.unique(level='DSID'):
             self.logger.debug(f"DSID {dsid}..")
-            xs = PMG_tool.get_crosssection(dsid)
+            xs = PMG_tool.get_crossSection(dsid)
             kFactor = PMG_tool.get_kFactor(dsid)
-            df.loc[dsid, 'truth_weight'] = df['mcWeight'] * self.lumi * df['rwCorr'] * df['prwWeight'] * xs / df['mcWeight'].sum()
+            df.loc[dsid, 'truth_weight'] = df['mcWeight'] * self.lumi * df['rwCorr'] * df['prwWeight'] * xs * kFactor / df['mcWeight'].sum()
             df.loc[dsid, 'reco_weight'] = df['weight'] * self.lumi * xs * kFactor / df['mcWeight'].sum()
 
         # filter events with nan/inf weight values (why do these appear?)

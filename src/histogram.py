@@ -88,6 +88,10 @@ class Histogram1D(bh.Histogram, family=None):
 
             self.logger.debug(f"Initialising histogram {name}...")
 
+            # check length of var and weight
+            if hasattr(weight, '__len__') and (len(var) != len(weight)):
+                raise ValueError(f"Weight and value arrays are of different lengths! {len(weight)}, {len(var)}")
+
             # check for invalid entries (nan or inf in weights or values)
             if weight is not None:
                 inv_bool = np.logical_xor(np.logical_xor(np.isnan(var), np.isnan(weight)),

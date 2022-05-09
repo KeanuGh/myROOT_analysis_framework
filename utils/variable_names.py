@@ -229,14 +229,19 @@ variable_data: Dict[str, Branch] = {
         'tag': VarTag.TRUTH,
     },
     'MTW': {
-        'name': r'$M^{W}_{T}$',
+        'name': r'Reco $M^{W}_{T}$',
         'units': 'GeV',
         'tag': VarTag.RECO,
     },
     'TruthMTW': {
-        'name': r'$M^{W}_{T}$',
+        'name': r'Truth $M^{W}_{T}$',
         'units': 'GeV',
         'tag': VarTag.TRUTH,
+    },
+    'DilepM': {
+        'name': r'$M_{ll}$',
+        'units': 'GeV',
+        'tag': VarTag.TRUTH
     },
 
     # RECO-LEVEL KINEMATIC VARIABLES

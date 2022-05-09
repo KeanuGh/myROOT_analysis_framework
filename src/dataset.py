@@ -244,7 +244,7 @@ class Dataset:
                     f"{phys_short:<{max_len_phys_short + 1}} " +
                     f"{len(self.df.loc[dsid]):<10} " +
                     f"{self.df.loc[dsid, 'weight_mc'].sum():<10.6e} " +
-                    f"{PMG_tool.get_crosssection(dsid):<10.6e} " +
+                    f"{PMG_tool.get_crossSection(dsid):<10.6e} " +
                     f"{self.lumi:<10.6e} " +
                     (f"{self.df.loc[dsid, 'truth_weight'].notna().sum():<11}  " if print_truth else "") +
                     (f"{self.df.loc[dsid, 'truth_weight'].notna().mean():<11.5e}  " if print_truth else "") +
@@ -560,7 +560,7 @@ class Dataset:
         fig.savefig(out_png_file, bbox_inches='tight')
         self.logger.info(f"Figure saved to {out_png_file}")
 
-    def plot_mass_slices(
+    def plot_dsid(
             self,
             var: str,
             weight: str,
@@ -571,7 +571,6 @@ class Dataset:
             xlabel: str = '',
             ylabel: str = '',
             title: str = '',
-            apply_cuts: Union[bool, str, List[str]] = True,
             **kwargs
     ) -> None:
         """
@@ -588,23 +587,20 @@ class Dataset:
         :param xlabel: x label
         :param ylabel: y label
         :param title: plot title
-        :param apply_cuts: True to apply all cuts to dataset before plotting or False for no cuts
-                           pass a string or list of strings of the cut label(s) to apply just those cuts
         :param kwargs: keyword arguments to pass to histogram plotting function
         """
         self.logger.info(f'Plotting {var} in {self.name} as slices...')
 
         fig, ax = plt.subplots()
-        df = self.apply_cuts(apply_cuts)
 
         # per dsid
         for dsid, dsid_df in self.df.groupby(level='DSID'):
             weights = dsid_df[weight] if isinstance(weight, str) else weight
-            hist = Histogram1D(bins, dsid_df[var], weights, logbins, logger=self.logger)
+            hist = Histogram1D(dsid_df[var], bins=bins, weight=weights, logbins=logbins, logger=self.logger)
             hist.plot(ax=ax, label=dsid, **kwargs)
         # inclusive
-        weights = df[weight] if isinstance(weight, str) else weight
-        hist = Histogram1D(bins, df[var], weights, logbins, logger=self.logger)
+        weights = self.df[weight] if isinstance(weight, str) else weight
+        hist = Histogram1D(self.df[var], bins=bins, weight=weights, logbins=logbins, logger=self.logger)
         hist.plot(ax=ax, label='Inclusive', color='k', **kwargs)
 
         ax.legend(fontsize=10, ncol=2)
@@ -613,7 +609,7 @@ class Dataset:
 
         filename = f"{self.plot_dir}{self.name}_{var}_SLICES.png"
         fig.savefig(filename, bbox_inches='tight')
-        self.logger.info(f'Saved mass slice plot of {var} in {self.name} to {filename}')
+        self.logger.info(f'Saved dsid slice plot of {var} in {self.name} to {filename}')
 
     def gen_cutflow_hist(self,
                          event: bool = True,

@@ -48,7 +48,8 @@ class Cutflow:
                 self.first_reco_cut = cut.name
 
         # list of cutflow labels (necessary for all cutflows)
-        self.cutflow_labels = ['Inclusive'] + [cut_name for cut_name in cuts]
+        self.cutflow_labels = ['Inclusive'] + [cut.name for cut in cuts.values()]
+        self.cutflow_str = ['Inclusive'] + [cut.cutstr for cut in cuts.values()]
         self.cutflow_ratio = [1.]  # contains ratio of each separate cut to inclusive sample
         self.cutflow_n_events = [self._n_events_tot]  # contains number of events passing each cut
         self.cutflow_a_ratio = [1.0]  # contains ratio of each separate cut to inclusive sample
@@ -66,7 +67,6 @@ class Cutflow:
             curr_cut_columns += [cut + config.cut_label]
             # number of events passing current cut & all previous cuts
             n_events_left = len(df.loc[df[curr_cut_columns].all(1)].index)
-
             self.cutflow_n_events.append(n_events_left)
 
             if prev_n == 0:
@@ -133,7 +133,7 @@ class Cutflow:
             if cutname == self.first_reco_cut:
                 self.logger.info("RECO:")
                 self.logger.info("---------------------------------")
-            self.logger.info(f"{cutname:<{max_name_len}} "
+            self.logger.info(f"{self.cutflow_str[i + 1]:<{max_name_len}} "
                              f"{self.cutflow_n_events[i + 1]:<{max_n_len}} "
                              f"{self.cutflow_ratio[i + 1]:.3f} "
                              f"{self.cutflow_a_ratio[i + 1]:.3f}    "

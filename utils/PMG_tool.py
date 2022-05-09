@@ -11,7 +11,7 @@ PMG_df = pd.read_csv(Path(__file__).parent / 'PMGxsecDB_mc16.txt', delim_whitesp
                             'generator_name': str, 'etag': str})
 
 
-def get_crosssection(dsid: int) -> float:
+def get_crossSection(dsid: int) -> float:
     return PMG_df.loc[dsid, 'crossSection']
 
 
@@ -27,11 +27,11 @@ def get_kFactor(dsid: int) -> str:
     return PMG_df.loc[dsid, 'kFactor']
 
 
-def get_relUnvertUP(dsid: int) -> float:
+def get_relUncertUP(dsid: int) -> float:
     return PMG_df.loc[dsid, 'relUncertUP']
 
 
-def get_relUnvertDOWN(dsid: int) -> float:
+def get_relUncertDOWN(dsid: int) -> float:
     return PMG_df.loc[dsid, 'relUncertDOWN']
 
 
