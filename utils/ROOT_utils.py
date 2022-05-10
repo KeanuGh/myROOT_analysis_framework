@@ -2,7 +2,7 @@ import glob
 import logging
 import pickle as pkl
 from contextlib import contextmanager
-from typing import Type, Optional
+from typing import Type
 
 import ROOT
 import boost_histogram as bh
@@ -84,7 +84,7 @@ def bh_to_TH1(h_bh: bh.Histogram, name: str, title: str, hist_type: str = 'F') -
 #     return h_bh
 
 
-def convert_pkl_to_root(filename: str, histname: Optional[str] = None) -> None:
+def convert_pkl_to_root(filename: str, histname: str | None = None) -> None:
     """
     Converts pickled histogram file to root file.
 

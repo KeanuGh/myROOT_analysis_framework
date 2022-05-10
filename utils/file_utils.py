@@ -3,14 +3,14 @@ import os
 from filecmp import cmp
 from glob import glob
 from pathlib import Path
-from typing import Optional, Union, List
+from typing import List
 from warnings import warn
 
 import src.config as config
 from utils import ROOT_utils
 
 
-def get_last_backup(backup_dir: str, name: str = '') -> Optional[str]:
+def get_last_backup(backup_dir: str, name: str = '') -> str | None:
     if is_dir_empty(backup_dir) or len(glob(backup_dir + name + '*')) == 0:
         return None
     else:
@@ -19,8 +19,8 @@ def get_last_backup(backup_dir: str, name: str = '') -> Optional[str]:
 
 def identical_to_backup(file: str,
                         logger: logging.Logger,
-                        backup_dir: Optional[str] = None,
-                        backup_file: Optional[str] = None,
+                        backup_dir: str | None = None,
+                        backup_file: str | None = None,
                         name: str = '',
                         ) -> bool:
     """
@@ -64,7 +64,7 @@ def get_file_parent(filepath: str) -> Path:
     return Path(filepath).parent
 
 
-def makedir(dirpath: Union[str, List[str]]) -> None:
+def makedir(dirpath: str | List[str]) -> None:
     """creates director(y/ies) if it/they don't exist. Accepts either string or list of strings"""
     if isinstance(dirpath, str):
         if not os.path.exists(dirpath):
@@ -88,7 +88,7 @@ def n_files(filepath: str) -> int:
 
 
 # FIXME
-def convert_pkl_to_root(pkl_name: Optional[str] = None, conv_all: bool = False) -> None:
+def convert_pkl_to_root(pkl_name: str | None = None, conv_all: bool = False) -> None:
     """
     Converts histogram pickle file into a root file containing the same histograms.
     At the moment only converts data and doesn't touch title and axis labels but may change that in the future

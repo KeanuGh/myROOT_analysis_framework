@@ -12,7 +12,7 @@ if __name__ == '__main__':
             'hard_cut': 'Muonic Tau',
             'lepton': 'tau',
             'dataset_type': 'dta',
-            # 'force_rebuild': False,
+            'force_rebuild': False,
             'validate_duplicated_events': False,
             'label': r'Sherpa 2211 $W\rightarrow\tau\nu\rightarrow \mu\nu$',
         },
@@ -36,7 +36,7 @@ if __name__ == '__main__':
     }
 
     my_analysis = Analysis(datasets, data_dir='/mnt/D/data/dataset_pkl_outputs/', year='2015+2016',
-                           analysis_label='dta_analysistop_compare', skip_verify_pkl=False, force_rebuild=False,
+                           analysis_label='dta_analysistop_compare', skip_verify_pkl=False,
                            log_level=10, log_out='both', timedatelog=True, separate_loggers=False)
     # my_analysis.merge_datasets('wtaunu_analysistop', 'wtaunu_analysistop_peak')
 
@@ -123,48 +123,48 @@ if __name__ == '__main__':
     #                       bins=(30, 1, 5000), weight='truth_weight',
     #                       title='normalised to 1', normalise=True, logx=True, logbins=True, **ratio_args)
 
-    # RECO
-    # -----------------------------------
-    # calculate specific weights
-    my_analysis.logger.info("Calculating weights...")
-    my_analysis['wtaunu_mu_dta']['muon_reco_weight'] =   my_analysis['wtaunu_mu_dta']['reco_weight'] \
-                                                       * my_analysis['wtaunu_mu_dta']['Muon_recoSF'] \
-                                                       * my_analysis['wtaunu_mu_dta']['Muon_isoSF'] \
-                                                       * my_analysis['wtaunu_mu_dta']['Muon_ttvaSF']
-    my_analysis['wtaunu_mu_dta'].dropna('muon_reco_weight', drop_inf=True)
-
-    # un-normalised
-    my_analysis.plot_hist(['wtaunu_mu_dta', 'wtaunu_analysistop'], ['MuonPt', 'mu_pt'],
-                          bins=(30, 1, 5000), weight=['muon_reco_weight', 'reco_weight'],
-                          normalise=False, title='reco - 36.2fb$^{-1}$', logx=True, logbins=True, **ratio_args)
-
-    my_analysis.plot_hist(['wtaunu_mu_dta', 'wtaunu_analysistop'], ['MuonEta', 'mu_eta'],
-                          bins=(30, -5, 5), weight=['muon_reco_weight', 'reco_weight'],
-                          normalise=False, title='reco - 36.2fb$^{-1}$', **ratio_args)
-
-    my_analysis.plot_hist(['wtaunu_mu_dta', 'wtaunu_analysistop'], ['MuonPhi', 'mu_phi'],
-                          bins=(30, -pi, pi), weight=['muon_reco_weight', 'reco_weight'],
-                          normalise=False, title='reco - 36.2fb$^{-1}$', **ratio_args)
-
-    my_analysis.plot_hist(['wtaunu_mu_dta', 'wtaunu_analysistop'], ['MET_met', 'met_met'],
-                          bins=(30, 1, 5000), weight=['muon_reco_weight', 'reco_weight'],
-                          normalise=False, title='reco - 36.2fb$^{-1}$', logx=True, logbins=True, **ratio_args)
-
-    my_analysis.plot_hist(['wtaunu_mu_dta', 'wtaunu_analysistop'], ['MET_phi', 'met_phi'],
-                          bins=(30, -pi, pi), weight=['muon_reco_weight', 'reco_weight'],
-                          normalise=False, title='reco - 36.2fb$^{-1}$', **ratio_args)
-
-    my_analysis.plot_hist(['wtaunu_mu_dta', 'wtaunu_analysistop'], ['MTW', 'mu_mt_reco'],
-                          bins=(30, 1, 5000), weight=['muon_reco_weight', 'reco_weight'],
-                          normalise=False, title='reco - 36.2fb$^{-1}$', logx=True, logbins=True, **ratio_args)
-
-    my_analysis.plot_hist(['wtaunu_mu_dta', 'wtaunu_analysistop'], ['Muon_d0sig', 'mu_d0sig'],
-                          bins=(30, -3.5, 3.5), weight=['muon_reco_weight', 'reco_weight'],
-                          normalise=False, title='reco - 36.2fb$^{-1}$', **ratio_args)
-
-    my_analysis.plot_hist(['wtaunu_mu_dta', 'wtaunu_analysistop'], ['Muon_delta_z0_sintheta', 'mu_delta_z0_sintheta'],
-                          bins=(30, -1, 1), weight=['muon_reco_weight', 'reco_weight'],
-                          normalise=False, title='reco - 36.2fb$^{-1}$', **ratio_args)
+    # # RECO
+    # # -----------------------------------
+    # # calculate specific weights
+    # my_analysis.logger.info("Calculating weights...")
+    # my_analysis['wtaunu_mu_dta']['muon_reco_weight'] =   my_analysis['wtaunu_mu_dta']['reco_weight'] \
+    #                                                    * my_analysis['wtaunu_mu_dta']['Muon_recoSF'] \
+    #                                                    * my_analysis['wtaunu_mu_dta']['Muon_isoSF'] \
+    #                                                    * my_analysis['wtaunu_mu_dta']['Muon_ttvaSF']
+    # my_analysis['wtaunu_mu_dta'].dropna('muon_reco_weight', drop_inf=True)
+    #
+    # # un-normalised
+    # my_analysis.plot_hist(['wtaunu_mu_dta', 'wtaunu_analysistop'], ['MuonPt', 'mu_pt'],
+    #                       bins=(30, 1, 5000), weight=['muon_reco_weight', 'reco_weight'],
+    #                       normalise=False, title='reco - 36.2fb$^{-1}$', logx=True, logbins=True, **ratio_args)
+    #
+    # my_analysis.plot_hist(['wtaunu_mu_dta', 'wtaunu_analysistop'], ['MuonEta', 'mu_eta'],
+    #                       bins=(30, -5, 5), weight=['muon_reco_weight', 'reco_weight'],
+    #                       normalise=False, title='reco - 36.2fb$^{-1}$', **ratio_args)
+    #
+    # my_analysis.plot_hist(['wtaunu_mu_dta', 'wtaunu_analysistop'], ['MuonPhi', 'mu_phi'],
+    #                       bins=(30, -pi, pi), weight=['muon_reco_weight', 'reco_weight'],
+    #                       normalise=False, title='reco - 36.2fb$^{-1}$', **ratio_args)
+    #
+    # my_analysis.plot_hist(['wtaunu_mu_dta', 'wtaunu_analysistop'], ['MET_met', 'met_met'],
+    #                       bins=(30, 1, 5000), weight=['muon_reco_weight', 'reco_weight'],
+    #                       normalise=False, title='reco - 36.2fb$^{-1}$', logx=True, logbins=True, **ratio_args)
+    #
+    # my_analysis.plot_hist(['wtaunu_mu_dta', 'wtaunu_analysistop'], ['MET_phi', 'met_phi'],
+    #                       bins=(30, -pi, pi), weight=['muon_reco_weight', 'reco_weight'],
+    #                       normalise=False, title='reco - 36.2fb$^{-1}$', **ratio_args)
+    #
+    # my_analysis.plot_hist(['wtaunu_mu_dta', 'wtaunu_analysistop'], ['MTW', 'mu_mt_reco'],
+    #                       bins=(30, 1, 5000), weight=['muon_reco_weight', 'reco_weight'],
+    #                       normalise=False, title='reco - 36.2fb$^{-1}$', logx=True, logbins=True, **ratio_args)
+    #
+    # my_analysis.plot_hist(['wtaunu_mu_dta', 'wtaunu_analysistop'], ['Muon_d0sig', 'mu_d0sig'],
+    #                       bins=(30, -3.5, 3.5), weight=['muon_reco_weight', 'reco_weight'],
+    #                       normalise=False, title='reco - 36.2fb$^{-1}$', **ratio_args)
+    #
+    # my_analysis.plot_hist(['wtaunu_mu_dta', 'wtaunu_analysistop'], ['Muon_delta_z0_sintheta', 'mu_delta_z0_sintheta'],
+    #                       bins=(30, -1, 1), weight=['muon_reco_weight', 'reco_weight'],
+    #                       normalise=False, title='reco - 36.2fb$^{-1}$', **ratio_args)
     #
     # # normalised
     # my_analysis.plot_hist(['wtaunu_mu_dta', 'wtaunu_analysistop'], ['MuonPt', 'mu_pt'],

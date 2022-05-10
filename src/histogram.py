@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Union, List, Tuple, Any, overload
+from typing import List, Tuple, Any, overload
 
 import ROOT
 import boost_histogram as bh
@@ -31,6 +31,8 @@ class Histogram1D(bh.Histogram, family=None):
     """
     Wrapper around boost-histogram histogram for 1D
     """
+    __slots__ = ("logger", "name", "TH1")
+
     @overload
     def __init__(self, bins: List[float], logger: logging.Logger = None, name: str = '', title: str = '') -> None:
         ...
@@ -48,8 +50,8 @@ class Histogram1D(bh.Histogram, family=None):
     @overload
     def __init__(self,
                  var: ArrayLike = None,
-                 bins: Union[List[float], Tuple[int, float, float], bh.axis.Axis] = (10, 0, 10),
-                 weight: Union[ArrayLike, int] = None,
+                 bins: List[float] | Tuple[int, float, float] | bh.axis.Axis = (10, 0, 10),
+                 weight: ArrayLike | int = None,
                  logbins: bool = False,
                  logger: logging.Logger = None,
                  name: str = '',
@@ -60,8 +62,8 @@ class Histogram1D(bh.Histogram, family=None):
 
     def __init__(self,
                  var: ArrayLike = None,
-                 bins: Union[List[float], Tuple[int, float, float], bh.axis.Axis] = (10, 0, 10),
-                 weight: Union[ArrayLike, float] = None,
+                 bins: List[float] | Tuple[int, float, float] | bh.axis.Axis = (10, 0, 10),
+                 weight: ArrayLike | float = None,
                  logbins: bool = False,
                  logger: logging.Logger = None,
                  name: str = '',
@@ -135,12 +137,12 @@ class Histogram1D(bh.Histogram, family=None):
             self.TH1.Fill(v, w)
         return self
 
-    def __truediv__(self, other: Union[bh.Histogram, "np.typing.NDArray[Any]", float]) -> Histogram1D:
+    def __truediv__(self, other: bh.Histogram | "np.typing.NDArray[Any]" | float) -> Histogram1D:
         """boost-histogram doesn't allow dividing weighted histograms so implement that here"""
         result = self.copy()
         return result.__itruediv__(other)
 
-    def __itruediv__(self, other: Union[bh.Histogram, "np.typing.NDArray[Any]", float]) -> Histogram1D:
+    def __itruediv__(self, other: bh.Histogram | "np.typing.NDArray[Any]" | float) -> Histogram1D:
         """boost-histogram doesn't allow dividing weighted histograms so implement that here"""
         if isinstance(other, Histogram1D):
             # Scale variances based on ROOT method. See https://root.cern.ch/doc/master/TH1_8cxx_source.html#l02929
@@ -164,12 +166,12 @@ class Histogram1D(bh.Histogram, family=None):
             # let boost-histogram handle return
             return self._compute_inplace_op("__itruediv__", other)
 
-    def __mul__(self, other: Union["bh.Histogram", "np.typing.NDArray[Any]", float]) -> Histogram1D:
+    def __mul__(self, other: bh.Histogram | "np.typing.NDArray[Any]" | float) -> Histogram1D:
         """boost-histogram doesn't allow multiplying weighted histograms so implement that here"""
         result = self.copy()
         return result.__imul__(other)
 
-    def __imul__(self, other: Union["bh.Histogram", "np.typing.NDArray[Any]", float]) -> Histogram1D:
+    def __imul__(self, other: bh.Histogram | "np.typing.NDArray[Any]" | float) -> Histogram1D:
         """boost-histogram doesn't allow multiplying weighted histograms so implement that here"""
         if isinstance(other, Histogram1D):
             # Scale variances based on ROOT method. See https://root.cern.ch/doc/master/TH1_8cxx_source.html#l06116
@@ -202,7 +204,7 @@ class Histogram1D(bh.Histogram, family=None):
         ...
 
     @staticmethod
-    def __gen_axis(bins: Union[List[float], Tuple[int, float, float]], logbins: bool = False) -> bh.axis.Axis:
+    def __gen_axis(bins: List[float] | Tuple[int, float, float], logbins: bool = False) -> bh.axis.Axis:
         """
         Returns the correct type of boost-histogram axis based on the input bins.
 
@@ -223,8 +225,8 @@ class Histogram1D(bh.Histogram, family=None):
                             f"Got {bins} of type {type(bins)}")
 
     @staticmethod
-    def __get_TH1_bins(bins: Union[List[float], Tuple[int, float, float], bh.axis.Axis]
-                       ) -> Union[Tuple[int, list], Tuple[int, float, float]]:
+    def __get_TH1_bins(bins: List[float] | Tuple[int, float, float] | bh.axis.Axis
+                       ) -> Tuple[int, list] | Tuple[int, float, float]:
         """Format bins for TH1 constructor"""
         if isinstance(bins, list):
             return len(bins), bins
@@ -353,7 +355,7 @@ class Histogram1D(bh.Histogram, family=None):
 
     # Fitting
     # ===================
-    def chi_square(self, other: Union[ROOT.TF1, ROOT.TH1, Histogram1D]) -> Tuple[float, float]:
+    def chi_square(self, other: ROOT.TF1 | ROOT.TH1 | Histogram1D) -> Tuple[float, float]:
         """Perform chi-squared test. Retun chi2 per degree of freedom, pvalue"""
         h1 = self.TH1
         if isinstance(other, ROOT.TH1):
@@ -389,9 +391,9 @@ class Histogram1D(bh.Histogram, family=None):
     def plot(
             self,
             ax: plt.Axes = None,
-            yerr: Union[ArrayLike, bool] = True,
+            yerr: ArrayLike | bool = True,
             w2: bool = False,
-            normalise: Union[float, bool] = False,
+            normalise: float | bool = False,
             scale_by_bin_width: bool = False,
             stats_box: bool = False,
             out_filename: str = None,
@@ -469,7 +471,7 @@ class Histogram1D(bh.Histogram, family=None):
 
     def Rplot(
         self,
-        normalise: Union[float, bool] = False,
+        normalise: float | bool = False,
         plot_option: str = '',
         stats_box: bool = False,
         out_filename: str = False
@@ -500,7 +502,7 @@ class Histogram1D(bh.Histogram, family=None):
             self,
             other: Histogram1D,
             ax: plt.Axes = None,
-            yerr: Union[ArrayLike, bool] = True,
+            yerr: ArrayLike | bool = True,
             normalise: bool = False,
             label: str = None,
             fit: bool = False,

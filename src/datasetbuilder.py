@@ -1,7 +1,7 @@
 import logging
 import time
 from dataclasses import dataclass, field
-from typing import Optional, Union, List, Dict, OrderedDict, Set, Iterable, overload
+from typing import List, Dict, OrderedDict, Set, Iterable, overload
 
 import ROOT
 import numpy as np
@@ -27,7 +27,7 @@ lumi_year = {
 }
 
 
-@dataclass
+@dataclass(slots=True)
 class DatasetBuilder:
     """
     Dataset builder class.
@@ -60,7 +60,7 @@ class DatasetBuilder:
     label: str = 'data',
     lepton: str = 'lepton'
     logger: logging.Logger = field(default_factory=get_logger)
-    hard_cut: Union[str, List[str]] = field(default_factory=list)
+    hard_cut: str | List[str] = field(default_factory=list)
     dataset_type: str = 'DTA'
     force_rebuild: bool = False
     force_recalc_cuts: bool = False
@@ -111,7 +111,7 @@ class DatasetBuilder:
             data_path: str,
             tree_dict: Dict[str, Set[str]],
             vars_to_calc: Set[str],
-            cuts: Optional[OrderedDict[str, Cut]] = None,
+            cuts: OrderedDict[str, Cut] | None = None,
     ) -> Dataset:
         ...
 

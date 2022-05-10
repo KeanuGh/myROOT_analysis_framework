@@ -1,5 +1,5 @@
 import os
-from typing import Optional, Union, Dict, List, Tuple, Iterable
+from typing import Dict, List, Tuple, Iterable
 
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -20,12 +20,13 @@ class Analysis:
     Access datasets in class with analysis.dataset_name or analsis['dataset_name']. Can set by key but not by attribute
     When calling a method that applies to only one dataset, naming the dataset in argument ds_name is optional.
     """
+    __slots__ = "paths", "name", "paths", "logger", "datasets", "global_lumi"
 
     def __init__(
             self,
             data_dict: Dict[str, Dict],
             analysis_label: str,
-            global_lumi: Optional[float] = 139.,
+            global_lumi: float | None = 139.,
             output_dir: str = None,
             data_dir: str = None,
             log_level: int = 20,
@@ -205,7 +206,7 @@ class Analysis:
         """
         self[name] = self[dataset].subset(args)
 
-    def create_dsid_subdataset(self, dataset: str, name: str, dsid: Union[str, int]) -> None:
+    def create_dsid_subdataset(self, dataset: str, name: str, dsid: str | int | None) -> None:
         """
         Create new dataset from DSID of other dataset
 
@@ -233,7 +234,7 @@ class Analysis:
     def merge_datasets(
             self,
             *datasets: str,
-            apply_cuts: Union[bool, str, List[str]] = False,
+            apply_cuts: bool | str | List[str] = False,
             new_name: str = None,
             delete: bool = True,
             to_pkl: bool = False,
@@ -278,8 +279,8 @@ class Analysis:
 
     @handle_dataset_arg
     def apply_cuts(self,
-                   datasets: Union[str, Iterable[str]],
-                   labels: Union[bool, str, List[str]] = True,
+                   datasets: str | Iterable[str],
+                   labels: bool | str | List[str] = True,
                    reco: bool = False,
                    truth: bool = False,
                    ) -> None:
@@ -329,15 +330,15 @@ class Analysis:
     # ===============================
     def plot_hist(
             self,
-            datasets: Union[str, List[str]],
-            var: Union[str, List[str]],
-            bins: Union[List[float], Tuple[int, float, float]],
-            weight: Union[List[Union[str, float]], str, float] = 1.,
-            yerr: Union[ArrayLike, str] = True,
+            datasets: str | List[str],
+            var: str | List[str],
+            bins: List[float] | Tuple[int, float, float],
+            weight: List[str | float] | str | float = 1.,
+            yerr: ArrayLike | str = True,
             labels: List[str] = None,
             w2: bool = False,
-            normalise: Union[float, bool, str] = False,
-            apply_cuts: Union[bool, str, List[str]] = False,
+            normalise: float | bool | str = False,
+            apply_cuts: bool | str | List[str] = False,
             logbins: bool = False,
             logx: bool = False,
             logy: bool = True,
@@ -482,7 +483,7 @@ class Analysis:
         return fig
 
     @check_single_dataset
-    def gen_cutflow_hist(self, ds_name: Optional[str], **kwargs) -> None:
+    def gen_cutflow_hist(self, ds_name: str | None, **kwargs) -> None:
         """
         Generates and saves cutflow histograms. Choose which cutflow histogram option to print. Default: only by-event.
 
@@ -492,7 +493,7 @@ class Analysis:
         self[ds_name].gen_cutflow_hist(**kwargs)
 
     @handle_dataset_arg
-    def plot_mass_slices(self, datasets: Union[str, Iterable[str]], xvar: str, **kwargs) -> None:
+    def plot_mass_slices(self, datasets: str | Iterable[str], xvar: str, **kwargs) -> None:
         """
         Plots mass slices for input variable xvar if dataset is_slices
 
@@ -506,7 +507,7 @@ class Analysis:
     # ========= PRINTOUTS ===========
     # ===============================
     @handle_dataset_arg
-    def cutflow_printout(self, datasets: Union[str, Iterable[str]]) -> None:
+    def cutflow_printout(self, datasets: str | Iterable[str]) -> None:
         """Prints cutflow table to terminal"""
         self[datasets].cutflow.printout()
 
@@ -520,7 +521,7 @@ class Analysis:
             self.logger.info(f"luminosity   : {self[name].luminosity:.2f} fb-1")
 
     @handle_dataset_arg
-    def print_latex_table(self, datasets: Union[str, Iterable[str]]) -> None:
+    def print_latex_table(self, datasets: str | Iterable[str]) -> None:
         """
         Prints a latex table(s) of cutflow.
 

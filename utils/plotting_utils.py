@@ -1,4 +1,4 @@
-from typing import Tuple, Optional, Union, List
+from typing import Tuple, List
 from warnings import warn
 
 import boost_histogram as bh
@@ -17,7 +17,7 @@ plt.style.use([hep.style.ATLAS])
 # ===============================
 # ===== HISTOGRAM VARIABLES =====
 # ===============================
-def get_axis_labels(var_name: Union[str, List[str]], lepton: str = 'lepton') -> Tuple[Optional[str], Optional[str]]:
+def get_axis_labels(var_name: str | List[str], lepton: str = 'lepton') -> Tuple[str | None, str | None]:
     """Gets label for corresponding variable in axis labels dictionary"""
     if isinstance(var_name, list):
         # If a list is passed, check if all variables have the same name, otherwise throw warning and pick first
@@ -62,7 +62,7 @@ def get_axis_labels(var_name: Union[str, List[str]], lepton: str = 'lepton') -> 
     return xlabel, ylabel
 
 
-def get_axis(bins: Union[List[float], Tuple[int, float, float]], logbins: bool = False) -> bh.axis.Axis:
+def get_axis(bins: List[float] | Tuple[int, float, float], logbins: bool = False) -> bh.axis.Axis:
     """
     Returns the correct type of boost-histogram axis based on the input bins.
 
@@ -87,8 +87,8 @@ def get_axis(bins: Union[List[float], Tuple[int, float, float]], logbins: bool =
 
 def set_axis_options(
         axis: plt.axes,
-        var_name: Union[List[str], str],
-        bins: Union[tuple, list],
+        var_name: List[str] | str,
+        bins: tuple | list,
         lepton: str = None,
         xlabel: str = '',
         ylabel: str = '',
@@ -137,7 +137,7 @@ def set_axis_options(
 # ===============================
 def histplot_2d(
         var_x: pd.Series, var_y: pd.Series,
-        xbins: Union[tuple, list], ybins: Union[tuple, list],
+        xbins: tuple | list, ybins: tuple | list,
         weights: pd.Series,
         ax: plt.axes,
         fig: plt.figure,

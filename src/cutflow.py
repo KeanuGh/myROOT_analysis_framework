@@ -11,6 +11,12 @@ from src.logger import get_logger
 
 
 class Cutflow:
+    __slots__ = (
+        "logger", "_n_events_tot",
+        "cutflow_labels", "cutflow_ratio", "cutflow_n_events", "cutflow_a_ratio", "cutflow_cum", "cutflow_str",
+        "_cuthist_options", "__first_reco_cut",
+    )
+
     def __init__(self, df: pd.DataFrame, cuts: OrderedDict[str, Cut], logger: logging.Logger = None):
         """
         Generates cutflow object that keeps track of various properties and ratios of selections made on given dataset
@@ -40,12 +46,12 @@ class Cutflow:
             return
 
         # find first reco cut to separate reco and truth cuts in printout
-        self.first_reco_cut = ''
+        self.__first_reco_cut = ''
         for cut in cuts.values():
-            if self.first_reco_cut and not cut.is_reco:
+            if self.__first_reco_cut and not cut.is_reco:
                 raise ValueError("Truth cut after reco cut!")
-            elif not self.first_reco_cut and cut.is_reco:
-                self.first_reco_cut = cut.name
+            elif not self.__first_reco_cut and cut.is_reco:
+                self.__first_reco_cut = cut.name
 
         # list of cutflow labels (necessary for all cutflows)
         self.cutflow_labels = ['Inclusive'] + [cut.name for cut in cuts.values()]
@@ -125,12 +131,12 @@ class Cutflow:
         self.logger.info("Inclusive " + " " * (max_name_len - 9) + f"{self._n_events_tot} -     -        -")
 
         # print line
-        if not (self.cutflow_labels[1] == self.first_reco_cut):
+        if not (self.cutflow_labels[1] == self.__first_reco_cut):
             # truth cuts
             self.logger.info("TRUTH:")
             self.logger.info("---------------------------------")
         for i, cutname in enumerate(self.cutflow_labels[1:]):
-            if cutname == self.first_reco_cut:
+            if cutname == self.__first_reco_cut:
                 self.logger.info("RECO:")
                 self.logger.info("---------------------------------")
             self.logger.info(f"{self.cutflow_str[i + 1]:<{max_name_len}} "

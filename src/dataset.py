@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from typing import Union, List, Tuple, Iterable, OrderedDict
+from typing import List, Tuple, Iterable, OrderedDict
 
 import matplotlib.pyplot as plt
 import mplhep as hep
@@ -19,7 +19,7 @@ from utils import plotting_utils, PMG_tool
 from utils.variable_names import variable_data, VarTag
 
 
-@dataclass
+@dataclass(slots=True)
 class Dataset:
     """
     Dataset class. Contains/will contain all the variables needed for a singular analysis dataset.
@@ -133,7 +133,7 @@ class Dataset:
         """Get tags for all variables"""
         return [variable_data[col]['tag'] for col in self.df.columns if col in variable_data]
 
-    def __get_var_tag(self, tag: Union[VarTag, str]) -> list[str]:
+    def __get_var_tag(self, tag: VarTag | str) -> list[str]:
         """Get all variables in dataset with given tag"""
         return [
             col for col in self.df.columns
@@ -156,7 +156,7 @@ class Dataset:
         """Get reconstructed variables in dataset"""
         return self.df.loc[:, self.reco_vars]
 
-    def get_dsid(self, dsid: Union[str, int]) -> pd.DataFrame:
+    def get_dsid(self, dsid: str | int) -> pd.DataFrame:
         """Get events from partcular DSID"""
         return self.df.loc[dsid, :]
 
@@ -288,7 +288,7 @@ class Dataset:
             lepton=self.lepton
         )
 
-    def subset_dsid(self, dsid: Union[str, int]) -> Dataset:
+    def subset_dsid(self, dsid: str | int) -> Dataset:
         """Get DSID subset of Dataset"""
         return self.subset(dsid)
 
@@ -329,11 +329,11 @@ class Dataset:
     # ========== CUTTING ============
     # ===============================
     def apply_cuts(self,
-                   labels: Union[bool, str, List[str]] = True,
+                   labels: bool | str | List[str] = True,
                    reco: bool = False,
                    truth: bool = False,
                    inplace: bool = False,
-                   ) -> Union[pd.DataFrame, None]:
+                   ) -> pd.DataFrame | None:
         """
         Apply cut(s) to DataFrame.
 
@@ -402,7 +402,7 @@ class Dataset:
         ]:
             raise ValueError(f"No cut(s) {missing_cut_cols} in dataset {self.name}")
 
-    def dropna(self, col: Union[str, List[str]], drop_inf: bool = False) -> None:
+    def dropna(self, col: str | List[str], drop_inf: bool = False) -> None:
         """Drop rows with missing (and optionally infinite) values in column(s) with a message"""
         if nbad_rows := self.df[col].isna().sum():
             self.df.dropna(subset=col, inplace=True)
@@ -423,14 +423,14 @@ class Dataset:
     # ===========================================
     def plot_hist(
             self,
-            var: Union[str, List[str]],
-            bins: Union[tuple, list],
-            weight: Union[str, float] = 1.,
+            var: str | List[str],
+            bins: tuple | list,
+            weight: str | float = 1.,
             ax: plt.Axes = None,
-            yerr: Union[ArrayLike, bool] = False,
-            normalise: Union[float, bool] = False,
+            yerr: ArrayLike | bool = False,
+            normalise: float | bool = False,
             logbins: bool = False,
-            apply_cuts: Union[bool, str, List[str]] = False,
+            apply_cuts: bool | str | List[str] = False,
             name: str = '',
             **kwargs
     ) -> Histogram1D:
@@ -483,11 +483,11 @@ class Dataset:
     def plot_cut_overlays(
             self,
             var: str,
-            bins: Union[List[float], Tuple[int, float, float]],
-            weight: Union[str, float] = 1.,
-            yerr: Union[ArrayLike, bool] = True,
+            bins: List[float] | Tuple[int, float, float],
+            weight: str | float = 1.,
+            yerr: ArrayLike | bool = True,
             w2: bool = False,
-            normalise: Union[float, bool, str] = 'lumi',
+            normalise: float | bool | str = 'lumi',
             logbins: bool = False,
             logx: bool = False,
             logy: bool = True,
@@ -564,7 +564,7 @@ class Dataset:
             self,
             var: str,
             weight: str,
-            bins: Union[Iterable[float], Tuple[int, float, float]] = (30, 0, 5000),
+            bins: Iterable[float] | Tuple[int, float, float] = (30, 0, 5000),
             logbins: bool = False,
             logx: bool = False,
             logy: bool = True,

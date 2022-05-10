@@ -2,7 +2,7 @@ import logging
 import re
 from collections import OrderedDict
 from dataclasses import dataclass
-from typing import Tuple, Dict, Set, Union
+from typing import Tuple, Dict, Set
 
 from src.logger import get_logger
 from utils.file_utils import get_filename
@@ -18,7 +18,7 @@ class Cut:
     """Cut class containing info for each cut"""
     name: str
     cutstr: str
-    var: Union[str, Set[str]]
+    var: str | Set[str]
     tree: str
     is_reco: bool
 
@@ -28,6 +28,8 @@ class Cut:
 
 class Cutfile:
     """Handles importing cutfiles and extracting variables"""
+    __slots__ = "sep", "logger", "name", "_path", "given_tree", "cuts", "__vars_to_cut", "tree_dict", "vars_to_calc"
+
     def __init__(self, file_path: str, default_tree: str = '0:NONE', logger: logging.Logger = None, sep='\t'):
         """
         Read and pull variables and cuts from cutfile.
