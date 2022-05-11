@@ -63,220 +63,219 @@ if __name__ == '__main__':
         log_level=10,
         log_out='both',
         timedatelog=True,
+        dataset_type='analysistop',
         year='2015+2016',
-        force_rebuild=True,
+        force_rebuild=False,
         TTree_name='truth',
         hard_cut='M_W'
     )
-
-    analysis.print_latex_table()
 
     analysis.merge_datasets("wminmunu",   "wminmunu_hm")
     analysis.merge_datasets("wmintaunu",  "wmintaunu_hm")
     analysis.merge_datasets("wplusmunu",  "wplusmunu_hm")
     analysis.merge_datasets("wplustaunu", "wplustaunu_hm")
 
-    # =========================
-    # ===== TRUTH - UNCUT =====
-    # =========================
-    # normalised
-    analysis.plot_hist(['wminmunu', 'wmintaunu'], 'MC_WZ_dilep_m_born', weight='truth_weight', title='truth - 139fb$^{-1}$',
-                       bins=(30, 50, 5000), logbins=True, logx=True, lepton='muon', ratio_fit=True, stats_box=True,
-                       normalise=True, scale_by_bin_width=True)
+    # # =========================
+    # # ===== TRUTH - UNCUT =====
+    # # =========================
+    # # normalised
+    # analysis.plot_hist(['wminmunu', 'wmintaunu'], 'MC_WZ_dilep_m_born', weight='truth_weight', title='truth - normalised to unity$',
+    #                    bins=(30, 50, 5000), logbins=True, logx=True, lepton='muon', ratio_fit=True, stats_box=True,
+    #                    normalise=True)
     
-    analysis.plot_hist(['wplusmunu', 'wplustaunu'], 'MC_WZ_dilep_m_born', weight='truth_weight', title='truth - 139fb$^{-1}$',
-                       bins=(30, 50, 5000), logbins=True, logx=True, ratio_fit=True, stats_box=True,
-                       lepton='muon', normalise=True, scale_by_bin_width=True)
+    # analysis.plot_hist(['wplusmunu', 'wplustaunu'], 'MC_WZ_dilep_m_born', weight='truth_weight', title='truth - normalised to unity$',
+    #                    bins=(30, 50, 5000), logbins=True, logx=True, ratio_fit=True, stats_box=True,
+    #                    lepton='muon', normalise=True)
     
-    analysis.plot_hist(['wminmunu', 'wmintaunu'], 'MC_WZneutrino_eta_born', weight='truth_weight', title='truth - 139fb$^{-1}$',
-                       bins=(30, -4, 4), lepton='muon', ratio_fit=True, stats_box=True,
-                       normalise=True, scale_by_bin_width=True)
+    # analysis.plot_hist(['wminmunu', 'wmintaunu'], 'MC_WZneutrino_eta_born', weight='truth_weight', title='truth - normalised to unity$',
+    #                    bins=(30, -4, 4), lepton='muon', ratio_fit=True, stats_box=True,
+    #                    normalise=True)
     
-    analysis.plot_hist(['wplusmunu', 'wplustaunu'], 'MC_WZneutrino_eta_born', weight='truth_weight', title='truth - 139fb$^{-1}$',
-                       bins=(30, -4, 4), lepton='muon', ratio_fit=True, stats_box=True,
-                       normalise=True, scale_by_bin_width=True)
+    # analysis.plot_hist(['wplusmunu', 'wplustaunu'], 'MC_WZneutrino_eta_born', weight='truth_weight', title='truth - normalised to unity$',
+    #                    bins=(30, -4, 4), lepton='muon', ratio_fit=True, stats_box=True,
+    #                    normalise=True)
     
-    analysis.plot_hist(['wminmunu', 'wmintaunu'], 'MC_WZneutrino_pt_born', weight='truth_weight', title='truth - 139fb$^{-1}$',
-                       bins=(30, 50, 5000), logbins=True, logx=True, ratio_fit=True, stats_box=True,
-                       lepton='muon', normalise=True, scale_by_bin_width=True)
+    # analysis.plot_hist(['wminmunu', 'wmintaunu'], 'MC_WZneutrino_pt_born', weight='truth_weight', title='truth - normalised to unity$',
+    #                    bins=(30, 50, 5000), logbins=True, logx=True, ratio_fit=True, stats_box=True,
+    #                    lepton='muon', normalise=True)
     
-    analysis.plot_hist(['wplusmunu', 'wplustaunu'], 'MC_WZneutrino_pt_born', weight='truth_weight', title='truth - 139fb$^{-1}$',
-                       bins=(30, 50, 5000), logbins=True, logx=True, ratio_fit=True, stats_box=True,
-                       lepton='muon', normalise=True, scale_by_bin_width=True)
+    # analysis.plot_hist(['wplusmunu', 'wplustaunu'], 'MC_WZneutrino_pt_born', weight='truth_weight', title='truth - normalised to unity$',
+    #                    bins=(30, 50, 5000), logbins=True, logx=True, ratio_fit=True, stats_box=True,
+    #                    lepton='muon', normalise=True)
     
-    analysis.plot_hist(['wminmunu', 'wmintaunu'], 'MC_WZmu_el_eta_born', weight='truth_weight', title='truth - 139fb$^{-1}$',
-                       bins=(30, -4, 4), lepton='muon', ratio_fit=True, stats_box=True,
-                       normalise=True, scale_by_bin_width=True)
+    # analysis.plot_hist(['wminmunu', 'wmintaunu'], 'MC_WZmu_el_eta_born', weight='truth_weight', title='truth - normalised to unity$',
+    #                    bins=(30, -4, 4), lepton='muon', ratio_fit=True, stats_box=True,
+    #                    normalise=True)
 
-    analysis.plot_hist(['wplusmunu', 'wplustaunu'], 'MC_WZmu_el_eta_born', weight='truth_weight', title='truth - 139fb$^{-1}$',
-                       bins=(30, -4, 4), lepton='muon', ratio_fit=True, stats_box=True,
-                       normalise=True, scale_by_bin_width=True)
+    # analysis.plot_hist(['wplusmunu', 'wplustaunu'], 'MC_WZmu_el_eta_born', weight='truth_weight', title='truth - normalised to unity$',
+    #                    bins=(30, -4, 4), lepton='muon', ratio_fit=True, stats_box=True,
+    #                    normalise=True)
     
-    analysis.plot_hist(['wminmunu', 'wmintaunu'], 'MC_WZmu_el_pt_born', weight='truth_weight', title='truth - 139fb$^{-1}$',
-                       bins=(30, 50, 5000), logbins=True, logx=True, ratio_fit=True, stats_box=True,
-                       lepton='muon', normalise=True, scale_by_bin_width=True)
+    # analysis.plot_hist(['wminmunu', 'wmintaunu'], 'MC_WZmu_el_pt_born', weight='truth_weight', title='truth - normalised to unity$',
+    #                    bins=(30, 50, 5000), logbins=True, logx=True, ratio_fit=True, stats_box=True,
+    #                    lepton='muon', normalise=True)
     
-    analysis.plot_hist(['wplusmunu', 'wplustaunu'], 'MC_WZmu_el_pt_born', weight='truth_weight', title='truth - 139fb$^{-1}$',
-                       bins=(30, 50, 5000), logbins=True, logx=True, ratio_fit=True, stats_box=True,
-                       lepton='muon', normalise=True, scale_by_bin_width=True)
+    # analysis.plot_hist(['wplusmunu', 'wplustaunu'], 'MC_WZmu_el_pt_born', weight='truth_weight', title='truth - normalised to unity$',
+    #                    bins=(30, 50, 5000), logbins=True, logx=True, ratio_fit=True, stats_box=True,
+    #                    lepton='muon', normalise=True)
     
-    analysis.plot_hist(['wminmunu', 'wmintaunu'], 'mt_born', weight='truth_weight', title='truth - 139fb$^{-1}$',
-                       bins=(30, 50, 5000), logbins=True, logx=True, ratio_fit=True, stats_box=True,
-                       lepton='muon', normalise=True, scale_by_bin_width=True)
+    # analysis.plot_hist(['wminmunu', 'wmintaunu'], 'mt_born', weight='truth_weight', title='truth - normalised to unity$',
+    #                    bins=(30, 50, 5000), logbins=True, logx=True, ratio_fit=True, stats_box=True,
+    #                    lepton='muon', normalise=True)
 
-    analysis.plot_hist(['wplusmunu', 'wplustaunu'], 'mt_born', weight='truth_weight', title='truth - 139fb$^{-1}$',
-                       bins=(30, 50, 5000), logbins=True, logx=True, ratio_fit=True, stats_box=True,
-                       lepton='muon', normalise=True, scale_by_bin_width=True)
+    # analysis.plot_hist(['wplusmunu', 'wplustaunu'], 'mt_born', weight='truth_weight', title='truth - normalised to unity$',
+    #                    bins=(30, 50, 5000), logbins=True, logx=True, ratio_fit=True, stats_box=True,
+    #                    lepton='muon', normalise=True)
     
-    # un-normalised
-    analysis.plot_hist(['wminmunu', 'wmintaunu'], 'MC_WZ_dilep_m_born', weight='truth_weight', title='truth - un-normalised',
-                       bins=(30, 50, 5000), logbins=True, logx=True, lepton='muon', ratio_fit=True, stats_box=True,
-                       normalise=False, scale_by_bin_width=True)
+    # # 36.2fb$^{-1}$
+    # analysis.plot_hist(['wminmunu', 'wmintaunu'], 'MC_WZ_dilep_m_born', weight='truth_weight', title='truth - 36.2fb$^{-1}$',
+    #                    bins=(30, 50, 5000), logbins=True, logx=True, lepton='muon', ratio_fit=True, stats_box=True,
+    #                    normalise=False)
 
-    analysis.plot_hist(['wplusmunu', 'wplustaunu'], 'MC_WZ_dilep_m_born', weight='truth_weight', title='truth - un-normalised',
+    # analysis.plot_hist(['wplusmunu', 'wplustaunu'], 'MC_WZ_dilep_m_born', weight='truth_weight', title='truth - 36.2fb$^{-1}$',
+    #                    bins=(30, 50, 5000), logbins=True, logx=True, ratio_fit=True, stats_box=True,
+    #                    normalise=False, lepton='muon')
+
+    # analysis.plot_hist(['wminmunu', 'wmintaunu'], 'MC_WZneutrino_eta_born', weight='truth_weight', title='truth - 36.2fb$^{-1}$',
+    #                    bins=(30, -4, 4), lepton='muon', ratio_fit=True, stats_box=True,
+    #                    normalise=False)
+
+    # analysis.plot_hist(['wplusmunu', 'wplustaunu'], 'MC_WZneutrino_eta_born', weight='truth_weight', title='truth - 36.2fb$^{-1}$',
+    #                    bins=(30, -4, 4), lepton='muon', ratio_fit=True, stats_box=True,
+    #                    normalise=False)
+
+    # analysis.plot_hist(['wminmunu', 'wmintaunu'], 'MC_WZneutrino_pt_born', weight='truth_weight', title='truth - 36.2fb$^{-1}$',
+    #                    bins=(30, 50, 5000), logbins=True, logx=True, ratio_fit=True, stats_box=True,
+    #                    normalise=False, lepton='muon')
+
+    # analysis.plot_hist(['wplusmunu', 'wplustaunu'], 'MC_WZneutrino_pt_born', weight='truth_weight', title='truth - 36.2fb$^{-1}$',
+    #                    bins=(30, 50, 5000), logbins=True, logx=True, ratio_fit=True, stats_box=True,
+    #                    normalise=False, lepton='muon')
+
+    # analysis.plot_hist(['wminmunu', 'wmintaunu'], 'MC_WZmu_el_eta_born', weight='truth_weight', title='truth - 36.2fb$^{-1}$',
+    #                    bins=(30, -4, 4), lepton='muon', ratio_fit=True, stats_box=True,
+    #                    normalise=False)
+
+    # analysis.plot_hist(['wplusmunu', 'wplustaunu'], 'MC_WZmu_el_eta_born', weight='truth_weight', title='truth - 36.2fb$^{-1}$',
+    #                    bins=(30, -4, 4), lepton='muon', ratio_fit=True, stats_box=True,
+    #                    normalise=False)
+
+    # analysis.plot_hist(['wminmunu', 'wmintaunu'], 'MC_WZmu_el_pt_born', weight='truth_weight', title='truth - 36.2fb$^{-1}$',
+    #                    bins=(30, 50, 5000), logbins=True, logx=True, ratio_fit=True, stats_box=True,
+    #                    normalise=False, lepton='muon')
+
+    # analysis.plot_hist(['wplusmunu', 'wplustaunu'], 'MC_WZmu_el_pt_born', weight='truth_weight', title='truth - 36.2fb$^{-1}$',
+    #                    bins=(30, 50, 5000), logbins=True, logx=True, ratio_fit=True, stats_box=True,
+    #                    normalise=False, lepton='muon')
+
+    analysis.plot_hist(['wminmunu', 'wmintaunu'], 'mt_born', weight='truth_weight', title='truth - 36.2fb$^{-1}$',
                        bins=(30, 50, 5000), logbins=True, logx=True, ratio_fit=True, stats_box=True,
-                       normalise=False, lepton='muon', scale_by_bin_width=True)
+                       normalise=False, lepton='muon')
 
-    analysis.plot_hist(['wminmunu', 'wmintaunu'], 'MC_WZneutrino_eta_born', weight='truth_weight', title='truth - un-normalised',
-                       bins=(30, -4, 4), lepton='muon', ratio_fit=True, stats_box=True,
-                       normalise=False, scale_by_bin_width=True)
-
-    analysis.plot_hist(['wplusmunu', 'wplustaunu'], 'MC_WZneutrino_eta_born', weight='truth_weight', title='truth - un-normalised',
-                       bins=(30, -4, 4), lepton='muon', ratio_fit=True, stats_box=True,
-                       normalise=False, scale_by_bin_width=True)
-
-    analysis.plot_hist(['wminmunu', 'wmintaunu'], 'MC_WZneutrino_pt_born', weight='truth_weight', title='truth - un-normalised',
+    analysis.plot_hist(['wplusmunu', 'wplustaunu'], 'mt_born', weight='truth_weight', title='truth - 36.2fb$^{-1}$',
                        bins=(30, 50, 5000), logbins=True, logx=True, ratio_fit=True, stats_box=True,
-                       normalise=False, lepton='muon', scale_by_bin_width=True)
-
-    analysis.plot_hist(['wplusmunu', 'wplustaunu'], 'MC_WZneutrino_pt_born', weight='truth_weight', title='truth - un-normalised',
-                       bins=(30, 50, 5000), logbins=True, logx=True, ratio_fit=True, stats_box=True,
-                       normalise=False, lepton='muon', scale_by_bin_width=True)
-
-    analysis.plot_hist(['wminmunu', 'wmintaunu'], 'MC_WZmu_el_eta_born', weight='truth_weight', title='truth - un-normalised',
-                       bins=(30, -4, 4), lepton='muon', ratio_fit=True, stats_box=True,
-                       normalise=False, scale_by_bin_width=True)
-
-    analysis.plot_hist(['wplusmunu', 'wplustaunu'], 'MC_WZmu_el_eta_born', weight='truth_weight', title='truth - un-normalised',
-                       bins=(30, -4, 4), lepton='muon', ratio_fit=True, stats_box=True,
-                       normalise=False, scale_by_bin_width=True)
-
-    analysis.plot_hist(['wminmunu', 'wmintaunu'], 'MC_WZmu_el_pt_born', weight='truth_weight', title='truth - un-normalised',
-                       bins=(30, 50, 5000), logbins=True, logx=True, ratio_fit=True, stats_box=True,
-                       normalise=False, lepton='muon', scale_by_bin_width=True)
-
-    analysis.plot_hist(['wplusmunu', 'wplustaunu'], 'MC_WZmu_el_pt_born', weight='truth_weight', title='truth - un-normalised',
-                       bins=(30, 50, 5000), logbins=True, logx=True, ratio_fit=True, stats_box=True,
-                       normalise=False, lepton='muon', scale_by_bin_width=True)
-
-    analysis.plot_hist(['wminmunu', 'wmintaunu'], 'mt_born', weight='truth_weight', title='truth - un-normalised',
-                       bins=(30, 50, 5000), logbins=True, logx=True, ratio_fit=True, stats_box=True,
-                       normalise=False, lepton='muon', scale_by_bin_width=True)
-
-    analysis.plot_hist(['wplusmunu', 'wplustaunu'], 'mt_born', weight='truth_weight', title='truth - un-normalised',
-                       bins=(30, 50, 5000), logbins=True, logx=True, ratio_fit=True, stats_box=True,
-                       normalise=False, lepton='muon', scale_by_bin_width=True)
+                       normalise=False, lepton='muon')
 
     # cut
     analysis.apply_cuts()
 
-    # =========================
-    # ====== RECO - CUTS ======
-    # =========================
-    # normalised
-    analysis.plot_hist(['wminmunu', 'wmintaunu'], 'mu_mt_reco', weight='reco_weight', title='reco - 139fb$^{-1}$',
-                       bins=(30, 50, 5000), logbins=True, logx=True, ratio_fit=True, stats_box=True,
-                       lepton='muon', normalise=True, scale_by_bin_width=True)
+    # # =========================
+    # # ====== RECO - CUTS ======
+    # # =========================
+    # # normalised
+    # analysis.plot_hist(['wminmunu', 'wmintaunu'], 'mu_mt_reco', weight='reco_weight', title='reco - normalised to unity$',
+    #                    bins=(30, 50, 5000), logbins=True, logx=True, ratio_fit=True, stats_box=True,
+    #                    lepton='muon', normalise=True)
 
-    analysis.plot_hist(['wplusmunu', 'wplustaunu'], 'mu_mt_reco', weight='reco_weight', title='reco - 139fb$^{-1}$',
-                       bins=(30, 50, 5000), logbins=True, logx=True, ratio_fit=True, stats_box=True,
-                       lepton='muon', normalise=True, scale_by_bin_width=True)
+    # analysis.plot_hist(['wplusmunu', 'wplustaunu'], 'mu_mt_reco', weight='reco_weight', title='reco - normalised to unity$',
+    #                    bins=(30, 50, 5000), logbins=True, logx=True, ratio_fit=True, stats_box=True,
+    #                    lepton='muon', normalise=True)
 
-    analysis.plot_hist(['wminmunu', 'wmintaunu'], 'met_met', weight='reco_weight', title='reco - 139fb$^{-1}$',
-                       bins=(30, 50, 5000), logbins=True, logx=True, ratio_fit=True, stats_box=True,
-                       lepton='muon', normalise=True, scale_by_bin_width=True)
+    # analysis.plot_hist(['wminmunu', 'wmintaunu'], 'met_met', weight='reco_weight', title='reco - normalised to unity$',
+    #                    bins=(30, 50, 5000), logbins=True, logx=True, ratio_fit=True, stats_box=True,
+    #                    lepton='muon', normalise=True)
 
-    analysis.plot_hist(['wplusmunu', 'wplustaunu'], 'met_met', weight='reco_weight', title='reco - 139fb$^{-1}$',
-                       bins=(30, 50, 5000), logbins=True, logx=True, ratio_fit=True, stats_box=True,
-                       lepton='muon', normalise=True, scale_by_bin_width=True)
+    # analysis.plot_hist(['wplusmunu', 'wplustaunu'], 'met_met', weight='reco_weight', title='reco - normalised to unity$',
+    #                    bins=(30, 50, 5000), logbins=True, logx=True, ratio_fit=True, stats_box=True,
+    #                    lepton='muon', normalise=True)
 
-    analysis.plot_hist(['wminmunu', 'wmintaunu'], 'mu_pt', weight='reco_weight', title='reco - 139fb$^{-1}$',
-                       bins=(30, 50, 5000), logbins=True, logx=True, ratio_fit=True, stats_box=True,
-                       lepton='muon', normalise=True, scale_by_bin_width=True)
+    # analysis.plot_hist(['wminmunu', 'wmintaunu'], 'mu_pt', weight='reco_weight', title='reco - normalised to unity$',
+    #                    bins=(30, 50, 5000), logbins=True, logx=True, ratio_fit=True, stats_box=True,
+    #                    lepton='muon', normalise=True)
 
-    analysis.plot_hist(['wplusmunu', 'wplustaunu'], 'mu_pt', weight='reco_weight', title='reco - 139fb$^{-1}$',
-                       bins=(30, 50, 1000), logbins=True, logx=True, lepton='muon', ratio_fit=True, stats_box=True,
-                       normalise=True, scale_by_bin_width=True)
+    # analysis.plot_hist(['wplusmunu', 'wplustaunu'], 'mu_pt', weight='reco_weight', title='reco - normalised to unity$',
+    #                    bins=(30, 50, 1000), logbins=True, logx=True, lepton='muon', ratio_fit=True, stats_box=True,
+    #                    normalise=True)
 
-    analysis.plot_hist(['wminmunu', 'wmintaunu'], 'mu_eta', weight='reco_weight', title='reco - 139fb$^{-1}$',
-                       bins=(30, -3.5, 3.5), logy=True, ratio_fit=True, stats_box=True,
-                       lepton='muon', normalise=True)
+    # analysis.plot_hist(['wminmunu', 'wmintaunu'], 'mu_eta', weight='reco_weight', title='reco - normalised to unity$',
+    #                    bins=(30, -3.5, 3.5), logy=True, ratio_fit=True, stats_box=True,
+    #                    lepton='muon', normalise=True)
 
-    analysis.plot_hist(['wplusmunu', 'wplustaunu'], 'mu_eta', weight='reco_weight', title='reco - 139fb$^{-1}$',
-                       bins=(30, -3.5, 3.5), logy=True, ratio_fit=True, stats_box=True,
-                       lepton='muon', normalise=True)
+    # analysis.plot_hist(['wplusmunu', 'wplustaunu'], 'mu_eta', weight='reco_weight', title='reco - normalised to unity$',
+    #                    bins=(30, -3.5, 3.5), logy=True, ratio_fit=True, stats_box=True,
+    #                    lepton='muon', normalise=True)
 
-    analysis.plot_hist(['wminmunu', 'wmintaunu'], 'mu_d0sig', weight='reco_weight', title='reco - 139fb$^{-1}$',
-                       bins=(30, -3.5, 3.5), logy=True, ratio_fit=True, stats_box=True,
-                       lepton='muon', normalise=True)
+    # analysis.plot_hist(['wminmunu', 'wmintaunu'], 'mu_d0sig', weight='reco_weight', title='reco - normalised to unity$',
+    #                    bins=(30, -3.5, 3.5), logy=True, ratio_fit=True, stats_box=True,
+    #                    lepton='muon', normalise=True)
 
-    analysis.plot_hist(['wplusmunu', 'wplustaunu'], 'mu_d0sig', weight='reco_weight', title='reco - 139fb$^{-1}$',
-                       bins=(30, -3.5, 3.5), logy=True, ratio_fit=True, stats_box=True,
-                       lepton='muon', normalise=True)
+    # analysis.plot_hist(['wplusmunu', 'wplustaunu'], 'mu_d0sig', weight='reco_weight', title='reco - normalised to unity$',
+    #                    bins=(30, -3.5, 3.5), logy=True, ratio_fit=True, stats_box=True,
+    #                    lepton='muon', normalise=True)
 
-    analysis.plot_hist(['wminmunu', 'wmintaunu'], 'mu_delta_z0_sintheta', weight='reco_weight', title='reco - 139fb$^{-1}$',
-                       bins=(30, -1, 1), ratio_fit=True, stats_box=True,
-                       lepton='muon', normalise=True)
+    # analysis.plot_hist(['wminmunu', 'wmintaunu'], 'mu_delta_z0_sintheta', weight='reco_weight', title='reco - normalised to unity$',
+    #                    bins=(30, -1, 1), ratio_fit=True, stats_box=True,
+    #                    lepton='muon', normalise=True)
 
-    analysis.plot_hist(['wplusmunu', 'wplustaunu'], 'mu_delta_z0_sintheta', weight='reco_weight', title='reco - 139fb$^{-1}$',
-                       bins=(30, -1, 1), ratio_fit=True, stats_box=True,
-                       lepton='muon', normalise=True)
+    # analysis.plot_hist(['wplusmunu', 'wplustaunu'], 'mu_delta_z0_sintheta', weight='reco_weight', title='reco - normalised to unity$',
+    #                    bins=(30, -1, 1), ratio_fit=True, stats_box=True,
+    #                    lepton='muon', normalise=True)
     
-    # un-normalised
-    analysis.plot_hist(['wminmunu', 'wmintaunu'], 'mu_mt_reco', weight='reco_weight', title='reco - un-normalised',
-                       bins=(30, 50, 5000), logbins=True, logx=True, lepton='muon', ratio_fit=True, stats_box=True,
-                       normalise=False, scale_by_bin_width=True)
+    # # 36.2fb$^{-1}$
+    # analysis.plot_hist(['wminmunu', 'wmintaunu'], 'mu_mt_reco', weight='reco_weight', title='reco - 36.2fb$^{-1}$',
+    #                    bins=(30, 50, 5000), logbins=True, logx=True, lepton='muon', ratio_fit=True, stats_box=True,
+    #                    normalise=False)
 
-    analysis.plot_hist(['wplusmunu', 'wplustaunu'], 'mu_mt_reco', weight='reco_weight', title='reco - un-normalised',
-                       bins=(30, 50, 5000), logbins=True, logx=True, ratio_fit=True, stats_box=True,
-                       normalise=False, lepton='muon', scale_by_bin_width=True)
+    # analysis.plot_hist(['wplusmunu', 'wplustaunu'], 'mu_mt_reco', weight='reco_weight', title='reco - 36.2fb$^{-1}$',
+    #                    bins=(30, 50, 5000), logbins=True, logx=True, ratio_fit=True, stats_box=True,
+    #                    normalise=False, lepton='muon')
 
-    analysis.plot_hist(['wminmunu', 'wmintaunu'], 'met_met', weight='reco_weight', title='reco - un-normalised',
-                       bins=(30, 50, 5000), logbins=True, logx=True, lepton='muon', ratio_fit=True, stats_box=True,
-                       normalise=False, scale_by_bin_width=True)
+    # analysis.plot_hist(['wminmunu', 'wmintaunu'], 'met_met', weight='reco_weight', title='reco - 36.2fb$^{-1}$',
+    #                    bins=(30, 50, 5000), logbins=True, logx=True, lepton='muon', ratio_fit=True, stats_box=True,
+    #                    normalise=False)
 
-    analysis.plot_hist(['wplusmunu', 'wplustaunu'], 'met_met', weight='reco_weight', title='reco - un-normalised',
-                       bins=(30, 50, 5000), logbins=True, logx=True, ratio_fit=True, stats_box=True,
-                       normalise=False, lepton='muon', scale_by_bin_width=True)
+    # analysis.plot_hist(['wplusmunu', 'wplustaunu'], 'met_met', weight='reco_weight', title='reco - 36.2fb$^{-1}$',
+    #                    bins=(30, 50, 5000), logbins=True, logx=True, ratio_fit=True, stats_box=True,
+    #                    normalise=False, lepton='muon')
     
-    analysis.plot_hist(['wminmunu', 'wmintaunu'], 'mu_pt', weight='reco_weight', title='reco - un-normalised',
-                       bins=(30, 50, 5000), logbins=True, logx=True, ratio_fit=True, stats_box=True,
-                       normalise=False, lepton='muon', scale_by_bin_width=True)
+    # analysis.plot_hist(['wminmunu', 'wmintaunu'], 'mu_pt', weight='reco_weight', title='reco - 36.2fb$^{-1}$',
+    #                    bins=(30, 50, 5000), logbins=True, logx=True, ratio_fit=True, stats_box=True,
+    #                    normalise=False, lepton='muon')
 
-    analysis.plot_hist(['wplusmunu', 'wplustaunu'], 'mu_pt', weight='reco_weight', title='reco - un-normalised',
-                       bins=(30, 50, 1000), logbins=True, logx=True, lepton='muon', ratio_fit=True, stats_box=True,
-                       normalise=False, scale_by_bin_width=True)
+    # analysis.plot_hist(['wplusmunu', 'wplustaunu'], 'mu_pt', weight='reco_weight', title='reco - 36.2fb$^{-1}$',
+    #                    bins=(30, 50, 1000), logbins=True, logx=True, lepton='muon', ratio_fit=True, stats_box=True,
+    #                    normalise=False)
     
-    analysis.plot_hist(['wminmunu', 'wmintaunu'], 'mu_eta', weight='reco_weight', title='reco - un-normalised',
-                       bins=(30, -3.5, 3.5), logy=True, ratio_fit=True, stats_box=True,
-                       lepton='muon', normalise=False)
+    # analysis.plot_hist(['wminmunu', 'wmintaunu'], 'mu_eta', weight='reco_weight', title='reco - 36.2fb$^{-1}$',
+    #                    bins=(30, -3.5, 3.5), logy=True, ratio_fit=True, stats_box=True,
+    #                    lepton='muon', normalise=False)
 
-    analysis.plot_hist(['wplusmunu', 'wplustaunu'], 'mu_eta', weight='reco_weight', title='reco - un-normalised',
-                       bins=(30, -3.5, 3.5), logy=True, ratio_fit=True, stats_box=True,
-                       lepton='muon', normalise=False)
+    # analysis.plot_hist(['wplusmunu', 'wplustaunu'], 'mu_eta', weight='reco_weight', title='reco - 36.2fb$^{-1}$',
+    #                    bins=(30, -3.5, 3.5), logy=True, ratio_fit=True, stats_box=True,
+    #                    lepton='muon', normalise=False)
 
-    analysis.plot_hist(['wminmunu', 'wmintaunu'], 'mu_d0sig', weight='reco_weight', title='reco - un-normalised',
-                       bins=(30, -3.5, 3.5), logy=True, ratio_fit=True, stats_box=True,
-                       normalise=False, lepton='muon')
+    # analysis.plot_hist(['wminmunu', 'wmintaunu'], 'mu_d0sig', weight='reco_weight', title='reco - 36.2fb$^{-1}$',
+    #                    bins=(30, -3.5, 3.5), logy=True, ratio_fit=True, stats_box=True,
+    #                    normalise=False, lepton='muon')
 
-    analysis.plot_hist(['wplusmunu', 'wplustaunu'], 'mu_d0sig', weight='reco_weight', title='reco - un-normalised',
-                       bins=(30, -3.5, 3.5), logy=True, ratio_fit=True, stats_box=True,
-                       normalise=False, lepton='muon')
+    # analysis.plot_hist(['wplusmunu', 'wplustaunu'], 'mu_d0sig', weight='reco_weight', title='reco - 36.2fb$^{-1}$',
+    #                    bins=(30, -3.5, 3.5), logy=True, ratio_fit=True, stats_box=True,
+    #                    normalise=False, lepton='muon')
 
-    analysis.plot_hist(['wminmunu', 'wmintaunu'], 'mu_delta_z0_sintheta', weight='reco_weight', title='reco - un-normalised',
-                       bins=(30, -1, 1), ratio_fit=True, stats_box=True,
-                       normalise=False, lepton='muon')
+    # analysis.plot_hist(['wminmunu', 'wmintaunu'], 'mu_delta_z0_sintheta', weight='reco_weight', title='reco - 36.2fb$^{-1}$',
+    #                    bins=(30, -1, 1), ratio_fit=True, stats_box=True,
+    #                    normalise=False, lepton='muon')
 
-    analysis.plot_hist(['wplusmunu', 'wplustaunu'], 'mu_delta_z0_sintheta', weight='reco_weight', title='reco - un-normalised',
-                       bins=(30, -1, 1), ratio_fit=True, stats_box=True,
-                       normalise=False, lepton='muon')
+    # analysis.plot_hist(['wplusmunu', 'wplustaunu'], 'mu_delta_z0_sintheta', weight='reco_weight', title='reco - 36.2fb$^{-1}$',
+    #                    bins=(30, -1, 1), ratio_fit=True, stats_box=True,
+    #                    normalise=False, lepton='muon')

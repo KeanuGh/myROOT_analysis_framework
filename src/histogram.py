@@ -31,8 +31,6 @@ class Histogram1D(bh.Histogram, family=None):
     """
     Wrapper around boost-histogram histogram for 1D
     """
-    __slots__ = ("logger", "name", "TH1")
-
     @overload
     def __init__(self, bins: List[float], logger: logging.Logger = None, name: str = '', title: str = '') -> None:
         ...
