@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import logging
 from typing import List, Tuple, Any, overload
 
@@ -31,6 +32,8 @@ class Histogram1D(bh.Histogram, family=None):
     """
     Wrapper around boost-histogram histogram for 1D
     """
+    __slots__ = 'logger', 'name', 'TH1'
+
     @overload
     def __init__(self, bins: List[float], logger: logging.Logger = None, name: str = '', title: str = '') -> None:
         ...
@@ -131,6 +134,16 @@ class Histogram1D(bh.Histogram, family=None):
         for v, w in zip(var, weight):
             self.TH1.Fill(v, w)
         return self
+
+    def __copy__(self) -> Histogram1D:
+        new = self._new_hist(copy.copy(self._hist))
+        new.TH1 = self.TH1.Clone()
+        return new
+
+    def __deepcopy__(self, memo: Any) -> Histogram1D:
+        new = self._new_hist(copy.deepcopy(self._hist), memo=memo)
+        new.TH1 = self.TH1.Clone()
+        return new
 
     def __truediv__(self, other: bh.Histogram | "np.typing.NDArray[Any]" | float) -> Histogram1D:
         """boost-histogram doesn't allow dividing weighted histograms so implement that here"""
@@ -425,7 +438,7 @@ class Histogram1D(bh.Histogram, family=None):
         else:
             self.logger.debug(f"Plotting normalised histogram {self.name} normalised to {normalise}...")
             hist = self.normalised_to(normalise)
-        
+
         if scale_by_bin_width:
             hist /= hist.bin_widths
 
@@ -529,9 +542,9 @@ class Histogram1D(bh.Histogram, family=None):
             _, ax = plt.subplots()
 
         if normalise:
-            h_ratio = self.normalised() / other.normalised()
+            h_ratio = other.normalised() / self.normalised()
         else:
-            h_ratio = self / other
+            h_ratio = other / self
 
         if yerr is True:
             yerr = h_ratio.root_sumw2()
