@@ -36,19 +36,13 @@ wanted_cols = [
     # 'VisTruthTauEta', 'VisTruthTauPhi', 'VisTruthTauPt', 'VisTruthTauM',
     # 'TruthTau_isHadronic', 'TruthTau_decay_mode',
     # 'MET_etx', 'MET_ety', 'MET_met', 'MET_phi',
+    'TruthTau_decay_mode'
 ]
 
 chain = ROOT_utils.glob_chain(treename, filepath)
 Rdf = ROOT.RDataFrame(chain)
 # Rdf = Rdf.Filter("(passTruth == true) & (passReco == true)")
 
-# routine to separate vector branches into separate variables
-ROOT.gInterpreter.Declare("""
-float getVecVal(ROOT::VecOps::RVec<float> x, int i) {
-    if (x.size() > i)  return x[i];
-    else               return NAN;
-}
-""")
 badcols = set()  # save old column names to avoid extracting them later
 for col_name in list(Rdf.GetColumnNames()):
     col_type = Rdf.GetColumnType(col_name)
@@ -101,6 +95,9 @@ df = df.loc[~np.isinf(df['muon_reco_weight'])]
 df = df.loc[df['TruthTauPt'] > 25]
 df = df.loc[df['TruthTauEta'].abs() < 2.47]
 df = df.loc[(df['TruthTauEta'].abs() < 1.37) | (df['TruthTauEta'].abs() > 1.52)]
+
+BR = df.loc[df['TruthTau_decay_mode'] == 1].sum() / df.loc[df['TruthTau_decay_mode'] == 2].sum()
+print("tau->munu / tau->enu: ", BR)
 
 # plot
 bins = (30, 1, 50000)

@@ -225,15 +225,14 @@ class DatasetBuilder:
         self.logger.debug(f"Validate missing events: {self.validate_missing_events}")
         self.logger.debug(f"Validate duplicated events: {self.validate_duplicated_events}")
         self.logger.debug(f"Validate sum of weights: {self.validate_sumofweights}")
-        if self.logger.level == logging.DEBUG:
-            for tree in tree_dict:
-                self.logger.debug(f"Variables from {tree} tree: ")
-                for var in tree_dict[tree]:
-                    self.logger.debug(f"  - {var}")
-            if vars_to_calc:
-                self.logger.debug("Calculated Variables: ")
-                for var in vars_to_calc:
-                    self.logger.debug(f"  - {var}")
+        for tree in tree_dict:
+            self.logger.debug(f"Variables from {tree} tree: ")
+            for var in tree_dict[tree]:
+                self.logger.debug(f"  - {var}")
+        if vars_to_calc:
+            self.logger.debug("Calculated Variables: ")
+            for var in vars_to_calc:
+                self.logger.debug(f"  - {var}")
         self.logger.debug("----------------------------")
         self.logger.debug("")
 
@@ -292,6 +291,7 @@ class DatasetBuilder:
             self.__create_cut_columns(df, cuts)
 
         # apply hard cut(s) if it exists in cut columns
+        # TODO: apply hard cuts on import instead of after
         hard_cuts_to_apply = []
         for h_cut in self.hard_cut:
             if h_cut + config.cut_label not in df.columns:
@@ -473,6 +473,8 @@ class DatasetBuilder:
         :param is_reco: whether dataset contains reco data
         :return: output dataframe containing columns corresponding to necessary variables
         """
+        # TODO switch to using pure ROOT instead of uproot
+
         self.logger.info(f"Building DataFrame from {data_path} ({file_utils.n_files(data_path)} file(s))...")
 
         # is the default tree a truth tree?
@@ -667,7 +669,7 @@ class DatasetBuilder:
             col for col in import_cols
             if col not in list(Rdf.GetColumnNames())
         ]:
-            raise ValueError(f"No column(s) {', '.join(missing_cols)} in TTree {self.TTree_name} of file(s) {data_path}")
+            raise ValueError(f"No branch(es) named {', '.join(missing_cols)} in TTree {self.TTree_name} of file(s) {data_path}")
 
         # routine to separate vector branches into separate variables
         badcols = set()  # save old vector column names to avoid extracting them later

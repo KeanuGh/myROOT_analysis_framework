@@ -118,7 +118,7 @@ class Cutflow:
         """Prints out cutflow table to terminal"""
         # lengths of characters needed to get everything to line up properly
         max_n_len = len(str(self._n_events_tot))
-        max_name_len = max([len(cut) for cut in self.cutflow_labels])
+        max_name_len = max([len(cut) for cut in self.cutflow_str])
 
         # cutflow printout
         self.logger.info('')

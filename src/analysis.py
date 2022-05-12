@@ -206,7 +206,7 @@ class Analysis:
         """
         self[name] = self[dataset].subset(args)
 
-    def create_dsid_subdataset(self, dataset: str, name: str, dsid: str | int | None) -> None:
+    def create_dsid_subdataset(self, dataset: str, name: str, dsid: str | int) -> None:
         """
         Create new dataset from DSID of other dataset
 

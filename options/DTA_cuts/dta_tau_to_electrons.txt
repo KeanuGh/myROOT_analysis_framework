@@ -1,7 +1,7 @@
 [CUTS]
 # Name	Variable	</>	Cut (in GeV if applicable) tree
 # truth
-Muonic Tau	TruthTau_decay_mode == 1
+Electronic Tau	TruthTau_decay_mode == 2
 # Truth M_T	TruthMTW > 200
 Truth tau p_T	TruthTauPt > 25
 Truth tau eta	TruthTauEta.abs() < 2.47
@@ -26,9 +26,9 @@ TauSF_TightWP
 TauLooseWP
 TauMediumWP
 TauTightWP
-Muon_recoSF
-Muon_isoSF
-Muon_ttvaSF
+Ele_recoSF
+Ele_idSF
+Ele_isoSF
 
 # truth
 TruthTauPt
@@ -45,10 +45,10 @@ TruthNeutrinoE
 # TruthJetPhi
 # TruthJetE
 TruthMTW
-TruthMuonPt
-TruthMuonEta
-TruthMuonPhi
-TruthMuonE
+TruthElePt
+TruthEleEta
+TruthElePhi
+TruthEleE
 
 # reco
 TauPt
@@ -61,9 +61,9 @@ TauE
 MET_met
 MET_phi
 MTW
-MuonPt
-MuonEta
-MuonPhi
-Muon_d0sig
-Muon_delta_z0
-Muon_delta_z0_sintheta
+ElePt
+EleEta
+ElePhi
+Ele_d0sig
+Ele_delta_z0
+Ele_delta_z0_sintheta

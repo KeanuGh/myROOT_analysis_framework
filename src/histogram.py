@@ -122,9 +122,6 @@ class Histogram1D(bh.Histogram, family=None):
         self.logger.debug(f"Filling histogram {self.name} with {len(var)} events..")
         super().fill(var, weight=weight, threads=0)
 
-        if hasattr(weight, '__len__'):
-            assert len(weight) == len(var), "Number of weight values do not match!"
-
         # fill vector with weight in order to zip
         if isinstance(weight, (int, float)):
             weight = np.full(len(var), weight)
@@ -452,7 +449,7 @@ class Histogram1D(bh.Histogram, family=None):
                         box_ypos = .38
 
             textstr = '\n'.join((
-                r"$\mathbf{" + self.name + "}$",
+                self.name,
                 r'$\mu=%.2f\pm%.2f$' % (self.mean, self.mean_error),
                 r'$\sigma=%.2f\pm%.2f$' % (self.std, self.std_error),
                 r'$\mathrm{Entries}: %.0f$' % self.n_entries))
@@ -544,10 +541,12 @@ class Histogram1D(bh.Histogram, family=None):
 
             with redirect_stdout() as fit_output:
                 fit_results = h_ratio.TH1.Fit('pol0', 'VFSN')
+
             self.logger.debug(f"ROOT fit output:\n"
                               f"==========================================================================\n"
                               f"{fit_output.getvalue()}"
                               f"==========================================================================")
+
             c = fit_results.Parameters()[0]
             err = fit_results.Errors()[0]
 
@@ -558,7 +557,7 @@ class Histogram1D(bh.Histogram, family=None):
                 r'$\mathrm{NDF}=%.3f$' % fit_results.Ndf(),
                 r'$c=%.2f\pm%.3f$' % (c, err))
             )
-            stats_box = AnchoredText(textstr, loc='upper left', frameon=False, prop=dict(fontsize="small"))
+            stats_box = AnchoredText(textstr, loc='upper left', frameon=False, prop=dict(fontsize="x-small"))
             ax.add_artist(stats_box)
 
         ax.axhline(1., linestyle='--', linewidth=1., c='k')
