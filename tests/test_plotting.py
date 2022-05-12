@@ -8,7 +8,7 @@ class TestPlottingUtils:
         output = plotting_utils.get_axis_labels('TauPt')
         assert output == ('Tau $p_{T}$ [GeV]', 'Entries')
 
-    @pytest.mark.filterwarnings('ignore:UserWarning')
     def test_get_axis_labels_list(self):
-        output = plotting_utils.get_axis_labels(['TauPt', 'met_met'])
-        assert output == ('Tau $p_{T}$ [GeV]', 'Entries')
+        with pytest.warns(UserWarning):
+            output = plotting_utils.get_axis_labels(['TauPt', 'met_met'])
+            assert output == ('Tau $p_{T}$ [GeV]', 'Entries')
