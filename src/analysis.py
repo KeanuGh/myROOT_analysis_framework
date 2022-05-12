@@ -442,7 +442,7 @@ class Analysis:
                 )
             )
             if ratio_plot and len(hists) > 1:
-                label = f"{labels[0]}/{labels[-1]}" if labels else f"{self[datasets[0]].label}/{self[dataset].label}"
+                label = f"{labels[-1]}/{labels[0]}" if labels else f"{self[dataset].label}/{self[datasets[0]].label}"
                 hists[0].plot_ratio(
                     hists[-1],
                     ax=ratio_ax,
@@ -463,7 +463,7 @@ class Analysis:
             ax.set_xlabel('')
 
             if len(datasets) > 2:  # don't show legend if there's only two datasets
-                ratio_ax.legend(fontsize=10)
+                ratio_ax.legend(fontsize=10, loc=1)
 
             plotting_utils.set_axis_options(axis=ratio_ax, var_name=var, bins=bins, lepton=lepton,
                                             xlabel=xlabel, ylabel='Ratio', title='', logx=logx, logy=False, label=False)

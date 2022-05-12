@@ -121,7 +121,7 @@ class Histogram1D(bh.Histogram, family=None):
             if var is not None:
                 self.Fill(var, weight=weight)
 
-    def Fill(self, var: ArrayLike, weight: ArrayLike = None) -> Histogram1D:
+    def Fill(self, var: ArrayLike, weight: ArrayLike | int | float = None) -> Histogram1D:
         self.logger.debug(f"Filling histogram {self.name} with {len(var)} events..")
         super().fill(var, weight=weight, threads=0)
 
