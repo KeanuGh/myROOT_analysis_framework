@@ -449,10 +449,12 @@ class Analysis:
                     yerr=yerr,
                     label=label,
                     normalise=bool(normalise),
-                    color='k' if len(datasets) == 2 else None,
+                    color='k' if len(datasets) == 2 else None,  # auto colour if there is more than one ratio
                     fit=ratio_fit,
-                    yax_lim=ratio_axlim
+                    yax_lim=ratio_axlim,
+                    display_stats=len(datasets) <= 3  # ony display fit results if there are two fits or less
                 )
+
 
         ax.legend(fontsize=10, loc='upper right')
         plotting_utils.set_axis_options(ax, var, bins, lepton, xlabel, ylabel, title, logx, logy)
