@@ -35,8 +35,8 @@ class Cutflow:
 
         # generate cutflow
         self._n_events_tot = len(df.index)
-        if self._n_events_tot == 0:
-            self.logger.error("Empty dataset, empty cutflow")
+        if (self._n_events_tot == 0) or (len(cuts) == 0):
+            self.logger.error("Skipping cutflow; either no cuts or no events.")
             self.cutflow_labels = ['Inclusive'] + [cut_name for cut_name in cuts]
             n = len(self.cutflow_labels)
             self.cutflow_ratio = [1.] * n

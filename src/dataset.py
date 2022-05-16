@@ -253,6 +253,7 @@ class Dataset:
                     '\n'
                 )
             header = (
+                '\n' +
                 "DSID   " +
                 f"{'phys_short':<{max_len_phys_short + 2}}" +
                 "n_events   " +

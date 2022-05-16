@@ -342,7 +342,7 @@ class DatasetBuilder:
         ):
             dataset.save_pkl_file(pkl_path)
         else:
-            self.logger.debug("Pickle file not saved, no changes made.")
+            self.logger.debug("No pickle file saved.")
 
         return dataset
 

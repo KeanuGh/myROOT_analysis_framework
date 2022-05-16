@@ -31,7 +31,7 @@ BRANCHES = [
 # pull root data
 t = time.time()
 truth_df = to_pandas(uproot.concatenate(DATAFILE + ':truth', BRANCHES, num_workers=N_THREADS))
-print(f"Importing from ROOT: {time.time() - t:.3f}s")\
+print(f"Importing from ROOT: {time.time() - t:.3f}s")
 
 # # delete duplicate events
 # t = time.time()

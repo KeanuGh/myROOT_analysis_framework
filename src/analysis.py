@@ -89,9 +89,9 @@ class Analysis:
         self.datasets: Dict[str, Dataset] = dict()
         for name, data_args in data_dict.items():
             self.logger.info("")
-            self.logger.info("=" * (42 + len(self.name)))
-            self.logger.info(f"======== INITIALISING DATASET '{self.name}' =========")
-            self.logger.info("=" * (42 + len(self.name)))
+            self.logger.info("=" * (42 + len(name)))
+            self.logger.info(f"======== INITIALISING DATASET '{name}' =========")
+            self.logger.info("=" * (42 + len(name)))
 
             if dup_args := set(data_args) & set(kwargs):
                 raise SyntaxError(f"Got multiple values for argument(s) {dup_args} for dataset {name}")
@@ -148,9 +148,9 @@ class Analysis:
 
             self[name] = dataset  # save to analysis
 
-            self.logger.info("=" * (42 + len(self.name)))
-            self.logger.info(f"========= DATASET '{self.name}' INITIALISED =========")
-            self.logger.info("=" * (42 + len(self.name)))
+            self.logger.info("=" * (42 + len(name)))
+            self.logger.info(f"========= DATASET '{name}' INITIALISED =========")
+            self.logger.info("=" * (42 + len(name)))
             self.logger.info("")
 
         self.logger.info("=" * (len(analysis_label) + 23))
@@ -454,7 +454,6 @@ class Analysis:
                     yax_lim=ratio_axlim,
                     display_stats=len(datasets) <= 3  # ony display fit results if there are two fits or less
                 )
-
 
         ax.legend(fontsize=10, loc='upper right')
         plotting_utils.set_axis_options(ax, var, bins, lepton, xlabel, ylabel, title, logx, logy)

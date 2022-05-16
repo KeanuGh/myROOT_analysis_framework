@@ -2,9 +2,12 @@ from numpy import pi
 
 from src.analysis import Analysis
 
-DTA_PATH = '/data/keanu/ditau_output/'
-ANALYSISTOP_PATH = '/data/atlas/HighMassDrellYan/mc16a'
-DATA_OUT_DIR = '/data/keanu/framework_outputs/'
+# DTA_PATH = '/data/keanu/ditau_output/'
+# ANALYSISTOP_PATH = '/data/atlas/HighMassDrellYan/mc16a'
+# DATA_OUT_DIR = '/data/keanu/framework_outputs/'
+DTA_PATH = '/mnt/D/data/DTA_outputs/'
+ANALYSISTOP_PATH = '/mnt/D/data/analysistop_out/mc16a/'
+DATA_OUT_DIR = '/mnt/D/data/dataset_pkl_outputs/'
 
 
 if __name__ == '__main__':
@@ -17,8 +20,8 @@ if __name__ == '__main__':
             'hard_cut': 'Muonic Tau',
             'lepton': 'tau',
             'dataset_type': 'dta',
-            'force_rebuild': False,
-            'validate_duplicated_events': False,
+            # 'force_rebuild': False,
+            # 'validate_duplicated_events': False,
             'label': r'Sherpa 2211 $W\rightarrow\tau\nu\rightarrow \mu\nu$',
         },
         # analysistop w->taunu->munu
@@ -36,11 +39,12 @@ if __name__ == '__main__':
             'lepton': 'tau',
             'dataset_type': 'analysistop',
             'hard_cut': 'M_W',
+            # 'force_rebuild': True,
             'label': r'Powheg/Pythia 8 $W\rightarrow\tau\nu\rightarrow\mu\nu$',
         },
     }
 
-    my_analysis = Analysis(datasets, data_dir=DATA_OUT_DIR, year='2015+2016',
+    my_analysis = Analysis(datasets, data_dir=DATA_OUT_DIR, year='2015+2016', force_rebuild=True,
                            analysis_label='dta_analysistop_compare', skip_verify_pkl=False,
                            log_level=10, log_out='both', timedatelog=True, separate_loggers=False)
     my_analysis.merge_datasets('wtaunu_analysistop', 'wtaunu_analysistop_peak')
@@ -59,7 +63,7 @@ if __name__ == '__main__':
     my_analysis.plot_hist('wtaunu_analysistop', 'mt_born', weight='truth_weight', bins=(30, 200, 5000), logx=True, logy=True, logbins=True)
     my_analysis.plot_hist('wtaunu_analysistop', 'MC_WZ_dilep_m_born', weight='truth_weight', bins=(30, 1, 5000), logx=True, logy=True, logbins=True)
     my_analysis.plot_hist('wtaunu_mu_dta', 'TruthMTW', weight='truth_weight', bins=(30, 1, 5000), logx=True, logy=True, logbins=True)
-    
+
     my_analysis['wtaunu_analysistop'].plot_dsid('mt_born', weight='truth_weight', bins=(30, 200, 5000), logx=True, logy=True, logbins=True)
     my_analysis['wtaunu_analysistop'].plot_dsid('MC_WZ_dilep_m_born', weight='truth_weight', bins=(30, 1, 5000), logx=True, logy=True, logbins=True)
     my_analysis['wtaunu_mu_dta'].plot_dsid('TruthMTW', weight='truth_weight', bins=(30, 1, 5000), logx=True, logy=True, logbins=True)
