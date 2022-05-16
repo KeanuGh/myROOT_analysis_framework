@@ -517,6 +517,7 @@ class Histogram1D(bh.Histogram, family=None):
             out_filename: str = None,
             yax_lim: float = False,
             display_stats: bool = True,
+            color: str = 'k',
             **kwargs
     ) -> plt.Axes:
         """
@@ -535,6 +536,7 @@ class Histogram1D(bh.Histogram, family=None):
         :param out_filename: provide filename to print. If not given, nothing is saved
         :param yax_lim: limit y-axis to 1 +/- {yax_lim}
         :param display_stats: whether to display the fit parameters on the plot
+        :param color: plot colour
         :param kwargs: Args to pass to ax.errorbar()
         :return: axis object with plot
         """
@@ -565,8 +567,9 @@ class Histogram1D(bh.Histogram, family=None):
             err = fit_results.Errors()[0]
 
             # display fit line
-            ax.fill_between([self.bin_edges[0], self.bin_edges[-1]], [c - err], [c + err], color='r', alpha=0.3)
-            ax.axhline(c, color='r', linewidth=1.)
+            col = 'r' if color == 'k' else color
+            ax.fill_between([self.bin_edges[0], self.bin_edges[-1]], [c - err], [c + err], color=col, alpha=0.3)
+            ax.axhline(c, color=col, linewidth=1.)
 
             if display_stats:
                 textstr = '\n'.join((
@@ -585,7 +588,7 @@ class Histogram1D(bh.Histogram, family=None):
 
         ax.axhline(1., linestyle='--', linewidth=1., c='k')
         ax.errorbar(h_ratio.bin_centres, h_ratio.bin_values(), xerr=h_ratio.bin_widths / 2, yerr=yerr,
-                    linestyle='None', label=label, **kwargs)
+                    linestyle='None', label=label, **kwargs, c=color)
         ax.grid(visible=True, which='both', axis='y')
 
         if yax_lim:

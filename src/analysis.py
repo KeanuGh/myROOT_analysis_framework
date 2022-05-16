@@ -257,6 +257,18 @@ class Analysis:
             if n not in self.datasets:
                 raise ValueError(f"No dataset named {n} found in analysis {self.name}")
 
+        # check for columns missing from any dataset
+        first_cols = set(self[datasets[0]].df.columns)
+        for d in datasets[0:]:
+            curr_cols = set(self[d].df.columns)
+            if first_cols ^ curr_cols:
+                if cols_missing_from_first := first_cols - curr_cols:
+                    self.logger.warning(f"Missing column(s) from dataset '{d}' but are in '{datasets[0]}': "
+                                        f"{cols_missing_from_first}")
+                if cols_missing_from_curr := curr_cols - first_cols:
+                    self.logger.warning(f"Missing column(s) from dataset '{datasets[0]}' but are in '{d}': "
+                                        f"{cols_missing_from_curr}")
+
         if apply_cuts:
             self.apply_cuts(list(datasets), labels=apply_cuts)
 
@@ -443,13 +455,14 @@ class Analysis:
             )
             if ratio_plot and len(hists) > 1:
                 label = f"{labels[-1]}/{labels[0]}" if labels else f"{self[dataset].label}/{self[datasets[0]].label}"
+                color = 'k' if (len(datasets) == 2) else ax.get_lines()[-1].get_color()
                 hists[0].plot_ratio(
                     hists[-1],
                     ax=ratio_ax,
                     yerr=yerr,
                     label=label,
                     normalise=bool(normalise),
-                    color='k' if len(datasets) == 2 else None,  # auto colour if there is more than one ratio
+                    color=color,
                     fit=ratio_fit,
                     yax_lim=ratio_axlim,
                     display_stats=len(datasets) <= 3  # ony display fit results if there are two fits or less

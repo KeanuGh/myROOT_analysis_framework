@@ -596,10 +596,12 @@ class Dataset:
 
         # per dsid
         for dsid, dsid_df in self.df.groupby(level='DSID'):
+            self.logger.debug(f"Plotting DSID {dsid}...")
             weights = dsid_df[weight] if isinstance(weight, str) else weight
             hist = Histogram1D(dsid_df[var], bins=bins, weight=weights, logbins=logbins, logger=self.logger)
             hist.plot(ax=ax, label=dsid, **kwargs)
         # inclusive
+        self.logger.debug(f"Plotting inclusive histogram...")
         weights = self.df[weight] if isinstance(weight, str) else weight
         hist = Histogram1D(self.df[var], bins=bins, weight=weights, logbins=logbins, logger=self.logger)
         hist.plot(ax=ax, label='Inclusive', color='k', **kwargs)

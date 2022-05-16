@@ -44,9 +44,15 @@ if __name__ == '__main__':
         },
     }
 
-    my_analysis = Analysis(datasets, data_dir=DATA_OUT_DIR, year='2015+2016', force_rebuild=True,
-                           analysis_label='dta_analysistop_compare', skip_verify_pkl=False,
-                           log_level=10, log_out='both', timedatelog=True, separate_loggers=False)
+    my_analysis = Analysis(
+        datasets,
+        data_dir=DATA_OUT_DIR,
+        year='2015+2016',
+        force_rebuild=False,
+        analysis_label='dta_analysistop_compare',
+        skip_verify_pkl=False,
+        force_recalc_cuts=True,
+        log_level=10, log_out='both', timedatelog=True, separate_loggers=False)
     my_analysis.merge_datasets('wtaunu_analysistop', 'wtaunu_analysistop_peak')
 
     my_analysis.apply_cuts(truth=True)
@@ -60,13 +66,13 @@ if __name__ == '__main__':
         'ratio_fit': True
     }
 
-    my_analysis.plot_hist('wtaunu_analysistop', 'mt_born', weight='truth_weight', bins=(30, 200, 5000), logx=True, logy=True, logbins=True)
-    my_analysis.plot_hist('wtaunu_analysistop', 'MC_WZ_dilep_m_born', weight='truth_weight', bins=(30, 1, 5000), logx=True, logy=True, logbins=True)
-    my_analysis.plot_hist('wtaunu_mu_dta', 'TruthMTW', weight='truth_weight', bins=(30, 1, 5000), logx=True, logy=True, logbins=True)
-
-    my_analysis['wtaunu_analysistop'].plot_dsid('mt_born', weight='truth_weight', bins=(30, 200, 5000), logx=True, logy=True, logbins=True)
-    my_analysis['wtaunu_analysistop'].plot_dsid('MC_WZ_dilep_m_born', weight='truth_weight', bins=(30, 1, 5000), logx=True, logy=True, logbins=True)
-    my_analysis['wtaunu_mu_dta'].plot_dsid('TruthMTW', weight='truth_weight', bins=(30, 1, 5000), logx=True, logy=True, logbins=True)
+    # my_analysis.plot_hist('wtaunu_analysistop', 'mt_born', weight='truth_weight', bins=(30, 1, 5000), logx=True, logy=True, logbins=True)
+    # my_analysis.plot_hist('wtaunu_analysistop', 'MC_WZ_dilep_m_born', weight='truth_weight', bins=(30, 1, 5000), logx=True, logy=True, logbins=True)
+    # my_analysis.plot_hist('wtaunu_mu_dta', 'TruthMTW', weight='truth_weight', bins=(30, 1, 5000), logx=True, logy=True, logbins=True)
+    #
+    # my_analysis['wtaunu_analysistop'].plot_dsid('mt_born', weight='truth_weight', bins=(30, 1, 5000), logx=True, logy=True, logbins=True)
+    # my_analysis['wtaunu_analysistop'].plot_dsid('MC_WZ_dilep_m_born', weight='truth_weight', bins=(30, 1, 5000), logx=True, logy=True, logbins=True)
+    # my_analysis['wtaunu_mu_dta'].plot_dsid('TruthMTW', weight='truth_weight', bins=(30, 1, 5000), logx=True, logy=True, logbins=True)
 
     # TRUTH
     # -----------------------------------
@@ -76,7 +82,7 @@ if __name__ == '__main__':
     #                       title='truth - 36.2fb$^{-1}$', normalise=False, logx=True, logbins=True, **ratio_args)
 
     my_analysis.plot_hist(['wtaunu_mu_dta', 'wtaunu_analysistop'], ['TruthTauPt', 'MC_WZmu_el_pt_born'],
-                          bins=(30, 1, 5000), weight='truth_weight', ratio_axlim=1.5,
+                          bins=(30, 1, 5000), weight='truth_weight',
                           title='truth - 36.2fb$^{-1}$', normalise=False, logx=True, logbins=True, **ratio_args)
 
     my_analysis.plot_hist(['wtaunu_mu_dta', 'wtaunu_analysistop'], ['TruthTauEta', 'MC_WZmu_el_eta_born'],
@@ -88,7 +94,7 @@ if __name__ == '__main__':
                           title='truth - 36.2fb$^{-1}$', normalise=False, **ratio_args)
 
     my_analysis.plot_hist(['wtaunu_mu_dta', 'wtaunu_analysistop'], ['TruthNeutrinoPt', 'MC_WZneutrino_pt_born'],
-                          bins=(30, 1, 5000), weight='truth_weight', ratio_axlim=1.5,
+                          bins=(30, 1, 5000), weight='truth_weight',
                           title='truth - 36.2fb$^{-1}$', normalise=False, logx=True, logbins=True, **ratio_args)
 
     my_analysis.plot_hist(['wtaunu_mu_dta', 'wtaunu_analysistop'], ['TruthNeutrinoEta', 'MC_WZneutrino_eta_born'],
@@ -100,7 +106,7 @@ if __name__ == '__main__':
                           title='truth - 36.2fb$^{-1}$', normalise=False, **ratio_args)
 
     my_analysis.plot_hist(['wtaunu_mu_dta', 'wtaunu_analysistop'], ['TruthMTW', 'mt_born'],
-                          bins=(30, 1, 5000), weight='truth_weight', ratio_axlim=1.5,
+                          bins=(30, 200, 5000), weight='truth_weight', ratio_axlim=1.5,
                           title='truth - 36.2fb$^{-1}$', normalise=False, logx=True, logbins=True, **ratio_args)
 
     # # normalised

@@ -2,6 +2,12 @@ from numpy import pi
 
 from src.analysis import Analysis
 
+# DTA_PATH = '/data/keanu/ditau_output/'
+# ANALYSISTOP_PATH = '/data/atlas/HighMassDrellYan/mc16a'
+# DATA_OUT_DIR = '/data/keanu/framework_outputs/'
+DTA_PATH = '/mnt/D/data/DTA_outputs/'
+ANALYSISTOP_PATH = '/mnt/D/data/analysistop_out/mc16a/'
+DATA_OUT_DIR = '/mnt/D/data/dataset_pkl_outputs/'
 
 if __name__ == '__main__':
     datasets = {
@@ -16,7 +22,7 @@ if __name__ == '__main__':
             'label': r'Sherpa 2211 $W\rightarrow\tau\nu\rightarrow \mu\nu$',
         },
         'wtaunu_e_dta': {
-            'data_path': DTA_PATH  + '/user.kghorban.Sh_2211_Wtaunu_L*/*.root',
+            'data_path': DTA_PATH + '/user.kghorban.Sh_2211_Wtaunu_L*/*.root',
             'cutfile_path': '../options/DTA_cuts/dta_tau_to_electrons.txt',
             'TTree_name': 'T_s1tlv_NOMINAL',
             'hard_cut': 'Electronic Tau',
@@ -41,7 +47,7 @@ if __name__ == '__main__':
             'label': r'CFilterBVeto',
         },
         'wtaunu_BFilter_dta': {
-            'data_path': DTA_PATH + '/mnt/D/data/DTA_outputs/*BFilter*/*.root',
+            'data_path': DTA_PATH + '/*BFilter*/*.root',
             'cutfile_path': '../options/DTA_cuts/dta_init.txt',
             'TTree_name': 'T_s1thv_NOMINAL',
             'force_rebuild': False,
