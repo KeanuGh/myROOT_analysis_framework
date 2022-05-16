@@ -2,11 +2,12 @@ from numpy import pi
 
 from src.analysis import Analysis
 
+
 if __name__ == '__main__':
     datasets = {
         # dta w->taunu->munu
         'wtaunu_mu_dta': {
-            'data_path': '/mnt/D/data/DTA_outputs/user.kghorban.Sh_2211_Wtaunu_L*/*.root',
+            'data_path': DTA_PATH + '/user.kghorban.Sh_2211_Wtaunu_L*/*.root',
             'cutfile_path': '../options/DTA_cuts/dta_tau_to_muons.txt',
             'TTree_name': 'T_s1tlv_NOMINAL',
             'hard_cut': 'Muonic Tau',
@@ -15,7 +16,7 @@ if __name__ == '__main__':
             'label': r'Sherpa 2211 $W\rightarrow\tau\nu\rightarrow \mu\nu$',
         },
         'wtaunu_e_dta': {
-            'data_path': '/mnt/D/data/DTA_outputs/user.kghorban.Sh_2211_Wtaunu_L*/*.root',
+            'data_path': DTA_PATH  + '/user.kghorban.Sh_2211_Wtaunu_L*/*.root',
             'cutfile_path': '../options/DTA_cuts/dta_tau_to_electrons.txt',
             'TTree_name': 'T_s1tlv_NOMINAL',
             'hard_cut': 'Electronic Tau',
@@ -24,7 +25,7 @@ if __name__ == '__main__':
             'label': r'Sherpa 2211 $W\rightarrow\tau\nu\rightarrow e\nu$',
         },
         'wtaunu_CVetoBVeto_dta': {
-            'data_path': '/mnt/D/data/DTA_outputs/*CVetoBVeto*/*.root',
+            'data_path': DTA_PATH + '/*CVetoBVeto*/*.root',
             'cutfile_path': '../options/DTA_cuts/dta_init.txt',
             'TTree_name': 'T_s1thv_NOMINAL',
             'force_rebuild': False,
@@ -32,7 +33,7 @@ if __name__ == '__main__':
             'label': r'CVetoBVeto',
         },
         'wtaunu_CFilterBVeto_dta': {
-            'data_path': '/mnt/D/data/DTA_outputs/*CFilterBVeto*/*.root',
+            'data_path': DTA_PATH + '/*CFilterBVeto*/*.root',
             'cutfile_path': '../options/DTA_cuts/dta_init.txt',
             'TTree_name': 'T_s1thv_NOMINAL',
             'force_rebuild': False,
@@ -40,7 +41,7 @@ if __name__ == '__main__':
             'label': r'CFilterBVeto',
         },
         'wtaunu_BFilter_dta': {
-            'data_path': '/mnt/D/data/DTA_outputs/*BFilter*/*.root',
+            'data_path': DTA_PATH + '/mnt/D/data/DTA_outputs/*BFilter*/*.root',
             'cutfile_path': '../options/DTA_cuts/dta_init.txt',
             'TTree_name': 'T_s1thv_NOMINAL',
             'force_rebuild': False,
@@ -49,7 +50,7 @@ if __name__ == '__main__':
         },
     }
 
-    my_analysis = Analysis(datasets, data_dir='/mnt/D/data/dataset_pkl_outputs/', year='2015+2016',
+    my_analysis = Analysis(datasets, data_dir=DATA_OUT_DIR, year='2015+2016',
                            analysis_label='dta_internal_comparisons', skip_verify_pkl=False, lepton='tau',
                            dataset_type='dta', log_level=10, log_out='both', timedatelog=True, separate_loggers=False)
     # my_analysis.merge_datasets('wtaunu_e_dta', 'wtaunu_e_dta_peak')
