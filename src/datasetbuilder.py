@@ -503,16 +503,6 @@ class DatasetBuilder:
         df.set_index(['mcChannelNumber', 'eventNumber'], inplace=True)
         df.index.names = ['DSID', 'eventNumber']
         self.logger.debug("Set DSID/eventNumber as index")
-
-        # validate
-        if self.validate_duplicated_events:
-            validation = '1:1'
-            self.logger.info(f"Validating duplicated events in tree {self.TTree_name}...")
-            self.__drop_duplicates(df)
-            self.__drop_duplicate_event_numbers(df)
-        else:
-            validation = 'm:m'
-            self.logger.info("Skipping duplicted events validation")
         # -----------------------------------------------------------------------------------
 
         # iterate over other TTrees, merge & validate
@@ -552,14 +542,17 @@ class DatasetBuilder:
             else:
                 self.logger.info(f"Skipping missing events check in tree {tree}")
 
-            if self.validate_duplicated_events:
-                self.logger.info(f"Validating duplicated events in tree {tree}...")
-                self.__drop_duplicates(alt_df)
-
             self.logger.debug("Merging with rest of dataframe...")
-            df = pd.merge(df, alt_df, how='left', left_index=True, right_index=True, sort=False, copy=False,
-                          validate=validation)
+            df = pd.merge(df, alt_df, how='left', left_index=True, right_index=True, sort=False, copy=False)
         # -------------------------------------------------------------------------------------
+
+        # validate
+        if self.validate_duplicated_events:
+            self.logger.info(f"Validating duplicated events...")
+            self.__drop_duplicates(df)
+            self.__drop_duplicate_event_numbers(df)
+        else:
+            self.logger.info("Skipped duplicted events validation")
 
         if self.validate_sumofweights:
             # sanity check to make sure totalEventsWeighted really is what it says it is

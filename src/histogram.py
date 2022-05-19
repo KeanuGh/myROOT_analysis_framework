@@ -399,7 +399,7 @@ class Histogram1D(bh.Histogram, family=None):
     def plot(
             self,
             ax: plt.Axes = None,
-            yerr: ArrayLike | bool = True,
+            yerr: ArrayLike | bool | None = True,
             w2: bool = False,
             normalise: float | bool = False,
             scale_by_bin_width: bool = False,
@@ -445,7 +445,7 @@ class Histogram1D(bh.Histogram, family=None):
         # set error
         if yerr is True:
             yerr = hist.root_sumw2()
-        elif not isinstance(yerr, bool) and not hasattr(yerr, '__len__'):
+        elif yerr and not isinstance(yerr, bool) and not hasattr(yerr, '__len__'):
             raise TypeError(f"yerr should be a bool or iterable of values. Got {yerr}")
 
         if not ax:

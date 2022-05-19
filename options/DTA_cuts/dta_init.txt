@@ -1,7 +1,7 @@
 [CUTS]
 # Name	Variable	</>	Cut (in GeV if applicable) tree
 # truth
-Truth tau p_T	TruthTauPt > 25
+# Truth tau p_T	TruthTauPt > 25
 Truth tau eta	TruthTauEta.abs() < 2.47
 Truth tau eta crack	(TruthTauEta.abs() < 1.37) or (TruthTauEta.abs() > 1.52)
 

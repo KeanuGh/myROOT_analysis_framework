@@ -362,6 +362,7 @@ class Analysis:
             ratio_plot: bool = True,
             ratio_fit: bool = False,
             ratio_axlim: float = None,
+            ratio_label: str = 'Ratio',
             filename: str = None,
             filename_suffix: str = '',
             **kwargs
@@ -402,6 +403,7 @@ class Analysis:
         :param ratio_plot: If True, adds ratio of the first plot with each subseqent plot below
         :param ratio_fit: If True, fits ratio plot to a 0-degree polynomial and display line, chi-square and p-value
         :param ratio_axlim: pass to yax_lim in rato plotter
+        :param ratio_label: y-axis label for ratio plot
         :param filename: name of output
         :param filename_suffix: suffix to add at end of automatic filename if 'filename' arg not passed
         :param kwargs: keyword arguments to pass to mplhep.histplot()
@@ -480,7 +482,7 @@ class Analysis:
                 ratio_ax.legend(fontsize=10, loc=1)
 
             plotting_utils.set_axis_options(axis=ratio_ax, var_name=var, bins=bins, lepton=lepton,
-                                            xlabel=xlabel, ylabel='Ratio', title='', logx=logx, logy=False, label=False)
+                                            xlabel=xlabel, ylabel=ratio_label, title='', logx=logx, logy=False, label=False)
 
         if filename:
             filename = self.paths['plot_dir'] + '/' + filename

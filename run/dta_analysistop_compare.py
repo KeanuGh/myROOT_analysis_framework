@@ -48,23 +48,28 @@ if __name__ == '__main__':
         datasets,
         data_dir=DATA_OUT_DIR,
         year='2015+2016',
-        force_rebuild=False,
+        force_rebuild=True,
         analysis_label='dta_analysistop_compare',
         skip_verify_pkl=False,
-        force_recalc_cuts=True,
+        # force_recalc_cuts=True,
         log_level=10, log_out='both', timedatelog=True, separate_loggers=False)
     my_analysis.merge_datasets('wtaunu_analysistop', 'wtaunu_analysistop_peak')
 
-    my_analysis.apply_cuts(truth=True)
-
     # HISTORGRAMS
     # ==================================================================================================================
+    # look at monte carlo weights
+    my_analysis.plot_hist('wtaunu_analysistop', 'weight_mc', bins=(100, -5, 5), yerr=None, logy=True)
+    my_analysis.plot_hist('wtaunu_mu_dta', 'weight_mc', bins=(50, -1e7, 1e7), logy=True, yerr=None)
+
     # ratio plot arguments
     ratio_args = {
         # 'ratio_axlim': 1.5,
+        'ratio_label': 'Powheg/Sherpa',
         'stats_box': True,
         'ratio_fit': True
     }
+
+    my_analysis.apply_cuts(truth=True)
 
     # my_analysis.plot_hist('wtaunu_analysistop', 'mt_born', weight='truth_weight', bins=(30, 1, 5000), logx=True, logy=True, logbins=True)
     # my_analysis.plot_hist('wtaunu_analysistop', 'MC_WZ_dilep_m_born', weight='truth_weight', bins=(30, 1, 5000), logx=True, logy=True, logbins=True)
