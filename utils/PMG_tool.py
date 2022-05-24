@@ -19,11 +19,11 @@ def get_physics_short(dsid: int) -> str:
     return PMG_df.loc[dsid, 'physics_short']
 
 
-def get_genFiltEff(dsid: int) -> str:
+def get_genFiltEff(dsid: int) -> float:
     return PMG_df.loc[dsid, 'genFiltEff']
 
 
-def get_kFactor(dsid: int) -> str:
+def get_kFactor(dsid: int) -> float:
     return PMG_df.loc[dsid, 'kFactor']
 
 

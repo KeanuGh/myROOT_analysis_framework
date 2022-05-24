@@ -1,12 +1,14 @@
 [CUTS]
 # Name	Variable	</>	Cut (in GeV if applicable) tree
 # truth
-# Truth tau p_T	TruthTauPt > 25
+# Truth M_T	TruthMTW > 200
+Truth tau p_T	TruthTauPt > 25
 Truth tau eta	TruthTauEta.abs() < 2.47
 Truth tau eta crack	(TruthTauEta.abs() < 1.37) or (TruthTauEta.abs() > 1.52)
 
 # reco
-Muon eta	MuonEta.abs() < 2.4
+Tau pt	TauPt > 150
+Tau eta	TauEta.abs() < 2.4
 E_{T}^{MISS}	MET_met > 85
 M_T	MTW > 200
 
@@ -23,16 +25,17 @@ TauSF_TightWP
 TauLooseWP
 TauMediumWP
 TauTightWP
+Ele_recoSF
+Ele_idSF
+Ele_isoSF
 
 # truth
 TruthTauPt
 TruthTauEta
 TruthTauPhi
-TruthTauM
 VisTruthTauPt
 VisTruthTauEta
 VisTruthTauPhi
-VisTruthTauM
 TruthNeutrinoPt
 TruthNeutrinoEta
 TruthNeutrinoPhi
@@ -41,10 +44,10 @@ TruthNeutrinoE
 # TruthJetPhi
 # TruthJetE
 TruthMTW
-TruthMuonPt
-TruthMuonEta
-TruthMuonPhi
-TruthMuonE
+TruthElePt
+TruthEleEta
+TruthElePhi
+TruthEleE
 
 # reco
 TauPt
@@ -57,8 +60,9 @@ TauE
 MET_met
 MET_phi
 MTW
-MuonPt
-MuonEta
-MuonPhi
-Muon_d0sig
-Muon_delta_z0_sintheta
+ElePt
+EleEta
+ElePhi
+Ele_d0sig
+Ele_delta_z0
+Ele_delta_z0_sintheta

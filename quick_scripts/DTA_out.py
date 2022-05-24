@@ -1,14 +1,11 @@
+import glob
+
 import ROOT
-import matplotlib.pyplot as plt
-import numpy as np
 import pandas as pd
 
-from src.datasetbuilder import lumi_year
-from src.histogram import Histogram1D
-from utils import plotting_utils, ROOT_utils
-from utils.variable_names import variable_data
+from utils import ROOT_utils
 
-filepath = '/mnt/D/data/DTA_outputs/user.kghorban.Sh_2211_Wtaunu_L_*/*.root'
+filepath = '/mnt/D/data/DTA_outputs/user.kghorban.Sh_2211_Wtaunu_H_maxHTpTV2_CVetoBVeto.MC16a.v1.2022-04-01_histograms.root/*.root'
 treename = 'T_s1tlv_NOMINAL'
 wanted_cols = [
     'weight',
@@ -42,6 +39,19 @@ wanted_cols = [
 chain = ROOT_utils.glob_chain(treename, filepath)
 Rdf = ROOT.RDataFrame(chain)
 # Rdf = Rdf.Filter("(passTruth == true) & (passReco == true)")
+
+# get sumweights
+files_list = glob.glob(filepath)
+sum_of_weights = 0
+for file in files_list:
+    with ROOT_utils.ROOT_file(file, 'read') as f:
+        sum_of_weights += f.Get("sumOfWeights").GetBinContent(4)
+print("summed sumOfWeights: ", sum_of_weights)
+
+with ROOT_utils.ROOT_file('/mnt/D/data/DTA_outputs/CVetoBVeto_H.root', 'read') as f:
+    h = f.Get("sumOfWeights")
+    sum_of_weights = h.GetBinContent(4)
+print("hadd sumOfWeights: ", sum_of_weights)
 
 badcols = set()  # save old column names to avoid extracting them later
 for col_name in list(Rdf.GetColumnNames()):
@@ -77,36 +87,38 @@ df.index.names = ['DSID', 'eventNumber']
 
 df.dropna(subset='weight', inplace=True)
 
-# rescale GeV columns
-GeV_columns = [
-    column for column in df.columns
-    if (column in variable_data) and (variable_data[column]['units'] == 'GeV')
-]
-df[GeV_columns] /= 1000
+print("sum of mcWeight col: ", df['mcWeight'].sum())
 
-# calc weights
-df['reco_weight'] = df['weight'] * lumi_year['2015+2016'] / df['mcWeight'].sum()
-df['truth_weight'] = df['mcWeight'] * lumi_year['2015+2016'] * df['rwCorr'] * df['prwWeight'] / df['mcWeight'].sum()
-df['muon_reco_weight'] = df['reco_weight'] * df['Muon_recoSF'] * df['Muon_isoSF'] * df['Muon_ttvaSF']
-
-df.dropna(subset='truth_weight', inplace=True)
-df = df.loc[~np.isinf(df['muon_reco_weight'])]
-
-df = df.loc[df['TruthTauPt'] > 25]
-df = df.loc[df['TruthTauEta'].abs() < 2.47]
-df = df.loc[(df['TruthTauEta'].abs() < 1.37) | (df['TruthTauEta'].abs() > 1.52)]
-
-BR = df.loc[df['TruthTau_decay_mode'] == 1].sum() / df.loc[df['TruthTau_decay_mode'] == 2].sum()
-print("tau->munu / tau->enu: ", BR)
-
-# plot
-bins = (30, 1, 50000)
-hTauPt = Histogram1D(
-    df['MuonPt'],
-    bins,
-    weight=df['muon_reco_weight'],
-    logbins=True
-)
-ax = hTauPt.plot(normalise=False)
-plotting_utils.set_axis_options(ax, 'MuonPt', bins, lepton='Tau', logx=True, logy=True, title='36.2 fb$^{-1}$')
-plt.show()
+# # rescale GeV columns
+# GeV_columns = [
+#     column for column in df.columns
+#     if (column in variable_data) and (variable_data[column]['units'] == 'GeV')
+# ]
+# df[GeV_columns] /= 1000
+#
+# # calc weights
+# df['reco_weight'] = df['weight'] * lumi_year['2015+2016'] / sum_of_weights
+# df['truth_weight'] = df['mcWeight'] * lumi_year['2015+2016'] * df['rwCorr'] * df['prwWeight'] / sum_of_weights
+# df['muon_reco_weight'] = df['reco_weight'] * df['Muon_recoSF'] * df['Muon_isoSF'] * df['Muon_ttvaSF']
+#
+# df.dropna(subset='truth_weight', inplace=True)
+# df = df.loc[~np.isinf(df['muon_reco_weight'])]
+#
+# df = df.loc[df['TruthTauPt'] > 25]
+# df = df.loc[df['TruthTauEta'].abs() < 2.47]
+# df = df.loc[(df['TruthTauEta'].abs() < 1.37) | (df['TruthTauEta'].abs() > 1.52)]
+#
+# BR = df.loc[df['TruthTau_decay_mode'] == 1].sum() / df.loc[df['TruthTau_decay_mode'] == 2].sum()
+# print("tau->munu / tau->enu: ", BR)
+#
+# # plot
+# bins = (30, 1, 50000)
+# hTauPt = Histogram1D(
+#     df['MuonPt'],
+#     bins,
+#     weight=df['muon_reco_weight'],
+#     logbins=True
+# )
+# ax = hTauPt.plot(normalise=False)
+# plotting_utils.set_axis_options(ax, 'MuonPt', bins, lepton='Tau', logx=True, logy=True, title='36.2 fb$^{-1}$')
+# plt.show()

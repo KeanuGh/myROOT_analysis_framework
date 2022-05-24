@@ -711,12 +711,16 @@ class DatasetBuilder:
 
         # calc weights
         self.logger.info("Calculating DTA weights...")
-        for dsid in df.index.unique(level='DSID'):
+        sum_of_weights = ROOT_utils.get_dta_sumw(data_path)
+        for dsid, dsid_df in df.groupby(level='DSID'):
             self.logger.debug(f"DSID {dsid}..")
             xs = PMG_tool.get_crossSection(dsid)
             kFactor = PMG_tool.get_kFactor(dsid)
-            df.loc[dsid, 'truth_weight'] = df['mcWeight'] * self.lumi * df['rwCorr'] * df['prwWeight'] * xs * kFactor / df['mcWeight'].sum()
-            df.loc[dsid, 'reco_weight'] = df['weight'] * self.lumi * xs * kFactor / df['mcWeight'].sum()
+            filterEfficiency = PMG_tool.get_genFiltEff(dsid)
+            PMG_factor = xs * kFactor * filterEfficiency
+
+            df.loc[dsid, 'truth_weight'] = df['mcWeight'] * self.lumi * df['rwCorr'] * df['prwWeight'] * PMG_factor / dsid_df['mcWeight'].sum()
+            df.loc[dsid, 'reco_weight'] = df['weight'] * self.lumi * PMG_factor / dsid_df['mcWeight'].sum()
 
         # filter events with nan/inf weight values (why do these appear?)
         self.logger.info("Filtering invalid weights...")
@@ -724,7 +728,7 @@ class DatasetBuilder:
             df.dropna(subset=['weight', 'truth_weight', 'reco_weight'], inplace=True)
             self.logger.info(f"Dropped {nbad_rows} rows with missing weight values")
 
-        inf_rows = np.logical_xor(np.isinf(df['truth_weight']), np.isinf(df['reco_weight']))
+        inf_rows = np.isinf(df['truth_weight']) | np.isinf(df['reco_weight'])
         if nbad_rows := inf_rows.sum():
             df = df.loc[~inf_rows]
             self.logger.info(f"Dropped {nbad_rows} rows with infinite weight values")

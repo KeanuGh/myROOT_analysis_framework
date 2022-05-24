@@ -142,3 +142,13 @@ def glob_chain(TTree: str, path: str) -> ROOT.TChain:
     for file in glob.glob(path):
         chain.Add(file)
     return chain
+
+
+def get_dta_sumw(path: str) -> float:
+    """get total xAOD sum of weights for sample in DTA"""
+    files_list = glob.glob(path)
+    sum_of_weights = 0
+    for file in files_list:
+        with ROOT_file(file, 'read') as f:
+            sum_of_weights += f.Get("sumOfWeights").GetBinContent(4)
+    return sum_of_weights
