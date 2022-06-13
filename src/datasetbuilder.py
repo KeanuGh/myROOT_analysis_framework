@@ -65,6 +65,7 @@ class DatasetBuilder:
     force_rebuild: bool = False
     force_recalc_cuts: bool = False
     force_recalc_vars: bool = False
+    force_recalc_weights: bool = False
     skip_verify_pkl: bool = False
     chunksize: int = 1024
     validate_missing_events: bool = True
@@ -282,6 +283,10 @@ class DatasetBuilder:
 
         # POST-PROCESSING
         # ===============================
+        # calculate weights
+        if __build_df or self.force_recalc_weights:
+            self.__calc_event_weight(df, is_reco=is_reco, is_truth=is_truth)
+
         # calculate variables
         if __calculate_vars or self.force_recalc_vars:
             self.__calculate_vars(df, vars_to_calc)
@@ -575,59 +580,9 @@ class DatasetBuilder:
             self.logger.info("Skipping sum of weights validation")
         # ---------------------------------------------------------------------------------------
 
-        # calculate weights
-        # ---------------------------------------------------------------------------------------
-        if is_truth:
-            self.logger.info(f"Calculating truth weight for {self.name}...")
-            df['truth_weight'] = self.__event_weight_truth_analyistop(df)
-            # EVERY event MUST have a truth weight
-            self.logger.info(f"Verifying truth weight for {self.name}...")
-            if df['truth_weight'].isna().any():
-                raise ValueError("NAN values in truth weights!")
-        if is_reco:
-            self.logger.info(f"Calculating reco weight for {self.name}...")
-            df['reco_weight'] = self.__event_weight_reco_analysistop(df)
-            # every reco event MUST have a reco weight
-            self.logger.info(f"Verifying reco weight for {self.name}...")
-            if not is_truth:
-                if df['reco_weight'].isna().any():
-                    raise ValueError("NAN values in reco weights!")
-            else:
-                assert (~df['reco_weight'].isna()).sum() == (~df['weight_leptonSF'].isna()).sum(), \
-                    "Different number of events for reco weight and lepton scale factors!"
-        # ---------------------------------------------------------------------------------------
-
         # CLEANUP
         # ---------------------------------------------------------------------------------------
         self.__rescale_to_gev(df)  # properly scale GeV columns
-
-        # output number of truth and reco events
-        if is_truth:
-            n_truth = df['KFactor_weight_truth'].notna().sum()
-            self.logger.info(f"number of truth events: {n_truth}")
-        else:
-            n_truth = 0
-        if is_reco:
-            n_reco = df['weight_KFactor'].notna().sum()
-            self.logger.info(f"number of reco events: {n_reco}")
-        else:
-            n_reco = 0
-        # small check
-        assert len(df) == max(n_truth, n_reco), \
-            f"Length of DataFrame ({len(df.index)}) doesn't match number of truth ({n_truth}) or reco events ({n_reco})"
-
-        if is_truth and is_reco:
-            # make sure KFactor is the same for all reco and truth variables
-            pd.testing.assert_series_equal(
-                df.loc[pd.notna(df['weight_KFactor']), 'KFactor_weight_truth'],
-                df['weight_KFactor'].dropna(),
-                check_exact=True, check_names=False, check_index=False
-            ), "reco and truth KFactors not equal"
-            df.drop(columns='weight_KFactor', inplace=True)
-            self.logger.debug("Dropped extra KFactor column")
-        # ensure there is always only one KFactor column and it is named 'weight_KFactor'
-        if is_truth:
-            df.rename(columns={'KFactor_weight_truth': 'weight_KFactor'}, inplace=True)
 
         self.logger.info("Sorting by DSID...")
         df.sort_index(level='DSID', inplace=True)
@@ -709,38 +664,11 @@ class DatasetBuilder:
         # rescale GeV columns
         self.__rescale_to_gev(df)
 
-        # calc weights
-        self.logger.info("Calculating DTA weights...")
-        sum_of_weights = ROOT_utils.get_dta_sumw(data_path)
-        for dsid, dsid_df in df.groupby(level='DSID'):
-            self.logger.debug(f"DSID {dsid}..")
-            xs = PMG_tool.get_crossSection(dsid)
-            kFactor = PMG_tool.get_kFactor(dsid)
-            filterEfficiency = PMG_tool.get_genFiltEff(dsid)
-            PMG_factor = xs * kFactor * filterEfficiency
-
-            df.loc[dsid, 'truth_weight'] = df['mcWeight'] * self.lumi * df['rwCorr'] * df['prwWeight'] * PMG_factor / dsid_df['mcWeight'].sum()
-            df.loc[dsid, 'reco_weight'] = df['weight'] * self.lumi * PMG_factor / dsid_df['mcWeight'].sum()
-
-        # filter events with nan/inf weight values (why do these appear?)
-        self.logger.info("Filtering invalid weights...")
-        if nbad_rows := df['weight'].isna().sum():
-            df.dropna(subset=['weight', 'truth_weight', 'reco_weight'], inplace=True)
-            self.logger.info(f"Dropped {nbad_rows} rows with missing weight values")
-
-        inf_rows = np.isinf(df['truth_weight']) | np.isinf(df['reco_weight'])
-        if nbad_rows := inf_rows.sum():
-            df = df.loc[~inf_rows]
-            self.logger.info(f"Dropped {nbad_rows} rows with infinite weight values")
-
         # self.logger.info("Checking for invalid weights...")
         # if df['reco_weight'].isna().any() or np.isinf(df['reco_weight']).any():
         #     raise ValueError("NAN values in truth weights!")
         # if df['truth_weight'].isna().any() or np.isinf(df['truth_weight']).any():
         #     raise ValueError("NAN values in reco weights!")
-
-        # rename weight col for consistency
-        df.rename(columns={'mcWeight': 'weight_mc'}, inplace=True)
 
         self.logger.info(f"time to build dataframe: {time.strftime('%H:%M:%S', time.gmtime(time.time() - t1))}")
 
@@ -831,6 +759,84 @@ class DatasetBuilder:
                 df[cut.name + label] = df.eval(cut.cutstr)
             except ValueError as e:
                 raise Exception(f"Error in cut {cut.cutstr}:\n {e}")
+
+    def __calc_event_weight(self, df: pd.DataFrame, is_truth: bool = False, is_reco: bool = False) -> None:
+        """Calculate truth and reco event weights"""
+        if self.dataset_type == 'dta':
+            self.logger.info("Calculating DTA weights...")
+            # sumw = ROOT_utils.get_dta_sumw(data_path)
+            df['truth_weight'] = np.nan
+            df['reco_weight'] = np.nan
+            for dsid, dsid_df in df.groupby(level='DSID'):
+                xs = PMG_tool.get_crossSection(dsid)
+                kFactor = PMG_tool.get_kFactor(dsid)
+                filterEfficiency = PMG_tool.get_genFiltEff(dsid)
+                PMG_factor = xs * kFactor * filterEfficiency
+                sumw = dsid_df['mcWeight'].sum()
+                # self.logger.debug(f"DSID {dsid}.. pmg: {PMG_factor}, lumi: {self.lumi}, sum: {sumw}")
+
+                df.loc[dsid, 'truth_weight'] = dsid_df['mcWeight'] * self.lumi * dsid_df['rwCorr'] * dsid_df[
+                    'prwWeight'] * PMG_factor / sumw
+                df.loc[dsid, 'reco_weight'] = dsid_df['weight'] * self.lumi * PMG_factor / sumw
+
+            # filter events with nan/inf weight values (why do these appear?)
+            self.logger.info("Filtering invalid weights...")
+            if nbad_rows := df['weight'].isna().sum():
+                df.dropna(subset=['weight', 'truth_weight', 'reco_weight'], inplace=True)
+                self.logger.info(f"Dropped {nbad_rows} rows with missing weight values")
+
+            inf_rows = np.isinf(df['truth_weight']) | np.isinf(df['reco_weight'])
+            if nbad_rows := inf_rows.sum():
+                df = df.loc[~inf_rows]
+                self.logger.info(f"Dropped {nbad_rows} rows with infinite weight values")
+
+        elif self.dataset_type == 'analysistop':
+            if is_truth:
+                self.logger.info(f"Calculating truth weight for {self.name}...")
+                df['truth_weight'] = self.__event_weight_truth_analyistop(df)
+                # EVERY event MUST have a truth weight
+                self.logger.info(f"Verifying truth weight for {self.name}...")
+                if df['truth_weight'].isna().any():
+                    raise ValueError("NAN values in truth weights!")
+            if is_reco:
+                self.logger.info(f"Calculating reco weight for {self.name}...")
+                df['reco_weight'] = self.__event_weight_reco_analysistop(df)
+                # every reco event MUST have a reco weight
+                self.logger.info(f"Verifying reco weight for {self.name}...")
+                if not is_truth:
+                    if df['reco_weight'].isna().any():
+                        raise ValueError("NAN values in reco weights!")
+                else:
+                    assert (~df['reco_weight'].isna()).sum() == (~df['weight_leptonSF'].isna()).sum(), \
+                        "Different number of events for reco weight and lepton scale factors!"
+
+            # output number of truth and reco events
+            if is_truth:
+                n_truth = df['KFactor_weight_truth'].notna().sum()
+                self.logger.info(f"number of truth events: {n_truth}")
+            else:
+                n_truth = 0
+            if is_reco:
+                n_reco = df['weight_KFactor'].notna().sum()
+                self.logger.info(f"number of reco events: {n_reco}")
+            else:
+                n_reco = 0
+            # small check
+            assert len(df) == max(n_truth, n_reco), \
+                f"Length of DataFrame ({len(df.index)}) doesn't match number of truth ({n_truth}) or reco events ({n_reco})"
+
+            if is_truth and is_reco:
+                # make sure KFactor is the same for all reco and truth variables
+                pd.testing.assert_series_equal(
+                    df.loc[pd.notna(df['weight_KFactor']), 'KFactor_weight_truth'],
+                    df['weight_KFactor'].dropna(),
+                    check_exact=True, check_names=False, check_index=False
+                ), "reco and truth KFactors not equal"
+                df.drop(columns='weight_KFactor', inplace=True)
+                self.logger.debug("Dropped extra KFactor column")
+            # ensure there is always only one KFactor column and it is named 'weight_KFactor'
+            if is_truth:
+                df.rename(columns={'KFactor_weight_truth': 'weight_KFactor'}, inplace=True)
 
     def __event_weight_reco_analysistop(self,
                                         df: pd.DataFrame,

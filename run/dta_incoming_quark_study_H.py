@@ -36,7 +36,7 @@ if __name__ == '__main__':
 
     my_analysis = Analysis(datasets, data_dir=DATA_OUT_DIR, year='2015+2016', TTree_name='T_s1thv_NOMINAL',
                            analysis_label='dta_incoming_quark_study_H', skip_verify_pkl=False, lepton='tau',  # force_rebuild=True,
-                           dataset_type='dta', log_level=10, log_out='both', timedatelog=True, separate_loggers=False)
+                           dataset_type='dta', log_level=10, log_out='both', force_rebuild=True)
     # my_analysis.merge_datasets('wtaunu_e_dta', 'wtaunu_e_dta_peak')
 
     my_analysis.apply_cuts(truth=True)
@@ -47,7 +47,7 @@ if __name__ == '__main__':
     ratio_args = {
         # 'ratio_axlim': 1.5,
         'stats_box': True,
-        'ratio_fit': True
+        'ratio_fit': False
     }
 
     my_analysis['wtaunu_h_dta'].plot_dsid('TruthMTW', weight='truth_weight', bins=(30, 1, 5000), logx=True, logy=True, logbins=True)

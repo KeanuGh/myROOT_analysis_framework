@@ -823,6 +823,31 @@ variable_data: Dict[str, Branch] = {
         'units': 'GeV',
         'tag': VarTag.TRUTH
     },
+    'TruthBosonM': {
+        'name': r'Truth boson mass',
+        'units': 'GeV',
+        'tag': VarTag.TRUTH
+    },
+    'TruthBosonE': {
+        'name': r'Truth boson $E$',
+        'units': 'GeV',
+        'tag': VarTag.TRUTH
+    },
+    'TruthBosonPt': {
+        'name': r'Truth boson $p_T$',
+        'units': 'GeV',
+        'tag': VarTag.TRUTH
+    },
+    'TruthBosonPhi': {
+        'name': r'Truth boson $\phi$',
+        'units': '',
+        'tag': VarTag.TRUTH
+    },
+    'TruthBosonEta': {
+        'name': r'Truth boson $\eta$',
+        'units': '',
+        'tag': VarTag.TRUTH
+    },
     'VisTruthTauPhi': {
         'name': r'Visible truth tau $\phi$',
         'units': '',

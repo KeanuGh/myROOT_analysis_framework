@@ -1,7 +1,7 @@
 [CUTS]
 # Name	cutstring	tree
 # truth
-# Truth MTW	mt_born > 200	truth
+# Truth M_W	MC_WZ_dilep_m_born > 60	truth
 Truth tau p_T	MC_WZmu_el_pt_born > 25	truth
 Truth tau eta	MC_WZmu_el_eta_born.abs() < 2.47	truth
 Truth tau eta crack	(MC_WZmu_el_eta_born.abs() < 1.37) or (MC_WZmu_el_eta_born.abs() > 1.52)	truth
@@ -20,6 +20,7 @@ MC_WZneutrino_pt_born	truth
 MC_WZmu_el_eta_born	truth
 MC_WZmu_el_pt_born	truth
 mt_born	truth
+MC_WZ_m
 
 # reco
 mu_d0sig	nominal_Loose

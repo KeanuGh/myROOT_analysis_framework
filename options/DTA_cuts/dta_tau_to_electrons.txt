@@ -2,7 +2,7 @@
 # Name	Variable	</>	Cut (in GeV if applicable) tree
 # truth
 Electronic Tau	TruthTau_decay_mode == 2
-# Truth M_T	TruthMTW > 200
+# Truth M_T	TruthBosonM > 60
 Truth tau p_T	TruthTauPt > 25
 Truth tau eta	TruthTauEta.abs() < 2.47
 Truth tau eta crack	(TruthTauEta.abs() < 1.37) or (TruthTauEta.abs() > 1.52)
@@ -18,8 +18,6 @@ rwCorr
 prwWeight
 # Jet_btSF
 # Jet_JVT
-JVT_SF
-FJVT_SF
 TauSF_LooseWP
 TauSF_MediumWP
 TauSF_TightWP
@@ -49,6 +47,10 @@ TruthElePt
 TruthEleEta
 TruthElePhi
 TruthEleE
+TruthBosonE
+TruthBosonEta
+TruthBosonPt
+TruthBosonM
 
 # reco
 TauPt

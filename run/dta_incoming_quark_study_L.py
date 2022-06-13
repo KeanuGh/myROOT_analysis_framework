@@ -20,29 +20,29 @@ if __name__ == '__main__':
         'wtaunu_CVetoBVeto_dta_l': {
             'data_path': DTA_PATH + '/*_L_*CVetoBVeto*/*.root',
             'cutfile_path': '../options/DTA_cuts/dta_init.txt',
-            'force_rebuild': False,
+            # 'force_rebuild': False,
             'validate_duplicated_events': False,
             'label': r'CVetoBVeto',
         },
         'wtaunu_CFilterBVeto_dta_l': {
             'data_path': DTA_PATH + '/*_L_*CFilterBVeto*/*.root',
             'cutfile_path': '../options/DTA_cuts/dta_init.txt',
-            'force_rebuild': False,
+            # 'force_rebuild': False,
             'validate_duplicated_events': False,
             'label': r'CFilterBVeto',
         },
         'wtaunu_BFilter_dta_l': {
             'data_path': DTA_PATH + '/*_L_*BFilter*/*.root',
             'cutfile_path': '../options/DTA_cuts/dta_init.txt',
-            'force_rebuild': False,
+            # 'force_rebuild': False,
             'validate_duplicated_events': False,
             'label': r'BFilter',
         },
     }
 
     my_analysis = Analysis(datasets, data_dir=DATA_OUT_DIR, year='2015+2016', TTree_name='T_s1tlv_NOMINAL',
-                           analysis_label='dta_incoming_quark_study_L', skip_verify_pkl=False, lepton='tau',
-                           dataset_type='dta', log_level=10, log_out='both', timedatelog=True, separate_loggers=False)
+                           analysis_label='dta_incoming_quark_study_L', lepton='tau',
+                           dataset_type='dta', log_level=10, log_out='both', force_rebuild=True)
     # my_analysis.merge_datasets('wtaunu_e_dta', 'wtaunu_e_dta_peak')
 
     my_analysis.apply_cuts(truth=True)

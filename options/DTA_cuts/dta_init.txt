@@ -17,8 +17,6 @@ rwCorr
 prwWeight
 # Jet_btSF
 # Jet_JVT
-JVT_SF
-FJVT_SF
 TauSF_LooseWP
 TauSF_MediumWP
 TauSF_TightWP
@@ -48,6 +46,10 @@ TruthElePt
 TruthEleEta
 TruthElePhi
 TruthEleE
+TruthBosonE
+TruthBosonEta
+TruthBosonPt
+TruthBosonM
 
 # reco
 TauPt

@@ -19,37 +19,45 @@ plt.show()
 # roofit
 print("ROOFIT:\n--------------------------------------------------------------------------------")
 
+# define vars & pdf
 x = ROOT.RooRealVar("x", "x", 0, 1)
-c = ROOT.RooRealVar("c", "c", 0, 2)
+c = ROOT.RooRealVar("c", "c", 0.75, 0, 1)
+
 linear = ROOT.RooPolynomial("linear", "linear ratio fit", x, c, lowestOrder=0)
 
-h1 = ROOT.TH1F("", "", *bins)
+# fill TH1
+H1 = ROOT.TH1F("", "", *bins)
 for i in data1:
-    h1.Fill(i)
-h2 = ROOT.TH1F("", "", *bins)
+    H1.Fill(i)
+H2 = ROOT.TH1F("", "", *bins)
 for i in data2:
-    h2.Fill(i)
-h3 = h2.Clone()
-h3.Divide(h1)
-data = ROOT.RooDataHist("", "", [x], ROOT.RooFit.Import(h3))
+    H2.Fill(i)
+H3 = H2.Clone()
+H3.Divide(H1)
 
+data = ROOT.RooDataHist("", "", x, H3)
+
+# fit
 fit_result = linear.fitTo(data,
-                          # ROOT.RooFit.NumCPU(12),
+                          ROOT.RooFit.NumCPU(12),
                           ROOT.RooFit.SumW2Error(True),
                           ROOT.RooFit.Minimizer("Minuit"),
                           ROOT.RooFit.Verbose(True),
-                          ROOT.RooFit.Hesse(False),
+                          # ROOT.RooFit.Hesse(False),
+                          # ROOT.RooFit.Migrad(True),
                           Save=True,
                           )
+fit_result.Print()
+# print("Args: ")
+# stream = sys.stdout
+# fit_result.printValue(stream)
 
+# plot roofit
 xframe = x.frame(ROOT.RooFit.Title("linear fit with data"))
 data.plotOn(xframe)
-linear.plotOn(xframe)
-
-fit_result.Print()
+linear.plotOn(xframe, ROOT.RooFit.LineColor(ROOT.kRed))
 
 canvas = ROOT.TCanvas("Cool fit", "cool fit")
-ROOT.gPad.SetLeftMargin(0.15)
 ROOT.gPad.SetLeftMargin(0.15)
 xframe.GetYaxis().SetTitleOffset(1.6)
 xframe.Draw()

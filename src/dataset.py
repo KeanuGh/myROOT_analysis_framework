@@ -243,13 +243,13 @@ class Dataset:
                     f"{dsid:<6} " +
                     f"{phys_short:<{max_len_phys_short + 1}} " +
                     f"{len(self.df.loc[dsid]):<10} " +
-                    f"{self.df.loc[dsid, 'weight_mc'].sum():<10.6e} " +
+                    # f"{self.df.loc[dsid, 'weight_mc'].sum():<10.6e} " +
                     f"{PMG_tool.get_crossSection(dsid):<10.6e} " +
                     f"{self.lumi:<10.6e} " +
-                    (f"{self.df.loc[dsid, 'truth_weight'].notna().sum():<11}  " if print_truth else "") +
+                    (f"{self.df.loc[dsid, 'truth_weight'].notna().sum():<11}  "     if print_truth else "") +
                     (f"{self.df.loc[dsid, 'truth_weight'].notna().mean():<11.5e}  " if print_truth else "") +
-                    (f"{self.df.loc[dsid, 'reco_weight'].notna().sum():<11}  " if print_reco else "") +
-                    (f"{self.df.loc[dsid, 'reco_weight'].notna().mean():<11.5e}  " if print_reco else "") +
+                    (f"{self.df.loc[dsid, 'reco_weight'].notna().sum():<11}  "      if print_reco else "") +
+                    (f"{self.df.loc[dsid, 'reco_weight'].notna().mean():<11.5e}  "  if print_reco else "") +
                     '\n'
                 )
             header = (
@@ -257,7 +257,7 @@ class Dataset:
                 "DSID   " +
                 f"{'phys_short':<{max_len_phys_short + 2}}" +
                 "n_events   " +
-                "sum_w        " +
+                # "sum_w        " +
                 "x-s fb       " +
                 "lumi fb-1    " +
                 ("truth events " if print_truth else "") +
