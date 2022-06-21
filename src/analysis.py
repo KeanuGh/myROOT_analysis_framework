@@ -1,3 +1,4 @@
+import inspect
 import os
 from typing import Dict, List, Tuple, Iterable
 
@@ -93,24 +94,28 @@ class Analysis:
             self.logger.info(f"======== INITIALISING DATASET '{name}' =========")
             self.logger.info("=" * (42 + len(name)))
 
+            # get dataset build arguments out of options passed to analysis
             if dup_args := set(data_args) & set(kwargs):
                 raise SyntaxError(f"Got multiple values for argument(s) {dup_args} for dataset {name}")
 
-            # get dataset build arguments out of options passed to analysis
-            build_args = dict()
-            for arg in [
-                'data_path',
-                'pkl_path',
-                'cutfile_path',
-                'cutfile',
-                'tree_dict',
-                'vars_to_calc',
-                'cuts'
-            ]:
-                build_args[arg] = data_args.pop(arg, None)
+            builder_args = dict()  # arguments to pass to dataset builder
+            for builder_arg in inspect.signature(DatasetBuilder.__init__).parameters:
+                if str(builder_arg) == 'self': continue
+                if builder_arg in data_args:
+                    builder_args[builder_arg] = data_args[builder_arg]
+                if builder_arg in kwargs:
+                    builder_args[builder_arg] = kwargs[builder_arg]
+
+            build_args = dict()  # arguments to pass to build()
+            for build_arg in inspect.signature(DatasetBuilder.build).parameters:
+                if str(build_arg) == 'self': continue
+                if build_arg in data_args:
+                    build_args[build_arg] = data_args[build_arg]
+                if build_arg in kwargs:
+                    build_args[build_arg] = kwargs[build_arg]
 
             # set correct pickle path if not passed as a build argument
-            if build_args['pkl_path'] is None:
+            if 'pkl_path' not in build_args:
                 build_args['pkl_path'] = f"{self.paths['pkl_df_dir']}{name}_df.pkl"
 
             # check if a pickle file already exists if not already given
@@ -120,7 +125,7 @@ class Analysis:
 
             # make dataset
             builder = DatasetBuilder(
-                name=name,
+                **builder_args,
                 logger=(
                     self.logger  # use single logger
                     if not separate_loggers
@@ -131,9 +136,7 @@ class Analysis:
                         log_out=log_out,
                         timedatelog=timedatelog
                     )
-                ),
-                **data_args,
-                **kwargs
+                )
             )
             dataset = builder.build(**build_args)
             if separate_loggers:
@@ -430,7 +433,7 @@ class Analysis:
             fig, ax = plt.subplots()
             ratio_ax = None  # just so IDE doesn't complain
 
-        if len(datasets) > 2:
+        if (not isinstance(datasets, str)) and (len(datasets) > 2):
             self.logger.warning("Not enough space to display stats box. Will not display")
             stats_box = False
 

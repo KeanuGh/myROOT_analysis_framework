@@ -281,10 +281,9 @@ class Histogram1D(bh.Histogram, family=None):
         """Get number of entries"""
         return self.TH1.GetEntries()
 
-    @property
-    def eff_entries(self) -> float:
+    def eff_entries(self, flow: bool = False) -> float:
         """get effective number of entries"""
-        return self.bin_sum() * self.bin_sum() / sum(self.sumw2())
+        return self.bin_sum(flow) * self.bin_sum(flow) / sum(self.sumw2(flow))
 
     def sumw2(self, flow: bool = False) -> np.array:
         """get squared sum of weights"""
@@ -464,8 +463,10 @@ class Histogram1D(bh.Histogram, family=None):
             textstr = '\n'.join((
                 self.name,
                 r'$\mu=%.2f\pm%.2f$' % (self.mean, self.mean_error),
-                r'$\sigma=%.2f\pm%.2f$' % (self.std, self.std_error),
-                r'$\mathrm{Entries}: %.0f$' % self.n_entries))
+                # r'$\sigma=%.2f\pm%.2f$' % (self.std, self.std_error),
+                r'$\mathrm{Entries}: %.0f$' % self.n_entries,
+                r'$\mathrm{Eff. entries}: %.2f$' % self.eff_entries(flow=True),
+            ))
             ax.text(x=box_xpos, y=box_ypos, s=textstr, transform=ax.transAxes, fontsize='small')
 
         if out_filename:

@@ -773,10 +773,8 @@ class DatasetBuilder:
                 filterEfficiency = PMG_tool.get_genFiltEff(dsid)
                 PMG_factor = xs * kFactor * filterEfficiency
                 sumw = dsid_df['mcWeight'].sum()
-                # self.logger.debug(f"DSID {dsid}.. pmg: {PMG_factor}, lumi: {self.lumi}, sum: {sumw}")
 
-                df.loc[dsid, 'truth_weight'] = dsid_df['mcWeight'] * self.lumi * dsid_df['rwCorr'] * dsid_df[
-                    'prwWeight'] * PMG_factor / sumw
+                df.loc[dsid, 'truth_weight'] = dsid_df['mcWeight'] * self.lumi * dsid_df['rwCorr'] * dsid_df['prwWeight'] * PMG_factor / sumw
                 df.loc[dsid, 'reco_weight'] = dsid_df['weight'] * self.lumi * PMG_factor / sumw
 
             # filter events with nan/inf weight values (why do these appear?)

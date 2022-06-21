@@ -1,7 +1,6 @@
 from numpy import pi
 
 from src.analysis import Analysis
-from utils import ROOT_utils, PMG_tool
 
 # DTA_PATH = '/data/keanu/ditau_output/'
 # ANALYSISTOP_PATH = '/data/atlas/HighMassDrellYan/mc16a'
@@ -73,7 +72,7 @@ if __name__ == '__main__':
         'ratio_fit': False
     }
 
-    my_analysis.apply_cuts(truth=True)
+    # my_analysis.apply_cuts(truth=True)
 
     # my_analysis.plot_hist('wtaunu_analysistop', 'mt_born', weight='truth_weight', bins=(30, 1, 5000), logx=True, logy=True, logbins=True)
     # my_analysis.plot_hist('wtaunu_analysistop', 'MC_WZ_dilep_m_born', weight='truth_weight', bins=(30, 1, 5000), logx=True, logy=True, logbins=True)
@@ -84,19 +83,19 @@ if __name__ == '__main__':
     # my_analysis['wtaunu_mu_dta'].plot_dsid('TruthMTW', weight='truth_weight', bins=(30, 1, 5000), logx=True, logy=True, logbins=True)
 
     # calc weights
-    my_analysis.logger.info("Calculating DTA weights...")
-    for dsid, dsid_df in my_analysis['wtaunu_mu_dta'].df.groupby(level='DSID'):
-        my_analysis.logger.debug(f"DSID {dsid}..")
-        xs = PMG_tool.get_crossSection(dsid)
-        kFactor = PMG_tool.get_kFactor(dsid)
-        filterEfficiency = PMG_tool.get_genFiltEff(dsid)
-        PMG_factor = xs * kFactor * filterEfficiency
-        # sumw = dsid_df['mcWeight'].sum()
-        sumw = ROOT_utils.get_dta_sumw(DTA_PATH + '/user.kghorban.Sh_2211_Wtaunu_L*/*.root')
-        my_analysis.logger.debug(f"DSID {dsid}.. pmg: {PMG_factor}, lumi: {my_analysis['wtaunu_mu_dta'].lumi}, sum: {sumw}")
-
-        my_analysis['wtaunu_mu_dta'].df.loc[dsid, 'truth_weight'] = dsid_df['mcWeight'] * my_analysis['wtaunu_mu_dta'].lumi * \
-                                                                    dsid_df['rwCorr'] * dsid_df['prwWeight'] * PMG_factor / sumw
+    # my_analysis.logger.info("Calculating DTA weights...")
+    # for dsid, dsid_df in my_analysis['wtaunu_mu_dta'].df.groupby(level='DSID'):
+    #     my_analysis.logger.debug(f"DSID {dsid}..")
+    #     xs = PMG_tool.get_crossSection(dsid)
+    #     kFactor = PMG_tool.get_kFactor(dsid)
+    #     filterEfficiency = PMG_tool.get_genFiltEff(dsid)
+    #     PMG_factor = xs * kFactor * filterEfficiency
+    #     # sumw = dsid_df['mcWeight'].sum()
+    #     sumw = ROOT_utils.get_dta_sumw(DTA_PATH + '/user.kghorban.Sh_2211_Wtaunu_L*/*.root')
+    #     my_analysis.logger.debug(f"DSID {dsid}.. pmg: {PMG_factor}, lumi: {my_analysis['wtaunu_mu_dta'].lumi}, sum: {sumw}")
+    #
+    #     my_analysis['wtaunu_mu_dta'].df.loc[dsid, 'truth_weight'] = dsid_df['mcWeight'] * my_analysis['wtaunu_mu_dta'].lumi * \
+    #                                                                 dsid_df['rwCorr'] * dsid_df['prwWeight'] * PMG_factor / sumw
 
     # TRUTH
     # -----------------------------------
@@ -132,6 +131,10 @@ if __name__ == '__main__':
     my_analysis.plot_hist(['wtaunu_mu_dta', 'wtaunu_analysistop'], ['TruthMTW', 'mt_born'],
                           bins=(30, 1, 5000), weight='truth_weight', ratio_axlim=1.5,
                           title='truth - 36.2fb$^{-1}$', normalise=False, logx=True, logbins=True, **ratio_args)
+
+    my_analysis.plot_hist('wtaunu_mu_dta', 'TruthMuonPt', weight='truth_weight', bins=(30, 1, 5000), logx=True, logy=True, logbins=True)
+    my_analysis.plot_hist('wtaunu_mu_dta', 'TruthMuonEta', weight='truth_weight', bins=(30, -5, 5), logy=True)
+    my_analysis.plot_hist('wtaunu_mu_dta', 'TruthMuonPhi', weight='truth_weight', bins=(30, -pi, pi), logy=True)
 
     # # # normalised
     # my_analysis.plot_hist(['wtaunu_mu_dta', 'wtaunu_analysistop'], ['TruthTauPt', 'MC_WZmu_el_pt_born'],

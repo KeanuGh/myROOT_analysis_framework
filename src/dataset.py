@@ -479,6 +479,7 @@ class Dataset:
             normalise=normalise,
             **kwargs
         )
+        # self.logger.info(f"cross-section: {hist.integral}")
         return hist
 
     def plot_cut_overlays(
