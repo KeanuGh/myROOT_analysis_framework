@@ -278,6 +278,7 @@ class Analysis:
         self.logger.info(f"Merging dataset(s) {datasets[1:]} into dataset {datasets[0]}...")
 
         self[datasets[0]].df = pd.concat([self[n].df for n in datasets], verify_integrity=verify, copy=False)
+        self[datasets[0]].name = datasets[0]
 
         if new_name:
             self[new_name] = self.datasets.pop(datasets[0])

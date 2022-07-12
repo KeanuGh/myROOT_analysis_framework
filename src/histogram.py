@@ -236,7 +236,7 @@ class Histogram1D(bh.Histogram, family=None):
             if len(bins) == 3 and isinstance(bins, tuple):
                 return bins
             else:
-                return len(bins), np.sort(np.array(bins))
+                return len(bins), np.array(bins)
 
         raise ValueError("Bins should be list of bin edges or tuple like (nbins, xmin, xmax)")
 
