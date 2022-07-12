@@ -246,6 +246,7 @@ class Dataset:
                     # f"{self.df.loc[dsid, 'weight_mc'].sum():<10.6e} " +
                     f"{PMG_tool.get_crossSection(dsid):<10.6e} " +
                     f"{self.lumi:<10.6e} " +
+                    f"{PMG_tool.get_genFiltEff(dsid):<10.6e}" +
                     (f"{self.df.loc[dsid, 'truth_weight'].notna().sum():<11}  "     if print_truth else "") +
                     (f"{self.df.loc[dsid, 'truth_weight'].notna().mean():<11.5e}  " if print_truth else "") +
                     (f"{self.df.loc[dsid, 'reco_weight'].notna().sum():<11}  "      if print_reco else "") +
@@ -260,6 +261,7 @@ class Dataset:
                 # "sum_w        " +
                 "x-s fb       " +
                 "lumi fb-1    " +
+                "filter eff.  " +
                 ("truth events " if print_truth else "") +
                 ("avg truth wt " if print_truth else "") +
                 ("reco events  " if print_reco else "") +
