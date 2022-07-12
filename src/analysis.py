@@ -345,9 +345,9 @@ class Analysis:
     # ===============================
     def plot_hist(
             self,
-            datasets: str | List[str],
-            var: str | List[str],
-            bins: List[float] | Tuple[int, float, float],
+            datasets: str | ArrayLike | List[str],
+            var: str | ArrayLike | List[str],
+            bins: List[float] | ArrayLike | Tuple[int, float, float],
             weight: List[str | float] | str | float = 1.,
             yerr: ArrayLike | str = True,
             labels: List[str] = None,
@@ -494,7 +494,7 @@ class Analysis:
                 varname = '_'.join(var)
             else:
                 varname = var
-            filename = f"{self.paths['plot_dir']}{'_'.join(datasets)}_{varname}{'_NORMED' if normalise else ''}{filename_suffix}.png"
+            filename = f"{self.paths['plot_dir']}{'_'.join(datasets)}_{varname}{'_NORMED' if normalise else ''}_{filename_suffix}.png"
 
         fig.savefig(filename, bbox_inches='tight')
         self.logger.info(f'Saved overlay plot of {var} to {filename}')

@@ -203,7 +203,7 @@ class Histogram1D(bh.Histogram, family=None):
 
     @staticmethod
     @overload
-    def __gen_axis(bins: List[float]) -> bh.axis.Axis:
+    def __gen_axis(bins: List[float] | ArrayLike) -> bh.axis.Axis:
         ...
 
     @staticmethod
@@ -212,7 +212,7 @@ class Histogram1D(bh.Histogram, family=None):
         ...
 
     @staticmethod
-    def __gen_axis(bins: List[float] | Tuple[int, float, float], logbins: bool = False) -> bh.axis.Axis:
+    def __gen_axis(bins: List[float] | ArrayLike | Tuple[int, float, float], logbins: bool = False) -> bh.axis.Axis:
         """
         Returns the correct type of boost-histogram axis based on the input bins.
 
@@ -220,30 +220,25 @@ class Histogram1D(bh.Histogram, family=None):
                      In the first case returns an axis of type Regular(), otherwise of type Variable().
         :param logbins: whether logarithmic bins. Silently ignored if using variable bins.
         """
-        if isinstance(bins, tuple):
-            if len(bins) != 3:
-                raise ValueError("Tuple of bins should be formatted like (n_bins, start, stop).")
+        if len(bins) == 3 and isinstance(bins, tuple):
             return bh.axis.Regular(*bins, transform=bh.axis.transform.log if logbins else None)
-
-        elif isinstance(bins, list):
-            return bh.axis.Variable(bins)
-
         else:
-            raise TypeError(f"Bins must be formatted as either tuple (n_bins, start, stop) or a list of bin edges. "
-                            f"Got {bins} of type {type(bins)}")
+            return bh.axis.Variable(bins)
 
     @staticmethod
     def __get_TH1_bins(bins: List[float] | Tuple[int, float, float] | bh.axis.Axis
-                       ) -> Tuple[int, list] | Tuple[int, float, float]:
+                       ) -> Tuple[int, list | np.ndaray] | Tuple[int, float, float]:
         """Format bins for TH1 constructor"""
-        if isinstance(bins, list):
-            return len(bins), bins
-        elif isinstance(bins, tuple):
-            if len(bins) != 3:
-                raise ValueError("Tuple of bins should be formatted like (n_bins, start, stop).")
-            return bins
-        elif isinstance(bins, bh.axis.Axis):
+        if isinstance(bins, bh.axis.Axis):
             return bins.size, bins.edges
+
+        elif hasattr(bins, '__iter__'):
+            if len(bins) == 3 and isinstance(bins, tuple):
+                return bins
+            else:
+                return len(bins), np.sort(np.array(bins))
+
+        raise ValueError("Bins should be list of bin edges or tuple like (nbins, xmin, xmax)")
 
     # Variables
     # ===================
@@ -465,7 +460,7 @@ class Histogram1D(bh.Histogram, family=None):
                 r'$\mu=%.2f\pm%.2f$' % (self.mean, self.mean_error),
                 # r'$\sigma=%.2f\pm%.2f$' % (self.std, self.std_error),
                 r'$\mathrm{Entries}: %.0f$' % self.n_entries,
-                r'$\mathrm{Eff. entries}: %.2f$' % self.eff_entries(flow=True),
+                r'$\mathrm{Intergral}: %.2f$' % self.bin_sum(flow=True),
             ))
             ax.text(x=box_xpos, y=box_ypos, s=textstr, transform=ax.transAxes, fontsize='small')
 

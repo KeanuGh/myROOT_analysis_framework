@@ -77,13 +77,17 @@ def makedir(dirpath: str | List[str]) -> None:
         raise ValueError("dirpath should be a string or a list of strings")
 
 
-def file_exists(filepath: str) -> bool:
+def file_exists(filepath: str | Path) -> bool:
     """Does the file exist?"""
+    if isinstance(filepath, Path):
+        return bool(filepath.parent.rglob('*'))
     return bool(glob(filepath))
 
 
-def n_files(filepath: str) -> int:
+def n_files(filepath: str | Path) -> int:
     """how many files?"""
+    if isinstance(filepath, Path):
+        return len(list(filepath.parent.rglob('*.root')))
     return len(glob(filepath))
 
 

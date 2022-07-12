@@ -3,12 +3,17 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-PMG_df = pd.read_csv(Path(__file__).parent / 'PMGxsecDB_mc16.txt', delim_whitespace=True, header=0, index_col=0,
-                     names=['DSID', 'physics_short', 'crossSection', 'genFiltEff', 'kFactor',
-                            'relUncertUP', 'relUncertDOWN', 'generator_name', 'etag'],
-                     dtype={'DSID': np.int32, 'physics_short': str, 'crossSection': np.float32, 'genFiltEff': np.float32,
-                            'kFactor': np.float32, 'relUncertUP': np.float32, 'relUncertDOWN': np.float32,
-                            'generator_name': str, 'etag': str})
+PMG_DB_FILE = 'PMGxsecDB_mc16.txt'
+
+try:
+    PMG_df = pd.read_csv(Path(__file__).parent / PMG_DB_FILE, delim_whitespace=True, header=0, index_col=0,
+                         names=['DSID', 'physics_short', 'crossSection', 'genFiltEff', 'kFactor',
+                                'relUncertUP', 'relUncertDOWN', 'generator_name', 'etag'],
+                         dtype={'DSID': np.int32, 'physics_short': str, 'crossSection': np.float32, 'genFiltEff': np.float32,
+                                'kFactor': np.float32, 'relUncertUP': np.float32, 'relUncertDOWN': np.float32,
+                                'generator_name': str, 'etag': str})
+except FileNotFoundError:
+    raise FileNotFoundError(f"Could not find PMG database file '{PMG_DB_FILE}'")
 
 
 def get_crossSection(dsid: int) -> float:

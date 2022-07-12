@@ -1,7 +1,7 @@
 import logging
 import time
 from dataclasses import dataclass, field
-from typing import List, Dict, OrderedDict, Set, Iterable, overload
+from typing import List, Dict, OrderedDict, Set, Iterable, overload, Final
 
 import ROOT
 import numpy as np
@@ -19,7 +19,7 @@ from utils.var_helpers import derived_vars
 from utils.variable_names import variable_data
 
 # total dataset luminosity per year (fb-1)
-lumi_year = {
+lumi_year: Final[dict] = {
     '2015': 3.21956,
     '2017': 44.3074,
     '2018': 58.4501,
@@ -275,8 +275,6 @@ class DatasetBuilder:
             df = self.build_dataframe(
                 data_path=data_path,
                 tree_dict=tree_dict,
-                is_truth=is_truth,
-                is_reco=is_reco,
             )
             __create_cut_cols = True
             __calculate_vars = True
@@ -285,7 +283,7 @@ class DatasetBuilder:
         # ===============================
         # calculate weights
         if __build_df or self.force_recalc_weights:
-            self.__calc_event_weight(df, is_reco=is_reco, is_truth=is_truth)
+            self.__calc_event_weight(df, data_path=data_path, is_reco=is_reco, is_truth=is_truth)
 
         # calculate variables
         if __calculate_vars or self.force_recalc_vars:
@@ -446,15 +444,11 @@ class DatasetBuilder:
             self,
             data_path: str,
             tree_dict: Dict[str, Set[str]],
-            is_truth: bool,
-            is_reco: bool,
     ) -> pd.DataFrame:
         if self.dataset_type == 'analysistop':
             return self.__build_dataframe_analysistop(
                 data_path=data_path,
                 tree_dict=tree_dict,
-                is_truth=is_truth,
-                is_reco=is_reco,
             )
         elif self.dataset_type == 'dta':
             return self.__build_dataframe_dta(
@@ -466,20 +460,15 @@ class DatasetBuilder:
             self,
             data_path: str,
             tree_dict: Dict[str, Set[str]],
-            is_truth: bool,
-            is_reco: bool,
     ) -> pd.DataFrame:
         """
          Builds a dataframe
 
         :param data_path: path to ROOT datafile(s)
         :param tree_dict: dictionary of tree: variables to extract from Datapath
-        :param is_truth: whether dataset contains truth data
-        :param is_reco: whether dataset contains reco data
         :return: output dataframe containing columns corresponding to necessary variables
         """
         # TODO switch to using pure ROOT instead of uproot
-
         self.logger.info(f"Building DataFrame from {data_path} ({file_utils.n_files(data_path)} file(s))...")
 
         # is the default tree a truth tree?
@@ -493,12 +482,12 @@ class DatasetBuilder:
         # Extract main tree and event weights
         # ---------------------------------------------------------------------------------
         self.logger.debug(f"Extracting {tree_dict[self.TTree_name]} from {self.TTree_name} tree...")
-        df = to_pandas(uproot.concatenate(data_path + ':' + self.TTree_name, tree_dict[self.TTree_name],
+        df = to_pandas(uproot.concatenate(str(data_path) + ':' + self.TTree_name, tree_dict[self.TTree_name],
                                           num_workers=config.n_threads, begin_chunk_size=self.chunksize))
         self.logger.debug(f"Extracted {len(df)} events.")
 
         self.logger.debug(f"Extracting ['total_EventsWeighted', 'dsid'] from 'sumWeights' tree...")
-        sumw = to_pandas(uproot.concatenate(data_path + ':sumWeights', ['totalEventsWeighted', 'dsid'],
+        sumw = to_pandas(uproot.concatenate(str(data_path) + ':sumWeights', ['totalEventsWeighted', 'dsid'],
                                             num_workers=config.n_threads, begin_chunk_size=self.chunksize))
 
         self.logger.debug(f"Calculating sum of weights and merging...")
@@ -517,7 +506,7 @@ class DatasetBuilder:
                 continue
 
             self.logger.debug(f"Extracting {tree_dict[tree]} from {tree} tree...")
-            alt_df = to_pandas(uproot.concatenate(data_path + ":" + tree, tree_dict[tree],
+            alt_df = to_pandas(uproot.concatenate(str(data_path) + ":" + tree, tree_dict[tree],
                                                   num_workers=config.n_threads, begin_chunk_size=self.chunksize))
             self.logger.debug(f"Extracted {len(alt_df)} events.")
 
@@ -598,7 +587,7 @@ class DatasetBuilder:
         self.logger.debug("Initialising RDataframe..")
 
         # go through a TChain and globber because ROOT cannot glob directory names by itself
-        chain = ROOT_utils.glob_chain(self.TTree_name, data_path)
+        chain = ROOT_utils.glob_chain(self.TTree_name, str(data_path))
         Rdf = ROOT.RDataFrame(chain)  # segfault happens if you put the chain in here directly (why god why)
         # Rdf = Rdf.Filter("(passTruth == true) & (passReco == true)")
 
@@ -760,7 +749,7 @@ class DatasetBuilder:
             except ValueError as e:
                 raise Exception(f"Error in cut {cut.cutstr}:\n {e}")
 
-    def __calc_event_weight(self, df: pd.DataFrame, is_truth: bool = False, is_reco: bool = False) -> None:
+    def __calc_event_weight(self, df: pd.DataFrame, data_path: str, is_truth: bool = False, is_reco: bool = False) -> None:
         """Calculate truth and reco event weights"""
         if self.dataset_type == 'dta':
             self.logger.info("Calculating DTA weights...")

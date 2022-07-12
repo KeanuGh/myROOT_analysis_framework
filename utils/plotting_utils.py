@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import mplhep as hep
 import pandas as pd
 from matplotlib.colors import LogNorm
+from numpy.typing import ArrayLike
 
 import src.config as config
 from utils.variable_names import variable_data
@@ -88,7 +89,7 @@ def get_axis(bins: List[float] | Tuple[int, float, float], logbins: bool = False
 def set_axis_options(
         axis: plt.axes,
         var_name: List[str] | str,
-        bins: tuple | list,
+        bins: tuple | list | ArrayLike,
         lepton: str = None,
         xlabel: str = '',
         ylabel: str = '',
@@ -115,11 +116,10 @@ def set_axis_options(
     if logx: axis.semilogx()
     if logy: axis.semilogy()
 
-    if isinstance(bins, tuple):  axis.set_xlim(bins[1], bins[2])
-    elif isinstance(bins, list): axis.set_xlim(bins[0], bins[-1])
+    if isinstance(bins, tuple) and len(bins) == 3:
+        axis.set_xlim(bins[1], bins[2])
     else:
-        raise TypeError("Bins must be formatted as either tuple (n_bins, start, stop) or a list of bin edges. "
-                        f"Given input was {bins}")
+        axis.set_xlim(bins[0], bins[-1])
 
     # set axis labels
     _xlabel, _ylabel = get_axis_labels(var_name, lepton)
