@@ -9,6 +9,7 @@ from numpy.typing import ArrayLike
 import src.config as config
 from src.dataset import Dataset
 from src.datasetbuilder import DatasetBuilder
+from src.histogram import Histogram1D
 from src.logger import get_logger
 from utils import file_utils, plotting_utils
 from utils.context import check_single_dataset, handle_dataset_arg
@@ -370,7 +371,7 @@ class Analysis:
             filename: str = None,
             filename_suffix: str = '',
             **kwargs
-    ) -> plt.Figure:
+    ) -> List[Histogram1D]:
         """
         Plot same variable from different datasets
 
@@ -500,7 +501,7 @@ class Analysis:
         fig.savefig(filename, bbox_inches='tight')
         self.logger.info(f'Saved overlay plot of {var} to {filename}')
         plt.close(fig)
-        return fig
+        return hists
 
     @check_single_dataset
     def gen_cutflow_hist(self, ds_name: str | None, **kwargs) -> None:
