@@ -283,6 +283,9 @@ class DatasetBuilder:
         # ===============================
         # calculate weights
         if __build_df or self.force_recalc_weights:
+            if self.force_recalc_cuts and self.hard_cut:
+                self.logger.warning("Recalculating weights when a (hard) cut has already been applied "
+                                    "will lead to incorrect normalisations")
             self.__calc_event_weight(df, data_path=data_path, is_reco=is_reco, is_truth=is_truth)
 
         # calculate variables
@@ -481,16 +484,16 @@ class DatasetBuilder:
 
         # Extract main tree and event weights
         # ---------------------------------------------------------------------------------
-        self.logger.debug(f"Extracting {tree_dict[self.TTree_name]} from {self.TTree_name} tree...")
+        self.logger.info(f"Extracting {tree_dict[self.TTree_name]} from {self.TTree_name} tree...")
         df = to_pandas(uproot.concatenate(str(data_path) + ':' + self.TTree_name, tree_dict[self.TTree_name],
                                           num_workers=config.n_threads, begin_chunk_size=self.chunksize))
         self.logger.debug(f"Extracted {len(df)} events.")
 
-        self.logger.debug(f"Extracting ['total_EventsWeighted', 'dsid'] from 'sumWeights' tree...")
+        self.logger.info(f"Extracting ['total_EventsWeighted', 'dsid'] from 'sumWeights' tree...")
         sumw = to_pandas(uproot.concatenate(str(data_path) + ':sumWeights', ['totalEventsWeighted', 'dsid'],
                                             num_workers=config.n_threads, begin_chunk_size=self.chunksize))
 
-        self.logger.debug(f"Calculating sum of weights and merging...")
+        self.logger.info(f"Calculating sum of weights and merging...")
         sumw = sumw.groupby('dsid').sum()
         df = pd.merge(df, sumw, left_on='mcChannelNumber', right_on='dsid', sort=False, copy=False)
 
@@ -505,7 +508,7 @@ class DatasetBuilder:
             if tree == self.TTree_name:
                 continue
 
-            self.logger.debug(f"Extracting {tree_dict[tree]} from {tree} tree...")
+            self.logger.info(f"Extracting {tree_dict[tree]} from {tree} tree...")
             alt_df = to_pandas(uproot.concatenate(str(data_path) + ":" + tree, tree_dict[tree],
                                                   num_workers=config.n_threads, begin_chunk_size=self.chunksize))
             self.logger.debug(f"Extracted {len(alt_df)} events.")
@@ -536,7 +539,7 @@ class DatasetBuilder:
             else:
                 self.logger.info(f"Skipping missing events check in tree {tree}")
 
-            self.logger.debug("Merging with rest of dataframe...")
+            self.logger.info("Merging with rest of dataframe...")
             df = pd.merge(df, alt_df, how='left', left_index=True, right_index=True, sort=False, copy=False)
         # -------------------------------------------------------------------------------------
 
