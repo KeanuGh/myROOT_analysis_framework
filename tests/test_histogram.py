@@ -119,7 +119,7 @@ class TestHistogram1DTH1Comparison:
         np.testing.assert_allclose(my_hist.n_entries, root_hist.GetEntries(), rtol=1e-05)
 
     def test_eff_enties(self, my_hist: Histogram1D, root_hist: ROOT.TH1F):
-        np.testing.assert_allclose(my_hist.eff_entries, root_hist.GetEffectiveEntries(), rtol=1e-05)
+        np.testing.assert_allclose(my_hist.eff_entries(flow=False), root_hist.GetEffectiveEntries(), rtol=1e-05)
 
     def test_mean_bh_root(self, my_hist: Histogram1D, root_hist: ROOT.TH1F):
         np.testing.assert_allclose(my_hist.mean, root_hist.GetMean(), rtol=1e-05)

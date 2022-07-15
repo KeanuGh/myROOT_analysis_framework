@@ -14,14 +14,11 @@ from numpy.typing import ArrayLike
 
 from src.logger import get_logger
 from utils.AtlasStyle import set_atlas_style
+from utils.ROOT_utils import load_ROOT_settings
 from utils.context import redirect_stdout
 
 # settings
-ROOT.gROOT.SetBatch(True)  # Prevents TCanvas popups
-ROOT.PyConfig.StartGUIThread = False  # disables polling for ROOT GUI events
-ROOT.TH1.AddDirectory(False)  # stops TH1s from being saved and prevents overwrite warnings
-ROOT.TH1.SetDefaultSumw2()  # Sets weighted binning in all ROOT histograms by default
-ROOT.EnableImplicitMT()  # enable multithreading
+load_ROOT_settings()
 set_atlas_style()  # set ATLAS plotting style to ROOT plots
 plt.style.use(hep.style.ATLAS)  # set atlas-style plots in matplotilb
 np.seterr(invalid='ignore')  # ignore division by zero errors

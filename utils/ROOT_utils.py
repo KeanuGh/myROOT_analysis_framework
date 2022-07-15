@@ -1,12 +1,28 @@
 import glob
 import logging
+import pathlib
 import pickle as pkl
 from contextlib import contextmanager
+from os import PathLike
 from typing import Type
 
 import ROOT
 import boost_histogram as bh
 import numpy as np
+
+
+# ROOT settings
+def load_ROOT_settings():
+    ROOT.gROOT.SetBatch(True)  # Prevents TCanvas popups
+    ROOT.PyConfig.StartGUIThread = False  # disables polling for ROOT GUI events
+    ROOT.TH1.AddDirectory(False)  # stops TH1s from being saved and prevents overwrite warnings
+    ROOT.TH1.SetDefaultSumw2()  # Sets weighted binning in all ROOT histograms by default
+    ROOT.EnableImplicitMT()  # enable multithreading
+
+    # declare helper function to unravel ROOT vector branches
+    ROOT.gSystem.Load(f'{pathlib.Path(__file__).parent}/rootfuncs.h')
+    ROOT.gInterpreter.Declare(f'#include "{pathlib.Path(__file__).parent}/rootfuncs.h"')
+
 
 # this dictionary decides which ROOT constructor needs to be called based on hist type and dimension
 # call it with TH1_constructor[type][n_dims](name, title, *n_bins, *bin_edges) where 'type' is in {'F','D','I','C','S'}
@@ -116,7 +132,7 @@ def convert_pkl_to_root(filename: str, histname: str | None = None) -> None:
 
 
 @contextmanager
-def ROOT_file(filename: str, TFile_arg='RECREATE'):
+def ROOT_file(filename: str | PathLike, TFile_arg='RECREATE'):
     """Context manager for opening root files"""
     file = ROOT.TFile(filename, TFile_arg)
     try:
@@ -125,23 +141,21 @@ def ROOT_file(filename: str, TFile_arg='RECREATE'):
         file.Close()
 
 
-# declare helper function to unravel ROOT vector branches
-ROOT.gInterpreter.Declare("""
-float getVecVal(ROOT::VecOps::RVec<float> x, int i = 0);
-
-float getVecVal(ROOT::VecOps::RVec<float> x, int i) {
-    if (x.size() > i)  return x[i];
-    else               return NAN;
-}
-""")
-
-
-def glob_chain(TTree: str, path: str) -> ROOT.TChain:
+def glob_chain(TTree: str, path: PathLike | str) -> ROOT.TChain:
     """Return TChain with glob'd files because ROOT can't glob by itself"""
     chain = ROOT.TChain(TTree)
     for file in glob.glob(path):
         chain.Add(file)
     return chain
+
+# # not sure why this doesn't work
+# class RDataFrame(ROOT.RDataFrame):
+#     __slots__ = 'chain'
+#
+#     def __init__(self, path: PathLike | str, tree: str):
+#         """Allow RDataFrames to be constructed with a wildcard in the filepath"""
+#         self.chain = glob_chain(tree, path)
+#         super().__init__(self.chain)
 
 
 def get_dta_sumw(path: str) -> float:
