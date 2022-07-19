@@ -23,7 +23,7 @@ lumi_year: Final[dict] = {
     '2015': 3.21956,
     '2017': 44.3074,
     '2018': 58.4501,
-    '2015+2016': 32.9881 + 3.21956
+    '2015+2016': 32988.1 + 3219.56
 }
 
 
@@ -822,8 +822,6 @@ class DatasetBuilder:
                     df['weight_KFactor'].dropna(),
                     check_exact=True, check_names=False, check_index=False
                 ), "reco and truth KFactors not equal"
-                df.drop(columns='weight_KFactor', inplace=True)
-                self.logger.debug("Dropped extra KFactor column")
             # ensure there is always only one KFactor column and it is named 'weight_KFactor'
             if is_truth:
                 df.rename(columns={'KFactor_weight_truth': 'weight_KFactor'}, inplace=True)
