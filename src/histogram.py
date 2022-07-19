@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import copy
 import logging
-from typing import List, Tuple, Any, overload
+from typing import List, Tuple, Any, overload, Type
 
 import ROOT
 import boost_histogram as bh
@@ -32,7 +32,19 @@ class Histogram1D(bh.Histogram, family=None):
     __slots__ = 'logger', 'name', 'TH1'
 
     @overload
-    def __init__(self, bins: List[float], logger: logging.Logger = None, name: str = '', title: str = '') -> None:
+    def __init__(self, th1: Type[ROOT.TH1],
+                 logger: logging.Logger = None,
+                 name: str = '',
+                 title: str = '',
+                 ) -> None:
+        ...
+
+    @overload
+    def __init__(self, bins: List[float] | np.ndarray,
+                 logger: logging.Logger = None,
+                 name: str = '',
+                 title: str = ''
+                 ) -> None:
         ...
 
     @overload
@@ -48,7 +60,7 @@ class Histogram1D(bh.Histogram, family=None):
     @overload
     def __init__(self,
                  var: ArrayLike = None,
-                 bins: List[float] | Tuple[int, float, float] | bh.axis.Axis = (10, 0, 10),
+                 bins: List[float] | np.ndarray | Tuple[int, float, float] | bh.axis.Axis = (10, 0, 10),
                  weight: ArrayLike | int = None,
                  logbins: bool = False,
                  logger: logging.Logger = None,
@@ -60,14 +72,15 @@ class Histogram1D(bh.Histogram, family=None):
 
     def __init__(self,
                  var: ArrayLike = None,
-                 bins: List[float] | Tuple[int, float, float] | bh.axis.Axis = (10, 0, 10),
+                 bins: List[float] | np.ndarray | Tuple[int, float, float] | bh.axis.Axis = (10, 0, 10),
                  weight: ArrayLike | float = None,
                  logbins: bool = False,
                  logger: logging.Logger = None,
                  name: str = '',
                  title: str = '',
+                 th1: Type[ROOT.TH1] = None,
                  **kwargs
-                 ):
+                 ) -> None:
         """
         :param bins: tuple of bins in x (n_bins, start, stop) or list of bin edges.
                      In the first case returns an axis of type Regular(), otherwise of type Variable().
@@ -75,17 +88,44 @@ class Histogram1D(bh.Histogram, family=None):
         :param var: iterable of values to fill histogram 
         :param weight: iterable of weights corresponding to each variable value or value to weight by
         :param logbins: whether logarithmic binnings
+        :param logger: logger object to pass messages to. Creates new logger object that logs to console if None
+        :param name: name of histogram
+        :param title: histogram title
+        :param th1: create a new histogram from a TH1
         :param kwargs: keyword arguments to pass to boost_histogram.Histogram()
         """
-        # to avoid issues with copying
+        if logger is None:
+            logger = get_logger()
+        self.logger = logger
+
+        # workaround for copying issue in boost_histogram
         if isinstance(var, bh._core.hist.any_weight):
             super().__init__(var)
 
-        else:
-            if logger is None:
-                logger = get_logger()
-            self.logger = logger
+        elif th1:
+            # create from TH1
+            self.logger.info(f"Creating histogram from TH1: '{th1}'...")
+            edges = [th1.GetBinLowEdge(i + 1) for i in range(th1.GetNbinsX() + 1)]
+            super().__init__(bh.axis.Variable(edges), storage=bh.storage.Weight())
 
+            # set vars
+            self.TH1 = th1.Clone()
+            if title: self.TH1.SetTitle(title)
+            if name:
+                self.TH1.SetName(name)
+                self.name = name
+            else:
+                self.name = th1.GetName()
+
+            # fill
+            for idx, _ in np.ndenumerate(self.view(flow=True)):
+                self.view(flow=True).value[idx] = th1.GetBinContent(*idx)  # bin value
+                self.view(flow=True).variance[idx] = th1.GetBinError(*idx) ** 2
+
+            if var is not None:
+                self.Fill(var, weight=weight)
+
+        else:
             self.logger.debug(f"Initialising histogram {name}...")
 
             # check length of var and weight
@@ -457,7 +497,8 @@ class Histogram1D(bh.Histogram, family=None):
                 r'$\mu=%.2f\pm%.2f$' % (self.mean, self.mean_error),
                 # r'$\sigma=%.2f\pm%.2f$' % (self.std, self.std_error),
                 r'$\mathrm{Entries}: %.0f$' % self.n_entries,
-                r'$\mathrm{Intergral}: %.2f$' % self.bin_sum(flow=True),
+                r'$\mathrm{Bin sum}: %.2f$' % self.bin_sum(),
+                r'$\mathrm{Integral}: %.2f$' % self.integral,
             ))
             ax.text(x=box_xpos, y=box_ypos, s=textstr, transform=ax.transAxes, fontsize='small')
 
