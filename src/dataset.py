@@ -230,50 +230,51 @@ class Dataset:
         print_truth = self.is_truth
         print_reco = self.is_reco
 
-        if self.logger.level == logging.DEBUG:
-            self.logger.info(f"DATASET INFO FOR {self.name}:")
-            # get max length of phys_short to display the table correctly
-            DSIDs = self.df.index.unique(level='DSID')
-            max_len_phys_short = max([len(PMG_tool.get_physics_short(dsid)) for dsid in DSIDs])
-            # per dsid
-            table_str = ''
-            for dsid in self.df.index.unique(level='DSID'):
-                phys_short = PMG_tool.get_physics_short(dsid)
-                table_str += (
-                    f"{dsid:<6} " +
-                    f"{phys_short:<{max_len_phys_short + 1}} " +
-                    f"{len(self.df.loc[dsid]):<10} " +
-                    # f"{self.df.loc[dsid, 'weight_mc'].sum():<10.6e} " +
-                    f"{PMG_tool.get_crossSection(dsid):<10.6e} " +
-                    f"{self.lumi:<10.6e} " +
-                    f"{PMG_tool.get_genFiltEff(dsid):<10.6e}" +
-                    (f"{self.df.loc[dsid, 'truth_weight'].notna().sum():<11}  "     if print_truth else "") +
-                    (f"{self.df.loc[dsid, 'truth_weight'].notna().mean():<11.5e}  " if print_truth else "") +
-                    (f"{self.df.loc[dsid, 'reco_weight'].notna().sum():<11}  "      if print_reco else "") +
-                    (f"{self.df.loc[dsid, 'reco_weight'].notna().mean():<11.5e}  "  if print_reco else "") +
-                    '\n'
-                )
-            header = (
-                '\n' +
-                "DSID   " +
-                f"{'phys_short':<{max_len_phys_short + 2}}" +
-                "n_events   " +
-                # "sum_w        " +
-                "x-s fb       " +
-                "lumi fb-1    " +
-                "filter eff.  " +
-                ("truth events " if print_truth else "") +
-                ("avg truth wt " if print_truth else "") +
-                ("reco events  " if print_reco else "") +
-                ("avg reco wt" if print_reco else "")
+        self.logger.info(f"DATASET INFO FOR {self.name}:")
+        # get max length of phys_short to display the table correctly
+        DSIDs = self.df.index.unique(level='DSID')
+        max_len_phys_short = max([len(PMG_tool.get_physics_short(dsid)) for dsid in DSIDs])
+        # per dsid
+        table_str = ''
+        for dsid in self.df.index.unique(level='DSID'):
+            phys_short = PMG_tool.get_physics_short(dsid)
+            table_str += (
+                f"{dsid:<6} " +
+                f"{phys_short:<{max_len_phys_short + 1}} " +
+                f"{len(self.df.loc[dsid]):<10} " +
+                # f"{self.df.loc[dsid, 'weight_mc'].sum():<10.6e} " +
+                f"{PMG_tool.get_crossSection(dsid):<10.6e} " +
+                f"{self.lumi:<10.6e} " +
+                f"{PMG_tool.get_genFiltEff(dsid):<10.6e} " +
+                f"{self.df.loc[dsid, 'weight_mc'].sum():<10.6}  " +
+                (f"{self.df.loc[dsid, 'truth_weight'].notna().sum():<11}  "     if print_truth else "") +
+                (f"{self.df.loc[dsid, 'truth_weight'].notna().mean():<11.5e}  " if print_truth else "") +
+                (f"{self.df.loc[dsid, 'reco_weight'].notna().sum():<11}  "      if print_reco else "") +
+                (f"{self.df.loc[dsid, 'reco_weight'].notna().mean():<11.5e}  "  if print_reco else "") +
+                '\n'
             )
-            # print it all
-            self.logger.info(
-                f"{header}\n"
-                f"{'-' * len(header)}\n"
-                f"{table_str}\n"
-                f"{'-' * len(header)}"
-            )
+        header = (
+            '\n' +
+            "DSID   " +
+            f"{'phys_short':<{max_len_phys_short + 2}}" +
+            "n_events   " +
+            # "sum_w        " +
+            "x-s fb       " +
+            "lumi fb-1    " +
+            "filter eff.  " +
+            "sumw         " +
+            ("truth events " if print_truth else "") +
+            ("avg truth wt " if print_truth else "") +
+            ("reco events  " if print_reco else "") +
+            ("avg reco wt" if print_reco else "")
+        )
+        # print it all
+        self.logger.info(
+            f"{header}\n"
+            f"{'-' * len(header)}\n"
+            f"{table_str}\n"
+            f"{'-' * len(header)}"
+        )
 
     # ===============================
     # ========== SUBSETS ============
@@ -481,7 +482,6 @@ class Dataset:
             normalise=normalise,
             **kwargs
         )
-        # self.logger.info(f"cross-section: {hist.integral}")
         return hist
 
     def plot_cut_overlays(
@@ -520,6 +520,7 @@ class Dataset:
             w2=w2,
             color='k',
             linewidth=2,
+            name=self.name,
             **kwargs
         )
 

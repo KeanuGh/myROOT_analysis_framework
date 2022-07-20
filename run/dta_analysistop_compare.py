@@ -1,3 +1,4 @@
+import numpy as np
 from numpy import pi
 
 from src.analysis import Analysis
@@ -69,18 +70,25 @@ if __name__ == '__main__':
         # 'ratio_axlim': 1.5,
         'ratio_label': 'Powheg/Sherpa',
         'stats_box': True,
-        'ratio_fit': False
+        'ratio_fit': False,
+        'scale_by_bin_width': True,
     }
+    mass_bins = np.array(
+        [130, 140.3921, 151.6149, 163.7349, 176.8237, 190.9588, 206.2239, 222.7093, 240.5125, 259.7389, 280.5022,
+         302.9253, 327.1409, 353.2922, 381.5341, 412.0336, 444.9712, 480.5419, 518.956, 560.4409, 605.242, 653.6246,
+         705.8748, 762.3018, 823.2396, 889.0486, 960.1184, 1036.869, 1119.756, 1209.268, 1305.936, 1410.332, 1523.072,
+         1644.825, 1776.311, 1918.308, 2071.656, 2237.263, 2416.107, 2609.249, 2817.83, 3043.085, 3286.347, 3549.055,
+         3832.763, 4139.151, 4470.031, 4827.361, 5213.257])
 
     # my_analysis.apply_cuts(truth=True)
 
-    # my_analysis.plot_hist('wtaunu_analysistop', 'mt_born', weight='truth_weight', bins=(30, 1, 5000), logx=True, logy=True, logbins=True)
-    # my_analysis.plot_hist('wtaunu_analysistop', 'MC_WZ_dilep_m_born', weight='truth_weight', bins=(30, 1, 5000), logx=True, logy=True, logbins=True)
-    # my_analysis.plot_hist('wtaunu_mu_dta', 'TruthMTW', weight='truth_weight', bins=(30, 1, 5000), logx=True, logy=True, logbins=True)
+    # my_analysis.plot_hist('wtaunu_analysistop', 'mt_born', weight='truth_weight', bins=mass_bins, logx=True, logy=True, logbins=True)
+    # my_analysis.plot_hist('wtaunu_analysistop', 'MC_WZ_dilep_m_born', weight='truth_weight', bins=mass_bins, logx=True, logy=True, logbins=True)
+    # my_analysis.plot_hist('wtaunu_mu_dta', 'TruthMTW', weight='truth_weight', bins=mass_bins, logx=True, logy=True, logbins=True)
     #
-    # my_analysis['wtaunu_analysistop'].plot_dsid('mt_born', weight='truth_weight', bins=(30, 1, 5000), logx=True, logy=True, logbins=True)
-    # my_analysis['wtaunu_analysistop'].plot_dsid('MC_WZ_dilep_m_born', weight='truth_weight', bins=(30, 1, 5000), logx=True, logy=True, logbins=True)
-    # my_analysis['wtaunu_mu_dta'].plot_dsid('TruthMTW', weight='truth_weight', bins=(30, 1, 5000), logx=True, logy=True, logbins=True)
+    # my_analysis['wtaunu_analysistop'].plot_dsid('mt_born', weight='truth_weight', bins=mass_bins, logx=True, logy=True, logbins=True)
+    # my_analysis['wtaunu_analysistop'].plot_dsid('MC_WZ_dilep_m_born', weight='truth_weight', bins=mass_bins, logx=True, logy=True, logbins=True)
+    # my_analysis['wtaunu_mu_dta'].plot_dsid('TruthMTW', weight='truth_weight', bins=mass_bins, logx=True, logy=True, logbins=True)
 
     # calc weights
     # my_analysis.logger.info("Calculating DTA weights...")
@@ -101,11 +109,11 @@ if __name__ == '__main__':
     # -----------------------------------
     # unnormalised
     my_analysis.plot_hist(['wtaunu_mu_dta', 'wtaunu_analysistop'], ['TruthBosonM', 'MC_WZ_dilep_m_born'],
-                          bins=(30, 1, 5000), weight='truth_weight', ratio_axlim=1.5,
+                          bins=mass_bins, weight='truth_weight', ratio_axlim=1.5,
                           title='truth - 36.2fb$^{-1}$', normalise=False, logx=True, logbins=True, **ratio_args)
 
     my_analysis.plot_hist(['wtaunu_mu_dta', 'wtaunu_analysistop'], ['TruthTauPt', 'MC_WZmu_el_pt_born'],
-                          bins=(30, 1, 5000), weight='truth_weight',
+                          bins=mass_bins, weight='truth_weight',
                           title='truth - 36.2fb$^{-1}$', normalise=False, logx=True, logbins=True, **ratio_args)
 
     my_analysis.plot_hist(['wtaunu_mu_dta', 'wtaunu_analysistop'], ['TruthTauEta', 'MC_WZmu_el_eta_born'],
@@ -117,7 +125,7 @@ if __name__ == '__main__':
                           title='truth - 36.2fb$^{-1}$', normalise=False, **ratio_args)
 
     my_analysis.plot_hist(['wtaunu_mu_dta', 'wtaunu_analysistop'], ['TruthNeutrinoPt', 'MC_WZneutrino_pt_born'],
-                          bins=(30, 1, 5000), weight='truth_weight',
+                          bins=mass_bins, weight='truth_weight',
                           title='truth - 36.2fb$^{-1}$', normalise=False, logx=True, logbins=True, **ratio_args)
 
     my_analysis.plot_hist(['wtaunu_mu_dta', 'wtaunu_analysistop'], ['TruthNeutrinoEta', 'MC_WZneutrino_eta_born'],
@@ -129,16 +137,16 @@ if __name__ == '__main__':
                           title='truth - 36.2fb$^{-1}$', normalise=False, **ratio_args)
 
     my_analysis.plot_hist(['wtaunu_mu_dta', 'wtaunu_analysistop'], ['TruthMTW', 'mt_born'],
-                          bins=(30, 1, 5000), weight='truth_weight', ratio_axlim=1.5,
+                          bins=mass_bins, weight='truth_weight', ratio_axlim=1.5,
                           title='truth - 36.2fb$^{-1}$', normalise=False, logx=True, logbins=True, **ratio_args)
 
-    my_analysis.plot_hist('wtaunu_mu_dta', 'TruthMuonPt', weight='truth_weight', bins=(30, 1, 5000), logx=True, logy=True, logbins=True)
+    my_analysis.plot_hist('wtaunu_mu_dta', 'TruthMuonPt', weight='truth_weight', bins=mass_bins, logx=True, logy=True, logbins=True)
     my_analysis.plot_hist('wtaunu_mu_dta', 'TruthMuonEta', weight='truth_weight', bins=(30, -5, 5), logy=True)
     my_analysis.plot_hist('wtaunu_mu_dta', 'TruthMuonPhi', weight='truth_weight', bins=(30, -pi, pi), logy=True)
 
     # # # normalised
     # my_analysis.plot_hist(['wtaunu_mu_dta', 'wtaunu_analysistop'], ['TruthTauPt', 'MC_WZmu_el_pt_born'],
-    #                       bins=(30, 1, 5000), weight='truth_weight',
+    #                       bins=mass_bins, weight='truth_weight',
     #                       title='normalised to 1', normalise=True, logx=True, logbins=True, **ratio_args)
     #
     # my_analysis.plot_hist(['wtaunu_mu_dta', 'wtaunu_analysistop'], ['TruthTauEta', 'MC_WZmu_el_eta_born'],
@@ -150,7 +158,7 @@ if __name__ == '__main__':
     #                       title='normalised to 1', normalise=True, **ratio_args)
     #
     # my_analysis.plot_hist(['wtaunu_mu_dta', 'wtaunu_analysistop'], ['TruthNeutrinoPt', 'MC_WZneutrino_pt_born'],
-    #                       bins=(30, 1, 5000), weight='truth_weight',
+    #                       bins=mass_bins, weight='truth_weight',
     #                       title='normalised to 1', normalise=True, logx=True, logbins=True, **ratio_args)
     #
     # my_analysis.plot_hist(['wtaunu_mu_dta', 'wtaunu_analysistop'], ['TruthNeutrinoEta', 'MC_WZneutrino_eta_born'],
@@ -162,7 +170,7 @@ if __name__ == '__main__':
     #                       title='normalised to 1', normalise=True, **ratio_args)
     #
     # my_analysis.plot_hist(['wtaunu_mu_dta', 'wtaunu_analysistop'], ['TruthMTW', 'mt_born'],
-    #                       bins=(30, 1, 5000), weight='truth_weight',
+    #                       bins=mass_bins, weight='truth_weight',
     #                       title='normalised to 1', normalise=True, logx=True, logbins=True, **ratio_args)
 
     # # RECO
@@ -177,7 +185,7 @@ if __name__ == '__main__':
     #
     # # un-normalised
     # my_analysis.plot_hist(['wtaunu_mu_dta', 'wtaunu_analysistop'], ['MuonPt', 'mu_pt'],
-    #                       bins=(30, 1, 5000), weight=['muon_reco_weight', 'reco_weight'],
+    #                       bins=mass_bins, weight=['muon_reco_weight', 'reco_weight'],
     #                       normalise=False, title='reco - 36.2fb$^{-1}$', logx=True, logbins=True, **ratio_args)
     #
     # my_analysis.plot_hist(['wtaunu_mu_dta', 'wtaunu_analysistop'], ['MuonEta', 'mu_eta'],
@@ -189,7 +197,7 @@ if __name__ == '__main__':
     #                       normalise=False, title='reco - 36.2fb$^{-1}$', **ratio_args)
     #
     # my_analysis.plot_hist(['wtaunu_mu_dta', 'wtaunu_analysistop'], ['MET_met', 'met_met'],
-    #                       bins=(30, 1, 5000), weight=['muon_reco_weight', 'reco_weight'],
+    #                       bins=mass_bins, weight=['muon_reco_weight', 'reco_weight'],
     #                       normalise=False, title='reco - 36.2fb$^{-1}$', logx=True, logbins=True, **ratio_args)
     #
     # my_analysis.plot_hist(['wtaunu_mu_dta', 'wtaunu_analysistop'], ['MET_phi', 'met_phi'],
@@ -197,7 +205,7 @@ if __name__ == '__main__':
     #                       normalise=False, title='reco - 36.2fb$^{-1}$', **ratio_args)
     #
     # my_analysis.plot_hist(['wtaunu_mu_dta', 'wtaunu_analysistop'], ['MTW', 'mu_mt_reco'],
-    #                       bins=(30, 1, 5000), weight=['muon_reco_weight', 'reco_weight'],
+    #                       bins=mass_bins, weight=['muon_reco_weight', 'reco_weight'],
     #                       normalise=False, title='reco - 36.2fb$^{-1}$', logx=True, logbins=True, **ratio_args)
     #
     # my_analysis.plot_hist(['wtaunu_mu_dta', 'wtaunu_analysistop'], ['Muon_d0sig', 'mu_d0sig'],
@@ -210,7 +218,7 @@ if __name__ == '__main__':
     #
     # # normalised
     # my_analysis.plot_hist(['wtaunu_mu_dta', 'wtaunu_analysistop'], ['MuonPt', 'mu_pt'],
-    #                       bins=(30, 1, 5000), weight=['muon_reco_weight', 'reco_weight'],
+    #                       bins=mass_bins, weight=['muon_reco_weight', 'reco_weight'],
     #                       normalise=True, title='normalised to 1', logx=True, logbins=True, **ratio_args)
     #
     # my_analysis.plot_hist(['wtaunu_mu_dta', 'wtaunu_analysistop'], ['MuonEta', 'mu_eta'],
@@ -222,7 +230,7 @@ if __name__ == '__main__':
     #                       normalise=True, title='normalised to 1', **ratio_args)
     #
     # my_analysis.plot_hist(['wtaunu_mu_dta', 'wtaunu_analysistop'], ['MET_met', 'met_met'],
-    #                       bins=(30, 1, 5000), weight=['muon_reco_weight', 'reco_weight'],
+    #                       bins=mass_bins, weight=['muon_reco_weight', 'reco_weight'],
     #                       normalise=True, title='normalised to 1', logx=True, logbins=True, **ratio_args)
     #
     # my_analysis.plot_hist(['wtaunu_mu_dta', 'wtaunu_analysistop'], ['MET_phi', 'met_phi'],
@@ -230,7 +238,7 @@ if __name__ == '__main__':
     #                       normalise=True, title='normalised to 1', **ratio_args)
     #
     # my_analysis.plot_hist(['wtaunu_mu_dta', 'wtaunu_analysistop'], ['MTW', 'mu_mt_reco'],
-    #                       bins=(30, 1, 5000), weight=['muon_reco_weight', 'reco_weight'],
+    #                       bins=mass_bins, weight=['muon_reco_weight', 'reco_weight'],
     #                       normalise=True, title='normalised to 1', logx=True, logbins=True, **ratio_args)
     #
     # my_analysis.plot_hist(['wtaunu_mu_dta', 'wtaunu_analysistop'], ['Muon_d0sig', 'mu_d0sig'],

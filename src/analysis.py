@@ -243,7 +243,8 @@ class Analysis:
             delete: bool = True,
             to_pkl: bool = False,
             verify: bool = False,
-            delete_pkl: bool = False
+            delete_pkl: bool = False,
+            sort: bool = True,
     ) -> None:
         """
         Merge datasets by concatenating one or more into the other
@@ -256,6 +257,7 @@ class Analysis:
         :param to_pkl: whether to print new dataset to a pickle file (will replace original pickle file)
         :param verify: whether to check for duplicated events
         :param delete_pkl: whether to delete pickle files of merged datasets (not the one that is merged into)
+        :param sort: whether to sort output dataset
         """
         for n in datasets:
             if n not in self.datasets:
@@ -280,6 +282,9 @@ class Analysis:
 
         self[datasets[0]].df = pd.concat([self[n].df for n in datasets], verify_integrity=verify, copy=False)
         self[datasets[0]].name = datasets[0]
+
+        if sort:
+            self[datasets[0]].df.sort_index(level='DSID', inplace=True)
 
         if new_name:
             self[new_name] = self.datasets.pop(datasets[0])
@@ -363,6 +368,7 @@ class Analysis:
             ylabel: str = '',
             title: str = '',
             lepton: str = 'lepton',
+            scale_by_bin_width: bool = False,
             stats_box: bool = False,
             ratio_plot: bool = True,
             ratio_fit: bool = False,
@@ -404,6 +410,7 @@ class Analysis:
         :param ylabel: y label
         :param title: plot title
         :param lepton: lepton to fill variable label
+        :param scale_by_bin_width: divide histogram bin values by bin width
         :param stats_box: display stats box
         :param ratio_plot: If True, adds ratio of the first plot with each subseqent plot below
         :param ratio_fit: If True, fits ratio plot to a 0-degree polynomial and display line, chi-square and p-value
@@ -457,6 +464,7 @@ class Analysis:
                     w2=w2,
                     stats_box=stats_box,
                     name=self[dataset].name,
+                    scale_by_bin_width=scale_by_bin_width,
                     **kwargs
                 )
             )
@@ -476,7 +484,8 @@ class Analysis:
                 )
 
         ax.legend(fontsize=10, loc='upper right')
-        plotting_utils.set_axis_options(ax, var, bins, lepton, xlabel, ylabel, title, logx, logy)
+        plotting_utils.set_axis_options(ax, var, bins, lepton, xlabel, ylabel, title, logx, logy,
+                                        diff_xs=scale_by_bin_width)
         if ratio_plot:
             fig.tight_layout()
             fig.subplots_adjust(hspace=0.1, wspace=0)
@@ -487,7 +496,8 @@ class Analysis:
                 ratio_ax.legend(fontsize=10, loc=1)
 
             plotting_utils.set_axis_options(axis=ratio_ax, var_name=var, bins=bins, lepton=lepton,
-                                            xlabel=xlabel, ylabel=ratio_label, title='', logx=logx, logy=False, label=False)
+                                            diff_xs=scale_by_bin_width, xlabel=xlabel, ylabel=ratio_label,
+                                            title='', logx=logx, logy=False, label=False)
 
         if filename:
             filename = self.paths['plot_dir'] + '/' + filename

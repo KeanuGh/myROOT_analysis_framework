@@ -18,7 +18,8 @@ plt.style.use([hep.style.ATLAS])
 # ===============================
 # ===== HISTOGRAM VARIABLES =====
 # ===============================
-def get_axis_labels(var_name: str | List[str], lepton: str = 'lepton') -> Tuple[str | None, str | None]:
+def get_axis_labels(var_name: str | List[str], lepton: str = 'lepton', diff_xs: bool = False
+                    ) -> Tuple[str | None, str | None]:
     """Gets label for corresponding variable in axis labels dictionary"""
     if isinstance(var_name, list):
         # If a list is passed, check if all variables have the same name, otherwise throw warning and pick first
@@ -56,7 +57,10 @@ def get_axis_labels(var_name: str | List[str], lepton: str = 'lepton') -> Tuple[
 
     if variable_data[var_name]['tag'] == 'truth':
         # weird but it does the job
-        ylabel = r'$\frac{d\sigma}{d' + symbol + r'}$ [fb' + (f' {units}' + '$^{-1}$]' if units else ']')
+        if diff_xs:
+            ylabel = r'$\frac{d\sigma}{d' + symbol + r'}$ [fb' + (f' {units}' + '$^{-1}$]' if units else ']')
+        else:
+            ylabel = r'$d\sigma$ [fb$^{-1}$]'
     else:
         ylabel = 'Entries'
 
@@ -96,7 +100,8 @@ def set_axis_options(
         title: str = '',
         logx: bool = False,
         logy: bool = False,
-        label: bool = True
+        label: bool = True,
+        diff_xs: bool = False
 ) -> plt.axes:
     """
     Sets my default axis options
@@ -111,6 +116,7 @@ def set_axis_options(
     :param logx: bool whether to set log axis
     :param logy: whether to set logarithmic bins where appropriate
     :param label: whether to add ATLAS label
+    :param diff_xs: set yaxis label to differential cross-section
     :return: changed axis (also works in place)
     """
     if logx: axis.semilogx()
@@ -122,7 +128,7 @@ def set_axis_options(
         axis.set_xlim(bins[0], bins[-1])
 
     # set axis labels
-    _xlabel, _ylabel = get_axis_labels(var_name, lepton)
+    _xlabel, _ylabel = get_axis_labels(var_name, lepton, diff_xs)
     axis.set_xlabel(xlabel if xlabel else _xlabel)
     axis.set_ylabel(ylabel if ylabel else _ylabel)
     axis.minorticks_on()

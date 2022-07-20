@@ -102,32 +102,8 @@ class Histogram1D(bh.Histogram, family=None):
         if isinstance(var, bh._core.hist.any_weight):
             super().__init__(var)
 
-        elif th1:
-            # create from TH1
-            self.logger.info(f"Creating histogram from TH1: '{th1}'...")
-            edges = [th1.GetBinLowEdge(i + 1) for i in range(th1.GetNbinsX() + 1)]
-            super().__init__(bh.axis.Variable(edges), storage=bh.storage.Weight())
-
-            # set vars
-            self.TH1 = th1.Clone()
-            if title: self.TH1.SetTitle(title)
-            if name:
-                self.TH1.SetName(name)
-                self.name = name
-            else:
-                self.name = th1.GetName()
-
-            # fill
-            for idx, _ in np.ndenumerate(self.view(flow=True)):
-                self.view(flow=True).value[idx] = th1.GetBinContent(*idx)  # bin value
-                self.view(flow=True).variance[idx] = th1.GetBinError(*idx) ** 2
-
-            if var is not None:
-                self.Fill(var, weight=weight)
-
         else:
-            self.logger.debug(f"Initialising histogram {name}...")
-
+            self.logger.debug("Checking variables..")
             # check length of var and weight
             if hasattr(weight, '__len__') and (len(var) != len(weight)):
                 raise ValueError(f"Weight and value arrays are of different lengths! {len(weight)}, {len(var)}")
@@ -139,24 +115,50 @@ class Histogram1D(bh.Histogram, family=None):
                 if n_inv := inv_bool.sum():
                     self.logger.error(f"{n_inv} invalid entries in histogram!")
 
-            # TH1
-            self.TH1 = ROOT.TH1F(name, title, *self.__get_TH1_bins(bins))
+            if th1:
+                # create from TH1
+                self.logger.info(f"Creating histogram from TH1: '{th1}'...")
+                edges = [th1.GetBinLowEdge(i + 1) for i in range(th1.GetNbinsX() + 1)]
+                super().__init__(bh.axis.Variable(edges), storage=bh.storage.Weight())
 
-            self.name = name
+                # set vars
+                self.TH1 = th1.Clone()
+                if title: self.TH1.SetTitle(title)
+                if name:
+                    self.TH1.SetName(name)
+                    self.name = name
+                else:
+                    self.name = th1.GetName()
 
-            # get axis
-            axis = (
-                bins if isinstance(bins, bh.axis.Axis)
-                else self.__gen_axis(bins, logbins)
-            )
-            super().__init__(
-                axis,
-                storage=bh.storage.Weight(),
-                **kwargs
-            )
+                # fill
+                for idx, _ in np.ndenumerate(self.view(flow=True)):
+                    self.view(flow=True).value[idx] = th1.GetBinContent(*idx)  # bin value
+                    self.view(flow=True).variance[idx] = th1.GetBinError(*idx) ** 2
 
-            if var is not None:
-                self.Fill(var, weight=weight)
+                if var is not None:
+                    self.Fill(var, weight=weight)
+
+            else:
+                self.logger.debug(f"Initialising histogram {name}...")
+
+                # TH1
+                self.TH1 = ROOT.TH1F(name, title, *self.__get_TH1_bins(bins))
+
+                self.name = name
+
+                # get axis
+                axis = (
+                    bins if isinstance(bins, bh.axis.Axis)
+                    else self.__gen_axis(bins, logbins)
+                )
+                super().__init__(
+                    axis,
+                    storage=bh.storage.Weight(),
+                    **kwargs
+                )
+
+                if var is not None:
+                    self.Fill(var, weight=weight)
 
     def Fill(self, var: ArrayLike, weight: ArrayLike | int | float = None) -> Histogram1D:
         self.logger.debug(f"Filling histogram {self.name} with {len(var)} events..")
@@ -175,11 +177,13 @@ class Histogram1D(bh.Histogram, family=None):
     def __copy__(self) -> Histogram1D:
         new = self._new_hist(copy.copy(self._hist))
         new.TH1 = self.TH1.Clone()
+        new.name = self.name
         return new
 
     def __deepcopy__(self, memo: Any) -> Histogram1D:
         new = self._new_hist(copy.deepcopy(self._hist), memo=memo)
         new.TH1 = self.TH1.Clone()
+        new.name = self.name
         return new
 
     def __truediv__(self, other: bh.Histogram | "np.typing.NDArray[Any]" | float) -> Histogram1D:
@@ -273,7 +277,7 @@ class Histogram1D(bh.Histogram, family=None):
             if len(bins) == 3 and isinstance(bins, tuple):
                 return bins
             else:
-                return len(bins) -1, np.array(bins)
+                return len(bins) - 1, np.array(bins)
 
         raise ValueError("Bins should be list of bin edges or tuple like (nbins, xmin, xmax)")
 
@@ -459,16 +463,21 @@ class Histogram1D(bh.Histogram, family=None):
         :param show: whether to display the plot (plt.show())
         :return: matplotlib axis object with plot
         """
+        hist = self.copy()
+
+        if scale_by_bin_width:
+            self.logger.debug(f"Scaling histogram {self.name} by bin width...")
+            hist /= hist.bin_widths
+
         # normalise/scale
         if not normalise:
             self.logger.debug(f"Plotting histogram {self.name}...")
-            hist = self.copy()
         elif normalise is True:
             self.logger.debug(f"Plotting histogram {self.name} normalised to unity...")
-            hist = self.normalised()
+            hist.normalise()
         else:
             self.logger.debug(f"Plotting normalised histogram {self.name} normalised to {normalise}...")
-            hist = self.normalised_to(normalise)
+            hist.normalise_to(normalise)
 
         if scale_by_bin_width:
             hist /= hist.bin_widths

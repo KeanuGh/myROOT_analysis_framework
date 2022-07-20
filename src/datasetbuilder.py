@@ -656,6 +656,9 @@ class DatasetBuilder:
         # rescale GeV columns
         self.__rescale_to_gev(df)
 
+        # rename mcWeight
+        df.rename(columns={'mcWeight': 'weight_mc'}, inplace=True)
+
         # self.logger.info("Checking for invalid weights...")
         # if df['reco_weight'].isna().any() or np.isinf(df['reco_weight']).any():
         #     raise ValueError("NAN values in truth weights!")
@@ -756,7 +759,7 @@ class DatasetBuilder:
         """Calculate truth and reco event weights"""
         if self.dataset_type == 'dta':
             self.logger.info("Calculating DTA weights...")
-            # sumw = ROOT_utils.get_dta_sumw(data_path)
+            sumw = ROOT_utils.get_dta_sumw(data_path)
             df['truth_weight'] = np.nan
             df['reco_weight'] = np.nan
             for dsid, dsid_df in df.groupby(level='DSID'):
@@ -764,9 +767,9 @@ class DatasetBuilder:
                 kFactor = PMG_tool.get_kFactor(dsid)
                 filterEfficiency = PMG_tool.get_genFiltEff(dsid)
                 PMG_factor = xs * kFactor * filterEfficiency
-                sumw = dsid_df['mcWeight'].sum()
+                # sumw = dsid_df['weight_mc'].sum()
 
-                df.loc[dsid, 'truth_weight'] = dsid_df['mcWeight'] * self.lumi * dsid_df['rwCorr'] * dsid_df['prwWeight'] * PMG_factor / sumw
+                df.loc[dsid, 'truth_weight'] = dsid_df['weight_mc'] * self.lumi * dsid_df['rwCorr'] * dsid_df['prwWeight'] * PMG_factor / sumw
                 df.loc[dsid, 'reco_weight'] = dsid_df['weight'] * self.lumi * PMG_factor / sumw
 
             # filter events with nan/inf weight values (why do these appear?)
