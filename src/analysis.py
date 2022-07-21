@@ -126,6 +126,7 @@ class Analysis:
 
             # make dataset
             builder = DatasetBuilder(
+                name=name,
                 **builder_args,
                 logger=(
                     self.logger  # use single logger
@@ -376,6 +377,7 @@ class Analysis:
             ratio_label: str = 'Ratio',
             filename: str = None,
             filename_suffix: str = '',
+            filename_prefix: str = '',
             **kwargs
     ) -> List[Histogram1D]:
         """
@@ -418,6 +420,7 @@ class Analysis:
         :param ratio_label: y-axis label for ratio plot
         :param filename: name of output
         :param filename_suffix: suffix to add at end of automatic filename if 'filename' arg not passed
+        :param filename_prefix: prefix to add at end of automatic filename if 'filename' arg not passed
         :param kwargs: keyword arguments to pass to mplhep.histplot()
         """
         self.logger.info(f'Plotting {var} in as overlay in {datasets}...')
@@ -506,7 +509,13 @@ class Analysis:
                 varname = '_'.join(var)
             else:
                 varname = var
-            filename = f"{self.paths['plot_dir']}{'_'.join(datasets)}_{varname}{'_NORMED' if normalise else ''}_{filename_suffix}.png"
+            filename = f"{self.paths['plot_dir']}" \
+                       f"{filename_prefix}_" \
+                       f"{'_'.join(datasets)}" \
+                       f"_{varname}" \
+                       f"{'_NORMED' if normalise else ''}" \
+                       f"_{filename_suffix}" \
+                       f".png"
 
         fig.savefig(filename, bbox_inches='tight')
         self.logger.info(f'Saved overlay plot of {var} to {filename}')
