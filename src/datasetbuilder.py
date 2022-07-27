@@ -18,7 +18,7 @@ from utils import file_utils, ROOT_utils, PMG_tool
 from utils.var_helpers import derived_vars
 from utils.variable_names import variable_data
 
-# total dataset luminosity per year (fb-1)
+# total dataset luminosity per year (pb-1)
 lumi_year: Final[dict] = {
     '2015': 3.21956,
     '2017': 44.3074,
@@ -634,13 +634,13 @@ class DatasetBuilder:
         # import needed columns to pandas dataframe
         cols_to_extract = [c for c in import_cols
                            if c not in badcols]
-        self.logger.debug(f"Extracting {tree_dict[self.TTree_name]} from {self.TTree_name} tree...")
+        self.logger.info(f"Extracting {tree_dict[self.TTree_name]} from {self.TTree_name} tree...")
         df = pd.DataFrame(Rdf.AsNumpy(columns=cols_to_extract))
         self.logger.debug(f"Extracted {len(df.index)} events.")
 
+        self.logger.debug("Setting DSID/eventNumber as index...")
         df.set_index(['mcChannel', 'eventNumber'], inplace=True)
         df.index.names = ['DSID', 'eventNumber']
-        self.logger.debug("Set DSID/eventNumber as index")
 
         self.logger.info("Sorting by DSID...")
         df.sort_index(level='DSID', inplace=True)
@@ -651,7 +651,7 @@ class DatasetBuilder:
             self.__drop_duplicates(df)
             self.__drop_duplicate_event_numbers(df)
         else:
-            self.logger.info("Skipping duplicted events validation")
+            self.logger.info("Skipping duplicated events validation")
 
         # rescale GeV columns
         self.__rescale_to_gev(df)
@@ -681,15 +681,15 @@ class DatasetBuilder:
             # add necessary metadata to all trees
             tree_dict[tree] |= {'mcChannelNumber', 'eventNumber'}
             if 'nominal' in tree.lower():
-                self.logger.info(f"Detected {tree} as reco tree, "
-                                 f"adding 'weight_leptonSF' and 'weight_KFactor' to tree variables")
+                self.logger.debug(f"Detected {tree} as reco tree, "
+                                  f"adding 'weight_leptonSF' and 'weight_KFactor' to tree variables")
                 tree_dict[tree] |= {'weight_leptonSF', 'weight_KFactor'}
             elif 'truth' in tree.lower():
-                self.logger.info(f"Detected {tree} as truth tree, "
-                                 f"adding 'KFactor_weight_truth' to tree variables")
+                self.logger.debug(f"Detected {tree} as truth tree, "
+                                  f"adding 'KFactor_weight_truth' to tree variables")
                 tree_dict[tree].add('KFactor_weight_truth')
             else:
-                self.logger.info(f"Neither {tree} as truth nor reco dataset detected.")
+                self.logger.debug(f"Neither {tree} as truth nor reco dataset detected.")
 
         return tree_dict
 
@@ -759,7 +759,7 @@ class DatasetBuilder:
         """Calculate truth and reco event weights"""
         if self.dataset_type == 'dta':
             self.logger.info("Calculating DTA weights...")
-            sumw = ROOT_utils.get_dta_sumw(data_path)
+            # sumw = ROOT_utils.get_dta_sumw(data_path)
             df['truth_weight'] = np.nan
             df['reco_weight'] = np.nan
             for dsid, dsid_df in df.groupby(level='DSID'):
@@ -767,7 +767,7 @@ class DatasetBuilder:
                 kFactor = PMG_tool.get_kFactor(dsid)
                 filterEfficiency = PMG_tool.get_genFiltEff(dsid)
                 PMG_factor = xs * kFactor * filterEfficiency
-                # sumw = dsid_df['weight_mc'].sum()
+                sumw = dsid_df['weight_mc'].sum()
 
                 df.loc[dsid, 'truth_weight'] = dsid_df['weight_mc'] * self.lumi * dsid_df['rwCorr'] * dsid_df['prwWeight'] * PMG_factor / sumw
                 df.loc[dsid, 'reco_weight'] = dsid_df['weight'] * self.lumi * PMG_factor / sumw

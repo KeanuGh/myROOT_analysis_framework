@@ -32,7 +32,7 @@ class Dataset:
     :param label: Label to put on plots
     :param logger: Logger object to print to. Defaults to console output at DEBUG-level
     :param lepton: Name of charged DY lepton channel in dataset (if applicable)
-    :param pkl_dir: directory to save plots to. Defaults to current directory
+    :param plot_dir: directory to save plots to. Defaults to current directory
     :param pkl_file: File containing pickled DataFrame. Defaults to '<name>.pkl' in current directory
     """
     name: str
@@ -246,7 +246,7 @@ class Dataset:
                 f"{PMG_tool.get_crossSection(dsid):<10.6e} " +
                 f"{self.lumi:<10.6e} " +
                 f"{PMG_tool.get_genFiltEff(dsid):<10.6e} " +
-                f"{self.df.loc[dsid, 'weight_mc'].sum():<10.6}  " +
+                f"{self.df.loc[dsid, 'weight_mc'].sum():<10.6e}  " +
                 (f"{self.df.loc[dsid, 'truth_weight'].notna().sum():<11}  "     if print_truth else "") +
                 (f"{self.df.loc[dsid, 'truth_weight'].notna().mean():<11.5e}  " if print_truth else "") +
                 (f"{self.df.loc[dsid, 'reco_weight'].notna().sum():<11}  "      if print_reco else "") +

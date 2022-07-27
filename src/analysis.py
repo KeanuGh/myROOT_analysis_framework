@@ -1,5 +1,6 @@
 import inspect
 import os
+from collections import OrderedDict
 from typing import Dict, List, Tuple, Iterable
 
 import matplotlib.pyplot as plt
@@ -11,7 +12,7 @@ from src.dataset import Dataset
 from src.datasetbuilder import DatasetBuilder
 from src.histogram import Histogram1D
 from src.logger import get_logger
-from utils import file_utils, plotting_utils
+from utils import file_utils, plotting_utils, ROOT_utils
 from utils.context import check_single_dataset, handle_dataset_arg
 
 
@@ -22,7 +23,7 @@ class Analysis:
     Access datasets in class with analysis.dataset_name or analsis['dataset_name']. Can set by key but not by attribute
     When calling a method that applies to only one dataset, naming the dataset in argument ds_name is optional.
     """
-    __slots__ = "paths", "name", "paths", "logger", "datasets", "global_lumi"
+    __slots__ = "name", "paths", "histograms", "logger", "datasets", "global_lumi", "__output_dir"
 
     def __init__(
             self,
@@ -53,20 +54,19 @@ class Analysis:
         self.name = analysis_label
         if self.name in data_dict:
             raise SyntaxError("Analysis must have different name to any dataset")
+        self.histograms: OrderedDict[str, Histogram1D] = OrderedDict()
 
         # SET OUTPUT DIRECTORIES
         # ===========================
         if not output_dir:
             # root in the directory above this one
             output_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        output_dir = output_dir + '/outputs/' + analysis_label + '/'  # where outputs go
+        self.__output_dir = output_dir + '/outputs/' + analysis_label + '/'  # where outputs go
         self.paths = {
-            'plot_dir': output_dir + '/plots/',  # where plots go
+            'plot_dir': self.__output_dir + '/plots/',  # where plots go
             'pkl_df_dir': data_dir if data_dir else output_dir + '/data/',  # pickle file directory
-            'pkl_hist_dir': output_dir + '/histograms/',  # pickle file to place histograms into
-            'backup_cutfiles_dir': output_dir + '/cutfiles/',  # cutfile backups
-            'latex_dir': output_dir + '/LaTeX/',  # where to print latex cutflow table
-            'log_dir': output_dir + '/logs/',
+            'latex_dir': self.__output_dir + '/LaTeX/',  # where to print latex cutflow table
+            'log_dir': self.__output_dir + '/logs/',
         }
         for path in self.paths:
             file_utils.makedir(self.paths[path])
@@ -376,8 +376,8 @@ class Analysis:
             ratio_axlim: float = None,
             ratio_label: str = 'Ratio',
             filename: str = None,
-            filename_suffix: str = '',
-            filename_prefix: str = '',
+            name_suffix: str = '',
+            name_prefix: str = '',
             **kwargs
     ) -> List[Histogram1D]:
         """
@@ -419,14 +419,28 @@ class Analysis:
         :param ratio_axlim: pass to yax_lim in rato plotter
         :param ratio_label: y-axis label for ratio plot
         :param filename: name of output
-        :param filename_suffix: suffix to add at end of automatic filename if 'filename' arg not passed
-        :param filename_prefix: prefix to add at end of automatic filename if 'filename' arg not passed
+        :param name_suffix: suffix to add at end of histogram/file name
+        :param name_prefix: prefix to add at start of histogram/file
         :param kwargs: keyword arguments to pass to mplhep.histplot()
         """
         self.logger.info(f'Plotting {var} in as overlay in {datasets}...')
 
+        # naming template for file/histogram name
+        name_template = (
+            ((name_prefix + '_') if name_prefix else '') +  # prefix
+            "{dataset}" +                                   # name of dataset(s)
+            "_{variable}" +                                 # name of variable(s)
+            ('_NORMED' if normalise else '') +              # normalisation flag
+            (('_' + name_suffix) if name_suffix else '')    # suffix
+        )
+
+        if isinstance(datasets, str):
+            datasets = [datasets]
+        if isinstance(labels, str):
+            labels = [labels]
+
         # no ratio if just one thing being plotted
-        if isinstance(datasets, str) or (len(datasets) == 1):
+        if len(datasets) == 1:
             ratio_plot = False
 
         if isinstance(normalise, str):
@@ -443,38 +457,42 @@ class Analysis:
             fig, (ax, ratio_ax) = plt.subplots(2, 1, gridspec_kw={'height_ratios': [3, 1]})
         else:
             fig, ax = plt.subplots()
-            ratio_ax = None  # just so IDE doesn't complain
+            ratio_ax = None  # just so IDE doesn't complain about missing variable
 
-        if (not isinstance(datasets, str)) and (len(datasets) > 2):
+        if len(datasets) > 2:
             self.logger.warning("Not enough space to display stats box. Will not display")
             stats_box = False
 
-        if isinstance(datasets, str):
-            datasets = [datasets]
-        hists = []
+        hists = []  # add histograms to be overlaid in this list
         for i, dataset in enumerate(datasets):
-            hists.append(
-                self[dataset].plot_hist(
-                    var=var if isinstance(var, str) else var[i],
+            varname = var if isinstance(var, str) else var[i]
+            label = labels[i] if isinstance(labels, list) else self[dataset].label
+            hist_name = name_template.format(dataset=dataset, variable=var)
+            hist = self[dataset].plot_hist(
+                    var=varname,
                     bins=bins,
                     weight=weight[i] if isinstance(weight, list) else weight,
                     ax=ax,
                     yerr=yerr,
                     normalise=normalise,
                     logbins=logbins,
-                    label=labels[i] if labels else self[dataset].label,
+                    name=hist_name,
+                    label=label,
                     apply_cuts=apply_cuts,
                     w2=w2,
                     stats_box=stats_box,
-                    name=self[dataset].name,
                     scale_by_bin_width=scale_by_bin_width,
                     **kwargs
                 )
-            )
+            hists.append(hist)
+            self.histograms[hist_name] = hist
+
             if ratio_plot and len(hists) > 1:
+                # ratio of first dataset to this one
                 label = f"{labels[-1]}/{labels[0]}" if labels else f"{self[dataset].label}/{self[datasets[0]].label}"
                 color = 'k' if (len(datasets) == 2) else ax.get_lines()[-1].get_color()
-                hists[0].plot_ratio(
+                ratio_hist_name = name_template.format(dataset=f"{dataset}_{datasets[0]}", variable=varname) + '_ratio'
+                ratio_hist = hists[0].plot_ratio(
                     hists[-1],
                     ax=ratio_ax,
                     yerr=yerr,
@@ -483,8 +501,10 @@ class Analysis:
                     color=color,
                     fit=ratio_fit,
                     yax_lim=ratio_axlim,
+                    name=ratio_hist_name,
                     display_stats=len(datasets) <= 3  # ony display fit results if there are two fits or less
                 )
+                self.histograms[ratio_hist_name] = ratio_hist
 
         ax.legend(fontsize=10, loc='upper right')
         plotting_utils.set_axis_options(ax, var, bins, lepton, xlabel, ylabel, title, logx, logy,
@@ -509,13 +529,11 @@ class Analysis:
                 varname = '_'.join(var)
             else:
                 varname = var
-            filename = f"{self.paths['plot_dir']}" \
-                       f"{filename_prefix}_" \
-                       f"{'_'.join(datasets)}" \
-                       f"_{varname}" \
-                       f"{'_NORMED' if normalise else ''}" \
-                       f"_{filename_suffix}" \
-                       f".png"
+            filename = (
+                    self.paths['plot_dir'] +
+                    name_template.format(dataset='_'.join(datasets), variable=varname) +
+                    '.png'
+            )
 
         fig.savefig(filename, bbox_inches='tight')
         self.logger.info(f'Saved overlay plot of {var} to {filename}')
@@ -559,6 +577,32 @@ class Analysis:
             self.logger.info("---------------------------------")
             self.logger.info(f"cross-section: {self[name].cross_section:.2f} fb")
             self.logger.info(f"luminosity   : {self[name].luminosity:.2f} fb-1")
+
+    def save_histograms(self, filename: str = None,
+                        tfile_option: str = 'Update',
+                        write_option: str = 'Overwrite',
+                        clear_hists: bool = False,
+                        ) -> None:
+        """
+        Saves current histograms into root file
+
+        :param filename: Should end in '.root'. if not given will set as '<analysis_name>.root'
+        :param tfile_option: TFile option.
+                             See: https://root.cern.ch/doc/master/classTFile.html#ad0377adf2f3d88da1a1f77256a140d60
+        :param write_option: WriteObject() option.
+                             See: https://root.cern.ch/doc/master/classTDirectoryFile.html#ae1bb32dcbb69de7f06a3b5de9d22e852
+        :param clear_hists: clears histograms in dictionary
+        """
+        if not filename:
+            filename = f"{self.__output_dir}/{self.name}.root"
+
+        self.logger.info(f"Saving {len(self.histograms)} histograms to file {filename}...")
+        with ROOT_utils.ROOT_TFile_mgr(filename, tfile_option) as file:
+            for name, histo in self.histograms.items():
+                file.WriteObject(histo.TH1, name, write_option)
+
+        if clear_hists:
+            self.histograms = OrderedDict()
 
     @handle_dataset_arg
     def print_latex_table(self, datasets: str | Iterable[str]) -> None:

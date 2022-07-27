@@ -58,9 +58,9 @@ def get_axis_labels(var_name: str | List[str], lepton: str = 'lepton', diff_xs: 
     if variable_data[var_name]['tag'] == 'truth':
         # weird but it does the job
         if diff_xs:
-            ylabel = r'$\frac{d\sigma}{d' + symbol + r'}$ [fb' + (f' {units}' + '$^{-1}$]' if units else ']')
+            ylabel = r'$\frac{d\sigma}{d' + symbol + r'}$ [pb' + (f' {units}' + '$^{-1}$]' if units else ']')
         else:
-            ylabel = r'$d\sigma$ [fb$^{-1}$]'
+            ylabel = r'$d\sigma$ [pb$^{-1}$]'
     else:
         ylabel = 'Entries'
 
@@ -131,7 +131,6 @@ def set_axis_options(
     _xlabel, _ylabel = get_axis_labels(var_name, lepton, diff_xs)
     axis.set_xlabel(xlabel if xlabel else _xlabel)
     axis.set_ylabel(ylabel if ylabel else _ylabel)
-    axis.minorticks_on()
     if label:
         hep.atlas.label(italic=(True, True), ax=axis, loc=0, llabel='Internal', rlabel=title)
 

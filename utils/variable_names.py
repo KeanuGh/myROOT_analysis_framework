@@ -819,12 +819,12 @@ variable_data: Dict[str, Branch] = {
         'tag': VarTag.TRUTH
     },
     'TruthTauM': {
-        'name': r'Truth tau mass',
+        'name': r'Truth tau $m$',
         'units': 'GeV',
         'tag': VarTag.TRUTH
     },
     'TruthBosonM': {
-        'name': r'Truth boson mass',
+        'name': r'Truth boson $m$',
         'units': 'GeV',
         'tag': VarTag.TRUTH
     },
@@ -864,7 +864,7 @@ variable_data: Dict[str, Branch] = {
         'tag': VarTag.TRUTH
     },
     'VisTruthTauM': {
-        'name': r'Visible truth tau mass',
+        'name': r'Visible truth tau $m$',
         'units': 'GeV',
         'tag': VarTag.TRUTH
     },

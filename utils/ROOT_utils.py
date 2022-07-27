@@ -20,7 +20,7 @@ def load_ROOT_settings(set_batch: bool = True, gui: bool = False, th1_dir: bool 
     ROOT.EnableImplicitMT()  # enable multithreading
     ROOT.gStyle.SetOptStat(optstat)
 
-    # declare helper function to unravel ROOT vector branches
+    # load custom C++ functions
     ROOT.gSystem.Load(f'{pathlib.Path(__file__).parent}/rootfuncs.h')
     ROOT.gInterpreter.Declare(f'#include "{pathlib.Path(__file__).parent}/rootfuncs.h"')
 
@@ -64,7 +64,7 @@ def bh_to_TH1(h_bh: bh.Histogram, name: str, title: str, hist_type: str = 'F') -
     if hist_type.upper() not in TH1_constructor:
         raise ValueError(f"TH1 types: {', '.join(TH1_constructor.keys())}. {hist_type.upper()} was input.")
 
-    # check dims
+    # check dimensions
     n_dims = len(h_bh.axes)
     if n_dims > 3:
         raise Exception("ROOT cannot handle Histograms with more than 3 dimensions.")
@@ -114,7 +114,7 @@ def convert_pkl_to_root(filename: str, histname: str | None = None) -> None:
 
     if isinstance(obj, bh.Histogram):
         logging.info(f"Printing {histname} to {rootfilename}")
-        with ROOT_file(rootfilename):
+        with ROOT_TFile_mgr(rootfilename):
             bh_to_TH1(obj, name=histname, title=histname).Write()
         return
     elif isinstance(obj, dict):
@@ -125,14 +125,14 @@ def convert_pkl_to_root(filename: str, histname: str | None = None) -> None:
         raise ValueError(f"No boost-histogram objects found in object {obj}.")
 
     if len(TH1s) > 0:
-        with ROOT_file(rootfilename):
+        with ROOT_TFile_mgr(rootfilename):
             for h in TH1s: h.Write()
             logging.info(f"Histograms saved to {rootfilename}")
         return
 
 
 @contextmanager
-def ROOT_file(filename: str | PathLike, TFile_arg='RECREATE'):
+def ROOT_TFile_mgr(filename: str | PathLike, TFile_arg='RECREATE'):
     """Context manager for opening root files"""
     file = ROOT.TFile(filename, TFile_arg)
     try:
@@ -161,8 +161,8 @@ def glob_chain(TTree: str, path: PathLike | str) -> ROOT.TChain:
 def get_dta_sumw(path: str) -> float:
     """get total xAOD sum of weights for sample in DTA"""
     files_list = glob.glob(path)
-    sum_of_weights = 0
+    sum_of_weights = 0.
     for file in files_list:
-        with ROOT_file(file, 'read') as f:
+        with ROOT_TFile_mgr(file, 'read') as f:
             sum_of_weights += f.Get("sumOfWeights").GetBinContent(4)
     return sum_of_weights

@@ -143,7 +143,6 @@ class Histogram1D(bh.Histogram, family=None):
 
                 # TH1
                 self.TH1 = ROOT.TH1F(name, title, *self.__get_TH1_bins(bins))
-
                 self.name = name
 
                 # get axis
@@ -170,6 +169,7 @@ class Histogram1D(bh.Histogram, family=None):
         elif weight is None:
             weight = np.ones(len(var))
 
+        # TODO: got to be a faster way than this
         for v, w in zip(var, weight):
             self.TH1.Fill(v, w)
         return self
@@ -495,11 +495,11 @@ class Histogram1D(bh.Histogram, family=None):
 
         if stats_box:
             # dumb workaround to avoid the stats boxes from overlapping eachother
-            box_xpos, box_ypos = (.75, .61)
+            box_xpos, box_ypos = (.75, .55)
             for artist in ax.get_children():
                 if isinstance(artist, plt.Text):
                     if r'$\mu=' in artist.get_text():
-                        box_ypos = .38
+                        box_ypos = .25
 
             textstr = '\n'.join((
                 self.name,
@@ -557,12 +557,13 @@ class Histogram1D(bh.Histogram, family=None):
             normalise: bool = False,
             label: str = None,
             fit: bool = False,
+            name: str = '',
             out_filename: str = None,
             yax_lim: float = False,
             display_stats: bool = True,
             color: str = 'k',
             **kwargs
-    ) -> plt.Axes:
+    ) -> Histogram1D:
         """
         Plot (and properly format) ratio between this histogram and another.
 
@@ -576,6 +577,7 @@ class Histogram1D(bh.Histogram, family=None):
         :param normalise: Whether histograms are normalised before taking ratio
         :param label: Legend label
         :param fit: whether to fit to a 0-degree polynomial and display line, chi-square and p-value
+        :param name: histogram name
         :param out_filename: provide filename to print. If not given, nothing is saved
         :param yax_lim: limit y-axis to 1 +/- {yax_lim}
         :param display_stats: whether to display the fit parameters on the plot
@@ -588,10 +590,14 @@ class Histogram1D(bh.Histogram, family=None):
         if not ax:
             _, ax = plt.subplots()
 
+        # create ratio histogram
         if normalise:
             h_ratio = other.normalised() / self.normalised()
         else:
             h_ratio = other / self
+
+        # set name
+        if name: h_ratio.name = name
 
         if yerr is True:
             yerr = h_ratio.root_sumw2()
@@ -647,4 +653,4 @@ class Histogram1D(bh.Histogram, family=None):
             plt.savefig(out_filename, bbox_inches='tight')
             self.logger.info(f'image saved in {out_filename}')
 
-        return ax
+        return h_ratio

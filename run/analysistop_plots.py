@@ -65,6 +65,6 @@ my_analysis['wplustaunu_analysistop']['truth_weight'] = my_analysis['wplustaunu_
 my_analysis.plot_hist('wmintaunu_analysistop', 'MC_WZ_dilep_m_born',
                       bins=bins, weight='truth_weight', logx=True, stats_box=True)
 my_analysis.plot_hist('wmintaunu_analysistop', 'MC_WZ_dilep_m_born',
-                      bins=bins, logx=True, stats_box=True, filename_suffix='unweighted')
+                      bins=bins, logx=True, stats_box=True, name_suffix='unweighted')
 
 my_analysis.logger.info("DONE")

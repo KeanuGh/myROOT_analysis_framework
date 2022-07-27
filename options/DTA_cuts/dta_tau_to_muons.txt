@@ -18,15 +18,15 @@ rwCorr
 prwWeight
 # Jet_btSF
 # Jet_JVT
-TauSF_LooseWP
-TauSF_MediumWP
-TauSF_TightWP
-TauLooseWP
-TauMediumWP
-TauTightWP
-Muon_recoSF
-Muon_isoSF
-Muon_ttvaSF
+# TauSF_LooseWP
+# TauSF_MediumWP
+# TauSF_TightWP
+# TauLooseWP
+# TauMediumWP
+# TauTightWP
+# Muon_recoSF
+# Muon_isoSF
+# Muon_ttvaSF
 
 # truth
 TruthTauPt
@@ -53,19 +53,19 @@ TruthBosonPt
 TruthBosonM
 
 # reco
-TauPt
-TauEta
-TauPhi
-TauE
+# TauPt
+# TauEta
+# TauPhi
+# TauE
 # JetEta
 # JetPhi
 # JetE
-MET_met
-MET_phi
-MTW
-MuonPt
-MuonEta
-MuonPhi
-Muon_d0sig
-Muon_delta_z0
-Muon_delta_z0_sintheta
+# MET_met
+# MET_phi
+# MTW
+# MuonPt
+# MuonEta
+# MuonPhi
+# Muon_d0sig
+# Muon_delta_z0
+# Muon_delta_z0_sintheta

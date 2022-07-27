@@ -44,11 +44,11 @@ Rdf = ROOT.RDataFrame(chain)
 files_list = glob.glob(filepath)
 sum_of_weights = 0
 for file in files_list:
-    with ROOT_utils.ROOT_file(file, 'read') as f:
+    with ROOT_utils.ROOT_TFile_mgr(file, 'read') as f:
         sum_of_weights += f.Get("sumOfWeights").GetBinContent(4)
 print("summed sumOfWeights: ", sum_of_weights)
 
-with ROOT_utils.ROOT_file('/mnt/D/data/DTA_outputs/CVetoBVeto_H.root', 'read') as f:
+with ROOT_utils.ROOT_TFile_mgr('/mnt/D/data/DTA_outputs/CVetoBVeto_H.root', 'read') as f:
     h = f.Get("sumOfWeights")
     sum_of_weights = h.GetBinContent(4)
 print("hadd sumOfWeights: ", sum_of_weights)

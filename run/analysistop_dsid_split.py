@@ -8,8 +8,8 @@ from analysis import Analysis
 from src.histogram import Histogram1D
 from utils.plotting_utils import set_axis_options
 
-ANALYSISTOP_PATH = pathlib.Path('/mnt/D/data/analysistop_out/mc16a')
-DATA_OUT_DIR = '/mnt/D/data/dataset_pkl_outputs/'
+ANALYSISTOP_PATH = pathlib.Path('/data/analysistop_out/mc16a')
+DATA_OUT_DIR = '/data/dataset_pkl_outputs/'
 bins = np.array(
     [130, 140.3921, 151.6149, 163.7349, 176.8237, 190.9588, 206.2239, 222.7093, 240.5125, 259.7389, 280.5022,
      302.9253, 327.1409, 353.2922, 381.5341, 412.0336, 444.9712, 480.5419, 518.956, 560.4409, 605.242, 653.6246,
@@ -46,6 +46,7 @@ my_analysis = Analysis(
 
 for ds in datasets:
     my_analysis.plot_hist(ds, 'MC_WZ_dilep_m_born',  bins=bins, weight='truth_weight', logx=True, stats_box=True)
+my_analysis.save_histograms()
 
 # merge all wmin
 my_analysis['wmintaunu_analysistop'].dsid_metadata_printout()
@@ -54,6 +55,13 @@ wmin_strs = [s for s in datasets.keys() if
 
 my_analysis.merge_datasets('wmintaunu_analysistop', *wmin_strs)
 my_analysis['wmintaunu_analysistop'].dsid_metadata_printout()
+
+# import jesal histogram
+h_jesal_root = ROOT.TFile("../wmintaunu_wminus_Total.root").Get("h_WZ_dilep_m_born")
+h_jesal = Histogram1D(th1=h_jesal_root, logger=my_analysis.logger)
+
+h = Histogram1D(var=my_analysis['wmintaunu_analysistop'][BRANCH], bins=bins, logger=my_analysis.logger,
+                weight=my_analysis['wmintaunu_analysistop']['truth_weight'])
 
 # plot
 # ========================
@@ -66,15 +74,9 @@ set_axis_options(axis=ratio_ax, var_name=BRANCH, bins=bins, lepton='tau',
 ax.set_xticklabels([])
 ax.set_xlabel('')
 
-# import jesal histogram
-h_jesal_root = ROOT.TFile("../wmintaunu_wminus_Total.root").Get("h_WZ_dilep_m_born")
-h_jesal = Histogram1D(th1=h_jesal_root, logger=my_analysis.logger)
-
-h = Histogram1D(var=my_analysis['wmintaunu_analysistop'][BRANCH], bins=bins, logger=my_analysis.logger,
-                weight=my_analysis['wmintaunu_analysistop']['truth_weight'])
-
-h_jesal.plot(ax=ax, stats_box=True, scale_by_bin_width=True)
-h.plot(ax=ax, stats_box=True)
+h_jesal.plot(ax=ax, stats_box=True, label='jesal')
+h.plot(ax=ax, stats_box=True, label='me')
+ax.legend(fontsize=10, loc='upper right')
 h.plot_ratio(h_jesal, ax=ratio_ax, fit=True)
 plt.show()
 
