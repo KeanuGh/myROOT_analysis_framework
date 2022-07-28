@@ -178,12 +178,14 @@ class Histogram1D(bh.Histogram, family=None):
         new = self._new_hist(copy.copy(self._hist))
         new.TH1 = self.TH1.Clone()
         new.name = self.name
+        print('copying: ', self.name, self.n_entries, new.n_entries)
         return new
 
     def __deepcopy__(self, memo: Any) -> Histogram1D:
         new = self._new_hist(copy.deepcopy(self._hist), memo=memo)
         new.TH1 = self.TH1.Clone()
         new.name = self.name
+        print('deep copying: ', self.name, self.n_entries, new.n_entries)
         return new
 
     def __truediv__(self, other: bh.Histogram | "np.typing.NDArray[Any]" | float) -> Histogram1D:
@@ -208,8 +210,8 @@ class Histogram1D(bh.Histogram, family=None):
             # scale TH1 properly
             if hasattr(other, '__iter__'):
                 for i, val in enumerate(other):
-                    self.TH1.SetBinContent(i, self.TH1.GetBinContent(i) / val)
-                    self.TH1.SetBinError(i, self.TH1.GetBinError(i) / val)
+                    self.TH1.SetBinContent(i + 1, self.TH1.GetBinContent(i + 1) / val)
+                    self.TH1.SetBinError(i + 1, self.TH1.GetBinError(i + 1) / val)
             else:
                 self.TH1.Scale(1 / other)
             # let boost-histogram handle return
@@ -236,8 +238,8 @@ class Histogram1D(bh.Histogram, family=None):
             # scale TH1 properly
             if hasattr(other, '__iter__'):
                 for i, val in enumerate(other):
-                    self.TH1.SetBinValue(i, self.TH1.GetBinContent(i) * val)
-                    self.TH1.SetBinError(i, self.TH1.GetBinError(i) * val)
+                    self.TH1.SetBinContent(i + 1, self.TH1.GetBinContent(i + 1) * val)
+                    self.TH1.SetBinError(i + 1, self.TH1.GetBinError(i + 1) * val)
             else:
                 self.TH1.Scale(other)
             return self._compute_inplace_op("__imul__", other)
@@ -442,7 +444,7 @@ class Histogram1D(bh.Histogram, family=None):
             out_filename: str = None,
             show: bool = False,
             **kwargs
-    ) -> plt.Axes:
+    ) -> Histogram1D:
         """
         Plot histogram on axis ax
 
@@ -465,9 +467,12 @@ class Histogram1D(bh.Histogram, family=None):
         """
         hist = self.copy()
 
+        print('copied:', self.name, self.n_entries, hist.n_entries)
+
         if scale_by_bin_width:
             self.logger.debug(f"Scaling histogram {self.name} by bin width...")
             hist /= hist.bin_widths
+            print('scaled:', self.name, self.n_entries, hist.n_entries)
 
         # normalise/scale
         if not normalise:
@@ -478,9 +483,6 @@ class Histogram1D(bh.Histogram, family=None):
         else:
             self.logger.debug(f"Plotting normalised histogram {self.name} normalised to {normalise}...")
             hist.normalise_to(normalise)
-
-        if scale_by_bin_width:
-            hist /= hist.bin_widths
 
         # set error
         if yerr is True:
@@ -502,12 +504,12 @@ class Histogram1D(bh.Histogram, family=None):
                         box_ypos = .25
 
             textstr = '\n'.join((
-                self.name,
-                r'$\mu=%.2f\pm%.2f$' % (self.mean, self.mean_error),
+                hist.name,
+                r'$\mu=%.2f\pm%.2f$' % (hist.mean, hist.mean_error),
                 # r'$\sigma=%.2f\pm%.2f$' % (self.std, self.std_error),
-                r'$\mathrm{Entries}: %.0f$' % self.n_entries,
-                r'$\mathrm{Bin sum}: %.2f$' % self.bin_sum(),
-                r'$\mathrm{Integral}: %.2f$' % self.integral,
+                r'$\mathrm{Entries}: %.0f$' % hist.n_entries,
+                r'$\mathrm{Bin sum}: %.2f$' % hist.bin_sum(True),
+                r'$\mathrm{Integral}: %.2f$' % hist.integral,
             ))
             ax.text(x=box_xpos, y=box_ypos, s=textstr, transform=ax.transAxes, fontsize='small')
 
@@ -518,7 +520,8 @@ class Histogram1D(bh.Histogram, family=None):
         if show:
             plt.show()
 
-        return ax
+        print('done:', self.name, self.n_entries, hist.n_entries)
+        return hist
 
     def Rplot(
         self,

@@ -58,7 +58,7 @@ def get_axis_labels(var_name: str | List[str], lepton: str = 'lepton', diff_xs: 
     if variable_data[var_name]['tag'] == 'truth':
         # weird but it does the job
         if diff_xs:
-            ylabel = r'$\frac{d\sigma}{d' + symbol + r'}$ [pb' + (f' {units}' + '$^{-1}$]' if units else ']')
+            ylabel = r'$\frac{d\sigma}{d' + symbol + r'}$ [pb' + ((f' {units}' + '$^{-1}$]') if units else ']')
         else:
             ylabel = r'$d\sigma$ [pb]'
     else:

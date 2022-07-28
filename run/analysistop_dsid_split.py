@@ -3,9 +3,11 @@ import pathlib
 import ROOT
 import matplotlib.pyplot as plt
 import numpy as np
+from tabulate import tabulate
 
 from analysis import Analysis
 from src.histogram import Histogram1D
+from utils.PMG_tool import get_crossSection
 from utils.plotting_utils import set_axis_options
 
 ANALYSISTOP_PATH = pathlib.Path('/data/analysistop_out/mc16a')
@@ -35,18 +37,40 @@ my_analysis = Analysis(
     TTree_name='truth',
     dataset_type='analysistop',
     lumi_year='2016+2015',
-    # log_level=10,
+    log_level=10,
     data_dir=DATA_OUT_DIR,
-    log_out='both',
+    log_out='console',
     lepton='tau',
     cutfile_path='../options/DTA_cuts/analysistop.txt',
     validate_duplicated_events=False,
     # force_recalc_weights=True,
 )
 
+reg_metadata = []
+bin_scaled_metadata = []
 for ds in datasets:
-    my_analysis.plot_hist(ds, 'MC_WZ_dilep_m_born',  bins=bins, weight='truth_weight', logx=True, stats_box=True)
+    dsid = my_analysis[ds].df.index[0][0]
+    my_analysis[ds].label += '_' + str(dsid)  # set label to include DSID
+
+    # regular histogram
+    h = my_analysis.plot_hist(ds, 'MC_WZ_dilep_m_born',  bins=bins, weight='truth_weight', logx=True, stats_box=True)
+    reg_metadata.append([dsid, h[0].name, h[0].n_entries, h[0].bin_sum(True), h[0].integral, get_crossSection(dsid)])
+    reg_metadata.sort(key=lambda row: row[0])
+
+    # bin-scaled histogram
+    h = my_analysis.plot_hist(ds, 'MC_WZ_dilep_m_born', bins=bins, weight='truth_weight', logx=True, stats_box=True,
+                              scale_by_bin_width=True, name_prefix='bin_scaled')
+    bin_scaled_metadata.append([dsid, h[0].name, h[0].n_entries, h[0].bin_sum(True), h[0].integral, get_crossSection(dsid)])
+    bin_scaled_metadata.sort(key=lambda row: row[0])
+
 my_analysis.save_histograms()
+
+# print histogram metadata
+headers = ['DSID', 'Name', 'Entries', 'Bin sum', 'Integral', 'PMG cross-section']
+my_analysis.logger.info("Regular:")
+my_analysis.logger.info(tabulate(reg_metadata, headers=headers))
+my_analysis.logger.info("Bin-width-scaled:")
+my_analysis.logger.info(tabulate(bin_scaled_metadata, headers=headers))
 
 # merge all wmin
 my_analysis['wmintaunu_analysistop'].dsid_metadata_printout()
@@ -61,7 +85,7 @@ h_jesal_root = ROOT.TFile("../wmintaunu_wminus_Total.root").Get("h_WZ_dilep_m_bo
 h_jesal = Histogram1D(th1=h_jesal_root, logger=my_analysis.logger)
 
 h = Histogram1D(var=my_analysis['wmintaunu_analysistop'][BRANCH], bins=bins, logger=my_analysis.logger,
-                weight=my_analysis['wmintaunu_analysistop']['truth_weight'])
+                weight=my_analysis['wmintaunu_analysistop']['truth_weight'], name='keanu_histogram')
 
 # plot
 # ========================

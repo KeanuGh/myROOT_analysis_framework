@@ -476,12 +476,7 @@ class Dataset:
             else weight
         )
         hist = Histogram1D(df[var], bins, weights, logbins, name=name, logger=self.logger)
-        hist.plot(
-            ax=ax,
-            yerr=yerr,
-            normalise=normalise,
-            **kwargs
-        )
+        hist = hist.plot(ax=ax, yerr=yerr, normalise=normalise, **kwargs)
         return hist
 
     def plot_cut_overlays(

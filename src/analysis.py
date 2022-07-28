@@ -466,31 +466,35 @@ class Analysis:
         hists = []  # add histograms to be overlaid in this list
         for i, dataset in enumerate(datasets):
             varname = var if isinstance(var, str) else var[i]
-            label = labels[i] if isinstance(labels, list) else self[dataset].label
+            label = labels[i] if labels else self[dataset].label
             hist_name = name_template.format(dataset=dataset, variable=var)
+
+            # plot
             hist = self[dataset].plot_hist(
-                    var=varname,
-                    bins=bins,
-                    weight=weight[i] if isinstance(weight, list) else weight,
-                    ax=ax,
-                    yerr=yerr,
-                    normalise=normalise,
-                    logbins=logbins,
-                    name=hist_name,
-                    label=label,
-                    apply_cuts=apply_cuts,
-                    w2=w2,
-                    stats_box=stats_box,
-                    scale_by_bin_width=scale_by_bin_width,
-                    **kwargs
-                )
+                var=varname,
+                bins=bins,
+                weight=weight[i] if isinstance(weight, list) else weight,
+                ax=ax,
+                yerr=yerr,
+                normalise=normalise,
+                logbins=logbins,
+                name=hist_name,
+                label=label,
+                apply_cuts=apply_cuts,
+                w2=w2,
+                stats_box=stats_box,
+                scale_by_bin_width=scale_by_bin_width,
+                **kwargs
+            )
+
+            # save
             hists.append(hist)
             self.histograms[hist_name] = hist
 
             if ratio_plot and len(hists) > 1:
                 # ratio of first dataset to this one
                 label = f"{labels[-1]}/{labels[0]}" if labels else f"{self[dataset].label}/{self[datasets[0]].label}"
-                color = 'k' if (len(datasets) == 2) else ax.get_lines()[-1].get_color()
+                color = 'k' if (len(datasets) == 2) else ax.get_lines()[-1].get_color()  # match ratio colour to plot
                 ratio_hist_name = name_template.format(dataset=f"{dataset}_{datasets[0]}", variable=varname) + '_ratio'
                 ratio_hist = hists[0].plot_ratio(
                     hists[-1],

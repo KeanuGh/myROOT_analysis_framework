@@ -15,6 +15,7 @@ xmax = 1.
 a = np.random.normal(0, 1, 100000)
 b = np.random.normal(0.5, 1.1, 100000)
 w = .4 * np.random.random(100000) + 0.8  # between 0.8 and 0.2
+s = .4 * np.random.random(20) + 0.8
 
 # regular
 mine_h = Histogram1D(a, (nbins, xmin, xmax), weight=w)
@@ -51,12 +52,35 @@ root_h_normed_10.Scale(10 / root_h.Integral())
 mine_h_ratio = mine_h / mine_h2
 root_h_ratio = root_h.Clone()
 root_h_ratio.Divide(root_h2)
-root_h_ratio.ResetStats()
 
 # product
 mine_h_prod = mine_h * mine_h2
 root_h_prod = root_h.Clone()
 root_h_prod.Multiply(root_h2)
+
+# scale
+mine_h_div_scaled = mine_h / s
+mine_h_mul_scaled = mine_h * s
+
+
+@pytest.mark.parametrize(
+    'h,th',
+    [
+        pytest.param(mine_h, mine_h.TH1, id='regular - bh-selfTH1'),
+        pytest.param(mine_h2, mine_h2.TH1, id='regular2 - bh-selfTH1'),
+        pytest.param(mine_h_10, mine_h_10.TH1, id='* 10 - bh-selfTH1'),
+        pytest.param(mine_h_01, mine_h_01.TH1, id='/ 10 - bh-selfTH1'),
+        pytest.param(mine_h_normed, mine_h_normed.TH1, id='normalised - bh-selfTH1'),
+        pytest.param(mine_h_normed_10, mine_h_normed_10.TH1, id='normalised to 10 - bh-selfTH1'),
+        pytest.param(mine_h_ratio, mine_h_ratio.TH1, id='ratio - bh-selfTH1'),
+        pytest.param(mine_h_prod, mine_h_prod.TH1, id='product - bh-selfTH1'),
+        pytest.param(mine_h_div_scaled, mine_h_div_scaled.TH1, id='div scaled - bh-selfTH1'),
+        pytest.param(mine_h_mul_scaled, mine_h_mul_scaled.TH1, id='mul scaled - bh-selfTH1'),
+    ]
+)
+class TestBinEntries:
+    def test_bin_entries(self, h: Histogram1D, th: ROOT.TH1F):
+        assert h.n_entries == th.GetEntries()
 
 
 @pytest.mark.parametrize(
@@ -79,6 +103,8 @@ root_h_prod.Multiply(root_h2)
         pytest.param(mine_h_normed_10, mine_h_normed_10.TH1, id='normalised to 10 - bh-selfTH1'),
         pytest.param(mine_h_ratio, mine_h_ratio.TH1, id='ratio - bh-selfTH1'),
         pytest.param(mine_h_prod, mine_h_prod.TH1, id='product - bh-selfTH1'),
+        pytest.param(mine_h_div_scaled, mine_h_div_scaled.TH1, id='div scaled - bh-selfTH1'),
+        pytest.param(mine_h_mul_scaled, mine_h_mul_scaled.TH1, id='mul scaled - bh-selfTH1'),
     ]
 )
 class TestHistogram1DTH1Comparison:
