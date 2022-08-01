@@ -74,7 +74,7 @@ class DatasetBuilder:
 
     def __post_init__(self):
         if self.lumi and self.year:
-            raise ValueError("Pass wither lumi or year")
+            raise ValueError("Pass either lumi or year")
         elif self.year:
             self.lumi = lumi_year[self.year]
 

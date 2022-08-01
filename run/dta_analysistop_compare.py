@@ -14,7 +14,7 @@ DATA_OUT_DIR = '/data/dataset_pkl_outputs/'
 if __name__ == '__main__':
     datasets = {
         # dta w->taunu->munu
-        'wtaunu_mu_dta': {
+        'wtaunu_dta': {
             'data_path': DTA_PATH + '/user.kghorban.Sh_2211_Wtaunu_L*/*.root',
             'cutfile_path': '../options/DTA_cuts/dta_tau_to_muons.txt',
             'TTree_name': 'T_s1tlv_NOMINAL',

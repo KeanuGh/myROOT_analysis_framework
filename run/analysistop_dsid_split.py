@@ -48,19 +48,27 @@ my_analysis = Analysis(
 
 reg_metadata = []
 bin_scaled_metadata = []
+min_xs_sum = 0
+plus_xs_sum = 0
 for ds in datasets:
     dsid = my_analysis[ds].df.index[0][0]
     my_analysis[ds].label += '_' + str(dsid)  # set label to include DSID
 
+    xs = get_crossSection(dsid)
+    # get total cross-section
+    if ds not in ('wmintaunu', 'wplustaunu'):
+        if 'min' in ds: min_xs_sum += xs
+        elif 'plus' in ds: plus_xs_sum += xs
+
     # regular histogram
     h = my_analysis.plot_hist(ds, 'MC_WZ_dilep_m_born',  bins=bins, weight='truth_weight', logx=True, stats_box=True)
-    reg_metadata.append([dsid, h[0].name, h[0].n_entries, h[0].bin_sum(True), h[0].integral, get_crossSection(dsid)])
+    reg_metadata.append([dsid, h[0].name, h[0].n_entries, h[0].bin_sum(True), h[0].integral, xs])
     reg_metadata.sort(key=lambda row: row[0])
 
     # bin-scaled histogram
     h = my_analysis.plot_hist(ds, 'MC_WZ_dilep_m_born', bins=bins, weight='truth_weight', logx=True, stats_box=True,
                               scale_by_bin_width=True, name_prefix='bin_scaled')
-    bin_scaled_metadata.append([dsid, h[0].name, h[0].n_entries, h[0].bin_sum(True), h[0].integral, get_crossSection(dsid)])
+    bin_scaled_metadata.append([dsid, h[0].name, h[0].n_entries, h[0].bin_sum(True), h[0].integral, xs])
     bin_scaled_metadata.sort(key=lambda row: row[0])
 
 my_analysis.save_histograms()
@@ -82,10 +90,17 @@ my_analysis['wmintaunu_analysistop'].dsid_metadata_printout()
 
 # import jesal histogram
 h_jesal_root = ROOT.TFile("../wmintaunu_wminus_Total.root").Get("h_WZ_dilep_m_born")
+my_analysis.logger.info(f"jesal integral: {h_jesal_root.Integral()}")
+
 h_jesal = Histogram1D(th1=h_jesal_root, logger=my_analysis.logger)
 
 h = Histogram1D(var=my_analysis['wmintaunu_analysistop'][BRANCH], bins=bins, logger=my_analysis.logger,
                 weight=my_analysis['wmintaunu_analysistop']['truth_weight'], name='keanu_histogram')
+my_analysis.logger.info(f"my_integral: {h.integral}")
+my_analysis.logger.info(f"my_integral (ROOT): {h.TH1.Integral()}")
+my_analysis.logger.info(f"my_bin_sum (flow): {h.bin_sum(True)}")
+my_analysis.logger.info(f"my_bin_sum (no flow): {h.bin_sum(False)}")
+my_analysis.logger.info(f"cross-section sum: {min_xs_sum}")
 
 # plot
 # ========================
