@@ -20,9 +20,9 @@ from utils.variable_names import variable_data
 
 # total dataset luminosity per year (pb-1)
 lumi_year: Final[dict] = {
-    '2015': 3.21956,
-    '2017': 44.3074,
-    '2018': 58.4501,
+    '2015': 3219.56,
+    '2017': 44307.4,
+    '2018': 5845.01,
     '2015+2016': 32988.1 + 3219.56
 }
 
