@@ -9,6 +9,7 @@ import mplhep as hep
 import numpy as np
 import pandas as pd
 from numpy.typing import ArrayLike
+from tabulate import tabulate
 
 import src.config as config
 from src.cutfile import Cutfile, Cut
@@ -231,50 +232,43 @@ class Dataset:
         print_reco = self.is_reco
 
         self.logger.info(f"DATASET INFO FOR {self.name}:")
-        # get max length of phys_short to display the table correctly
-        DSIDs = self.df.index.unique(level='DSID')
-        max_len_phys_short = max([len(PMG_tool.get_physics_short(dsid)) for dsid in DSIDs])
+
         # per dsid
-        table_str = ''
+        rows = []
         for dsid in self.df.index.unique(level='DSID'):
             phys_short = PMG_tool.get_physics_short(dsid)
-            table_str += (
-                f"{dsid:<6} " +
-                f"{phys_short:<{max_len_phys_short + 1}} " +
-                f"{len(self.df.loc[dsid]):<10} " +
-                # f"{self.df.loc[dsid, 'weight_mc'].sum():<10.6e} " +
-                f"{PMG_tool.get_crossSection(dsid):<10.6e} " +
-                f"{self.lumi:<10.6e} " +
-                f"{PMG_tool.get_genFiltEff(dsid):<10.6e} " +
-                f"{self.df.loc[dsid, 'weight_mc'].sum():<10.6e}  " +
-                (f"{self.df.loc[dsid, 'truth_weight'].notna().sum():<11}  "     if print_truth else "") +
-                (f"{self.df.loc[dsid, 'truth_weight'].notna().mean():<11.5e}  " if print_truth else "") +
-                (f"{self.df.loc[dsid, 'reco_weight'].notna().sum():<11}  "      if print_reco else "") +
-                (f"{self.df.loc[dsid, 'reco_weight'].notna().mean():<11.5e}  "  if print_reco else "") +
-                '\n'
-            )
-        header = (
-            '\n' +
-            "DSID   " +
-            f"{'phys_short':<{max_len_phys_short + 2}}" +
-            "n_events   " +
-            # "sum_w        " +
-            "x-s fb       " +
-            "lumi fb-1    " +
-            "filter eff.  " +
-            "sumw         " +
-            ("truth events " if print_truth else "") +
-            ("avg truth wt " if print_truth else "") +
-            ("reco events  " if print_reco else "") +
-            ("avg reco wt" if print_reco else "")
-        )
+            row = [
+                dsid,
+                phys_short,
+                len(self.df.loc[dsid]),
+                PMG_tool.get_crossSection(dsid),
+                self.lumi,
+                PMG_tool.get_genFiltEff(dsid),
+                self.df.loc[dsid, 'weight_mc'].sum(),
+            ]
+            if print_truth:
+                row += [self.df.loc[dsid, 'truth_weight'].notna().sum(), self.df.loc[dsid, 'truth_weight'].mean()]
+            if print_reco:
+                row += [self.df.loc[dsid, 'reco_weight'].notna().sum(), self.df.loc[dsid, 'reco_weight'].mean()]
+
+            rows.append(row)
+
+        header = [
+            "DSID",
+            "phys_short",
+            "n_events",
+            "x-s pb",
+            "lumi pb-1",
+            "filter eff.",
+            "sumw",
+        ]
+        if print_truth:
+            header += ["truth events", "avg truth wgt"]
+        if print_reco:
+            header += ["reco events", "avg reco wgt"]
+
         # print it all
-        self.logger.info(
-            f"{header}\n"
-            f"{'-' * len(header)}\n"
-            f"{table_str}\n"
-            f"{'-' * len(header)}"
-        )
+        self.logger.info(tabulate(rows, headers=header))
 
     # ===============================
     # ========== SUBSETS ============
