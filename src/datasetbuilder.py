@@ -443,21 +443,14 @@ class DatasetBuilder:
     # ===============================
     # ===== DATAFRAME FUNCTIONS =====
     # ===============================
-    def build_dataframe(
-            self,
-            data_path: str,
-            tree_dict: Dict[str, Set[str]],
-    ) -> pd.DataFrame:
-        if self.dataset_type == 'analysistop':
-            return self.__build_dataframe_analysistop(
-                data_path=data_path,
-                tree_dict=tree_dict,
-            )
-        elif self.dataset_type == 'dta':
-            return self.__build_dataframe_dta(
-                data_path=data_path,
-                tree_dict=tree_dict,
-            )
+    def build_dataframe(self, data_path: str, tree_dict: Dict[str, Set[str]]) -> pd.DataFrame:
+        match self.dataset_type:
+            case "analysistop":
+                return self.__build_dataframe_analysistop(data_path=data_path, tree_dict=tree_dict)
+            case "dta":
+                return self.__build_dataframe_dta(data_path=data_path, tree_dict=tree_dict)
+            case _:
+                raise ValueError(f"Unknown dataset {self.dataset_type}")
 
     def __build_dataframe_analysistop(
             self,
