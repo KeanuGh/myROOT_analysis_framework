@@ -178,14 +178,12 @@ class Histogram1D(bh.Histogram, family=None):
         new = self._new_hist(copy.copy(self._hist))
         new.TH1 = self.TH1.Clone()
         new.name = self.name
-        print('copying: ', self.name, self.n_entries, new.n_entries)
         return new
 
     def __deepcopy__(self, memo: Any) -> Histogram1D:
         new = self._new_hist(copy.deepcopy(self._hist), memo=memo)
         new.TH1 = self.TH1.Clone()
         new.name = self.name
-        print('deep copying: ', self.name, self.n_entries, new.n_entries)
         return new
 
     def __truediv__(self, other: bh.Histogram | "np.typing.NDArray[Any]" | float) -> Histogram1D:
@@ -467,12 +465,9 @@ class Histogram1D(bh.Histogram, family=None):
         """
         hist = self.copy()
 
-        print('copied:', self.name, self.n_entries, hist.n_entries)
-
         if scale_by_bin_width:
             self.logger.debug(f"Scaling histogram {self.name} by bin width...")
             hist /= hist.bin_widths
-            print('scaled:', self.name, self.n_entries, hist.n_entries)
 
         # normalise/scale
         if not normalise:
@@ -520,7 +515,6 @@ class Histogram1D(bh.Histogram, family=None):
         if show:
             plt.show()
 
-        print('done:', self.name, self.n_entries, hist.n_entries)
         return hist
 
     def Rplot(
