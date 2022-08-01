@@ -37,7 +37,7 @@ my_analysis = Analysis(
     TTree_name='truth',
     dataset_type='analysistop',
     lumi_year='2016+2015',
-    log_level=10,
+    # log_level=10,
     data_dir=DATA_OUT_DIR,
     log_out='console',
     lepton='tau',
@@ -80,43 +80,46 @@ my_analysis.logger.info(tabulate(reg_metadata, headers=headers))
 my_analysis.logger.info("Bin-width-scaled:")
 my_analysis.logger.info(tabulate(bin_scaled_metadata, headers=headers))
 
-# merge all wmin
-my_analysis['wmintaunu_analysistop'].dsid_metadata_printout()
-wmin_strs = [s for s in datasets.keys() if
-             ('wmin' in s) and (s != 'wmintaunu_analysistop')]
+# compare with jesal for both plus and minus
+for c in ('wmin', 'wplus'):
+    ds_name = f'{c}taunu_analysistop'
 
-my_analysis.merge_datasets('wmintaunu_analysistop', *wmin_strs)
-my_analysis['wmintaunu_analysistop'].dsid_metadata_printout()
+    # merge all wmin
+    wc_strs = [s for s in datasets.keys() if
+               (c in s) and (s != ds_name)]
 
-# import jesal histogram
-h_jesal_root = ROOT.TFile("../wmintaunu_wminus_Total.root").Get("h_WZ_dilep_m_born")
-my_analysis.logger.info(f"jesal integral: {h_jesal_root.Integral()}")
+    my_analysis.merge_datasets(ds_name, *wc_strs)
+    my_analysis[ds_name].dsid_metadata_printout()
 
-h_jesal = Histogram1D(th1=h_jesal_root, logger=my_analysis.logger)
+    # import jesal histogram
+    h_jesal_root = ROOT.TFile(f"../{c}taunu_{'wminus' if c == 'wmin' else 'wplus'}_Total.root").Get("h_WZ_dilep_m_born")
+    my_analysis.logger.info(f"jesal integral: {h_jesal_root.Integral()}")
 
-h = Histogram1D(var=my_analysis['wmintaunu_analysistop'][BRANCH], bins=bins, logger=my_analysis.logger,
-                weight=my_analysis['wmintaunu_analysistop']['truth_weight'], name='keanu_histogram')
-my_analysis.logger.info(f"my_integral: {h.integral}")
-my_analysis.logger.info(f"my_integral (ROOT): {h.TH1.Integral()}")
-my_analysis.logger.info(f"my_bin_sum (flow): {h.bin_sum(True)}")
-my_analysis.logger.info(f"my_bin_sum (no flow): {h.bin_sum(False)}")
-my_analysis.logger.info(f"cross-section sum: {min_xs_sum}")
+    h_jesal = Histogram1D(th1=h_jesal_root, logger=my_analysis.logger, name=f'jesal_hisogram_{c}')
 
-# plot
-# ========================
-fig, (ax, ratio_ax) = plt.subplots(2, 1, gridspec_kw={'height_ratios': [3, 1]})
-fig.tight_layout()
-fig.subplots_adjust(hspace=0.1, wspace=0)
-set_axis_options(ax, BRANCH, bins, 'tau', logx=True, logy=True, diff_xs=True)
-set_axis_options(axis=ratio_ax, var_name=BRANCH, bins=bins, lepton='tau',
-                 xlabel=r'Born $m_{ll}$', ylabel='Ratio', title='', logx=True, logy=False, label=False)
-ax.set_xticklabels([])
-ax.set_xlabel('')
+    h = Histogram1D(var=my_analysis[ds_name][BRANCH], bins=bins, logger=my_analysis.logger,
+                    weight=my_analysis[ds_name]['truth_weight'], name=f'keanu_histogram_{c}')
+    my_analysis.logger.info(f"my_integral: {h.integral}")
+    my_analysis.logger.info(f"my_integral (ROOT): {h.TH1.Integral()}")
+    my_analysis.logger.info(f"my_bin_sum (flow): {h.bin_sum(True)}")
+    my_analysis.logger.info(f"my_bin_sum (no flow): {h.bin_sum(False)}")
+    my_analysis.logger.info(f"cross-section sum: {min_xs_sum}")
 
-h_jesal.plot(ax=ax, stats_box=True, label='jesal')
-h.plot(ax=ax, stats_box=True, label='me')
-ax.legend(fontsize=10, loc='upper right')
-h.plot_ratio(h_jesal, ax=ratio_ax, fit=True)
-plt.show()
+    # plot
+    # ========================
+    fig, (ax, ratio_ax) = plt.subplots(2, 1, gridspec_kw={'height_ratios': [3, 1]})
+    fig.tight_layout()
+    fig.subplots_adjust(hspace=0.1, wspace=0)
+    ax.set_xticklabels([])
+    ax.set_xlabel('')
+    set_axis_options(ax, BRANCH, bins, 'tau', logx=True, logy=True, diff_xs=False)
+    set_axis_options(axis=ratio_ax, var_name=BRANCH, bins=bins, lepton='tau',
+                     xlabel=r'Born $m_{ll}$', ylabel='Ratio', title='', logx=True, logy=False, label=False)
+
+    h_jesal.plot(ax=ax, stats_box=True, label=f'jesal {c}')
+    h.plot(ax=ax, stats_box=True, label=f'me {c}')
+    ax.legend(fontsize=10, loc='upper right')
+    h.plot_ratio(h_jesal, ax=ratio_ax, fit=True)
+    fig.savefig(f"{my_analysis.paths['plot_dir']}/{c}_compare", bbox_inches='tight')
 
 my_analysis.logger.info("DONE")
