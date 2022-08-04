@@ -550,7 +550,7 @@ class Histogram1D(bh.Histogram, family=None):
             self,
             other: Histogram1D,
             ax: plt.Axes = None,
-            yerr: ArrayLike | bool = True,
+            yerr: ArrayLike | bool | str = True,
             normalise: bool = False,
             label: str = None,
             fit: bool = False,
@@ -569,6 +569,7 @@ class Histogram1D(bh.Histogram, family=None):
         :param yerr: Histogram uncertainties. Following modes are supported:
                      - 'rsumw2', sqrt(SumW2) errors
                      - 'sqrtN', sqrt(N) errors or poissonian interval when w2 is specified
+                     - 'carry', carries fractional error from original histogram
                      - shape(N) array of for one-sided errors or list thereof
                      - shape(Nx2) array of for two-sided errors or list thereof
         :param normalise: Whether histograms are normalised before taking ratio
@@ -598,6 +599,10 @@ class Histogram1D(bh.Histogram, family=None):
 
         if yerr is True:
             yerr = h_ratio.root_sumw2()
+        elif yerr == 'carry':
+            yerr = (self.root_sumw2() / self.bin_values()) * h_ratio.bin_values()
+            for i in range(h_ratio.TH1.GetNbinsX()):
+                h_ratio.TH1.SetBinError(i + 1, yerr[i])
 
         if fit:
             self.logger.info("Performing fit on ratio..")
@@ -641,8 +646,8 @@ class Histogram1D(bh.Histogram, family=None):
             ax.set_ylim(1 - yax_lim, 1 + yax_lim)
         else:
             # I don't know why the matplotlib automatic yaxis scaling doesn't work but I've done it for them here
-            ymax = np.max(np.ma.masked_invalid(h_ratio.bin_values() + (h_ratio.root_sumw2() / 2)))
-            ymin = np.min(np.ma.masked_invalid(h_ratio.bin_values() - (h_ratio.root_sumw2() / 2)))
+            ymax = np.max(np.ma.masked_invalid(h_ratio.bin_values() + (yerr / 2)))
+            ymin = np.min(np.ma.masked_invalid(h_ratio.bin_values() - (yerr / 2)))
             vspace = (ymax - ymin) * 0.1
             ax.set_ylim(ymin - vspace, ymax + vspace)
 

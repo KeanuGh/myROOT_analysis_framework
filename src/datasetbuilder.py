@@ -602,7 +602,8 @@ class DatasetBuilder:
             col for col in import_cols
             if col not in list(Rdf.GetColumnNames())
         ]:
-            raise ValueError(f"No branch(es) named {', '.join(missing_cols)} in TTree {self.TTree_name} of file(s) {data_path}")
+            raise ValueError(
+                f"No branch(es) named {', '.join(missing_cols)} in TTree {self.TTree_name} of file(s) {data_path}")
 
         # routine to separate vector branches into separate variables
         badcols = set()  # save old vector column names to avoid extracting them later
@@ -748,7 +749,8 @@ class DatasetBuilder:
             except ValueError as e:
                 raise Exception(f"Error in cut {cut.cutstr}:\n {e}")
 
-    def __calc_event_weight(self, df: pd.DataFrame, data_path: str, is_truth: bool = False, is_reco: bool = False) -> None:
+    def __calc_event_weight(self, df: pd.DataFrame, data_path: str, is_truth: bool = False,
+                            is_reco: bool = False) -> None:
         """Calculate truth and reco event weights"""
         if self.dataset_type == 'dta':
             self.logger.info("Calculating DTA weights...")
@@ -762,7 +764,8 @@ class DatasetBuilder:
                 PMG_factor = xs * kFactor * filterEfficiency
                 sumw = dsid_df['weight_mc'].sum()
 
-                df.loc[dsid, 'truth_weight'] = dsid_df['weight_mc'] * self.lumi * dsid_df['rwCorr'] * dsid_df['prwWeight'] * PMG_factor / sumw
+                df.loc[dsid, 'truth_weight'] = dsid_df['weight_mc'] * self.lumi * dsid_df['rwCorr'] * dsid_df[
+                    'prwWeight'] * PMG_factor / sumw
                 df.loc[dsid, 'reco_weight'] = dsid_df['weight'] * self.lumi * PMG_factor / sumw
 
             # filter events with nan/inf weight values (why do these appear?)
@@ -778,15 +781,55 @@ class DatasetBuilder:
 
         elif self.dataset_type == 'analysistop':
             if is_truth:
+                """
+                Calculate total truth event weights
+
+                lumi_data taken from year
+                mc_weight = +/-1 * cross_section
+                scale factor = weight_leptonSF
+                KFactor = KFactor_weight_truth
+                pileup = weight_pileup
+                recoweight = scalefactors * KFactor * pileup
+                lumi_weight = mc_weight * lumi_data / sum of event weights
+
+                total event weight = lumi_weight * truth_weight * reco_weight
+
+                This is done in one line for efficiency with pandas (sorry)
+                """
                 self.logger.info(f"Calculating truth weight for {self.name}...")
-                df['truth_weight'] = self.__event_weight_truth_analyistop(df)
+                df['truth_weight'] = self.lumi \
+                                     * df['mc_weight'] \
+                                     * abs(df['mc_weight']) \
+                                     / df['totalEventsWeighted'] \
+                                     * df['KFactor_weight_truth'] \
+                                     * df['weight_pileup']
                 # EVERY event MUST have a truth weight
                 self.logger.info(f"Verifying truth weight for {self.name}...")
                 if df['truth_weight'].isna().any():
                     raise ValueError("NAN values in truth weights!")
             if is_reco:
+                """
+                Calculate total reco event weights
+
+                lumi_data taken from year
+                mc_weight = +/-1 * cross_section
+                kFactor = kFactor_weight_truth
+                pileup = weight_pileup
+                truth_weight = kFactor * pileup
+                lumi_weight = mc_weight * lumi_data / sum of event weights
+
+                total event weight = lumi_weight * truth_weight * reco_weight
+
+                This is done in one line for efficiency with pandas (sorry)
+                """
                 self.logger.info(f"Calculating reco weight for {self.name}...")
-                df['reco_weight'] = self.__event_weight_reco_analysistop(df)
+                df['reco_weight'] = self.lumi \
+                                    * df['mc_weight'] \
+                                    * abs(df['mc_weight']) \
+                                    / df['totalEventsWeighted'] \
+                                    * df['weight_KFactor'] \
+                                    * df['weight_pileup'] \
+                                    * df['weight_leptonSF']
                 # every reco event MUST have a reco weight
                 self.logger.info(f"Verifying reco weight for {self.name}...")
                 if not is_truth:
@@ -822,54 +865,5 @@ class DatasetBuilder:
             if is_truth:
                 df.rename(columns={'KFactor_weight_truth': 'weight_KFactor'}, inplace=True)
 
-    def __event_weight_reco_analysistop(self,
-                                        df: pd.DataFrame,
-                                        mc_weight: str = 'weight_mc',
-                                        tot_weighted_events: str = 'totalEventsWeighted',
-                                        KFactor: str = 'weight_KFactor',
-                                        lepton_SF: str = 'weight_leptonSF',
-                                        pileup_weight: str = 'weight_pileup',
-                                        ) -> pd.Series:
-        """
-        Calculate total reco event weights
-
-        lumi_data taken from year
-        mc_weight = +/-1 * cross_section
-        kFactor = kFactor_weight_truth
-        pileup = weight_pileup
-        truth_weight = kFactor * pileup
-        lumi_weight = mc_weight * lumi_data / sum of event weights
-
-        total event weight = lumi_weight * truth_weight * reco_weight
-
-        This is done in one line for efficiency with pandas (sorry)
-        """
-        return \
-            self.lumi * df[mc_weight] * abs(df[mc_weight]) / df[tot_weighted_events] * \
-            df[KFactor] * df[pileup_weight] * df[lepton_SF]
-
-    def __event_weight_truth_analyistop(self,
-                                        df: pd.DataFrame,
-                                        mc_weight: str = 'weight_mc',
-                                        tot_weighted_events: str = 'totalEventsWeighted',
-                                        KFactor: str = 'KFactor_weight_truth',
-                                        pileup_weight: str = 'weight_pileup',
-                                        ) -> pd.Series:
-        """
-        Calculate total truth event weights
-
-        lumi_data taken from year
-        mc_weight = +/-1 * cross_section
-        scale factor = weight_leptonSF
-        KFactor = KFactor_weight_truth
-        pileup = weight_pileup
-        recoweight = scalefactors * KFactor * pileup
-        lumi_weight = mc_weight * lumi_data / sum of event weights
-
-        total event weight = lumi_weight * truth_weight * reco_weight
-
-        This is done in one line for efficiency with pandas (sorry)
-        """
-        return \
-            self.lumi * df[mc_weight] * abs(df[mc_weight]) / df[tot_weighted_events] * \
-            df[KFactor] * df[pileup_weight]
+        else:
+            raise ValueError(f"Unknown dataset type '{self.dataset_type}'")

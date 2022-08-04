@@ -119,7 +119,7 @@ for c in ('wmin', 'wplus'):
     h_jesal.plot(ax=ax, stats_box=True, label=f'jesal {c}')
     h.plot(ax=ax, stats_box=True, label=f'me {c}')
     ax.legend(fontsize=10, loc='upper right')
-    h.plot_ratio(h_jesal, ax=ratio_ax, fit=True)
+    h.plot_ratio(h_jesal, yerr='carry', ax=ratio_ax, fit=True)
     fig.savefig(f"{my_analysis.paths['plot_dir']}/{c}_compare", bbox_inches='tight')
 
 my_analysis.logger.info("DONE")

@@ -258,7 +258,7 @@ class Dataset:
             "phys_short",
             "n_events",
             "x-s pb",
-            "lumi pb-1",
+            "data lumi pb-1",
             "filter eff.",
             "sumw",
         ]
