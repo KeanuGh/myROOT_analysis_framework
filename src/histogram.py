@@ -506,7 +506,7 @@ class Histogram1D(bh.Histogram, family=None):
                 r'$\mathrm{Bin sum}: %.2f$' % hist.bin_sum(True),
                 r'$\mathrm{Integral}: %.2f$' % hist.integral,
             ))
-            ax.text(x=box_xpos, y=box_ypos, s=textstr, transform=ax.transAxes, fontsize='small')
+            ax.text(x=box_xpos, y=box_ypos, s=textstr, transform=ax.transAxes, fontsize='x-small')
 
         if out_filename:
             plt.savefig(out_filename, bbox_inches='tight')

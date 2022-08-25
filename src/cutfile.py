@@ -19,7 +19,7 @@ class Cut:
     name: str
     cutstr: str
     var: str | Set[str]
-    tree: str
+    tree: str | Set[str]
     is_reco: bool
 
     def __str__(self) -> str:
@@ -30,13 +30,13 @@ class Cutfile:
     """Handles importing cutfiles and extracting variables"""
     __slots__ = "sep", "logger", "name", "_path", "given_tree", "cuts", "__vars_to_cut", "tree_dict", "vars_to_calc"
 
-    def __init__(self, file_path: str, default_tree: str = '0:NONE', logger: logging.Logger = None, sep='\t'):
+    def __init__(self, file_path: str, default_tree: str | Set[str] = '0:NONE', logger: logging.Logger = None, sep='\t'):
         """
         Read and pull variables and cuts from cutfile.
 
         :param file_path: cutfile
-        :param default_tree: name of TTree to assume if not given in file path. default value is to avoid overlap with
-                             any possible TTree names
+        :param default_tree: name of TTree or list of names to assume if not given in file path. Default value is to
+                         avoid overlap with any possible TTree names
         :param logger: logger to output messages to. Will default to console output if not given
         :param sep: separator for values in cutfile. Default is TAB
         """
@@ -44,6 +44,8 @@ class Cutfile:
         self.logger = logger if logger is not None else get_logger()
         self.name = get_filename(file_path)
         self._path = file_path
+        if not isinstance(default_tree, str):  # make sure the default tree is a set of strings or a string
+            default_tree = set(default_tree)
         self.given_tree = default_tree
         self.cuts, self.__vars_to_cut = self.parse_cutfile()
 
@@ -108,7 +110,7 @@ class Cutfile:
 
         return Cut(name=name, cutstr=cut_str, var=var, tree=tree, is_reco=is_reco)
 
-    def parse_cutfile(self, path: str = None, sep='\t') -> Tuple[OrderedDict[str, Cut], Set[Tuple[str, str]]]:
+    def parse_cutfile(self, path: str = None, sep='\t') -> Tuple[OrderedDict[str, Cut], Dict[str, Set[str]]]:
         """
         | Generates pythonic outputs from input cutfile
         | Cutfile should be formatted with headers [CUTS] and [OUTPUTS]
@@ -146,7 +148,7 @@ class Cutfile:
                 cuts[cut.name] = cut
 
             # get output variables
-            output_vars = set()
+            output_vars = dict()
             for output_var in lines[lines.index('[OUTPUTS]') + 1:]:
                 if output_var.startswith('#') or len(output_var) < 2:
                     continue
@@ -157,10 +159,13 @@ class Cutfile:
                                       f"Got '{var_tree}'.")
                 elif len(var_tree) == 2:
                     out_var, tree = var_tree
-                    output_vars.add((out_var, tree))
+                    output_vars[out_var] = {tree}
                 elif len(var_tree) == 1:
                     out_var = var_tree[0]
-                    output_vars.add((out_var, self.given_tree))
+                    if not isinstance(self.given_tree, set):
+                        output_vars[out_var] = {self.given_tree}
+                    else:
+                        output_vars[out_var] = self.given_tree
                 else:
                     raise Exception("This should never happen")
 
@@ -173,54 +178,77 @@ class Cutfile:
 
         :return Tuple[{Dictionary of trees and its variables to extract}, {set of variables to calculate}]
         """
-        # generate initial dict with given (default) TTree
-        tree_dict: Dict[str, set] = {self.given_tree: set()}
+        # generate initial dict with given (default) TTree(s)
+        if isinstance(self.given_tree, set):
+            tree_dict: Dict[str, set] = dict()
+            for tree in self.given_tree:
+                tree_dict[tree] = set()
+        else:
+            tree_dict: Dict[str, set] = {self.given_tree: set()}
         extracted_vars = dict()  # keep all extracted variables here
 
         for cut in self.cuts.values():
             # cut could have multiple variables in it
+            if isinstance(cut.tree, str):
+                # ensure tree is always a set
+                tree = {cut.tree}
+            else:
+                tree = cut.tree
+
             if isinstance(cut.var, str):
                 the_var = {cut.var}
-                extracted_vars[cut.var] = cut.tree
+                extracted_vars[cut.var] = tree
             elif isinstance(cut.var, set):
                 the_var = cut.var
                 for var in the_var:
-                    extracted_vars[var] = cut.tree
+                    extracted_vars[var] = tree
             else:
                 raise ValueError("This should never happen")
 
-            if cut.tree not in tree_dict:
-                tree_dict[cut.tree] = the_var
+            # add cut variables to tree_dict
+            if not isinstance(cut.tree, set):
+                trees = {cut.tree}
             else:
-                tree_dict[cut.tree] |= the_var
+                trees = cut.tree
+
+            for tree in trees:
+                if tree not in tree_dict:
+                    tree_dict[tree] = the_var
+                else:
+                    tree_dict[tree] |= the_var
 
         # add variables not cut on to tree dict
-        for var, tree in self.__vars_to_cut:
-            extracted_vars[var] = tree
-            if tree in tree_dict:
-                tree_dict[tree] |= {var}
+        for var, trees in self.__vars_to_cut.items():
+            if var in extracted_vars:
+                extracted_vars[var] |= trees
             else:
-                tree_dict[tree] = {var}
+                extracted_vars[var] = trees
+            for tree in trees:
+                if tree in tree_dict:
+                    tree_dict[tree] |= {var}
+                else:
+                    tree_dict[tree] = {var}
 
         # work out which variables to calculate and which to extract from ROOT file
-        calc_vars = {  # cut variables that are in derived vars
-            (var, tree) for var, tree in extracted_vars.items()
+        calc_vars = [  # cut variables that are in derived vars
+            [var, trees] for var, trees in extracted_vars.items()
             if var in derived_vars
-        }
+        ]
 
         # remove variables to calculate from tree dict
         for tree in tree_dict:
             tree_dict[tree] -= {var for var, _ in calc_vars}
 
         # add any variables needed from which trees for calculating derived variables
-        for calc_var, tree in calc_vars:
-            if tree == self.given_tree and derived_vars[calc_var]['tree']:
-                tree = derived_vars[calc_var]['tree']
+        for calc_var, trees in calc_vars:
+            for tree in trees:
+                if tree == self.given_tree and derived_vars[calc_var]['tree']:
+                    tree = derived_vars[calc_var]['tree']
 
-            if tree in tree_dict:
-                tree_dict[tree] |= set(derived_vars[calc_var]['var_args'])
-            else:
-                tree_dict[tree] = set(derived_vars[calc_var]['var_args'])
+                if tree in tree_dict:
+                    tree_dict[tree] |= set(derived_vars[calc_var]['var_args'])
+                else:
+                    tree_dict[tree] = set(derived_vars[calc_var]['var_args'])
 
         # only return the actual variable names to calculate. Which tree to extract from will be handled by tree_dict
         return tree_dict, {var for var, _ in calc_vars}

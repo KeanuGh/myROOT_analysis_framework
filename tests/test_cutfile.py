@@ -17,7 +17,7 @@ met phi \t met_phi > 200 \t reco
 
 [OUTPUTS]
 # truth
-PDFinfo_Q \t truth
+PDFinfo_Q
 MC_WZ_dilep_pt_born \t truth
 
 # reco
@@ -57,6 +57,20 @@ class TestCutfile:
         expected_cuts['met phi'] = Cut('met phi', 'met_phi > 200', 'met_phi', 'reco', is_reco=True)
 
         assert cutfile.cuts == expected_cuts
+
+    def test_multiple_default_trees(self, tmp_cutfile):
+        """Look for any unlabeled variables in all tree dictionaries"""
+        cutfile = Cutfile(tmp_cutfile, default_tree=['truth', 'truth2', 'truth3'])
+        expected_treedict = {
+            'truth': {'testvartruth', 'MC_WZmu_el_eta_bare', 'MC_WZneutrino_pt_born', 'MC_WZmu_el_pt_born', 'PDFinfo_Q',
+                      'MC_WZ_dilep_pt_born'},
+            'reco': {'mu_d0sig', 'met_phi', 'jet_e',
+                     # varibles to calculate mu_mt
+                     'met_phi', 'met_met', 'mu_phi', 'mu_pt'},
+            'truth2': {'testvartruth', 'MC_WZmu_el_eta_bare', 'MC_WZneutrino_pt_born', 'MC_WZmu_el_pt_born', 'PDFinfo_Q'},
+            'truth3': {'testvartruth', 'MC_WZmu_el_eta_bare', 'MC_WZneutrino_pt_born', 'MC_WZmu_el_pt_born', 'PDFinfo_Q'},
+        }
+        assert cutfile.tree_dict == expected_treedict
 
     def test_cutfile_output(self, cutfile):
         expected_treedict = {

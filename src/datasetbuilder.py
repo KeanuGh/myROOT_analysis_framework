@@ -1,6 +1,7 @@
 import logging
 import time
 from dataclasses import dataclass, field
+from glob import glob
 from typing import List, Dict, OrderedDict, Set, Iterable, overload, Final
 
 import ROOT
@@ -34,7 +35,7 @@ class DatasetBuilder:
     Pass dataset build options to initialise class. Use DatasetBuilder.build() with inputs to return Dataset object.
 
     :param name: dataset name
-    :param TTree_name: TTree in datapath to set as default tree
+    :param TTree_name: TTree in datapath to set as default tree, or list of trees to merge
     :param lumi: data luminosity for weight calculation and normalisation
     :param year: data year for luminosty mapping
     :param lumi: data luminosity. Pass either this or year
@@ -54,7 +55,7 @@ class DatasetBuilder:
     :return: output dataframe containing columns corresponding to necessary variables
     """
     name: str = 'data'
-    TTree_name: str = 'truth'
+    TTree_name: str | List[str] = 'truth'
     year: str = '2015+2016'
     lumi: float = None
     label: str = 'data',
@@ -73,6 +74,9 @@ class DatasetBuilder:
     validate_sumofweights: bool = True
 
     def __post_init__(self):
+        if (self.dataset_type == 'analysistop') and (not isinstance(self.TTree_name, str)):
+            raise ValueError("Only use one default tree with analysistop ntuples.")
+
         if self.lumi and self.year:
             raise ValueError("Pass either lumi or year")
         elif self.year:
@@ -540,7 +544,7 @@ class DatasetBuilder:
         if self.validate_duplicated_events:
             self.logger.info(f"Validating duplicated events...")
             self.__drop_duplicates(df)
-            self.__drop_duplicate_event_numbers(df)
+            self.__drop_duplicate_index(df)
         else:
             self.logger.info("Skipped duplicted events validation")
 
@@ -582,59 +586,70 @@ class DatasetBuilder:
 
         self.logger.debug("Initialising RDataframe..")
 
-        # go through a TChain and globber because ROOT cannot glob directory names by itself
-        chain = ROOT_utils.glob_chain(self.TTree_name, str(data_path))
-        Rdf = ROOT.RDataFrame(chain)  # segfault happens if you put the chain in here directly (why god why)
-        # Rdf = Rdf.Filter("(passTruth == true) & (passReco == true)")
-
-        # check tree(s)
-        for tree in tree_dict:
-            if tree != self.TTree_name:
-                raise ValueError("Don't import more than one DTA tree at once. Got the following trees: ",
-                                 ', '.join(tree_dict.keys()))
-
         # add variables necessary to calculate weights etc
         tree_dict = self.__add_necessary_dta_variables(tree_dict)
 
-        # check columns
-        import_cols = tree_dict[self.TTree_name]
-        if missing_cols := [
-            col for col in import_cols
-            if col not in list(Rdf.GetColumnNames())
-        ]:
-            raise ValueError(
-                f"No branch(es) named {', '.join(missing_cols)} in TTree {self.TTree_name} of file(s) {data_path}")
+        if not isinstance(self.TTree_name, set):
+            ttrees = {self.TTree_name}
+        else:
+            ttrees = self.TTree_name
 
-        # routine to separate vector branches into separate variables
-        badcols = set()  # save old vector column names to avoid extracting them later
-        for col_name in import_cols:
-            # unravel vector-type columns
-            col_type = Rdf.GetColumnType(col_name)
-            if "ROOT::VecOps::RVec" in col_type:
-                # skip non-numeric vector types
-                if col_type == "ROOT::VecOps::RVec<string>":
-                    self.logger.warning(f"Skipping string vector column {col_name}")
-                    badcols.add(col_name)
+        Rdfs = []
+        for ttree in ttrees:
+            files = glob(data_path)
+            Rdf = ROOT.RDataFrame(str(ttree), files)
+            Rdfs.append(Rdf)
 
-                elif 'jet' in str(col_name).lower():
-                    # create three new columns for each possible jet
-                    for i in range(3):
-                        Rdf = Rdf.Define(f"{col_name}{i + 1}", f"getVecVal({col_name},{i})")
-                    badcols.add(col_name)
+        # Extract each tree
+        dfs = []
+        for Rdf, ttree in zip(Rdfs, ttrees):
+            # check columns
+            import_cols = tree_dict[ttree]
+            if missing_cols := [
+                col for col in import_cols
+                if col not in list(Rdf.GetColumnNames())
+            ]:
+                raise ValueError(
+                    f"No branch(es) named {', '.join(missing_cols)} in TTree {ttree} of file(s) {data_path}")
 
-                else:
-                    Rdf = Rdf.Redefine(col_name, f"getVecVal({col_name},0)")
+            # routine to separate vector branches into separate variables
+            badcols = set()  # save old vector column names to avoid extracting them later
+            for col_name in import_cols:
+                # unravel vector-type columns
+                col_type = Rdf.GetColumnType(col_name)
+                if "ROOT::VecOps::RVec" in col_type:
+                    # skip non-numeric vector types
+                    if col_type == "ROOT::VecOps::RVec<string>":
+                        self.logger.warning(f"Skipping string vector column {col_name}")
+                        badcols.add(col_name)
 
-        # import needed columns to pandas dataframe
-        cols_to_extract = [c for c in import_cols
-                           if c not in badcols]
-        self.logger.info(f"Extracting {tree_dict[self.TTree_name]} from {self.TTree_name} tree...")
-        df = pd.DataFrame(Rdf.AsNumpy(columns=cols_to_extract))
-        self.logger.debug(f"Extracted {len(df.index)} events.")
+                    elif 'jet' in str(col_name).lower():
+                        # create three new columns for each possible jet
+                        for i in range(3):
+                            Rdf = Rdf.Define(f"{col_name}{i + 1}", f"getVecVal({col_name},{i})")
+                        badcols.add(col_name)
 
-        self.logger.debug("Setting DSID/eventNumber as index...")
-        df.set_index(['mcChannel', 'eventNumber'], inplace=True)
-        df.index.names = ['DSID', 'eventNumber']
+                    else:
+                        Rdf = Rdf.Redefine(col_name, f"getVecVal({col_name},0)")
+
+            # import needed columns to pandas dataframe
+            cols_to_extract = [c for c in import_cols
+                               if c not in badcols]
+            self.logger.info(f"Extracting {tree_dict[ttree]} from {ttree} tree...")
+            df = pd.DataFrame(Rdf.AsNumpy(columns=cols_to_extract))
+            self.logger.debug(f"Extracted {len(df.index)} events.")
+
+            self.logger.debug("Setting DSID/eventNumber as index...")
+            df.set_index(['mcChannel', 'eventNumber'], inplace=True)
+            df.index.names = ['DSID', 'eventNumber']
+
+            dfs.append(df)
+
+        if len(dfs) > 1:
+            self.logger.info("Merging trees into one dataset...")
+            df = pd.concat(dfs, copy=False)
+        else:
+            df = dfs[0]
 
         self.logger.info("Sorting by DSID...")
         df.sort_index(level='DSID', inplace=True)
@@ -642,10 +657,10 @@ class DatasetBuilder:
         # validate
         if self.validate_duplicated_events:
             self.logger.info(f"Validating duplicated events in tree {self.TTree_name}...")
-            self.__drop_duplicates(df)
-            self.__drop_duplicate_event_numbers(df)
+            # self.__drop_duplicates(df)
+            self.__drop_duplicate_index(df)
         else:
-            self.logger.info("Skipping duplicated events validation")
+            self.logger.info("Skipped duplicated event validation")
 
         # rescale GeV columns
         self.__rescale_to_gev(df)
@@ -711,9 +726,9 @@ class DatasetBuilder:
         df.drop_duplicates(inplace=True)
         self.logger.info(f"{b_size - len(df.index)} duplicate events dropped")
 
-    def __drop_duplicate_event_numbers(self, df: pd.DataFrame) -> None:
+    def __drop_duplicate_index(self, df: pd.DataFrame) -> None:
         b_size = len(df.index)
-        df.index = df.index.drop_duplicates()
+        df = df[~df.index.duplicated(keep='first')]
         self.logger.info(f"{b_size - len(df.index)} duplicate event numbers dropped")
 
     def __rescale_to_gev(self, df) -> None:
@@ -754,7 +769,7 @@ class DatasetBuilder:
         """Calculate truth and reco event weights"""
         if self.dataset_type == 'dta':
             self.logger.info("Calculating DTA weights...")
-            # sumw = ROOT_utils.get_dta_sumw(data_path)
+            sumw = ROOT_utils.get_dta_sumw(data_path)
             df['truth_weight'] = np.nan
             df['reco_weight'] = np.nan
             for dsid, dsid_df in df.groupby(level='DSID'):
@@ -762,10 +777,14 @@ class DatasetBuilder:
                 kFactor = PMG_tool.get_kFactor(dsid)
                 filterEfficiency = PMG_tool.get_genFiltEff(dsid)
                 PMG_factor = xs * kFactor * filterEfficiency
-                sumw = dsid_df['weight_mc'].sum()
+                # sumw = dsid_df['weight_mc'].sum()
 
-                df.loc[dsid, 'truth_weight'] = dsid_df['weight_mc'] * self.lumi * dsid_df['rwCorr'] * dsid_df[
-                    'prwWeight'] * PMG_factor / sumw
+                df.loc[dsid, 'truth_weight'] = dsid_df['weight_mc'] \
+                                               * self.lumi \
+                                               * dsid_df['rwCorr'] \
+                                               * dsid_df['prwWeight'] \
+                                               * PMG_factor \
+                                               / sumw
                 df.loc[dsid, 'reco_weight'] = dsid_df['weight'] * self.lumi * PMG_factor / sumw
 
             # filter events with nan/inf weight values (why do these appear?)
@@ -798,8 +817,8 @@ class DatasetBuilder:
                 """
                 self.logger.info(f"Calculating truth weight for {self.name}...")
                 df['truth_weight'] = self.lumi \
-                                     * df['mc_weight'] \
-                                     * abs(df['mc_weight']) \
+                                     * df['weight_mc'] \
+                                     * abs(df['weight_mc']) \
                                      / df['totalEventsWeighted'] \
                                      * df['KFactor_weight_truth'] \
                                      * df['weight_pileup']
@@ -824,8 +843,8 @@ class DatasetBuilder:
                 """
                 self.logger.info(f"Calculating reco weight for {self.name}...")
                 df['reco_weight'] = self.lumi \
-                                    * df['mc_weight'] \
-                                    * abs(df['mc_weight']) \
+                                    * df['weight_mc'] \
+                                    * abs(df['weight_mc']) \
                                     / df['totalEventsWeighted'] \
                                     * df['weight_KFactor'] \
                                     * df['weight_pileup'] \

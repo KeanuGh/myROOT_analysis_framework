@@ -6,6 +6,7 @@ from typing import Dict, List, Tuple, Iterable
 import matplotlib.pyplot as plt
 import pandas as pd
 from numpy.typing import ArrayLike
+from tabulate import tabulate
 
 import src.config as config
 from src.dataset import Dataset
@@ -607,6 +608,21 @@ class Analysis:
 
         if clear_hists:
             self.histograms = OrderedDict()
+
+    def histogram_printout(self, to_latex: bool = False) -> None:
+        """Printout of histogram metadata"""
+        rows = []
+        header = ['Hist name', 'Entries', 'Bin sum', 'Integral']
+        for name, h in self.histograms.items():
+            rows.append([name, h.n_entries, h.bin_sum(True), h.integral])
+
+        if not to_latex:
+            self.logger.info(tabulate(rows, headers=header))
+        else:
+            filepath = f"{self.paths['latex_dir']}_histograms.tex"
+            with open(filepath, "w") as f:
+                f.write(tabulate(rows, headers=header, tablefmt='latex_raw'))
+                self.logger.info(f"Saved LaTeX histogram table to {filepath}")
 
     @handle_dataset_arg
     def print_latex_table(self, datasets: str | Iterable[str]) -> None:

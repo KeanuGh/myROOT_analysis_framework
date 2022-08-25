@@ -50,6 +50,7 @@ TruthBosonE
 TruthBosonEta
 TruthBosonPt
 TruthBosonM
+TruthDilepM
 
 # reco
 # TauPt

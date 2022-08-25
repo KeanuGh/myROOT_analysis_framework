@@ -16,7 +16,7 @@ verbosity = ROOT.Experimental.RLogScopedVerbosity(ROOT.Detail.RDF.RDFLogChannel(
 FILEPATH_PEAK = '/data/analysistop_out/mc16a/wmintaunu/*.root'
 FILEPATH_SLICE = '/data/analysistop_out/mc16a/wmintaunu_*/*.root'
 TREENAME = 'truth'
-BRANCH = 'MC_WZ_dilep_m_born'
+BRANCH = 'MC_WZmu_el_pt_born'
 LUMI_SAMPLE = 32.9881 + 3.21956
 
 # ROOT.gSystem.Load(f'../utils/rootfuncs.h')
@@ -55,7 +55,7 @@ bins = np.array(
      705.8748, 762.3018, 823.2396, 889.0486, 960.1184, 1036.869, 1119.756, 1209.268, 1305.936, 1410.332, 1523.072,
      1644.825, 1776.311, 1918.308, 2071.656, 2237.263, 2416.107, 2609.249, 2817.83, 3043.085, 3286.347, 3549.055,
      3832.763, 4139.151, 4470.031, 4827.361, 5213.257])
-h = ROOT.TH1F("Dilep m", "Dilep m", len(bins) - 1, bins)
+h = ROOT.TH1F(BRANCH, BRANCH, len(bins) - 1, bins)
 
 h_filled = Rdf_slice.Fill(h, [BRANCH, 'truth_weight'])
 h_filled = Rdf_peak.Fill(h_filled.GetPtr(), [BRANCH, 'truth_weight'])
