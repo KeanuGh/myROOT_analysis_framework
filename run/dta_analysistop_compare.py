@@ -1,4 +1,3 @@
-import numpy as np
 from numpy import pi
 
 from src.analysis import Analysis
@@ -21,7 +20,7 @@ if __name__ == '__main__':
             # 'hard_cut': 'Muonic Tau',
             'lepton': 'tau',
             'dataset_type': 'dta',
-            'force_rebuild': True,
+            # 'force_rebuild': True,
             # 'force_recalc_weights': True,
             'label': r'Sherpa 2211 $W\rightarrow\tau\nu\rightarrow$',
         },
@@ -96,8 +95,8 @@ if __name__ == '__main__':
     my_analysis.merge_datasets('wtaunu_analysistop', 'wtaunu_analysistop_peak')
 
     # BR-scaled weight
-    my_analysis['wtaunu_dta'].df['br_scaled_weight'] = my_analysis['wtaunu_dta']['truth_weight']
-    my_analysis['wtaunu_analysistop'].df['br_scaled_weight'] = my_analysis['wtaunu_analysistop']['truth_weight'] * 0.1138
+    my_analysis['wtaunu_dta'].df['br_scaled_weight'] = my_analysis['wtaunu_dta']['truth_weight'] / my_analysis.global_lumi
+    my_analysis['wtaunu_analysistop'].df['br_scaled_weight'] = my_analysis['wtaunu_analysistop']['truth_weight'] * 0.1138 / my_analysis.global_lumi
 
     # HISTORGRAMS
     # ==================================================================================================================

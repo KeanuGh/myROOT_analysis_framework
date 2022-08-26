@@ -11,19 +11,37 @@ bins = np.array(
      1644.825, 1776.311, 1918.308, 2071.656, 2237.263, 2416.107, 2609.249, 2817.83, 3043.085, 3286.347, 3549.055,
      3832.763, 4139.151, 4470.031, 4827.361, 5213.257])
 
-DTA_PATH = '/data/DTA_outputs/2022-06-08/'
+DTA_PATH = '/data/DTA_outputs/2022-08-24/'
 DATA_OUT_DIR = '/data/dataset_pkl_outputs/'
 datasets = {
-    'wtaunu_dta_cvetobveto': {
+    'wtaunu_l_dta_cvetobveto': {
         'data_path': DTA_PATH + 'user.kghorban.Sh_2211_Wtaunu_L_maxHTpTV2_CVetoBVeto*_histograms.root/*.root',
+        'TTree_name': ['T_s1tmv_NOMINAL', 'T_s1tev_NOMINAL'],
         'label': r'C Veto B Veto',
     },
-    'wtaunu_dta_cfilterbveto': {
+    'wtaunu_l_dta_cfilterbveto': {
         'data_path': DTA_PATH + 'user.kghorban.Sh_2211_Wtaunu_L_maxHTpTV2_CFilterBVeto*_histograms.root/*.root',
+        'TTree_name': ['T_s1tmv_NOMINAL', 'T_s1tev_NOMINAL'],
         'label': r'C Filter B Veto',
     },
-    'wtaunu_dta_bfilter': {
+    'wtaunu_l_dta_bfilter': {
         'data_path': DTA_PATH + 'user.kghorban.Sh_2211_Wtaunu_L_maxHTpTV2_BFilter*_histograms.root/*.root',
+        'TTree_name': ['T_s1tmv_NOMINAL', 'T_s1tev_NOMINAL'],
+        'label': r'B Filter',
+    },
+    'wtaunu_h_dta_cvetobveto': {
+        'data_path': DTA_PATH + 'user.kghorban.Sh_2211_Wtaunu_H_maxHTpTV2_CVetoBVeto*_histograms.root/*.root',
+        'TTree_name': 'T_s1thv_NOMINAL',
+        'label': r'C Veto B Veto',
+    },
+    'wtaunu_h_dta_cfilterbveto': {
+        'data_path': DTA_PATH + 'user.kghorban.Sh_2211_Wtaunu_H_maxHTpTV2_CFilterBVeto*_histograms.root/*.root',
+        'TTree_name': 'T_s1thv_NOMINAL',
+        'label': r'C Filter B Veto',
+    },
+    'wtaunu_h_dta_bfilter': {
+        'data_path': DTA_PATH + 'user.kghorban.Sh_2211_Wtaunu_H_maxHTpTV2_BFilter*_histograms.root/*.root',
+        'TTree_name': 'T_s1thv_NOMINAL',
         'label': r'B Filter',
     },
 }
@@ -31,15 +49,13 @@ datasets = {
 my_analysis = Analysis(
     datasets,
     analysis_label='dta_analysis',
-    # force_rebuild=True,
-    TTree_name='T_s1tlv_NOMINAL',
+    force_rebuild=True,
     dataset_type='dta',
     # log_level=10,
     data_dir=DATA_OUT_DIR,
     log_out='both',
     lepton='tau',
     cutfile_path='../options/DTA_cuts/dta_init.txt',
-    validate_duplicated_events=False,
     # force_recalc_weights=True,
 )
 

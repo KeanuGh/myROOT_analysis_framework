@@ -55,7 +55,7 @@ class DatasetBuilder:
     :return: output dataframe containing columns corresponding to necessary variables
     """
     name: str = 'data'
-    TTree_name: str | List[str] = 'truth'
+    TTree_name: str | Set[str] = 'truth'
     year: str = '2015+2016'
     lumi: float = None
     label: str = 'data',
@@ -76,6 +76,10 @@ class DatasetBuilder:
     def __post_init__(self):
         if (self.dataset_type == 'analysistop') and (not isinstance(self.TTree_name, str)):
             raise ValueError("Only use one default tree with analysistop ntuples.")
+        if not isinstance(self.TTree_name, str):
+            self.TTree_name = set(self.TTree_name)
+        else:
+            self.TTree_name = {self.TTree_name}
 
         if self.lumi and self.year:
             raise ValueError("Pass either lumi or year")

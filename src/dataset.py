@@ -223,53 +223,6 @@ class Dataset:
             xs = cls.get_cross_section(df)
         return df[weight_col].sum() / xs
 
-    def dsid_metadata_printout(self) -> None:
-        """print some dataset ID metadata"""
-        if self.df.index.names != ['DSID', 'eventNumber']:
-            raise ValueError("Incorrect index")
-
-        print_truth = self.is_truth
-        print_reco = self.is_reco
-
-        self.logger.info(f"DATASET INFO FOR {self.name}:")
-
-        # per dsid
-        rows = []
-        for dsid in self.df.index.unique(level='DSID'):
-            phys_short = PMG_tool.get_physics_short(dsid)
-            row = [
-                dsid,
-                phys_short,
-                len(self.df.loc[dsid]),
-                PMG_tool.get_crossSection(dsid),
-                self.lumi,
-                PMG_tool.get_genFiltEff(dsid),
-                self.df.loc[dsid, 'weight_mc'].sum(),
-            ]
-            if print_truth:
-                row += [self.df.loc[dsid, 'truth_weight'].notna().sum(), self.df.loc[dsid, 'truth_weight'].mean()]
-            if print_reco:
-                row += [self.df.loc[dsid, 'reco_weight'].notna().sum(), self.df.loc[dsid, 'reco_weight'].mean()]
-
-            rows.append(row)
-
-        header = [
-            "DSID",
-            "phys_short",
-            "n_events",
-            "x-s pb",
-            "data lumi pb-1",
-            "filter eff.",
-            "sumw",
-        ]
-        if print_truth:
-            header += ["truth events", "avg truth wgt"]
-        if print_reco:
-            header += ["reco events", "avg reco wgt"]
-
-        # print it all
-        self.logger.info(tabulate(rows, headers=header))
-
     # ===============================
     # ========== SUBSETS ============
     # ===============================
@@ -322,6 +275,54 @@ class Dataset:
         """
         self.cutflow.print_latex_table(filepath)
         self.logger.info(f"Saved LaTeX cutflow table in {filepath}")
+
+    def dsid_metadata_printout(self, reco: bool = False) -> None:
+        """print some dataset ID metadata"""
+        if self.df.index.names != ['DSID', 'eventNumber']:
+            raise ValueError("Incorrect index")
+
+        print_truth = self.is_truth
+        print_reco = self.is_reco and reco
+
+        self.logger.info(f"DATASET INFO FOR {self.name}:")
+
+        # per dsid
+        rows = []
+        for dsid in self.df.index.unique(level='DSID'):
+            dsid_slice = self.df.loc[slice(dsid)]
+            phys_short = PMG_tool.get_physics_short(dsid)
+            row = [
+                dsid,
+                phys_short,
+                len(dsid_slice),
+                PMG_tool.get_crossSection(dsid),
+                self.lumi,
+                PMG_tool.get_genFiltEff(dsid),
+                dsid_slice['weight_mc'].sum(),
+            ]
+            if print_truth:
+                row += [dsid_slice['truth_weight'].notna().sum(), dsid_slice['truth_weight'].mean()]
+            if print_reco:
+                row += [dsid_slice['reco_weight'].notna().sum(), dsid_slice['reco_weight'].mean()]
+
+            rows.append(row)
+
+        header = [
+            "DSID",
+            "phys_short",
+            "n_events",
+            "x-s pb",
+            "data lumi pb-1",
+            "filter eff.",
+            "sumw",
+        ]
+        if print_truth:
+            header += ["truth events", "avg truth wgt"]
+        if print_reco:
+            header += ["reco events", "avg reco wgt"]
+
+        # print it all
+        self.logger.info(tabulate(rows, headers=header))
 
     # ===============================
     # ========== CUTTING ============

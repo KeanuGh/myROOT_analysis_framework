@@ -10,7 +10,7 @@ from tabulate import tabulate
 
 import src.config as config
 from src.dataset import Dataset
-from src.datasetbuilder import DatasetBuilder
+from src.datasetbuilder import DatasetBuilder, lumi_year
 from src.histogram import Histogram1D
 from src.logger import get_logger
 from utils import file_utils, plotting_utils, ROOT_utils
@@ -85,7 +85,10 @@ class Analysis:
         # SET OTHER GLOBAL OPTIONS
         # ============================
         self.name = analysis_label
-        self.global_lumi = global_lumi
+        if 'year' in kwargs:
+            self.global_lumi = lumi_year[kwargs['year']]
+        else:
+            self.global_lumi = global_lumi
 
         # BUILD DATASETS
         # ============================
