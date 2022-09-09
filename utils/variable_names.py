@@ -239,7 +239,12 @@ variable_data: Dict[str, Branch] = {
         'tag': VarTag.TRUTH,
     },
     'DilepM': {
-        'name': r'$M_{ll}$',
+        'name': r'$m_{ll}$',
+        'units': 'GeV',
+        'tag': VarTag.TRUTH
+    },
+    'TruthDilepM': {
+        'name': r'$m_{ll}$',
         'units': 'GeV',
         'tag': VarTag.TRUTH
     },

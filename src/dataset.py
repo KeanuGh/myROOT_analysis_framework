@@ -276,12 +276,12 @@ class Dataset:
         self.cutflow.print_latex_table(filepath)
         self.logger.info(f"Saved LaTeX cutflow table in {filepath}")
 
-    def dsid_metadata_printout(self, reco: bool = False) -> None:
+    def dsid_metadata_printout(self, truth: bool = True, reco: bool = False) -> None:
         """print some dataset ID metadata"""
         if self.df.index.names != ['DSID', 'eventNumber']:
             raise ValueError("Incorrect index")
 
-        print_truth = self.is_truth
+        print_truth = self.is_truth and truth
         print_reco = self.is_reco and reco
 
         self.logger.info(f"DATASET INFO FOR {self.name}:")

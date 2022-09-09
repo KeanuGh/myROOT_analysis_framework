@@ -15,7 +15,7 @@ from src.cutfile import Cutfile, Cut
 from src.cutflow import Cutflow
 from src.dataset import Dataset
 from src.logger import get_logger
-from utils import file_utils, ROOT_utils, PMG_tool
+from utils import file_utils, PMG_tool, ROOT_utils
 from utils.var_helpers import derived_vars
 from utils.variable_names import variable_data
 
@@ -547,8 +547,8 @@ class DatasetBuilder:
         # validate
         if self.validate_duplicated_events:
             self.logger.info(f"Validating duplicated events...")
-            self.__drop_duplicates(df)
-            self.__drop_duplicate_index(df)
+            # self.__drop_duplicates(df)
+            df = self.__drop_duplicate_index(df)
         else:
             self.logger.info("Skipped duplicted events validation")
 
@@ -598,15 +598,12 @@ class DatasetBuilder:
         else:
             ttrees = self.TTree_name
 
-        Rdfs = []
+        # Extract each tree
+        dfs = []
         for ttree in ttrees:
             files = glob(data_path)
             Rdf = ROOT.RDataFrame(str(ttree), files)
-            Rdfs.append(Rdf)
 
-        # Extract each tree
-        dfs = []
-        for Rdf, ttree in zip(Rdfs, ttrees):
             # check columns
             import_cols = tree_dict[ttree]
             if missing_cols := [
@@ -641,7 +638,12 @@ class DatasetBuilder:
                                if c not in badcols]
             self.logger.info(f"Extracting {tree_dict[ttree]} from {ttree} tree...")
             df = pd.DataFrame(Rdf.AsNumpy(columns=cols_to_extract))
-            self.logger.debug(f"Extracted {len(df.index)} events.")
+            self.logger.info(f"Extracted {len(df.index)} events.")
+
+            # calculate sum of weights
+            self.logger.info("Calculating sum of weights...")
+            sumw_df = ROOT_utils.get_dta_sumw(data_path, ttree)
+            df = pd.merge(df, sumw_df, on='mcChannel', sort=False, copy=False)
 
             self.logger.debug("Setting DSID/eventNumber as index...")
             df.set_index(['mcChannel', 'eventNumber'], inplace=True)
@@ -662,7 +664,7 @@ class DatasetBuilder:
         if self.validate_duplicated_events:
             self.logger.info(f"Validating duplicated events in tree {self.TTree_name}...")
             # self.__drop_duplicates(df)
-            self.__drop_duplicate_index(df)
+            df = self.__drop_duplicate_index(df)
         else:
             self.logger.info("Skipped duplicated event validation")
 
@@ -730,10 +732,11 @@ class DatasetBuilder:
         df.drop_duplicates(inplace=True)
         self.logger.info(f"{b_size - len(df.index)} duplicate events dropped")
 
-    def __drop_duplicate_index(self, df: pd.DataFrame) -> None:
+    def __drop_duplicate_index(self, df: pd.DataFrame) -> pd.DataFrame:
         b_size = len(df.index)
         df = df[~df.index.duplicated(keep='first')]
         self.logger.info(f"{b_size - len(df.index)} duplicate event numbers dropped")
+        return df
 
     def __rescale_to_gev(self, df) -> None:
         """rescales to GeV because athena's default output is in MeV for some reason"""
@@ -768,28 +771,31 @@ class DatasetBuilder:
             except ValueError as e:
                 raise Exception(f"Error in cut {cut.cutstr}:\n {e}")
 
-    def __calc_event_weight(self, df: pd.DataFrame, data_path: str, is_truth: bool = False,
+    def __calc_event_weight(self, df: pd.DataFrame,
+                            data_path: str,
+                            is_truth: bool = False,
                             is_reco: bool = False) -> None:
         """Calculate truth and reco event weights"""
         if self.dataset_type == 'dta':
             self.logger.info("Calculating DTA weights...")
-            sumw = ROOT_utils.get_dta_sumw(data_path)
             df['truth_weight'] = np.nan
             df['reco_weight'] = np.nan
-            for dsid, dsid_df in df.groupby(level='DSID'):
+            for dsid in df.index.unique(level='DSID'):
+                dsid_slice = df.loc[slice(dsid)]
+
                 xs = PMG_tool.get_crossSection(dsid)
                 kFactor = PMG_tool.get_kFactor(dsid)
                 filterEfficiency = PMG_tool.get_genFiltEff(dsid)
                 PMG_factor = xs * kFactor * filterEfficiency
-                # sumw = dsid_df['weight_mc'].sum()
 
-                df.loc[dsid, 'truth_weight'] = dsid_df['weight_mc'] \
-                                               * self.lumi \
-                                               * dsid_df['rwCorr'] \
-                                               * dsid_df['prwWeight'] \
-                                               * PMG_factor \
-                                               / sumw
-                df.loc[dsid, 'reco_weight'] = dsid_df['weight'] * self.lumi * PMG_factor / sumw
+                df.loc[dsid, 'truth_weight'] = dsid_slice['weight_mc'] \
+                                             * self.lumi \
+                                             * dsid_slice['rwCorr'] \
+                                             * dsid_slice['prwWeight'] \
+                                             * PMG_factor \
+                                             / dsid_slice['sumOfWeights']
+                df.loc[dsid, 'base_weight'] = dsid_slice['weight_mc'] * xs / dsid_slice['sumOfWeights']
+                df.loc[dsid, 'reco_weight'] = dsid_slice['weight'] * self.lumi * PMG_factor / dsid_slice['sumOfWeights']
 
             # filter events with nan/inf weight values (why do these appear?)
             self.logger.info("Filtering invalid weights...")
@@ -819,17 +825,21 @@ class DatasetBuilder:
 
                 This is done in one line for efficiency with pandas (sorry)
                 """
-                self.logger.info(f"Calculating truth weight for {self.name}...")
+                self.logger.info(f"Calculating truth weights for {self.name}...")
                 df['truth_weight'] = self.lumi \
                                      * df['weight_mc'] \
                                      * abs(df['weight_mc']) \
                                      / df['totalEventsWeighted'] \
                                      * df['KFactor_weight_truth'] \
                                      * df['weight_pileup']
+                df['base_weight'] = df['weight_mc'] \
+                                    * abs(df['weight_mc']) \
+                                    / df['totalEventsWeighted']
                 # EVERY event MUST have a truth weight
                 self.logger.info(f"Verifying truth weight for {self.name}...")
                 if df['truth_weight'].isna().any():
                     raise ValueError("NAN values in truth weights!")
+
             if is_reco:
                 """
                 Calculate total reco event weights

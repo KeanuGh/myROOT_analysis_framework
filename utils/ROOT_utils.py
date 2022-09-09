@@ -4,11 +4,12 @@ import pathlib
 import pickle as pkl
 from contextlib import contextmanager
 from os import PathLike
-from typing import Type
+from typing import Type, Dict
 
 import ROOT
 import boost_histogram as bh
 import numpy as np
+import pandas as pd
 
 
 # ROOT settings
@@ -158,11 +159,22 @@ def glob_chain(TTree: str, path: PathLike | str) -> ROOT.TChain:
 #         super().__init__(self.chain)
 
 
-def get_dta_sumw(path: str) -> float:
-    """get total xAOD sum of weights for sample in DTA"""
+def get_dta_sumw(path: str, ttree_name: str) -> pd.DataFrame:
+    """Return DataFrame containing sum of weights per DSID"""
     files_list = glob.glob(path)
-    sum_of_weights = 0.
+    dsid_sumw: Dict[int, float] = dict()
+
+    # loop over files and sum sumw values per dataset ID (assuming each file only has one dataset ID value)
     for file in files_list:
-        with ROOT_TFile_mgr(file, 'read') as f:
-            sum_of_weights += f.Get("sumOfWeights").GetBinContent(4)
-    return sum_of_weights
+        with ROOT_TFile_mgr(file, 'read') as tfile:
+            tree = tfile.Get(ttree_name)
+            tree.GetEntry(0)  # read first DSID from branch
+            if tree.mcChannel not in dsid_sumw:
+                dsid_sumw[tree.mcChannel] = tfile.Get("sumOfWeights").GetBinContent(4)
+            else:
+                dsid_sumw[tree.mcChannel] += tfile.Get("sumOfWeights").GetBinContent(4)
+
+    df = pd.DataFrame.from_dict(dsid_sumw, orient='index', columns=['sumOfWeights'])
+    df.index.name = 'mcChannel'
+
+    return df

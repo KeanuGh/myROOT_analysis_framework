@@ -16,13 +16,14 @@ if __name__ == '__main__':
         'wtaunu_dta': {
             'data_path': DTA_PATH + '/user.kghorban.Sh_2211_Wtaunu_*/*.root',
             'cutfile_path': '../options/DTA_cuts/dta_init.txt',
+            # 'TTree_name': 'T_s1thv_NOMINAL',
             'TTree_name': {'T_s1thv_NOMINAL', 'T_s1tev_NOMINAL', 'T_s1tmv_NOMINAL'},
             # 'hard_cut': 'Muonic Tau',
             'lepton': 'tau',
             'dataset_type': 'dta',
             # 'force_rebuild': True,
             # 'force_recalc_weights': True,
-            'label': r'Sherpa 2211 $W\rightarrow\tau\nu\rightarrow$',
+            'label': r'Sherpa 2211 $W\rightarrow\tau\nu$',
         },
         # 'wtaunu_h_dta': {
         #     'data_path': DTA_PATH + '/user.kghorban.Sh_2211_Wtaunu_H*/*.root',
@@ -91,7 +92,7 @@ if __name__ == '__main__':
         # log_level=10,
         log_out='both',
     )
-    # my_analysis.merge_datasets('wtaunu_mu_dta', 'wtaunu_e_dta', verify=True)
+    my_analysis.merge_datasets('wtaunu_mu_dta', 'wtaunu_e_dta', verify=True)
     my_analysis.merge_datasets('wtaunu_analysistop', 'wtaunu_analysistop_peak')
 
     # BR-scaled weight
@@ -172,7 +173,7 @@ if __name__ == '__main__':
     # -----------------------------------
     for arg_dict in (
             # unweighted_args,
-            weighted_args,
+            # weighted_args,
             # bin_scaled_args,
             br_weighted_args,
             # bin_br_scaled_args,

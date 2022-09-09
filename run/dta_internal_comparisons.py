@@ -1,11 +1,9 @@
-from numpy import pi
-
 from src.analysis import Analysis
 
 # DTA_PATH = '/data/keanu/ditau_output/'
 # ANALYSISTOP_PATH = '/data/atlas/HighMassDrellYan/mc16a'
 # DATA_OUT_DIR = '/data/keanu/framework_outputs/'
-DTA_PATH = '/mnt/D/data/DTA_outputs/'
+DTA_PATH = '/data/DTA_outputs/2022-08-24/'
 ANALYSISTOP_PATH = '/mnt/D/data/analysistop_out/mc16a/'
 DATA_OUT_DIR = '/mnt/D/data/dataset_pkl_outputs/'
 
@@ -14,51 +12,59 @@ if __name__ == '__main__':
         # dta w->taunu->munu
         'wtaunu_mu_dta': {
             'data_path': DTA_PATH + '/user.kghorban.Sh_2211_Wtaunu_L*/*.root',
-            'cutfile_path': '../options/DTA_cuts/dta_tau_to_muons.txt',
-            'TTree_name': 'T_s1tlv_NOMINAL',
-            'hard_cut': 'Muonic Tau',
+            'cutfile_path': '../options/DTA_cuts/dta_init.txt',
+            'TTree_name': 'T_s1tmv_NOMINAL',
             # 'force_rebuild': False,
-            'validate_duplicated_events': False,
             'label': r'Sherpa 2211 $W\rightarrow\tau\nu\rightarrow \mu\nu$',
         },
         'wtaunu_e_dta': {
             'data_path': DTA_PATH + '/user.kghorban.Sh_2211_Wtaunu_L*/*.root',
-            'cutfile_path': '../options/DTA_cuts/dta_tau_to_electrons.txt',
-            'TTree_name': 'T_s1tlv_NOMINAL',
-            'hard_cut': 'Electronic Tau',
+            'cutfile_path': '../options/DTA_cuts/dta_init.txt',
+            'TTree_name': 'T_s1tev_NOMINAL',
             # 'force_rebuild': False,
-            'validate_duplicated_events': False,
+            'label': r'Sherpa 2211 $W\rightarrow\tau\nu\rightarrow e\nu$',
+        },
+        'wtaunu_h_dta': {
+            'data_path': DTA_PATH + '/user.kghorban.Sh_2211_Wtaunu_H*/*.root',
+            'cutfile_path': '../options/DTA_cuts/dta_init.txt',
+            'TTree_name': 'T_s1thv_NOMINAL',
+            # 'force_rebuild': False,
             'label': r'Sherpa 2211 $W\rightarrow\tau\nu\rightarrow e\nu$',
         },
         'wtaunu_CVetoBVeto_dta': {
             'data_path': DTA_PATH + '/*CVetoBVeto*/*.root',
             'cutfile_path': '../options/DTA_cuts/dta_init.txt',
-            'TTree_name': 'T_s1thv_NOMINAL',
+            'TTree_name': {'T_s1thv_NOMINAL', 'T_s1tev_NOMINAL', 'T_s1tmv_NOMINAL'},
             # 'force_rebuild': False,
-            'validate_duplicated_events': False,
             'label': r'CVetoBVeto',
         },
         'wtaunu_CFilterBVeto_dta': {
             'data_path': DTA_PATH + '/*CFilterBVeto*/*.root',
             'cutfile_path': '../options/DTA_cuts/dta_init.txt',
-            'TTree_name': 'T_s1thv_NOMINAL',
+            'TTree_name': {'T_s1thv_NOMINAL', 'T_s1tev_NOMINAL', 'T_s1tmv_NOMINAL'},
             # 'force_rebuild': False,
-            'validate_duplicated_events': False,
             'label': r'CFilterBVeto',
         },
         'wtaunu_BFilter_dta': {
             'data_path': DTA_PATH + '/*BFilter*/*.root',
             'cutfile_path': '../options/DTA_cuts/dta_init.txt',
-            'TTree_name': 'T_s1thv_NOMINAL',
+            'TTree_name': {'T_s1thv_NOMINAL', 'T_s1tev_NOMINAL', 'T_s1tmv_NOMINAL'},
             # 'force_rebuild': False,
-            'validate_duplicated_events': False,
             'label': r'BFilter',
         },
     }
 
-    my_analysis = Analysis(datasets, data_dir=DATA_OUT_DIR, year='2015+2016', force_rebuild=True,
-                           analysis_label='dta_internal_comparisons', skip_verify_pkl=False, lepton='tau',
-                           dataset_type='dta', log_level=10, log_out='both', timedatelog=True, separate_loggers=False)
+    my_analysis = Analysis(
+        datasets,
+        data_dir=DATA_OUT_DIR,
+        year='2015+2016',
+        force_rebuild=True,
+        analysis_label='dta_internal_comparisons',
+        lepton='tau',
+        dataset_type='dta',
+        # log_level=10,
+        log_out='both',
+    )
     # my_analysis.merge_datasets('wtaunu_e_dta', 'wtaunu_e_dta_peak')
 
     BR = len(my_analysis['wtaunu_mu_dta']) / len(my_analysis['wtaunu_e_dta'])
@@ -70,7 +76,7 @@ if __name__ == '__main__':
     BR = len(my_analysis['wtaunu_BFilter_dta']) / len(my_analysis['wtaunu_CVetoBVeto_dta'])
     my_analysis.logger.info(f"BFilter / CVetoBVeto:  {BR:.5f}")
 
-    my_analysis.apply_cuts(truth=True)
+    # my_analysis.apply_cuts(truth=True)
 
     # HISTORGRAMS
     # ==================================================================================================================
@@ -80,67 +86,115 @@ if __name__ == '__main__':
         'stats_box': True,
         'ratio_fit': True
     }
+    base_args = {
+        'weight': 'base_weight',
+        'normalise': False,
+        'name_prefix': 'base_weighted',
+        'title': 'truth = 1fb$^(-1)$, no SF/PRW/FE'
+    }
+    truth_args = {
+        'weight': 'truth_weight',
+        'normalise': False,
+        'name_prefix': 'truth_weighted',
+        'title': 'truth = 36.2fb$^(-1)$'
+    }
+    for ds in datasets:
+        for args in base_args, truth_args:
+            my_analysis.plot_hist(ds, 'TruthBosonM', bins=(30, 1, 5000), logx=True, logbins=True, **ratio_args, **args)
+            my_analysis.plot_hist(ds, 'TruthDilepM', bins=(30, 1, 5000), logx=True, logbins=True, **ratio_args, **args)
 
     # TRUTH
     # -----------------------------------
     # unnormalised
     # lepton
-    my_analysis.plot_hist(['wtaunu_mu_dta', 'wtaunu_e_dta'], 'TruthTauPt',
-                          bins=(30, 1, 5000), weight='truth_weight', ratio_axlim=1.5,
-                          title='truth - 36.2fb$^{-1}$', normalise=False, logx=True, logbins=True, **ratio_args)
+    # my_analysis.plot_hist(['wtaunu_mu_dta', 'wtaunu_e_dta'], 'TruthTauPt',
+    #                       bins=(30, 1, 5000), weight='base_weight', ratio_axlim=1.5,
+    #                       title='truth - 36.2fb$^{-1}$', normalise=False, logx=True, logbins=True, **ratio_args)
+    #
+    # my_analysis.plot_hist(['wtaunu_mu_dta', 'wtaunu_e_dta'], 'TruthTauEta',
+    #                       bins=(30, -5, 5), weight='base_weight',
+    #                       title='truth - 36.2fb$^{-1}$', normalise=False, **ratio_args)
+    #
+    # my_analysis.plot_hist(['wtaunu_mu_dta', 'wtaunu_e_dta'], 'TruthTauPhi',
+    #                       bins=(30, -pi, pi), weight='base_weight',
+    #                       title='truth - 36.2fb$^{-1}$', normalise=False, **ratio_args)
+    #
+    # my_analysis.plot_hist(['wtaunu_mu_dta', 'wtaunu_e_dta'], 'TruthNeutrinoPt',
+    #                       bins=(30, 1, 5000), weight='base_weight', ratio_axlim=1.5,
+    #                       title='truth - 36.2fb$^{-1}$', normalise=False, logx=True, logbins=True, **ratio_args)
+    #
+    # my_analysis.plot_hist(['wtaunu_mu_dta', 'wtaunu_e_dta'], 'TruthNeutrinoEta',
+    #                       bins=(30, -5, 5), weight='base_weight',
+    #                       title='truth - 36.2fb$^{-1}$', normalise=False, **ratio_args)
+    #
+    # my_analysis.plot_hist(['wtaunu_mu_dta', 'wtaunu_e_dta'], 'TruthNeutrinoPhi',
+    #                       bins=(30, -pi, pi), weight='base_weight',
+    #                       title='truth - 36.2fb$^{-1}$', normalise=False, **ratio_args)
+    #
+    # my_analysis.plot_hist(['wtaunu_mu_dta', 'wtaunu_e_dta'], 'TruthMTW',
+    #                       bins=(30, 1, 5000), weight='base_weight', ratio_axlim=1.5,
+    #                       title='truth - 36.2fb$^{-1}$', normalise=False, logx=True, logbins=True, **ratio_args)
+    #
+    # # hadron
+    # my_analysis.plot_hist('wtaunu_h_dta', 'TruthTauPt',
+    #                       bins=(30, 1, 5000), weight='base_weight', ratio_axlim=1.5,
+    #                       title='truth - 36.2fb$^{-1}$', normalise=False, logx=True, logbins=True)
+    #
+    # my_analysis.plot_hist('wtaunu_h_dta', 'TruthTauEta',
+    #                       bins=(30, -5, 5), weight='base_weight',
+    #                       title='truth - 36.2fb$^{-1}$', normalise=False)
+    #
+    # my_analysis.plot_hist('wtaunu_h_dta', 'TruthTauPhi',
+    #                       bins=(30, -pi, pi), weight='base_weight',
+    #                       title='truth - 36.2fb$^{-1}$', normalise=False)
+    #
+    # my_analysis.plot_hist('wtaunu_h_dta', 'TruthNeutrinoPt',
+    #                       bins=(30, 1, 5000), weight='base_weight', ratio_axlim=1.5,
+    #                       title='truth - 36.2fb$^{-1}$', normalise=False, logx=True, logbins=True)
+    #
+    # my_analysis.plot_hist('wtaunu_h_dta', 'TruthNeutrinoEta',
+    #                       bins=(30, -5, 5), weight='base_weight',
+    #                       title='truth - 36.2fb$^{-1}$', normalise=False)
+    #
+    # my_analysis.plot_hist('wtaunu_h_dta', 'TruthNeutrinoPhi',
+    #                       bins=(30, -pi, pi), weight='base_weight',
+    #                       title='truth - 36.2fb$^{-1}$', normalise=False)
+    #
+    # my_analysis.plot_hist('wtaunu_h_dta', 'TruthMTW',
+    #                       bins=(30, 1, 5000), weight='base_weight', ratio_axlim=1.5,
+    #                       title='truth - 36.2fb$^{-1}$', normalise=False, logx=True, logbins=True)
+    #
+    # # incoming quark flavour
+    # my_analysis.plot_hist(['wtaunu_CVetoBVeto_dta', 'wtaunu_CFilterBVeto_dta', 'wtaunu_BFilter_dta'], 'TruthTauPt',
+    #                       bins=(30, 1, 5000), weight='base_weight', ratio_axlim=1.5,
+    #                       title='truth - 36.2fb$^{-1}$', normalise=False, logx=True, logbins=True, **ratio_args)
+    #
+    # my_analysis.plot_hist(['wtaunu_CVetoBVeto_dta', 'wtaunu_CFilterBVeto_dta', 'wtaunu_BFilter_dta'], 'TruthTauEta',
+    #                       bins=(30, -5, 5), weight='base_weight',
+    #                       title='truth - 36.2fb$^{-1}$', normalise=False, **ratio_args)
+    #
+    # my_analysis.plot_hist(['wtaunu_CVetoBVeto_dta', 'wtaunu_CFilterBVeto_dta', 'wtaunu_BFilter_dta'], 'TruthTauPhi',
+    #                       bins=(30, -pi, pi), weight='base_weight',
+    #                       title='truth - 36.2fb$^{-1}$', normalise=False, **ratio_args)
+    #
+    # my_analysis.plot_hist(['wtaunu_CVetoBVeto_dta', 'wtaunu_CFilterBVeto_dta', 'wtaunu_BFilter_dta'], 'TruthNeutrinoPt',
+    #                       bins=(30, 1, 5000), weight='base_weight', ratio_axlim=1.5,
+    #                       title='truth - 36.2fb$^{-1}$', normalise=False, logx=True, logbins=True, **ratio_args)
+    #
+    # my_analysis.plot_hist(['wtaunu_CVetoBVeto_dta', 'wtaunu_CFilterBVeto_dta', 'wtaunu_BFilter_dta'], 'TruthNeutrinoEta',
+    #                       bins=(30, -5, 5), weight='base_weight',
+    #                       title='truth - 36.2fb$^{-1}$', normalise=False, **ratio_args)
+    #
+    # my_analysis.plot_hist(['wtaunu_CVetoBVeto_dta', 'wtaunu_CFilterBVeto_dta', 'wtaunu_BFilter_dta'], 'TruthNeutrinoPhi',
+    #                       bins=(30, -pi, pi), weight='base_weight',
+    #                       title='truth - 36.2fb$^{-1}$', normalise=False, **ratio_args)
+    #
+    # my_analysis.plot_hist(['wtaunu_CVetoBVeto_dta', 'wtaunu_CFilterBVeto_dta', 'wtaunu_BFilter_dta'], 'TruthMTW',
+    #                       bins=(30, 1, 5000), weight='base_weight', ratio_axlim=1.5,
+    #                       title='truth - 36.2fb$^{-1}$', normalise=False, logx=True, logbins=True, **ratio_args)
 
-    my_analysis.plot_hist(['wtaunu_mu_dta', 'wtaunu_e_dta'], 'TruthTauEta',
-                          bins=(30, -5, 5), weight='truth_weight',
-                          title='truth - 36.2fb$^{-1}$', normalise=False, **ratio_args)
+    my_analysis.histogram_printout()
 
-    my_analysis.plot_hist(['wtaunu_mu_dta', 'wtaunu_e_dta'], 'TruthTauPhi',
-                          bins=(30, -pi, pi), weight='truth_weight',
-                          title='truth - 36.2fb$^{-1}$', normalise=False, **ratio_args)
-
-    my_analysis.plot_hist(['wtaunu_mu_dta', 'wtaunu_e_dta'], 'TruthNeutrinoPt',
-                          bins=(30, 1, 5000), weight='truth_weight', ratio_axlim=1.5,
-                          title='truth - 36.2fb$^{-1}$', normalise=False, logx=True, logbins=True, **ratio_args)
-
-    my_analysis.plot_hist(['wtaunu_mu_dta', 'wtaunu_e_dta'], 'TruthNeutrinoEta',
-                          bins=(30, -5, 5), weight='truth_weight',
-                          title='truth - 36.2fb$^{-1}$', normalise=False, **ratio_args)
-
-    my_analysis.plot_hist(['wtaunu_mu_dta', 'wtaunu_e_dta'], 'TruthNeutrinoPhi',
-                          bins=(30, -pi, pi), weight='truth_weight',
-                          title='truth - 36.2fb$^{-1}$', normalise=False, **ratio_args)
-
-    my_analysis.plot_hist(['wtaunu_mu_dta', 'wtaunu_e_dta'], 'TruthMTW',
-                          bins=(30, 1, 5000), weight='truth_weight', ratio_axlim=1.5,
-                          title='truth - 36.2fb$^{-1}$', normalise=False, logx=True, logbins=True, **ratio_args)
-
-    # incoming quark flavour
-    my_analysis.plot_hist(['wtaunu_CVetoBVeto_dta', 'wtaunu_CFilterBVeto_dta', 'wtaunu_BFilter_dta'], 'TruthTauPt',
-                          bins=(30, 1, 5000), weight='truth_weight', ratio_axlim=1.5,
-                          title='truth - 36.2fb$^{-1}$', normalise=False, logx=True, logbins=True, **ratio_args)
-
-    my_analysis.plot_hist(['wtaunu_CVetoBVeto_dta', 'wtaunu_CFilterBVeto_dta', 'wtaunu_BFilter_dta'], 'TruthTauEta',
-                          bins=(30, -5, 5), weight='truth_weight',
-                          title='truth - 36.2fb$^{-1}$', normalise=False, **ratio_args)
-
-    my_analysis.plot_hist(['wtaunu_CVetoBVeto_dta', 'wtaunu_CFilterBVeto_dta', 'wtaunu_BFilter_dta'], 'TruthTauPhi',
-                          bins=(30, -pi, pi), weight='truth_weight',
-                          title='truth - 36.2fb$^{-1}$', normalise=False, **ratio_args)
-
-    my_analysis.plot_hist(['wtaunu_CVetoBVeto_dta', 'wtaunu_CFilterBVeto_dta', 'wtaunu_BFilter_dta'], 'TruthNeutrinoPt',
-                          bins=(30, 1, 5000), weight='truth_weight', ratio_axlim=1.5,
-                          title='truth - 36.2fb$^{-1}$', normalise=False, logx=True, logbins=True, **ratio_args)
-
-    my_analysis.plot_hist(['wtaunu_CVetoBVeto_dta', 'wtaunu_CFilterBVeto_dta', 'wtaunu_BFilter_dta'], 'TruthNeutrinoEta',
-                          bins=(30, -5, 5), weight='truth_weight',
-                          title='truth - 36.2fb$^{-1}$', normalise=False, **ratio_args)
-
-    my_analysis.plot_hist(['wtaunu_CVetoBVeto_dta', 'wtaunu_CFilterBVeto_dta', 'wtaunu_BFilter_dta'], 'TruthNeutrinoPhi',
-                          bins=(30, -pi, pi), weight='truth_weight',
-                          title='truth - 36.2fb$^{-1}$', normalise=False, **ratio_args)
-
-    my_analysis.plot_hist(['wtaunu_CVetoBVeto_dta', 'wtaunu_CFilterBVeto_dta', 'wtaunu_BFilter_dta'], 'TruthMTW',
-                          bins=(30, 1, 5000), weight='truth_weight', ratio_axlim=1.5,
-                          title='truth - 36.2fb$^{-1}$', normalise=False, logx=True, logbins=True, **ratio_args)
     #
     # # normalised
     # my_analysis.plot_hist(['wtaunu_mu_dta', 'wtaunu_e_dta'], 'TruthTauPt',
