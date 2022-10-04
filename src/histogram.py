@@ -98,66 +98,61 @@ class Histogram1D(bh.Histogram, family=None):
             logger = get_logger()
         self.logger = logger
 
-        # workaround for copying issue in boost_histogram
-        if isinstance(var, bh._core.hist.any_weight):
-            super().__init__(var)
+        self.logger.debug("Checking variables..")
+        # check length of var and weight
+        if hasattr(weight, '__len__') and (len(var) != len(weight)):
+            raise ValueError(f"Weight and value arrays are of different lengths! {len(weight)}, {len(var)}")
+
+        # check for invalid entries (nan or inf in weights or values)
+        if weight is not None:
+            inv_bool = np.logical_xor(np.logical_xor(np.isnan(var), np.isnan(weight)),
+                                      np.logical_xor(np.isinf(var), np.isinf(weight)))
+            if n_inv := inv_bool.sum():
+                self.logger.error(f"{n_inv} invalid entries in histogram!")
+
+        if th1:
+            # create from TH1
+            self.logger.info(f"Creating histogram from TH1: '{th1}'...")
+            edges = [th1.GetBinLowEdge(i + 1) for i in range(th1.GetNbinsX() + 1)]
+            super().__init__(bh.axis.Variable(edges), storage=bh.storage.Weight())
+
+            # set vars
+            self.TH1 = th1.Clone()
+            if title: self.TH1.SetTitle(title)
+            if name:
+                self.TH1.SetName(name)
+                self.name = name
+            else:
+                self.name = th1.GetName()
+
+            # fill
+            for idx, _ in np.ndenumerate(self.view(flow=True)):
+                self.view(flow=True).value[idx] = th1.GetBinContent(*idx)  # bin value
+                self.view(flow=True).variance[idx] = th1.GetBinError(*idx) ** 2
+
+            if var is not None:
+                self.Fill(var, weight=weight)
 
         else:
-            self.logger.debug("Checking variables..")
-            # check length of var and weight
-            if hasattr(weight, '__len__') and (len(var) != len(weight)):
-                raise ValueError(f"Weight and value arrays are of different lengths! {len(weight)}, {len(var)}")
+            self.logger.debug(f"Initialising histogram {name}...")
 
-            # check for invalid entries (nan or inf in weights or values)
-            if weight is not None:
-                inv_bool = np.logical_xor(np.logical_xor(np.isnan(var), np.isnan(weight)),
-                                          np.logical_xor(np.isinf(var), np.isinf(weight)))
-                if n_inv := inv_bool.sum():
-                    self.logger.error(f"{n_inv} invalid entries in histogram!")
+            # TH1
+            self.TH1 = ROOT.TH1F(name, title, *self.__get_TH1_bins(bins))
+            self.name = name
 
-            if th1:
-                # create from TH1
-                self.logger.info(f"Creating histogram from TH1: '{th1}'...")
-                edges = [th1.GetBinLowEdge(i + 1) for i in range(th1.GetNbinsX() + 1)]
-                super().__init__(bh.axis.Variable(edges), storage=bh.storage.Weight())
+            # get axis
+            axis = (
+                bins if isinstance(bins, bh.axis.Axis)
+                else self.__gen_axis(bins, logbins)
+            )
+            super().__init__(
+                axis,
+                storage=bh.storage.Weight(),
+                **kwargs
+            )
 
-                # set vars
-                self.TH1 = th1.Clone()
-                if title: self.TH1.SetTitle(title)
-                if name:
-                    self.TH1.SetName(name)
-                    self.name = name
-                else:
-                    self.name = th1.GetName()
-
-                # fill
-                for idx, _ in np.ndenumerate(self.view(flow=True)):
-                    self.view(flow=True).value[idx] = th1.GetBinContent(*idx)  # bin value
-                    self.view(flow=True).variance[idx] = th1.GetBinError(*idx) ** 2
-
-                if var is not None:
-                    self.Fill(var, weight=weight)
-
-            else:
-                self.logger.debug(f"Initialising histogram {name}...")
-
-                # TH1
-                self.TH1 = ROOT.TH1F(name, title, *self.__get_TH1_bins(bins))
-                self.name = name
-
-                # get axis
-                axis = (
-                    bins if isinstance(bins, bh.axis.Axis)
-                    else self.__gen_axis(bins, logbins)
-                )
-                super().__init__(
-                    axis,
-                    storage=bh.storage.Weight(),
-                    **kwargs
-                )
-
-                if var is not None:
-                    self.Fill(var, weight=weight)
+            if var is not None:
+                self.Fill(var, weight=weight)
 
     def Fill(self, var: ArrayLike, weight: ArrayLike | int | float = None) -> Histogram1D:
         self.logger.debug(f"Filling histogram {self.name} with {len(var)} events..")
@@ -644,7 +639,7 @@ class Histogram1D(bh.Histogram, family=None):
         if yax_lim:
             ax.set_ylim(1 - yax_lim, 1 + yax_lim)
         else:
-            # I don't know why the matplotlib automatic yaxis scaling doesn't work but I've done it for them here
+            # I don't know why the matplotlib automatic yaxis scaling doesn't work, but I've done it for them here
             ymax = np.max(np.ma.masked_invalid(h_ratio.bin_values() + (yerr / 2)))
             ymin = np.min(np.ma.masked_invalid(h_ratio.bin_values() - (yerr / 2)))
             vspace = (ymax - ymin) * 0.1
