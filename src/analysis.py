@@ -86,9 +86,13 @@ class Analysis:
         # ============================
         self.name = analysis_label
         if 'year' in kwargs:
-            self.global_lumi = lumi_year[kwargs['year']]
+            try:
+                self.global_lumi = lumi_year[kwargs['year']]
+            except KeyError:
+                raise KeyError(f"Unknown data-year: {kwargs['year']}")
         else:
             self.global_lumi = global_lumi
+        self.logger.debug(f"Set global luminosity scale to {self.global_lumi} pb-1")
 
         # BUILD DATASETS
         # ============================
@@ -586,7 +590,8 @@ class Analysis:
             self.logger.info(f"cross-section: {self[name].cross_section:.2f} fb")
             self.logger.info(f"luminosity   : {self[name].luminosity:.2f} fb-1")
 
-    def save_histograms(self, filename: str = None,
+    def save_histograms(self,
+                        filename: str = None,
                         tfile_option: str = 'Update',
                         write_option: str = 'Overwrite',
                         clear_hists: bool = False,
@@ -622,7 +627,7 @@ class Analysis:
         if not to_latex:
             self.logger.info(tabulate(rows, headers=header))
         else:
-            filepath = f"{self.paths['latex_dir']}_histograms.tex"
+            filepath = self.paths['latex_dir'] + f"{self.name}_histograms.tex"
             with open(filepath, "w") as f:
                 f.write(tabulate(rows, headers=header, tablefmt='latex_raw'))
                 self.logger.info(f"Saved LaTeX histogram table to {filepath}")

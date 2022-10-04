@@ -85,19 +85,20 @@ if __name__ == '__main__':
         datasets,
         data_dir=DATA_OUT_DIR,
         year='2015+2016',
-        # force_rebuild=True,
+        force_rebuild=True,
         analysis_label='dta_analysistop_compare',
         skip_verify_pkl=False,
         # force_recalc_cuts=True,
         # log_level=10,
         log_out='both',
     )
-    my_analysis.merge_datasets('wtaunu_mu_dta', 'wtaunu_e_dta', verify=True)
+    # my_analysis.merge_datasets('wtaunu_mu_dta', 'wtaunu_e_dta', verify=True)
     my_analysis.merge_datasets('wtaunu_analysistop', 'wtaunu_analysistop_peak')
 
     # BR-scaled weight
     my_analysis['wtaunu_dta'].df['br_scaled_weight'] = my_analysis['wtaunu_dta']['truth_weight'] / my_analysis.global_lumi
-    my_analysis['wtaunu_analysistop'].df['br_scaled_weight'] = my_analysis['wtaunu_analysistop']['truth_weight'] * 0.1138 / my_analysis.global_lumi
+    # my_analysis['wtaunu_analysistop'].df['br_scaled_weight'] = my_analysis['wtaunu_analysistop']['truth_weight'] * 0.1138 / my_analysis.global_lumi
+    my_analysis['wtaunu_analysistop'].df['br_scaled_weight'] = my_analysis['wtaunu_analysistop']['truth_weight'] / my_analysis.global_lumi
 
     # HISTORGRAMS
     # ==================================================================================================================

@@ -169,10 +169,12 @@ def get_dta_sumw(path: str, ttree_name: str) -> pd.DataFrame:
         with ROOT_TFile_mgr(file, 'read') as tfile:
             tree = tfile.Get(ttree_name)
             tree.GetEntry(0)  # read first DSID from branch
-            if tree.mcChannel not in dsid_sumw:
-                dsid_sumw[tree.mcChannel] = tfile.Get("sumOfWeights").GetBinContent(4)
+            sumw = tfile.Get("sumOfWeights").GetBinContent(4)
+            dsid = tree.mcChannel
+            if dsid not in dsid_sumw:
+                dsid_sumw[dsid] = sumw
             else:
-                dsid_sumw[tree.mcChannel] += tfile.Get("sumOfWeights").GetBinContent(4)
+                dsid_sumw[dsid] += sumw
 
     df = pd.DataFrame.from_dict(dsid_sumw, orient='index', columns=['sumOfWeights'])
     df.index.name = 'mcChannel'

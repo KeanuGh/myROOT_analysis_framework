@@ -6,7 +6,7 @@ error = ../outputs/mutau_compare_full/condor.err
 notify_user = keanu.ghorbanian@cern.ch
 notification = Complete
 should_transfer_files = NO
-RequestMemory = 50G
+RequestMemory = 64G
 RequestCpus = 16
 +JobFlavour = "workday"
 

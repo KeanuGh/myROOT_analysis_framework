@@ -349,7 +349,6 @@ class Histogram1D(bh.Histogram, family=None):
 
     # Stats
     # ===================
-    # properties beginning with 'R' are calculated using ROOT
     @property
     def mean(self) -> float:
         """Return mean value of histogram - ROOT"""

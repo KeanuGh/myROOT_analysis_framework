@@ -74,12 +74,14 @@ class DatasetBuilder:
     validate_sumofweights: bool = True
 
     def __post_init__(self):
+        # argument checks
         if (self.dataset_type == 'analysistop') and (not isinstance(self.TTree_name, str)):
             raise ValueError("Only use one default tree with analysistop ntuples.")
-        if not isinstance(self.TTree_name, str):
-            self.TTree_name = set(self.TTree_name)
-        else:
-            self.TTree_name = {self.TTree_name}
+        if self.dataset_type == 'dta':
+            if not isinstance(self.TTree_name, str):
+                self.TTree_name = set(self.TTree_name)
+            else:
+                self.TTree_name = {self.TTree_name}
 
         if self.lumi and self.year:
             raise ValueError("Pass either lumi or year")
@@ -294,7 +296,7 @@ class DatasetBuilder:
             if self.force_recalc_cuts and self.hard_cut:
                 self.logger.warning("Recalculating weights when a (hard) cut has already been applied "
                                     "will lead to incorrect normalisations")
-            self.__calc_event_weight(df, data_path=data_path, is_reco=is_reco, is_truth=is_truth)
+            self.__calc_event_weight(df, is_reco=is_reco, is_truth=is_truth)
 
         # calculate variables
         if __calculate_vars or self.force_recalc_vars:
@@ -772,7 +774,6 @@ class DatasetBuilder:
                 raise Exception(f"Error in cut {cut.cutstr}:\n {e}")
 
     def __calc_event_weight(self, df: pd.DataFrame,
-                            data_path: str,
                             is_truth: bool = False,
                             is_reco: bool = False) -> None:
         """Calculate truth and reco event weights"""
