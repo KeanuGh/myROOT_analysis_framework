@@ -86,7 +86,7 @@ class Cutfile:
             raise SyntaxError(f"Check cutfile. Line {cutline} is badly formatted. Got {cutline_split}.")
 
         # check for variables in the cut string
-        split_string = set(re.findall(r"[\w]+|[.,!?;]", cut_str))
+        split_string = set(re.findall(r"\w+|[.,!?;]", cut_str))
         cutvars = all_vars & split_string  # find all known variables in cutstring
 
         if len(cutvars) == 1:

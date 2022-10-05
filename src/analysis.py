@@ -1,7 +1,7 @@
 import inspect
 import os
 from collections import OrderedDict
-from typing import Dict, List, Tuple, Iterable
+from typing import Dict, List, Tuple, Iterable, Callable, Any
 
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -107,38 +107,20 @@ class Analysis:
             if dup_args := set(data_args) & set(kwargs):
                 raise SyntaxError(f"Got multiple values for argument(s) {dup_args} for dataset {name}")
 
-            builder_args = dict()  # arguments to pass to dataset builder
-            for builder_arg in inspect.signature(DatasetBuilder.__init__).parameters:
-                if str(builder_arg) == 'self': continue
-                if builder_arg in data_args:
-                    builder_args[builder_arg] = data_args[builder_arg]
-                if builder_arg in kwargs:
-                    builder_args[builder_arg] = kwargs[builder_arg]
-
-            build_args = dict()  # arguments to pass to build()
-            for build_arg in inspect.signature(DatasetBuilder.build).parameters:
-                if str(build_arg) == 'self': continue
-                if build_arg in data_args:
-                    build_args[build_arg] = data_args[build_arg]
-                if build_arg in kwargs:
-                    build_args[build_arg] = kwargs[build_arg]
+            args = data_args | kwargs
+            builder_args = self.__match_params(args, DatasetBuilder.__init__)  # arguments to pass to dataset builder
+            build_args = self.__match_params(args, DatasetBuilder.build)  # arguments to pass to build()
 
             # set correct pickle path if not passed as a build argument
             if 'pkl_path' not in build_args:
                 build_args['pkl_path'] = f"{self.paths['pkl_df_dir']}{name}_df.pkl"
-
-            # check if a pickle file already exists if not already given
-            # avoids rebuilding dataset unnecessarily
-            if file_utils.file_exists(build_args['pkl_path']):
-                self.logger.debug(f"Found pickle file at {build_args['pkl_path']}. Passing to builder")
 
             # make dataset
             builder = DatasetBuilder(
                 name=name,
                 **builder_args,
                 logger=(
-                    self.logger  # use single logger
-                    if not separate_loggers
+                    self.logger if not separate_loggers  # use single logger
                     else get_logger(  # if seperate, make new logger for each Dataset
                         name=name,
                         log_dir=self.paths['log_dir'],
@@ -168,6 +150,16 @@ class Analysis:
 
         self.logger.info("=" * (len(analysis_label) + 23))
         self.logger.info(f"ANALYSIS '{analysis_label}' INITIALISED")
+
+    @staticmethod
+    def __match_params(params: Dict[str, Any], func: Callable) -> Dict[str, Any]:
+        """Return parameters matching passed function signature"""
+        args = dict()
+        for arg in inspect.signature(func).parameters:
+            if str(arg) == 'self': continue
+            if arg in params:
+                args[arg] = params[arg]
+        return args
 
     # ===============================
     # ========== BUILTINS ===========
@@ -435,11 +427,11 @@ class Analysis:
 
         # naming template for file/histogram name
         name_template = (
-            ((name_prefix + '_') if name_prefix else '') +  # prefix
-            "{dataset}" +                                   # name of dataset(s)
-            "_{variable}" +                                 # name of variable(s)
-            ('_NORMED' if normalise else '') +              # normalisation flag
-            (('_' + name_suffix) if name_suffix else '')    # suffix
+                ((name_prefix + '_') if name_prefix else '') +  # prefix
+                "{dataset}" +  # name of dataset(s)
+                "_{variable}" +  # name of variable(s)
+                ('_NORMED' if normalise else '') +  # normalisation flag
+                (('_' + name_suffix) if name_suffix else '')  # suffix
         )
 
         if isinstance(datasets, str):
