@@ -148,7 +148,7 @@ class Cutfile:
                 cuts[cut.name] = cut
 
             # get output variables
-            output_vars = dict()
+            output_vars: Dict[str, Set[str]] = dict()
             for output_var in lines[lines.index('[OUTPUTS]') + 1:]:
                 if output_var.startswith('#') or len(output_var) < 2:
                     continue

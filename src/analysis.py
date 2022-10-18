@@ -17,6 +17,7 @@ from utils import file_utils, plotting_utils, ROOT_utils
 from utils.context import check_single_dataset, handle_dataset_arg
 
 
+# TODO: use pathlib instead of os
 class Analysis:
     """
     Analysis class acts as a container for the src.dataset.Dataset class. Contains methods to apply either to
@@ -106,19 +107,12 @@ class Analysis:
             # get dataset build arguments out of options passed to analysis
             if dup_args := set(data_args) & set(kwargs):
                 raise SyntaxError(f"Got multiple values for argument(s) {dup_args} for dataset {name}")
-
             args = data_args | kwargs
-            builder_args = self.__match_params(args, DatasetBuilder.__init__)  # arguments to pass to dataset builder
-            build_args = self.__match_params(args, DatasetBuilder.build)  # arguments to pass to build()
-
-            # set correct pickle path if not passed as a build argument
-            if 'pkl_path' not in build_args:
-                build_args['pkl_path'] = f"{self.paths['pkl_df_dir']}{name}_df.pkl"
 
             # make dataset
             builder = DatasetBuilder(
                 name=name,
-                **builder_args,
+                **self.__match_params(args, DatasetBuilder.__init__),
                 logger=(
                     self.logger if not separate_loggers  # use single logger
                     else get_logger(  # if seperate, make new logger for each Dataset
@@ -130,7 +124,7 @@ class Analysis:
                     )
                 )
             )
-            dataset = builder.build(**build_args)
+            dataset = builder.build(**self.__match_params(args, DatasetBuilder.build))
             if separate_loggers:
                 # set new logger to append to analysis logger
                 dataset.logger = self.logger
@@ -138,8 +132,11 @@ class Analysis:
 
             dataset.dsid_metadata_printout()
 
+            # set correct pickle path if not passed as a build argument
+            if 'pkl_path' not in args:
+                args['pkl_path'] = f"{self.paths['pkl_df_dir']}{name}_df.pkl"
             dataset.set_plot_dir(self.paths['plot_dir'])
-            dataset.set_pkl_path(build_args['pkl_path'])
+            dataset.set_pkl_path(args['pkl_path'])
 
             self[name] = dataset  # save to analysis
 

@@ -19,7 +19,7 @@ def load_ROOT_settings(set_batch: bool = True, gui: bool = False, th1_dir: bool 
     ROOT.TH1.AddDirectory(th1_dir)  # stops TH1s from being saved and prevents overwrite warnings
     ROOT.TH1.SetDefaultSumw2()  # Sets weighted binning in all ROOT histograms by default
     ROOT.EnableImplicitMT()  # enable multithreading
-    ROOT.gStyle.SetOptStat(optstat)
+    ROOT.gStyle.SetOptStat(optstat)  # statsbox default options
 
     # load custom C++ functions
     ROOT.gSystem.Load(f'{pathlib.Path(__file__).parent}/rootfuncs.h')
