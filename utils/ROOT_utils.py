@@ -13,7 +13,9 @@ import pandas as pd
 
 
 # ROOT settings
-def load_ROOT_settings(set_batch: bool = True, gui: bool = False, th1_dir: bool = False, optstat: int = 1111):
+def load_ROOT_settings(
+    set_batch: bool = True, gui: bool = False, th1_dir: bool = False, optstat: int = 1111
+):
     ROOT.gROOT.SetBatch(set_batch)  # Prevents TCanvas popups
     ROOT.PyConfig.StartGUIThread = gui  # disables polling for ROOT GUI events
     ROOT.TH1.AddDirectory(th1_dir)  # stops TH1s from being saved and prevents overwrite warnings
@@ -22,48 +24,50 @@ def load_ROOT_settings(set_batch: bool = True, gui: bool = False, th1_dir: bool 
     ROOT.gStyle.SetOptStat(optstat)  # statsbox default options
 
     # load custom C++ functions
-    ROOT.gSystem.Load(f'{pathlib.Path(__file__).parent}/rootfuncs.h')
+    ROOT.gSystem.Load(f"{pathlib.Path(__file__).parent}/rootfuncs.h")
     ROOT.gInterpreter.Declare(f'#include "{pathlib.Path(__file__).parent}/rootfuncs.h"')
 
 
 # this dictionary decides which ROOT constructor needs to be called based on hist type and dimension
 # call it with TH1_constructor[type][n_dims](name, title, *n_bins, *bin_edges) where 'type' is in {'F','D','I','C','S'}
 TH1_constructor = {
-    'F': {  # histograms with one float per channel. Maximum precision 7 digits
+    "F": {  # histograms with one float per channel. Maximum precision 7 digits
         1: ROOT.TH1F,
         2: ROOT.TH2F,
-        3: ROOT.TH3F
+        3: ROOT.TH3F,
     },
-    'D': {  # histograms with one double per channel. Maximum precision 14 digits
+    "D": {  # histograms with one double per channel. Maximum precision 14 digits
         1: ROOT.TH1D,
         2: ROOT.TH2D,
-        3: ROOT.TH3D
+        3: ROOT.TH3D,
     },
-    'I': {  # histograms with one int per channel. Maximum bin content = 2147483647
+    "I": {  # histograms with one int per channel. Maximum bin content = 2147483647
         1: ROOT.TH1I,
         2: ROOT.TH2I,
-        3: ROOT.TH3I
+        3: ROOT.TH3I,
     },
-    'C': {  # histograms with one byte per channel. Maximum bin content = 127
+    "C": {  # histograms with one byte per channel. Maximum bin content = 127
         1: ROOT.TH1C,
         2: ROOT.TH2C,
-        3: ROOT.TH3C
+        3: ROOT.TH3C,
     },
-    'S': {  # histograms with one short per channel. Maximum bin content = 32767
+    "S": {  # histograms with one short per channel. Maximum bin content = 32767
         1: ROOT.TH1S,
         2: ROOT.TH2S,
-        3: ROOT.TH3S
+        3: ROOT.TH3S,
     },
 }
 
 
-def bh_to_TH1(h_bh: bh.Histogram, name: str, title: str, hist_type: str = 'F') -> Type[ROOT.TH1]:
+def bh_to_TH1(h_bh: bh.Histogram, name: str, title: str, hist_type: str = "F") -> Type[ROOT.TH1]:
     """
     Converts a boost-histogram histogram into a ROOT TH1 histogram. Only works for histograms with numeric axes.
     """
     # check type
     if hist_type.upper() not in TH1_constructor:
-        raise ValueError(f"TH1 types: {', '.join(TH1_constructor.keys())}. {hist_type.upper()} was input.")
+        raise ValueError(
+            f"TH1 types: {', '.join(TH1_constructor.keys())}. {hist_type.upper()} was input."
+        )
 
     # check dimensions
     n_dims = len(h_bh.axes)
@@ -71,7 +75,9 @@ def bh_to_TH1(h_bh: bh.Histogram, name: str, title: str, hist_type: str = 'F') -
         raise Exception("ROOT cannot handle Histograms with more than 3 dimensions.")
 
     # TH1 constructor
-    binargs = [arg for t in [(len(ax), ax.edges) for ax in h_bh.axes] for arg in t]  # extracts n_bins and bin edges
+    binargs = [
+        arg for t in [(len(ax), ax.edges) for ax in h_bh.axes] for arg in t
+    ]  # extracts n_bins and bin edges
     try:
         h_root = TH1_constructor[hist_type.upper()][n_dims](str(name), str(title), *binargs)
     except TypeError as e:
@@ -108,10 +114,10 @@ def convert_pkl_to_root(filename: str, histname: str | None = None) -> None:
     Reads pickle files containing either a boost-histogram Histogram object, a dictionary or other iterable containing
     boost histograms
     """
-    with open(filename, 'rb') as f:
+    with open(filename, "rb") as f:
         obj = pkl.load(f)
 
-    rootfilename = filename.replace('.pkl', '.root')
+    rootfilename = filename.replace(".pkl", ".root")
 
     if isinstance(obj, bh.Histogram):
         logging.info(f"Printing {histname} to {rootfilename}")
@@ -119,21 +125,30 @@ def convert_pkl_to_root(filename: str, histname: str | None = None) -> None:
             bh_to_TH1(obj, name=histname, title=histname).Write()
         return
     elif isinstance(obj, dict):
-        TH1s = [bh_to_TH1(hist, name, name) for name, hist in obj.items() if isinstance(hist, bh.Histogram)]
-    elif hasattr(obj, '__iter__'):
-        TH1s = [bh_to_TH1(hist, 'hist'+i, 'hist'+i) for i, hist in obj if isinstance(hist, bh.Histogram)]
+        TH1s = [
+            bh_to_TH1(hist, name, name)
+            for name, hist in obj.items()
+            if isinstance(hist, bh.Histogram)
+        ]
+    elif hasattr(obj, "__iter__"):
+        TH1s = [
+            bh_to_TH1(hist, "hist" + i, "hist" + i)
+            for i, hist in obj
+            if isinstance(hist, bh.Histogram)
+        ]
     else:
         raise ValueError(f"No boost-histogram objects found in object {obj}.")
 
     if len(TH1s) > 0:
         with ROOT_TFile_mgr(rootfilename):
-            for h in TH1s: h.Write()
+            for h in TH1s:
+                h.Write()
             logging.info(f"Histograms saved to {rootfilename}")
         return
 
 
 @contextmanager
-def ROOT_TFile_mgr(filename: str | PathLike, TFile_arg='RECREATE'):
+def ROOT_TFile_mgr(filename: str | PathLike, TFile_arg="RECREATE"):
     """Context manager for opening root files"""
     file = ROOT.TFile(filename, TFile_arg)
     try:
@@ -148,6 +163,7 @@ def glob_chain(TTree: str, path: PathLike | str) -> ROOT.TChain:
     for file in glob.glob(path):
         chain.Add(file)
     return chain
+
 
 # # not sure why this doesn't work
 # class RDataFrame(ROOT.RDataFrame):
@@ -166,7 +182,7 @@ def get_dta_sumw(path: str, ttree_name: str) -> pd.DataFrame:
 
     # loop over files and sum sumw values per dataset ID (assuming each file only has one dataset ID value)
     for file in files_list:
-        with ROOT_TFile_mgr(file, 'read') as tfile:
+        with ROOT_TFile_mgr(file, "read") as tfile:
             tree = tfile.Get(ttree_name)
             tree.GetEntry(0)  # read first DSID from branch
             sumw = tfile.Get("sumOfWeights").GetBinContent(4)
@@ -176,7 +192,7 @@ def get_dta_sumw(path: str, ttree_name: str) -> pd.DataFrame:
             else:
                 dsid_sumw[dsid] += sumw
 
-    df = pd.DataFrame.from_dict(dsid_sumw, orient='index', columns=['sumOfWeights'])
-    df.index.name = 'mcChannel'
+    df = pd.DataFrame.from_dict(dsid_sumw, orient="index", columns=["sumOfWeights"])
+    df.index.name = "mcChannel"
 
     return df

@@ -11,9 +11,10 @@ def check_single_dataset(func) -> Callable:
     Decorator to apply to src methods that take only a single dataset as their argument.
     If no dataset name is given, and src contains only one dataset, it passes that dataset name to the method.
     """
+
     @wraps(func)
     def wrapper(self, *args, **kwargs) -> Callable:
-        if (args and isinstance(args[0], str)) or 'ds_name' in kwargs:
+        if (args and isinstance(args[0], str)) or "ds_name" in kwargs:
             # if dataset name is passed, just return function as-is
             return func(self, *args, **kwargs)
         elif len(self.datasets) == 1:
@@ -33,15 +34,16 @@ def handle_dataset_arg(func: Callable) -> Callable:
 
     FUNCTION SHOULD NOT RETURN ANYTHING
     """
+
     @wraps(func)
     def wrapper(self, *args, **kwargs) -> None:
         # get datasets argument from function
         if args:
             datasets = args[0]
             args = args[1:]
-        elif 'datasets' in kwargs:
-            datasets = kwargs['datasets']
-            kwargs.pop('datasets')
+        elif "datasets" in kwargs:
+            datasets = kwargs["datasets"]
+            kwargs.pop("datasets")
         else:
             datasets = None
 
@@ -51,11 +53,13 @@ def handle_dataset_arg(func: Callable) -> Callable:
                 raise ValueError(f"No dataset '{datasets}' in analysis '{self.name}'")
             func(self, *args, **kwargs, datasets=datasets)
 
-        elif hasattr(datasets, '__iter__'):
+        elif hasattr(datasets, "__iter__"):
             # apply to each dataset in iterable
             for dataset in datasets:
                 if not isinstance(dataset, str):
-                    raise TypeError("Iterable dataset argument must be a string or iterable containing only strings")
+                    raise TypeError(
+                        "Iterable dataset argument must be a string or iterable containing only strings"
+                    )
                 if dataset not in self.datasets:
                     raise ValueError(f"No dataset '{dataset}' in analysis '{self.name}'")
                 func(self, *args, **kwargs, datasets=dataset)
@@ -93,7 +97,7 @@ def redirect_stdout(out_stream=None, in_stream=None):
 
     finally:
         # Print escape character to make the readOutput method stop:
-        escape_char = '\b'
+        escape_char = "\b"
         in_stream.write(escape_char)
         # Flush the stream to make sure all our data goes in before the escape character:
         in_stream.flush()

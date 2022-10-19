@@ -36,19 +36,20 @@ class Dataset:
     :param plot_dir: directory to save plots to. Defaults to current directory
     :param pkl_file: File containing pickled DataFrame. Defaults to '<name>.pkl' in current directory
     """
+
     name: str
     df: pd.DataFrame
     cutfile: Cutfile
     cutflow: Cutflow
-    lumi: float = 139.
-    label: str = 'data'
+    lumi: float = 139.0
+    label: str = "data"
     logger: logging.Logger = field(default_factory=get_logger)
-    lepton: str = 'lepton'
-    plot_dir: str = '.'
+    lepton: str = "lepton"
+    plot_dir: str = "."
     pkl_file: str = field(init=False)
 
     def __post_init__(self):
-        self.pkl_file = self.name + '_df.pkl'
+        self.pkl_file = self.name + "_df.pkl"
 
     # Builtins
     # ===================
@@ -66,7 +67,7 @@ class Dataset:
         return f'Dataset("{self.name}",Variables:{self.variables},Cuts:{self.cut_cols},Events:{len(self)})'
 
     def __str__(self):
-        return f'{self.name},Variable:{self.variables},Cuts:{self.cut_cols},Events:{len(self)}'
+        return f"{self.name},Variable:{self.variables},Cuts:{self.cut_cols},Events:{len(self)}"
 
     def __add__(self, other) -> pd.DataFrame:
         """Concatenate two dataframes"""
@@ -87,18 +88,12 @@ class Dataset:
     @property
     def variables(self) -> set:
         """Column names that do not contain a cut label"""
-        return {
-            col for col in self.df.columns
-            if config.cut_label not in col
-        }
+        return {col for col in self.df.columns if config.cut_label not in col}
 
     @property
     def cut_cols(self) -> set:
         """Column names that contain a cut label"""
-        return {
-            col for col in self.df.columns
-            if config.cut_label in col
-        }
+        return {col for col in self.df.columns if config.cut_label in col}
 
     @property
     def cuts(self) -> OrderedDict[str, Cut]:
@@ -132,14 +127,14 @@ class Dataset:
     @property
     def __var_tags(self) -> list[str]:
         """Get tags for all variables"""
-        return [variable_data[col]['tag'] for col in self.df.columns if col in variable_data]
+        return [variable_data[col]["tag"] for col in self.df.columns if col in variable_data]
 
     def __get_var_tag(self, tag: VarTag | str) -> list[str]:
         """Get all variables in dataset with given tag"""
         return [
-            col for col in self.df.columns
-            if col in variable_data
-            and variable_data[col]['tag'] == VarTag(tag)
+            col
+            for col in self.df.columns
+            if col in variable_data and variable_data[col]["tag"] == VarTag(tag)
         ]
 
     @property
@@ -165,7 +160,7 @@ class Dataset:
     def n_truth_events(self) -> int:
         """How many truth events in dataset"""
         if self.is_truth:
-            return self.df['truth_weight'].notna().sum()
+            return self.df["truth_weight"].notna().sum()
         else:
             return 0
 
@@ -173,19 +168,21 @@ class Dataset:
     def n_reco_events(self) -> int:
         """How many reco events in dataset"""
         if self.is_reco:
-            return self.df['reco_weight'].notna().sum()
+            return self.df["reco_weight"].notna().sum()
         else:
             return 0
 
     def get_truth_events(self, df: pd.DataFrame = None) -> pd.DataFrame:
         """Retrun view of truth events"""
-        if df is None: df = self.df
-        return df.loc[df['truth_weight'].notna()]
+        if df is None:
+            df = self.df
+        return df.loc[df["truth_weight"].notna()]
 
     def get_reco_events(self, df: pd.DataFrame = None) -> pd.DataFrame:
         """Retrun view of reco events"""
-        if df is None: df = self.df
-        return df.loc[df['reco_weight'].notna()]
+        if df is None:
+            df = self.df
+        return df.loc[df["reco_weight"].notna()]
 
     @property
     def cross_section(self) -> float:
@@ -198,7 +195,9 @@ class Dataset:
         return self.get_luminosity(self.df, xs=self.cross_section)
 
     @staticmethod
-    def get_cross_section(df: pd.DataFrame, n_events=None, weight_mc_col: str = 'weight_mc') -> float:
+    def get_cross_section(
+        df: pd.DataFrame, n_events=None, weight_mc_col: str = "weight_mc"
+    ) -> float:
         """
         Calculates cross-section of data in dataframe
         :param df: input dataframe
@@ -211,7 +210,9 @@ class Dataset:
         return df[weight_mc_col].sum() / n_events
 
     @classmethod
-    def get_luminosity(cls, df: pd.DataFrame, xs: float = None, weight_col: str = 'weight') -> float:
+    def get_luminosity(
+        cls, df: pd.DataFrame, xs: float = None, weight_col: str = "weight"
+    ) -> float:
         """
         Calculates luminosity from dataframe
         :param df: input dataframe
@@ -236,7 +237,7 @@ class Dataset:
             logger=self.logger,
             lumi=self.lumi,
             label=self.label,
-            lepton=self.lepton
+            lepton=self.lepton,
         )
 
     def subset_dsid(self, dsid: str | int) -> Dataset:
@@ -252,7 +253,8 @@ class Dataset:
     # ===============================
     def save_pkl_file(self, path: str = None) -> None:
         """Saves pickle"""
-        if not path: path = self.pkl_file
+        if not path:
+            path = self.pkl_file
         self.logger.info(f"Saving pickle file...")
         self.df.to_pickle(path)
         self.logger.info(f"Saved pickled DataFrame to {path}")
@@ -278,7 +280,7 @@ class Dataset:
 
     def dsid_metadata_printout(self, truth: bool = True, reco: bool = False) -> None:
         """print some dataset ID metadata"""
-        if self.df.index.names != ['DSID', 'eventNumber']:
+        if self.df.index.names != ["DSID", "eventNumber"]:
             raise ValueError("Incorrect index")
 
         print_truth = self.is_truth and truth
@@ -288,7 +290,7 @@ class Dataset:
 
         # per dsid
         rows = []
-        for dsid in self.df.index.unique(level='DSID'):
+        for dsid in self.df.index.unique(level="DSID"):
             dsid_slice = self.df.loc[slice(dsid)]
             phys_short = PMG_tool.get_physics_short(dsid)
             row = [
@@ -298,12 +300,12 @@ class Dataset:
                 PMG_tool.get_crossSection(dsid),
                 self.lumi,
                 PMG_tool.get_genFiltEff(dsid),
-                dsid_slice['weight_mc'].sum(),
+                dsid_slice["weight_mc"].sum(),
             ]
             if print_truth:
-                row += [dsid_slice['truth_weight'].notna().sum(), dsid_slice['truth_weight'].mean()]
+                row += [dsid_slice["truth_weight"].notna().sum(), dsid_slice["truth_weight"].mean()]
             if print_reco:
-                row += [dsid_slice['reco_weight'].notna().sum(), dsid_slice['reco_weight'].mean()]
+                row += [dsid_slice["reco_weight"].notna().sum(), dsid_slice["reco_weight"].mean()]
 
             rows.append(row)
 
@@ -327,12 +329,13 @@ class Dataset:
     # ===============================
     # ========== CUTTING ============
     # ===============================
-    def apply_cuts(self,
-                   labels: bool | str | List[str] = True,
-                   reco: bool = False,
-                   truth: bool = False,
-                   inplace: bool = False,
-                   ) -> pd.DataFrame | None:
+    def apply_cuts(
+        self,
+        labels: bool | str | List[str] = True,
+        reco: bool = False,
+        truth: bool = False,
+        inplace: bool = False,
+    ) -> pd.DataFrame | None:
         """
         Apply cut(s) to DataFrame.
 
@@ -348,7 +351,7 @@ class Dataset:
         if not labels and (not reco) and (not truth):
             raise ValueError("No cuts supplied")
         if (reco or truth) and isinstance(labels, (str, list)):
-            raise ValueError('Supply either named cut labels, truth or reco')
+            raise ValueError("Supply either named cut labels, truth or reco")
         if truth or reco:
             labels = False
 
@@ -357,16 +360,12 @@ class Dataset:
         if truth:
             self.logger.debug(f"Applying truth cuts to {self.name}...")
             cut_cols += [
-                cut.name + config.cut_label
-                for cut in self.cuts.values()
-                if cut.is_reco is False
+                cut.name + config.cut_label for cut in self.cuts.values() if cut.is_reco is False
             ]
         if reco:
             self.logger.debug(f"Applying reco cuts to {self.name}...")
             cut_cols += [
-                cut.name + config.cut_label
-                for cut in self.cuts.values()
-                if cut.is_reco is True
+                cut.name + config.cut_label for cut in self.cuts.values() if cut.is_reco is True
             ]
 
         if isinstance(labels, list):
@@ -379,8 +378,7 @@ class Dataset:
 
         elif labels is True:
             self.logger.debug(f"Applying all cuts to {self.name}...")
-            cut_cols += [str(col) for col in self.df.columns
-                         if config.cut_label in col]
+            cut_cols += [str(col) for col in self.df.columns if config.cut_label in col]
 
         elif labels is not False:
             raise TypeError("'labels' must be a bool, a string or a list of strings")
@@ -395,10 +393,7 @@ class Dataset:
 
     def __check_cut_cols(self, cuts: List[str]) -> None:
         """Check if cut columns exist in dataframe"""
-        if missing_cut_cols := [
-            label for label in cuts
-            if label not in self.df.columns
-        ]:
+        if missing_cut_cols := [label for label in cuts if label not in self.df.columns]:
             raise ValueError(f"No cut(s) {missing_cut_cols} in dataset {self.name}")
 
     def dropna(self, col: str | List[str], drop_inf: bool = False) -> None:
@@ -421,17 +416,17 @@ class Dataset:
     # =========== PLOTING FUNCTIONS =============
     # ===========================================
     def plot_hist(
-            self,
-            var: str | List[str],
-            bins: tuple | list,
-            weight: str | float = 1.,
-            ax: plt.Axes = None,
-            yerr: ArrayLike | bool = False,
-            normalise: float | bool = False,
-            logbins: bool = False,
-            apply_cuts: bool | str | List[str] = False,
-            name: str = '',
-            **kwargs
+        self,
+        var: str | List[str],
+        bins: tuple | list,
+        weight: str | float = 1.0,
+        ax: plt.Axes = None,
+        yerr: ArrayLike | bool = False,
+        normalise: float | bool = False,
+        logbins: bool = False,
+        apply_cuts: bool | str | List[str] = False,
+        name: str = "",
+        **kwargs,
     ) -> Histogram1D:
         """
         Generate 1D plots of given variables in dataframe. Returns figure object of list of figure objects.
@@ -465,36 +460,32 @@ class Dataset:
 
         df = self.apply_cuts(apply_cuts) if apply_cuts else self.df
 
-        weights = (
-            df[weight]
-            if isinstance(weight, str)
-            else weight
-        )
+        weights = df[weight] if isinstance(weight, str) else weight
         hist = Histogram1D(df[var], bins, weights, logbins, name=name, logger=self.logger)
         hist = hist.plot(ax=ax, yerr=yerr, normalise=normalise, **kwargs)
         return hist
 
     def plot_cut_overlays(
-            self,
-            var: str,
-            bins: List[float] | Tuple[int, float, float],
-            weight: str | float = 1.,
-            yerr: ArrayLike | bool = True,
-            w2: bool = False,
-            normalise: float | bool | str = 'lumi',
-            logbins: bool = False,
-            logx: bool = False,
-            logy: bool = True,
-            xlabel: str = '',
-            ylabel: str = '',
-            title: str = '',
-            lepton: str = 'lepton',
-            **kwargs
+        self,
+        var: str,
+        bins: List[float] | Tuple[int, float, float],
+        weight: str | float = 1.0,
+        yerr: ArrayLike | bool = True,
+        w2: bool = False,
+        normalise: float | bool | str = "lumi",
+        logbins: bool = False,
+        logx: bool = False,
+        logy: bool = True,
+        xlabel: str = "",
+        ylabel: str = "",
+        title: str = "",
+        lepton: str = "lepton",
+        **kwargs,
     ) -> None:
         """Plots overlay of cut and acceptance (ratio) plots"""
         self.logger.info(f"Plotting cuts on {var}...")
 
-        fig, (fig_ax, accept_ax) = plt.subplots(2, 1, gridspec_kw={'height_ratios': [3, 1]})
+        fig, (fig_ax, accept_ax) = plt.subplots(2, 1, gridspec_kw={"height_ratios": [3, 1]})
 
         # INCLUSIVE PLOT
         # ================
@@ -508,10 +499,10 @@ class Dataset:
             logbins=logbins,
             label=self.label,
             w2=w2,
-            color='k',
+            color="k",
             linewidth=2,
             name=self.name,
-            **kwargs
+            **kwargs,
         )
 
         # PLOT CUTS
@@ -529,13 +520,18 @@ class Dataset:
                 label=cut.name,
                 w2=w2,
                 linewidth=2,
-                **kwargs
+                **kwargs,
             )
 
             # RATIO PLOT
             # ================
-            h_cut.plot_ratio(h_inclusive, ax=accept_ax, yerr=yerr,
-                             label=cut.name, color=fig_ax.get_lines()[-1].get_color())
+            h_cut.plot_ratio(
+                h_inclusive,
+                ax=accept_ax,
+                yerr=yerr,
+                label=cut.name,
+                color=fig_ax.get_lines()[-1].get_color(),
+            )
 
         # AXIS FORMATTING
         # ==================
@@ -543,30 +539,34 @@ class Dataset:
         fig.subplots_adjust(hspace=0.1, wspace=0)
 
         # figure plot
-        plotting_utils.set_axis_options(fig_ax, var, bins, lepton, xlabel, ylabel, title, logx, logy)
+        plotting_utils.set_axis_options(
+            fig_ax, var, bins, lepton, xlabel, ylabel, title, logx, logy
+        )
         fig_ax.legend()
         fig_ax.get_xaxis().set_visible(False)
 
         # ratio plot
-        plotting_utils.set_axis_options(accept_ax, var, bins, lepton, xlabel, ylabel, title, logx, False, label=False)
+        plotting_utils.set_axis_options(
+            accept_ax, var, bins, lepton, xlabel, ylabel, title, logx, False, label=False
+        )
         accept_ax.set_ylabel("Acceptance")
 
         out_png_file = f"{self.plot_dir}{var}_CUTS{'_NORMED' if normalise else ''}.png"
-        fig.savefig(out_png_file, bbox_inches='tight')
+        fig.savefig(out_png_file, bbox_inches="tight")
         self.logger.info(f"Figure saved to {out_png_file}")
 
     def plot_dsid(
-            self,
-            var: str,
-            weight: str,
-            bins: Iterable[float] | Tuple[int, float, float] = (30, 0, 5000),
-            logbins: bool = False,
-            logx: bool = False,
-            logy: bool = True,
-            xlabel: str = '',
-            ylabel: str = '',
-            title: str = '',
-            **kwargs
+        self,
+        var: str,
+        weight: str,
+        bins: Iterable[float] | Tuple[int, float, float] = (30, 0, 5000),
+        logbins: bool = False,
+        logx: bool = False,
+        logy: bool = True,
+        xlabel: str = "",
+        ylabel: str = "",
+        title: str = "",
+        **kwargs,
     ) -> None:
         """
         Plot single variable in dataset with different DSIDs visible
@@ -584,37 +584,44 @@ class Dataset:
         :param title: plot title
         :param kwargs: keyword arguments to pass to histogram plotting function
         """
-        self.logger.info(f'Plotting {var} in {self.name} as slices...')
+        self.logger.info(f"Plotting {var} in {self.name} as slices...")
 
         fig, ax = plt.subplots()
 
         # per dsid
-        for dsid, dsid_df in self.df.groupby(level='DSID'):
+        for dsid, dsid_df in self.df.groupby(level="DSID"):
             self.logger.debug(f"Plotting DSID {dsid}...")
             weights = dsid_df[weight] if isinstance(weight, str) else weight
-            hist = Histogram1D(dsid_df[var], bins=bins, weight=weights, logbins=logbins, logger=self.logger)
+            hist = Histogram1D(
+                dsid_df[var], bins=bins, weight=weights, logbins=logbins, logger=self.logger
+            )
             hist.plot(ax=ax, label=dsid, **kwargs)
         # inclusive
         self.logger.debug(f"Plotting inclusive histogram...")
         weights = self.df[weight] if isinstance(weight, str) else weight
-        hist = Histogram1D(self.df[var], bins=bins, weight=weights, logbins=logbins, logger=self.logger)
-        hist.plot(ax=ax, label='Inclusive', color='k', **kwargs)
+        hist = Histogram1D(
+            self.df[var], bins=bins, weight=weights, logbins=logbins, logger=self.logger
+        )
+        hist.plot(ax=ax, label="Inclusive", color="k", **kwargs)
 
         ax.legend(fontsize=10, ncol=2)
         title = self.label if not title else title
-        plotting_utils.set_axis_options(ax, var, bins, self.lepton, xlabel, ylabel, title, logx, logy)
+        plotting_utils.set_axis_options(
+            ax, var, bins, self.lepton, xlabel, ylabel, title, logx, logy
+        )
 
         filename = f"{self.plot_dir}{self.name}_{var}_SLICES.png"
-        fig.savefig(filename, bbox_inches='tight')
-        self.logger.info(f'Saved dsid slice plot of {var} in {self.name} to {filename}')
+        fig.savefig(filename, bbox_inches="tight")
+        self.logger.info(f"Saved dsid slice plot of {var} in {self.name} to {filename}")
 
-    def gen_cutflow_hist(self,
-                         event: bool = True,
-                         ratio: bool = False,
-                         cummulative: bool = False,
-                         a_ratio: bool = False,
-                         all_plots: bool = False,
-                         ) -> None:
+    def gen_cutflow_hist(
+        self,
+        event: bool = True,
+        ratio: bool = False,
+        cummulative: bool = False,
+        a_ratio: bool = False,
+        all_plots: bool = False,
+    ) -> None:
         """
         Generates and saves cutflow histograms. Choose which cutflow histogram option to print. Default: only by-event.
 
@@ -628,48 +635,58 @@ class Dataset:
         if all_plots:
             event = ratio = cummulative = a_ratio = True
         if event:
-            self.cutflow.print_histogram(self.plot_dir, 'event')
+            self.cutflow.print_histogram(self.plot_dir, "event")
         if ratio:
-            self.cutflow.print_histogram(self.plot_dir, 'ratio')
+            self.cutflow.print_histogram(self.plot_dir, "ratio")
         if cummulative:
-            self.cutflow.print_histogram(self.plot_dir, 'cummulative')
+            self.cutflow.print_histogram(self.plot_dir, "cummulative")
         if a_ratio:
-            self.cutflow.print_histogram(self.plot_dir, 'a_ratio')
+            self.cutflow.print_histogram(self.plot_dir, "a_ratio")
 
     def profile_plot(
-            self,
-            varx: str,
-            vary: str,
-            title: str = '',
-            xlabel: str = '',
-            ylabel: str = '',
-            ax: plt.Axes = None,
-            to_file: bool = True,
-            xlim: Tuple[float, float] = None,
-            ylim: Tuple[float, float] = None,
-            logx: bool = False,
-            logy: bool = False,
-            lepton: str = 'lepton',
-            **kwargs
+        self,
+        varx: str,
+        vary: str,
+        title: str = "",
+        xlabel: str = "",
+        ylabel: str = "",
+        ax: plt.Axes = None,
+        to_file: bool = True,
+        xlim: Tuple[float, float] = None,
+        ylim: Tuple[float, float] = None,
+        logx: bool = False,
+        logy: bool = False,
+        lepton: str = "lepton",
+        **kwargs,
     ) -> None:
         if not ax:
             fig, ax = plt.subplots()
 
         self.logger.debug(f"Making profile plot of {varx}-{vary} in {self.name}...")
 
-        ax.scatter(self.df[varx], self.df[vary], c='k', s=0.2, **kwargs)
+        ax.scatter(self.df[varx], self.df[vary], c="k", s=0.2, **kwargs)
 
         ax.set_xlabel(xlabel if xlabel else plotting_utils.get_axis_labels(varx, lepton)[0])
         ax.set_ylabel(ylabel if ylabel else plotting_utils.get_axis_labels(vary, lepton)[0])
-        if xlim: ax.set_xlim(*xlim)
-        if ylim: ax.set_ylim(*ylim)
-        if logx: ax.semilogx()
-        if logy: ax.semilogy()
-        hep.atlas.label(italic=(True, True), loc=0, llabel='Internal', ax=ax, rlabel=title if title else self.label)
+        if xlim:
+            ax.set_xlim(*xlim)
+        if ylim:
+            ax.set_ylim(*ylim)
+        if logx:
+            ax.semilogx()
+        if logy:
+            ax.semilogy()
+        hep.atlas.label(
+            italic=(True, True),
+            loc=0,
+            llabel="Internal",
+            ax=ax,
+            rlabel=title if title else self.label,
+        )
 
         if to_file:
             filename = f"{self.plot_dir}{self.name}_{varx}_{vary}_PROFILE.png"
-            plt.savefig(filename, bbox_inches='tight')
+            plt.savefig(filename, bbox_inches="tight")
             self.logger.info(f"Figure saved as {filename}")
         else:
             plt.show()

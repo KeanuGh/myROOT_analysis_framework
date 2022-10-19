@@ -21,7 +21,7 @@ from utils.context import redirect_stdout
 load_ROOT_settings()
 set_atlas_style()  # set ATLAS plotting style to ROOT plots
 plt.style.use(hep.style.ATLAS)  # set atlas-style plots in matplotilb
-np.seterr(invalid='ignore')  # ignore division by zero errors
+np.seterr(invalid="ignore")  # ignore division by zero errors
 
 
 # TODO: 2D hist
@@ -29,63 +29,71 @@ class Histogram1D(bh.Histogram, family=None):
     """
     Wrapper around boost-histogram histogram for 1D
     """
-    __slots__ = 'logger', 'name', 'TH1'
+
+    __slots__ = "logger", "name", "TH1"
 
     @overload
-    def __init__(self, th1: Type[ROOT.TH1],
-                 logger: logging.Logger = None,
-                 name: str = '',
-                 title: str = '',
-                 ) -> None:
+    def __init__(
+        self,
+        th1: Type[ROOT.TH1],
+        logger: logging.Logger = None,
+        name: str = "",
+        title: str = "",
+    ) -> None:
         ...
 
     @overload
-    def __init__(self, bins: List[float] | np.ndarray,
-                 logger: logging.Logger = None,
-                 name: str = '',
-                 title: str = ''
-                 ) -> None:
+    def __init__(
+        self,
+        bins: List[float] | np.ndarray,
+        logger: logging.Logger = None,
+        name: str = "",
+        title: str = "",
+    ) -> None:
         ...
 
     @overload
-    def __init__(self,
-                 bins: Tuple[int, float, float],
-                 logbins: bool = False,
-                 logger: logging.Logger = None,
-                 name: str = '',
-                 title: str = ''
-                 ) -> None:
+    def __init__(
+        self,
+        bins: Tuple[int, float, float],
+        logbins: bool = False,
+        logger: logging.Logger = None,
+        name: str = "",
+        title: str = "",
+    ) -> None:
         ...
 
     @overload
-    def __init__(self,
-                 var: ArrayLike = None,
-                 bins: List[float] | np.ndarray | Tuple[int, float, float] | bh.axis.Axis = (10, 0, 10),
-                 weight: ArrayLike | int = None,
-                 logbins: bool = False,
-                 logger: logging.Logger = None,
-                 name: str = '',
-                 title: str = '',
-                 **kwargs
-                 ) -> None:
+    def __init__(
+        self,
+        var: ArrayLike = None,
+        bins: List[float] | np.ndarray | Tuple[int, float, float] | bh.axis.Axis = (10, 0, 10),
+        weight: ArrayLike | int = None,
+        logbins: bool = False,
+        logger: logging.Logger = None,
+        name: str = "",
+        title: str = "",
+        **kwargs,
+    ) -> None:
         ...
 
-    def __init__(self,
-                 var: ArrayLike = None,
-                 bins: List[float] | np.ndarray | Tuple[int, float, float] | bh.axis.Axis = (10, 0, 10),
-                 weight: ArrayLike | float = None,
-                 logbins: bool = False,
-                 logger: logging.Logger = None,
-                 name: str = '',
-                 title: str = '',
-                 th1: Type[ROOT.TH1] = None,
-                 **kwargs
-                 ) -> None:
+    def __init__(
+        self,
+        var: ArrayLike = None,
+        bins: List[float] | np.ndarray | Tuple[int, float, float] | bh.axis.Axis = (10, 0, 10),
+        weight: ArrayLike | float = None,
+        logbins: bool = False,
+        logger: logging.Logger = None,
+        name: str = "",
+        title: str = "",
+        th1: Type[ROOT.TH1] = None,
+        **kwargs,
+    ) -> None:
         """
         :param bins: tuple of bins in x (n_bins, start, stop) or list of bin edges.
                      In the first case returns an axis of type Regular(), otherwise of type Variable().
                      Raises error if not formatted in one of these ways.
-        :param var: iterable of values to fill histogram 
+        :param var: iterable of values to fill histogram
         :param weight: iterable of weights corresponding to each variable value or value to weight by
         :param logbins: whether logarithmic binnings
         :param logger: logger object to pass messages to. Creates new logger object that logs to console if None
@@ -100,13 +108,17 @@ class Histogram1D(bh.Histogram, family=None):
 
         self.logger.debug("Checking variables..")
         # check length of var and weight
-        if hasattr(weight, '__len__') and (len(var) != len(weight)):
-            raise ValueError(f"Weight and value arrays are of different lengths! {len(weight)}, {len(var)}")
+        if hasattr(weight, "__len__") and (len(var) != len(weight)):
+            raise ValueError(
+                f"Weight and value arrays are of different lengths! {len(weight)}, {len(var)}"
+            )
 
         # check for invalid entries (nan or inf in weights or values)
         if weight is not None:
-            inv_bool = np.logical_xor(np.logical_xor(np.isnan(var), np.isnan(weight)),
-                                      np.logical_xor(np.isinf(var), np.isinf(weight)))
+            inv_bool = np.logical_xor(
+                np.logical_xor(np.isnan(var), np.isnan(weight)),
+                np.logical_xor(np.isinf(var), np.isinf(weight)),
+            )
             if n_inv := inv_bool.sum():
                 self.logger.error(f"{n_inv} invalid entries in histogram!")
 
@@ -118,7 +130,8 @@ class Histogram1D(bh.Histogram, family=None):
 
             # set vars
             self.TH1 = th1.Clone()
-            if title: self.TH1.SetTitle(title)
+            if title:
+                self.TH1.SetTitle(title)
             if name:
                 self.TH1.SetName(name)
                 self.name = name
@@ -141,15 +154,8 @@ class Histogram1D(bh.Histogram, family=None):
             self.name = name
 
             # get axis
-            axis = (
-                bins if isinstance(bins, bh.axis.Axis)
-                else self.__gen_axis(bins, logbins)
-            )
-            super().__init__(
-                axis,
-                storage=bh.storage.Weight(),
-                **kwargs
-            )
+            axis = bins if isinstance(bins, bh.axis.Axis) else self.__gen_axis(bins, logbins)
+            super().__init__(axis, storage=bh.storage.Weight(), **kwargs)
 
             if var is not None:
                 self.Fill(var, weight=weight)
@@ -193,7 +199,9 @@ class Histogram1D(bh.Histogram, family=None):
             c0 = self.view(flow=True).value
             c1 = other.view(flow=True).value
             clsq = c1 * c1
-            variance = (self.view(flow=True).variance * clsq + other.view(flow=True).variance * c0 * c0) / (clsq * clsq)
+            variance = (
+                (self.view(flow=True).variance * clsq) + (other.view(flow=True).variance * c0 * c0)
+            ) / (clsq * clsq)
 
             self.view(flow=True).value = self.view(flow=True).value / other.view(flow=True).value
             self.view(flow=True).variance = variance
@@ -201,7 +209,7 @@ class Histogram1D(bh.Histogram, family=None):
             return self
         else:
             # scale TH1 properly
-            if hasattr(other, '__iter__'):
+            if hasattr(other, "__iter__"):
                 for i, val in enumerate(other):
                     self.TH1.SetBinContent(i + 1, self.TH1.GetBinContent(i + 1) / val)
                     self.TH1.SetBinError(i + 1, self.TH1.GetBinError(i + 1) / val)
@@ -221,7 +229,9 @@ class Histogram1D(bh.Histogram, family=None):
             # Scale variances based on ROOT method. See https://root.cern.ch/doc/master/TH1_8cxx_source.html#l06116
             c0 = self.view(flow=True).value
             c1 = other.view(flow=True).value
-            variance = self.view(flow=True).variance * c1 * c1 + other.view(flow=True).variance * c0 * c0
+            variance = (
+                self.view(flow=True).variance * c1 * c1 + other.view(flow=True).variance * c0 * c0
+            )
 
             self.view(flow=True).value.__imul__(other.view(flow=True).value)
             self.view(flow=True).variance = variance
@@ -229,7 +239,7 @@ class Histogram1D(bh.Histogram, family=None):
             return self
         else:
             # scale TH1 properly
-            if hasattr(other, '__iter__'):
+            if hasattr(other, "__iter__"):
                 for i, val in enumerate(other):
                     self.TH1.SetBinContent(i + 1, self.TH1.GetBinContent(i + 1) * val)
                     self.TH1.SetBinError(i + 1, self.TH1.GetBinError(i + 1) * val)
@@ -248,7 +258,9 @@ class Histogram1D(bh.Histogram, family=None):
         ...
 
     @staticmethod
-    def __gen_axis(bins: List[float] | ArrayLike | Tuple[int, float, float], logbins: bool = False) -> bh.axis.Axis:
+    def __gen_axis(
+        bins: List[float] | ArrayLike | Tuple[int, float, float], logbins: bool = False
+    ) -> bh.axis.Axis:
         """
         Returns the correct type of boost-histogram axis based on the input bins.
 
@@ -262,13 +274,14 @@ class Histogram1D(bh.Histogram, family=None):
             return bh.axis.Variable(bins)
 
     @staticmethod
-    def __get_TH1_bins(bins: List[float] | Tuple[int, float, float] | bh.axis.Axis
-                       ) -> Tuple[int, list | np.ndaray] | Tuple[int, float, float]:
+    def __get_TH1_bins(
+        bins: List[float] | Tuple[int, float, float] | bh.axis.Axis
+    ) -> Tuple[int, list | np.ndaray] | Tuple[int, float, float]:
         """Format bins for TH1 constructor"""
         if isinstance(bins, bh.axis.Axis):
             return bins.size, bins.edges
 
-        elif hasattr(bins, '__iter__'):
+        elif hasattr(bins, "__iter__"):
             if len(bins) == 3 and isinstance(bins, tuple):
                 return bins
             else:
@@ -298,7 +311,7 @@ class Histogram1D(bh.Histogram, family=None):
         return self.bin_edges[-1] - self.bin_edges[0]
 
     @property
-    def bin_edges(self,) -> np.array:
+    def bin_edges(self) -> np.array:
         """get bin edges"""
         return self.axes[0].edges
 
@@ -368,7 +381,7 @@ class Histogram1D(bh.Histogram, family=None):
     # ===================
     def normalised(self) -> Histogram1D:
         """Return histogram normalised to unity"""
-        return self.normalised_to(1.)
+        return self.normalised_to(1.0)
 
     def normalised_to(self, factor: float) -> Histogram1D:
         """Return histogram normalised to factor"""
@@ -380,7 +393,7 @@ class Histogram1D(bh.Histogram, family=None):
 
     def normalise(self) -> None:
         """Normalise histogram to unity inplace"""
-        self.normalise_to(1.)
+        self.normalise_to(1.0)
 
     def normalise_to(self, factor: float) -> None:
         """Normalise histogram to factor inplace"""
@@ -407,7 +420,7 @@ class Histogram1D(bh.Histogram, family=None):
 
     # Conversion
     # ===================
-    def to_TH1(self, name: str = 'name', title: str = 'title') -> ROOT.TH1F:
+    def to_TH1(self, name: str = "name", title: str = "title") -> ROOT.TH1F:
         """Convert Histogram to ROOT TH1F"""
         if self.TH1 is None:
             h_root = ROOT.TH1F(name, title, self.n_bins, self.bin_edges)
@@ -426,16 +439,16 @@ class Histogram1D(bh.Histogram, family=None):
     # Plotting
     # ===================
     def plot(
-            self,
-            ax: plt.Axes = None,
-            yerr: ArrayLike | bool | None = True,
-            w2: bool = False,
-            normalise: float | bool = False,
-            scale_by_bin_width: bool = False,
-            stats_box: bool = False,
-            out_filename: str = None,
-            show: bool = False,
-            **kwargs
+        self,
+        ax: plt.Axes = None,
+        yerr: ArrayLike | bool | None = True,
+        w2: bool = False,
+        normalise: float | bool = False,
+        scale_by_bin_width: bool = False,
+        stats_box: bool = False,
+        out_filename: str = None,
+        show: bool = False,
+        **kwargs,
     ) -> Histogram1D:
         """
         Plot histogram on axis ax
@@ -470,13 +483,15 @@ class Histogram1D(bh.Histogram, family=None):
             self.logger.debug(f"Plotting histogram {self.name} normalised to unity...")
             hist.normalise()
         else:
-            self.logger.debug(f"Plotting normalised histogram {self.name} normalised to {normalise}...")
+            self.logger.debug(
+                f"Plotting normalised histogram {self.name} normalised to {normalise}..."
+            )
             hist.normalise_to(normalise)
 
         # set error
         if yerr is True:
             yerr = hist.root_sumw2()
-        elif yerr and not isinstance(yerr, bool) and not hasattr(yerr, '__len__'):
+        elif yerr and not isinstance(yerr, bool) and not hasattr(yerr, "__len__"):
             raise TypeError(f"yerr should be a bool or iterable of values. Got {yerr}")
 
         if not ax:
@@ -486,25 +501,27 @@ class Histogram1D(bh.Histogram, family=None):
 
         if stats_box:
             # dumb workaround to avoid the stats boxes from overlapping eachother
-            box_xpos, box_ypos = (.75, .55)
+            box_xpos, box_ypos = (0.75, 0.55)
             for artist in ax.get_children():
                 if isinstance(artist, plt.Text):
-                    if r'$\mu=' in artist.get_text():
-                        box_ypos = .25
+                    if r"$\mu=" in artist.get_text():
+                        box_ypos = 0.25
 
-            textstr = '\n'.join((
-                hist.name,
-                r'$\mu=%.2f\pm%.2f$' % (hist.mean, hist.mean_error),
-                # r'$\sigma=%.2f\pm%.2f$' % (self.std, self.std_error),
-                r'$\mathrm{Entries}: %.0f$' % hist.n_entries,
-                r'$\mathrm{Bin sum}: %.2f$' % hist.bin_sum(True),
-                r'$\mathrm{Integral}: %.2f$' % hist.integral,
-            ))
-            ax.text(x=box_xpos, y=box_ypos, s=textstr, transform=ax.transAxes, fontsize='x-small')
+            textstr = "\n".join(
+                (
+                    hist.name,
+                    r"$\mu=%.2f\pm%.2f$" % (hist.mean, hist.mean_error),
+                    # r'$\sigma=%.2f\pm%.2f$' % (self.std, self.std_error),
+                    r"$\mathrm{Entries}: %.0f$" % hist.n_entries,
+                    r"$\mathrm{Bin sum}: %.2f$" % hist.bin_sum(True),
+                    r"$\mathrm{Integral}: %.2f$" % hist.integral,
+                )
+            )
+            ax.text(x=box_xpos, y=box_ypos, s=textstr, transform=ax.transAxes, fontsize="x-small")
 
         if out_filename:
-            plt.savefig(out_filename, bbox_inches='tight')
-            self.logger.info(f'image saved in {out_filename}')
+            plt.savefig(out_filename, bbox_inches="tight")
+            self.logger.info(f"image saved in {out_filename}")
 
         if show:
             plt.show()
@@ -514,9 +531,9 @@ class Histogram1D(bh.Histogram, family=None):
     def Rplot(
         self,
         normalise: float | bool = False,
-        plot_option: str = '',
+        plot_option: str = "",
         stats_box: bool = False,
-        out_filename: str = False
+        out_filename: str = False,
     ) -> None:
         """
         ROOT plot
@@ -541,19 +558,19 @@ class Histogram1D(bh.Histogram, family=None):
             c.Print(out_filename)
 
     def plot_ratio(
-            self,
-            other: Histogram1D,
-            ax: plt.Axes = None,
-            yerr: ArrayLike | bool | str = True,
-            normalise: bool = False,
-            label: str = None,
-            fit: bool = False,
-            name: str = '',
-            out_filename: str = None,
-            yax_lim: float = False,
-            display_stats: bool = True,
-            color: str = 'k',
-            **kwargs
+        self,
+        other: Histogram1D,
+        ax: plt.Axes = None,
+        yerr: ArrayLike | bool | str = True,
+        normalise: bool = False,
+        label: str = None,
+        fit: bool = False,
+        name: str = "",
+        out_filename: str = None,
+        yax_lim: float = False,
+        display_stats: bool = True,
+        color: str = "k",
+        **kwargs,
     ) -> Histogram1D:
         """
         Plot (and properly format) ratio between this histogram and another.
@@ -589,11 +606,12 @@ class Histogram1D(bh.Histogram, family=None):
             h_ratio = other / self
 
         # set name
-        if name: h_ratio.name = name
+        if name:
+            h_ratio.name = name
 
         if yerr is True:
             yerr = h_ratio.root_sumw2()
-        elif yerr == 'carry':
+        elif yerr == "carry":
             yerr = (self.root_sumw2() / self.bin_values()) * h_ratio.bin_values()
             for i in range(h_ratio.TH1.GetNbinsX()):
                 h_ratio.TH1.SetBinError(i + 1, yerr[i])
@@ -602,39 +620,55 @@ class Histogram1D(bh.Histogram, family=None):
             self.logger.info("Performing fit on ratio..")
 
             with redirect_stdout() as fit_output:
-                fit_results = h_ratio.TH1.Fit('pol0', 'VFSN')
+                fit_results = h_ratio.TH1.Fit("pol0", "VFSN")
 
-            self.logger.debug(f"ROOT fit output:\n"
-                              f"==========================================================================\n"
-                              f"{fit_output.getvalue()}"
-                              f"==========================================================================")
+            self.logger.debug(
+                f"ROOT fit output:\n"
+                f"==========================================================================\n"
+                f"{fit_output.getvalue()}"
+                f"=========================================================================="
+            )
             c = fit_results.Parameters()[0]
             err = fit_results.Errors()[0]
 
             # display fit line
-            col = 'r' if color == 'k' else color
-            ax.fill_between([self.bin_edges[0], self.bin_edges[-1]], [c - err], [c + err], color=col, alpha=0.3)
-            ax.axhline(c, color=col, linewidth=1.)
+            col = "r" if color == "k" else color
+            ax.fill_between(
+                [self.bin_edges[0], self.bin_edges[-1]], [c - err], [c + err], color=col, alpha=0.3
+            )
+            ax.axhline(c, color=col, linewidth=1.0)
 
             if display_stats:
-                textstr = '\n'.join((
-                    r'$\chi^2=%.3f$' % fit_results.Chi2(),
-                    r'$\mathrm{NDF}=%.3f$' % fit_results.Ndf(),
-                    r'$c=%.2f\pm%.3f$' % (c, err))
+                textstr = "\n".join(
+                    (
+                        r"$\chi^2=%.3f$" % fit_results.Chi2(),
+                        r"$\mathrm{NDF}=%.3f$" % fit_results.Ndf(),
+                        r"$c=%.2f\pm%.3f$" % (c, err),
+                    )
                 )
                 # dumb workaround to avoid the stats boxes from overlapping eachother
-                loc = 'upper left'
+                loc = "upper left"
                 for artist in ax.get_children():
                     if isinstance(artist, AnchoredText):
-                        if r'$\chi^2=' in artist.get_children()[0].get_text():
-                            loc = 'lower left'
-                stats_box = AnchoredText(textstr, loc=loc, frameon=False, prop=dict(fontsize="x-small"))
+                        if r"$\chi^2=" in artist.get_children()[0].get_text():
+                            loc = "lower left"
+                stats_box = AnchoredText(
+                    textstr, loc=loc, frameon=False, prop=dict(fontsize="x-small")
+                )
                 ax.add_artist(stats_box)
 
-        ax.axhline(1., linestyle='--', linewidth=1., c='k')
-        ax.errorbar(h_ratio.bin_centres, h_ratio.bin_values(), xerr=h_ratio.bin_widths / 2, yerr=yerr,
-                    linestyle='None', label=label, **kwargs, c=color)
-        ax.grid(visible=True, which='both', axis='y')
+        ax.axhline(1.0, linestyle="--", linewidth=1.0, c="k")
+        ax.errorbar(
+            h_ratio.bin_centres,
+            h_ratio.bin_values(),
+            xerr=h_ratio.bin_widths / 2,
+            yerr=yerr,
+            linestyle="None",
+            label=label,
+            **kwargs,
+            c=color,
+        )
+        ax.grid(visible=True, which="both", axis="y")
 
         if yax_lim:
             ax.set_ylim(1 - yax_lim, 1 + yax_lim)
@@ -646,7 +680,7 @@ class Histogram1D(bh.Histogram, family=None):
             ax.set_ylim(ymin - vspace, ymax + vspace)
 
         if out_filename:
-            plt.savefig(out_filename, bbox_inches='tight')
-            self.logger.info(f'image saved in {out_filename}')
+            plt.savefig(out_filename, bbox_inches="tight")
+            self.logger.info(f"image saved in {out_filename}")
 
         return h_ratio

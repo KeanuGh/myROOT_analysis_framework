@@ -25,20 +25,21 @@ class Analysis:
     Access datasets in class with analysis.dataset_name or analsis['dataset_name']. Can set by key but not by attribute
     When calling a method that applies to only one dataset, naming the dataset in argument ds_name is optional.
     """
+
     __slots__ = "name", "paths", "histograms", "logger", "datasets", "global_lumi", "__output_dir"
 
     def __init__(
-            self,
-            data_dict: Dict[str, Dict],
-            analysis_label: str,
-            global_lumi: float | None = 139.,
-            output_dir: str = None,
-            data_dir: str = None,
-            log_level: int = 20,
-            log_out: str = 'both',
-            timedatelog: bool = True,
-            separate_loggers: bool = False,
-            **kwargs
+        self,
+        data_dict: Dict[str, Dict],
+        analysis_label: str,
+        global_lumi: float | None = 139.0,
+        output_dir: str = None,
+        data_dir: str = None,
+        log_level: int = 20,
+        log_out: str = "both",
+        timedatelog: bool = True,
+        separate_loggers: bool = False,
+        **kwargs,
     ):
         """
         :param data_dict: Dictionary of dictionaries containing paths to root files and the tree to extract from each.
@@ -63,12 +64,12 @@ class Analysis:
         if not output_dir:
             # root in the directory above this one
             output_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        self.__output_dir = output_dir + '/outputs/' + analysis_label + '/'  # where outputs go
+        self.__output_dir = output_dir + "/outputs/" + analysis_label + "/"  # where outputs go
         self.paths = {
-            'plot_dir': self.__output_dir + '/plots/',  # where plots go
-            'pkl_df_dir': data_dir if data_dir else output_dir + '/data/',  # pickle file directory
-            'latex_dir': self.__output_dir + '/LaTeX/',  # where to print latex cutflow table
-            'log_dir': self.__output_dir + '/logs/',
+            "plot_dir": self.__output_dir + "/plots/",  # where plots go
+            "pkl_df_dir": data_dir if data_dir else output_dir + "/data/",  # pickle file directory
+            "latex_dir": self.__output_dir + "/LaTeX/",  # where to print latex cutflow table
+            "log_dir": self.__output_dir + "/logs/",
         }
         for path in self.paths:
             file_utils.makedir(self.paths[path])
@@ -77,18 +78,18 @@ class Analysis:
         # ============================
         self.logger = get_logger(
             name=self.name,
-            log_dir=self.paths['log_dir'],
+            log_dir=self.paths["log_dir"],
             log_level=log_level,
             log_out=log_out,
-            timedatelog=timedatelog
+            timedatelog=timedatelog,
         )
 
         # SET OTHER GLOBAL OPTIONS
         # ============================
         self.name = analysis_label
-        if 'year' in kwargs:
+        if "year" in kwargs:
             try:
-                self.global_lumi = lumi_year[kwargs['year']]
+                self.global_lumi = lumi_year[kwargs["year"]]
             except KeyError:
                 raise KeyError(f"Unknown data-year: {kwargs['year']}")
         else:
@@ -106,7 +107,9 @@ class Analysis:
 
             # get dataset build arguments out of options passed to analysis
             if dup_args := set(data_args) & set(kwargs):
-                raise SyntaxError(f"Got multiple values for argument(s) {dup_args} for dataset {name}")
+                raise SyntaxError(
+                    f"Got multiple values for argument(s) {dup_args} for dataset {name}"
+                )
             args = data_args | kwargs
 
             # make dataset
@@ -114,15 +117,16 @@ class Analysis:
                 name=name,
                 **self.__match_params(args, DatasetBuilder.__init__),
                 logger=(
-                    self.logger if not separate_loggers  # use single logger
+                    self.logger
+                    if not separate_loggers  # use single logger
                     else get_logger(  # if seperate, make new logger for each Dataset
                         name=name,
-                        log_dir=self.paths['log_dir'],
+                        log_dir=self.paths["log_dir"],
                         log_level=log_level,
                         log_out=log_out,
-                        timedatelog=timedatelog
+                        timedatelog=timedatelog,
                     )
-                )
+                ),
             )
             dataset = builder.build(**self.__match_params(args, DatasetBuilder.build))
             if separate_loggers:
@@ -133,10 +137,10 @@ class Analysis:
             dataset.dsid_metadata_printout()
 
             # set correct pickle path if not passed as a build argument
-            if 'pkl_path' not in args:
-                args['pkl_path'] = f"{self.paths['pkl_df_dir']}{name}_df.pkl"
-            dataset.set_plot_dir(self.paths['plot_dir'])
-            dataset.set_pkl_path(args['pkl_path'])
+            if "pkl_path" not in args:
+                args["pkl_path"] = f"{self.paths['pkl_df_dir']}{name}_df.pkl"
+            dataset.set_plot_dir(self.paths["plot_dir"])
+            dataset.set_pkl_path(args["pkl_path"])
 
             self[name] = dataset  # save to analysis
 
@@ -153,7 +157,8 @@ class Analysis:
         """Return parameters matching passed function signature"""
         args = dict()
         for arg in inspect.signature(func).parameters:
-            if str(arg) == 'self': continue
+            if str(arg) == "self":
+                continue
             if arg in params:
                 args[arg] = params[arg]
         return args
@@ -234,15 +239,15 @@ class Analysis:
             raise ValueError(f"No dataset named {key} found in analysis {self.name}")
 
     def merge_datasets(
-            self,
-            *datasets: str,
-            apply_cuts: bool | str | List[str] = False,
-            new_name: str = None,
-            delete: bool = True,
-            to_pkl: bool = False,
-            verify: bool = False,
-            delete_pkl: bool = False,
-            sort: bool = True,
+        self,
+        *datasets: str,
+        apply_cuts: bool | str | List[str] = False,
+        new_name: str = None,
+        delete: bool = True,
+        to_pkl: bool = False,
+        verify: bool = False,
+        delete_pkl: bool = False,
+        sort: bool = True,
     ) -> None:
         """
         Merge datasets by concatenating one or more into the other
@@ -267,22 +272,28 @@ class Analysis:
             curr_cols = set(self[d].df.columns)
             if first_cols ^ curr_cols:
                 if cols_missing_from_first := first_cols - curr_cols:
-                    self.logger.warning(f"Missing column(s) from dataset '{d}' but are in '{datasets[0]}': "
-                                        f"{cols_missing_from_first}")
+                    self.logger.warning(
+                        f"Missing column(s) from dataset '{d}' but are in '{datasets[0]}': "
+                        f"{cols_missing_from_first}"
+                    )
                 if cols_missing_from_curr := curr_cols - first_cols:
-                    self.logger.warning(f"Missing column(s) from dataset '{datasets[0]}' but are in '{d}': "
-                                        f"{cols_missing_from_curr}")
+                    self.logger.warning(
+                        f"Missing column(s) from dataset '{datasets[0]}' but are in '{d}': "
+                        f"{cols_missing_from_curr}"
+                    )
 
         if apply_cuts:
             self.apply_cuts(list(datasets), labels=apply_cuts)
 
         self.logger.info(f"Merging dataset(s) {datasets[1:]} into dataset {datasets[0]}...")
 
-        self[datasets[0]].df = pd.concat([self[n].df for n in datasets], verify_integrity=verify, copy=False)
+        self[datasets[0]].df = pd.concat(
+            [self[n].df for n in datasets], verify_integrity=verify, copy=False
+        )
         self[datasets[0]].name = datasets[0]
 
         if sort:
-            self[datasets[0]].df.sort_index(level='DSID', inplace=True)
+            self[datasets[0]].df.sort_index(level="DSID", inplace=True)
 
         if new_name:
             self[new_name] = self.datasets.pop(datasets[0])
@@ -298,12 +309,13 @@ class Analysis:
             self.logger.info(f"Saved merged dataset to file {self[datasets[0]].pkl_file}")
 
     @handle_dataset_arg
-    def apply_cuts(self,
-                   datasets: str | Iterable[str],
-                   labels: bool | str | List[str] = True,
-                   reco: bool = False,
-                   truth: bool = False,
-                   ) -> None:
+    def apply_cuts(
+        self,
+        datasets: str | Iterable[str],
+        labels: bool | str | List[str] = True,
+        reco: bool = False,
+        truth: bool = False,
+    ) -> None:
         """
         Apply cuts to dataset dataframes. Skip cuts that do not exist in dataset, logging in debug.
 
@@ -323,15 +335,13 @@ class Analysis:
 
         elif isinstance(labels, list):
             if missing_cuts := [
-                label for label in labels
+                label
+                for label in labels
                 if label + config.cut_label not in self[datasets].df.columns
             ]:
                 self.logger.debug(f"No cuts {missing_cuts} in dataset '{datasets}'; skipping.")
                 # remove missing cuts from list
-                labels = [
-                    label for label in labels
-                    if label + config.cut_label not in missing_cuts
-                ]
+                labels = [label for label in labels if label + config.cut_label not in missing_cuts]
 
         self[datasets].apply_cuts(labels, reco, truth, inplace=True)
 
@@ -349,33 +359,33 @@ class Analysis:
     # =========== PLOTS =============
     # ===============================
     def plot_hist(
-            self,
-            datasets: str | ArrayLike | List[str],
-            var: str | ArrayLike | List[str],
-            bins: List[float] | ArrayLike | Tuple[int, float, float],
-            weight: List[str | float] | str | float = 1.,
-            yerr: ArrayLike | str = True,
-            labels: List[str] = None,
-            w2: bool = False,
-            normalise: float | bool | str = False,
-            apply_cuts: bool | str | List[str] = False,
-            logbins: bool = False,
-            logx: bool = False,
-            logy: bool = True,
-            xlabel: str = '',
-            ylabel: str = '',
-            title: str = '',
-            lepton: str = 'lepton',
-            scale_by_bin_width: bool = False,
-            stats_box: bool = False,
-            ratio_plot: bool = True,
-            ratio_fit: bool = False,
-            ratio_axlim: float = None,
-            ratio_label: str = 'Ratio',
-            filename: str = None,
-            name_suffix: str = '',
-            name_prefix: str = '',
-            **kwargs
+        self,
+        datasets: str | ArrayLike | List[str],
+        var: str | ArrayLike | List[str],
+        bins: List[float] | ArrayLike | Tuple[int, float, float],
+        weight: List[str | float] | str | float = 1.0,
+        yerr: ArrayLike | str = True,
+        labels: List[str] = None,
+        w2: bool = False,
+        normalise: float | bool | str = False,
+        apply_cuts: bool | str | List[str] = False,
+        logbins: bool = False,
+        logx: bool = False,
+        logy: bool = True,
+        xlabel: str = "",
+        ylabel: str = "",
+        title: str = "",
+        lepton: str = "lepton",
+        scale_by_bin_width: bool = False,
+        stats_box: bool = False,
+        ratio_plot: bool = True,
+        ratio_fit: bool = False,
+        ratio_axlim: float = None,
+        ratio_label: str = "Ratio",
+        filename: str = None,
+        name_suffix: str = "",
+        name_prefix: str = "",
+        **kwargs,
     ) -> List[Histogram1D]:
         """
         Plot same variable from different datasets
@@ -420,15 +430,15 @@ class Analysis:
         :param name_prefix: prefix to add at start of histogram/file
         :param kwargs: keyword arguments to pass to mplhep.histplot()
         """
-        self.logger.info(f'Plotting {var} in as overlay in {datasets}...')
+        self.logger.info(f"Plotting {var} in as overlay in {datasets}...")
 
         # naming template for file/histogram name
         name_template = (
-                ((name_prefix + '_') if name_prefix else '') +  # prefix
-                "{dataset}" +  # name of dataset(s)
-                "_{variable}" +  # name of variable(s)
-                ('_NORMED' if normalise else '') +  # normalisation flag
-                (('_' + name_suffix) if name_suffix else '')  # suffix
+            ((name_prefix + "_") if name_prefix else "")  # prefix
+            + "{dataset}"  # name of dataset(s)
+            + "_{variable}"  # name of variable(s)
+            + ("_NORMED" if normalise else "")  # normalisation flag
+            + (("_" + name_suffix) if name_suffix else "")  # suffix
         )
 
         if isinstance(datasets, str):
@@ -441,17 +451,19 @@ class Analysis:
             ratio_plot = False
 
         if isinstance(normalise, str):
-            if normalise == 'lumi':
+            if normalise == "lumi":
                 normalise = self.global_lumi
             else:
                 raise ValueError("Only 'lumi' allowed for string value normalisation")
 
         if labels:
-            assert len(labels) == len(datasets), \
-                f"Labels iterable (length: {len(labels)}) must be of same length as number of datasets ({len(datasets)})"
+            assert len(labels) == len(datasets), (
+                f"Labels iterable (length: {len(labels)}) "
+                f"must be of same length as number of datasets ({len(datasets)})"
+            )
 
         if ratio_plot:
-            fig, (ax, ratio_ax) = plt.subplots(2, 1, gridspec_kw={'height_ratios': [3, 1]})
+            fig, (ax, ratio_ax) = plt.subplots(2, 1, gridspec_kw={"height_ratios": [3, 1]})
         else:
             fig, ax = plt.subplots()
             ratio_ax = None  # just so IDE doesn't complain about missing variable
@@ -481,7 +493,7 @@ class Analysis:
                 w2=w2,
                 stats_box=stats_box,
                 scale_by_bin_width=scale_by_bin_width,
-                **kwargs
+                **kwargs,
             )
 
             # save
@@ -490,9 +502,18 @@ class Analysis:
 
             if ratio_plot and len(hists) > 1:
                 # ratio of first dataset to this one
-                label = f"{labels[-1]}/{labels[0]}" if labels else f"{self[dataset].label}/{self[datasets[0]].label}"
-                color = 'k' if (len(datasets) == 2) else ax.get_lines()[-1].get_color()  # match ratio colour to plot
-                ratio_hist_name = name_template.format(dataset=f"{dataset}_{datasets[0]}", variable=varname) + '_ratio'
+                label = (
+                    f"{labels[-1]}/{labels[0]}"
+                    if labels
+                    else f"{self[dataset].label}/{self[datasets[0]].label}"
+                )
+                color = (
+                    "k" if (len(datasets) == 2) else ax.get_lines()[-1].get_color()
+                )  # match ratio colour to plot
+                ratio_hist_name = (
+                    name_template.format(dataset=f"{dataset}_{datasets[0]}", variable=varname)
+                    + "_ratio"
+                )
                 ratio_hist = hists[0].plot_ratio(
                     hists[-1],
                     ax=ratio_ax,
@@ -503,41 +524,52 @@ class Analysis:
                     fit=ratio_fit,
                     yax_lim=ratio_axlim,
                     name=ratio_hist_name,
-                    display_stats=len(datasets) <= 3  # ony display fit results if there are two fits or less
+                    display_stats=len(datasets) <= 3,  # display results if there are <2 fits
                 )
                 self.histograms[ratio_hist_name] = ratio_hist
 
-        ax.legend(fontsize=10, loc='upper right')
-        plotting_utils.set_axis_options(ax, var, bins, lepton, xlabel, ylabel, title, logx, logy,
-                                        diff_xs=scale_by_bin_width)
+        ax.legend(fontsize=10, loc="upper right")
+        plotting_utils.set_axis_options(
+            ax, var, bins, lepton, xlabel, ylabel, title, logx, logy, diff_xs=scale_by_bin_width
+        )
         if ratio_plot:
             fig.tight_layout()
             fig.subplots_adjust(hspace=0.1, wspace=0)
             ax.set_xticklabels([])
-            ax.set_xlabel('')
+            ax.set_xlabel("")
 
             if len(datasets) > 2:  # don't show legend if there's only two datasets
                 ratio_ax.legend(fontsize=10, loc=1)
 
-            plotting_utils.set_axis_options(axis=ratio_ax, var_name=var, bins=bins, lepton=lepton,
-                                            diff_xs=scale_by_bin_width, xlabel=xlabel, ylabel=ratio_label,
-                                            title='', logx=logx, logy=False, label=False)
+            plotting_utils.set_axis_options(
+                axis=ratio_ax,
+                var_name=var,
+                bins=bins,
+                lepton=lepton,
+                diff_xs=scale_by_bin_width,
+                xlabel=xlabel,
+                ylabel=ratio_label,
+                title="",
+                logx=logx,
+                logy=False,
+                label=False,
+            )
 
         if filename:
-            filename = self.paths['plot_dir'] + '/' + filename
+            filename = self.paths["plot_dir"] + "/" + filename
         else:
             if isinstance(var, list):
-                varname = '_'.join(var)
+                varname = "_".join(var)
             else:
                 varname = var
             filename = (
-                    self.paths['plot_dir'] +
-                    name_template.format(dataset='_'.join(datasets), variable=varname) +
-                    '.png'
+                self.paths["plot_dir"]
+                + name_template.format(dataset="_".join(datasets), variable=varname)
+                + ".png"
             )
 
-        fig.savefig(filename, bbox_inches='tight')
-        self.logger.info(f'Saved overlay plot of {var} to {filename}')
+        fig.savefig(filename, bbox_inches="tight")
+        self.logger.info(f"Saved overlay plot of {var} to {filename}")
         plt.close(fig)
         return hists
 
@@ -579,12 +611,13 @@ class Analysis:
             self.logger.info(f"cross-section: {self[name].cross_section:.2f} fb")
             self.logger.info(f"luminosity   : {self[name].luminosity:.2f} fb-1")
 
-    def save_histograms(self,
-                        filename: str = None,
-                        tfile_option: str = 'Update',
-                        write_option: str = 'Overwrite',
-                        clear_hists: bool = False,
-                        ) -> None:
+    def save_histograms(
+        self,
+        filename: str = None,
+        tfile_option: str = "Update",
+        write_option: str = "Overwrite",
+        clear_hists: bool = False,
+    ) -> None:
         """
         Saves current histograms into root file
 
@@ -609,16 +642,16 @@ class Analysis:
     def histogram_printout(self, to_latex: bool = False) -> None:
         """Printout of histogram metadata"""
         rows = []
-        header = ['Hist name', 'Entries', 'Bin sum', 'Integral']
+        header = ["Hist name", "Entries", "Bin sum", "Integral"]
         for name, h in self.histograms.items():
             rows.append([name, h.n_entries, h.bin_sum(True), h.integral])
 
         if not to_latex:
             self.logger.info(tabulate(rows, headers=header))
         else:
-            filepath = self.paths['latex_dir'] + f"{self.name}_histograms.tex"
+            filepath = self.paths["latex_dir"] + f"{self.name}_histograms.tex"
             with open(filepath, "w") as f:
-                f.write(tabulate(rows, headers=header, tablefmt='latex_raw'))
+                f.write(tabulate(rows, headers=header, tablefmt="latex_raw"))
                 self.logger.info(f"Saved LaTeX histogram table to {filepath}")
 
     @handle_dataset_arg
@@ -629,4 +662,6 @@ class Analysis:
         :param datasets: list of datasets or single dataset name. If not given applies to all datasets.
         :return: None
         """
-        self[datasets].print_latex_table(f"{self.paths['latex_dir']}{self[datasets].name}_cutflow.tex")
+        self[datasets].print_latex_table(
+            f"{self.paths['latex_dir']}{self[datasets].name}_cutflow.tex"
+        )

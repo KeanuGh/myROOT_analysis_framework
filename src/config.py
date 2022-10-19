@@ -9,4 +9,4 @@ n_threads = os.cpu_count()  # number of threads used for filling histograms
 
 # MISC SETTINGS
 # ====================
-cut_label = ' CUT'  # label to add to boolean cut columns in dataframe
+cut_label = " CUT"  # label to add to boolean cut columns in dataframe

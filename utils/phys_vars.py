@@ -1,7 +1,7 @@
 import pandas as pd
 
 
-def get_cross_section(df: pd.DataFrame, n_events=None, weight_mc_col: str = 'weight_mc'):
+def get_cross_section(df: pd.DataFrame, n_events=None, weight_mc_col: str = "weight_mc"):
     """
     Calculates cross-section of data in dataframe
     :param df: input dataframe
@@ -14,7 +14,7 @@ def get_cross_section(df: pd.DataFrame, n_events=None, weight_mc_col: str = 'wei
     return df[weight_mc_col].sum() / n_events
 
 
-def get_luminosity(df: pd.DataFrame, xs=None, weight_col: str = 'weight'):
+def get_luminosity(df: pd.DataFrame, xs=None, weight_col: str = "weight"):
     """
     Calculates luminosity from dataframe
     :param df: input dataframe

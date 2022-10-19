@@ -16,6 +16,7 @@ all_vars = set(derived_vars.keys()) | set(variable_data.keys())
 @dataclass
 class Cut:
     """Cut class containing info for each cut"""
+
     name: str
     cutstr: str
     var: str | Set[str]
@@ -28,9 +29,26 @@ class Cut:
 
 class Cutfile:
     """Handles importing cutfiles and extracting variables"""
-    __slots__ = "sep", "logger", "name", "_path", "given_tree", "cuts", "__vars_to_cut", "tree_dict", "vars_to_calc"
 
-    def __init__(self, file_path: str, default_tree: str | Set[str] = '0:NONE', logger: logging.Logger = None, sep='\t'):
+    __slots__ = (
+        "sep",
+        "logger",
+        "name",
+        "_path",
+        "given_tree",
+        "cuts",
+        "__vars_to_cut",
+        "tree_dict",
+        "vars_to_calc",
+    )
+
+    def __init__(
+        self,
+        file_path: str,
+        default_tree: str | Set[str] = "0:NONE",
+        logger: logging.Logger = None,
+        sep="\t",
+    ):
         """
         Read and pull variables and cuts from cutfile.
 
@@ -44,7 +62,8 @@ class Cutfile:
         self.logger = logger if logger is not None else get_logger()
         self.name = get_filename(file_path)
         self._path = file_path
-        if not isinstance(default_tree, str):  # make sure the default tree is a set of strings or a string
+        # make sure the default tree is a set of strings or a string
+        if not isinstance(default_tree, str):
             default_tree = set(default_tree)
         self.given_tree = default_tree
         self.cuts, self.__vars_to_cut = self.parse_cutfile()
@@ -69,10 +88,14 @@ class Cutfile:
 
         # if badly formatted
         if len(cutline_split) not in (2, 3):
-            raise SyntaxError(f"Check cutfile. Line {cutline} is badly formatted. Got {cutline_split}.")
+            raise SyntaxError(
+                f"Check cutfile. Line {cutline} is badly formatted. Got {cutline_split}."
+            )
         for v in cutline_split:
             if len(v) == 0:
-                raise SyntaxError(f"Check cutfile. Blank value given in line {cutline}. Got {cutline_split}.")
+                raise SyntaxError(
+                    f"Check cutfile. Blank value given in line {cutline}. Got {cutline_split}."
+                )
 
         name = cutline_split[0]
         cut_str = cutline_split[1]
@@ -82,8 +105,10 @@ class Cutfile:
         except IndexError:
             tree = self.given_tree
 
-        if tree == '':
-            raise SyntaxError(f"Check cutfile. Line {cutline} is badly formatted. Got {cutline_split}.")
+        if tree == "":
+            raise SyntaxError(
+                f"Check cutfile. Line {cutline} is badly formatted. Got {cutline_split}."
+            )
 
         # check for variables in the cut string
         split_string = set(re.findall(r"\w+|[.,!?;]", cut_str))
@@ -91,12 +116,12 @@ class Cutfile:
 
         if len(cutvars) == 1:
             var = cutvars.pop()
-            is_reco = (variable_data[var]['tag'] == VarTag.RECO)
+            is_reco = variable_data[var]["tag"] == VarTag.RECO
 
         elif len(cutvars) > 1:
             var = cutvars
             # make sure all variables have the same tag (truth or reco)
-            tags = {variable_data[v]['tag'] for v in var}
+            tags = {variable_data[v]["tag"] for v in var}
             if VarTag.META in tags:
                 raise Exception(f"Meta variable cut {cutline}")
             elif len(tags) > 1:
@@ -105,12 +130,16 @@ class Cutfile:
                 is_reco = VarTag.RECO in tags
 
         else:
-            raise ValueError(f"No known variable in string '{cut_str}' for line '{cutline}'\n"
-                             f"Read {cutline_split}")
+            raise ValueError(
+                f"No known variable in string '{cut_str}' for line '{cutline}'\n"
+                f"Read {cutline_split}"
+            )
 
         return Cut(name=name, cutstr=cut_str, var=var, tree=tree, is_reco=is_reco)
 
-    def parse_cutfile(self, path: str = None, sep='\t') -> Tuple[OrderedDict[str, Cut], Dict[str, Set[str]]]:
+    def parse_cutfile(
+        self, path: str = None, sep="\t"
+    ) -> Tuple[OrderedDict[str, Cut], Dict[str, Set[str]]]:
         """
         | Generates pythonic outputs from input cutfile
         | Cutfile should be formatted with headers [CUTS] and [OUTPUTS]
@@ -129,18 +158,18 @@ class Cutfile:
         if not path:
             path = self._path
 
-        with open(path, 'r') as f:
-            lines = [line.rstrip('\n') for line in f.readlines()]
+        with open(path, "r") as f:
+            lines = [line.rstrip("\n") for line in f.readlines()]
 
-            if '[CUTS]' not in lines:
+            if "[CUTS]" not in lines:
                 raise ValueError("Missing [CUTS] section!")
-            if '[OUTPUTS]' not in lines:
+            if "[OUTPUTS]" not in lines:
                 raise ValueError("Missing [OUTPUTS] section!")
 
             # get cut lines
             cuts: OrderedDict[str, Cut] = OrderedDict()
-            for cutline in lines[lines.index('[CUTS]') + 1: lines.index('[OUTPUTS]')]:
-                if cutline.startswith('#') or len(cutline) < 2:
+            for cutline in lines[lines.index("[CUTS]") + 1 : lines.index("[OUTPUTS]")]:
+                if cutline.startswith("#") or len(cutline) < 2:
                     continue
                 cut = self.parse_cut(cutline)
                 if cut.name in cuts:
@@ -149,14 +178,16 @@ class Cutfile:
 
             # get output variables
             output_vars: Dict[str, Set[str]] = dict()
-            for output_var in lines[lines.index('[OUTPUTS]') + 1:]:
-                if output_var.startswith('#') or len(output_var) < 2:
+            for output_var in lines[lines.index("[OUTPUTS]") + 1 :]:
+                if output_var.startswith("#") or len(output_var) < 2:
                     continue
 
                 var_tree = [i.strip() for i in output_var.split(sep)]
                 if len(var_tree) > 2:
-                    raise SyntaxError(f"Check line '{output_var}'. Should be variable and tree (optional). "
-                                      f"Got '{var_tree}'.")
+                    raise SyntaxError(
+                        f"Check line '{output_var}'. Should be variable and tree (optional). "
+                        f"Got '{var_tree}'."
+                    )
                 elif len(var_tree) == 2:
                     out_var, tree = var_tree
                     output_vars[out_var] = {tree}
@@ -231,8 +262,7 @@ class Cutfile:
 
         # work out which variables to calculate and which to extract from ROOT file
         calc_vars = [  # cut variables that are in derived vars
-            [var, trees] for var, trees in extracted_vars.items()
-            if var in derived_vars
+            [var, trees] for var, trees in extracted_vars.items() if var in derived_vars
         ]
 
         # remove variables to calculate from tree dict
@@ -242,13 +272,13 @@ class Cutfile:
         # add any variables needed from which trees for calculating derived variables
         for calc_var, trees in calc_vars:
             for tree in trees:
-                if tree == self.given_tree and derived_vars[calc_var]['tree']:
-                    tree = derived_vars[calc_var]['tree']
+                if tree == self.given_tree and derived_vars[calc_var]["tree"]:
+                    tree = derived_vars[calc_var]["tree"]
 
                 if tree in tree_dict:
-                    tree_dict[tree] |= set(derived_vars[calc_var]['var_args'])
+                    tree_dict[tree] |= set(derived_vars[calc_var]["var_args"])
                 else:
-                    tree_dict[tree] = set(derived_vars[calc_var]['var_args'])
+                    tree_dict[tree] = set(derived_vars[calc_var]["var_args"])
 
         # only return the actual variable names to calculate. Which tree to extract from will be handled by tree_dict
         return tree_dict, {var for var, _ in calc_vars}
@@ -265,9 +295,9 @@ class Cutfile:
         for var_ls in tree_dict.values():
             for var in var_ls:
                 if var in variable_data:
-                    if variable_data[var]['tag'] == 'truth':
+                    if variable_data[var]["tag"] == "truth":
                         is_truth = True
-                    elif variable_data[var]['tag'] == 'reco':
+                    elif variable_data[var]["tag"] == "reco":
                         is_reco = True
         return is_truth, is_reco
 
@@ -282,7 +312,7 @@ class Cutfile:
                  optionally returns the string 'None' if cut_label is None
         """
         if cut_label is None:
-            return 'None'
+            return "None"
 
         # get cut dict with name cut_label
         cut = next((c for c in self.cuts.values() if c.name == cut_label), None)
@@ -291,7 +321,7 @@ class Cutfile:
 
         name_len = max([len(cut_name) for cut_name in self.cuts]) if align else 0
 
-        return (f"{cut.name:<{name_len}}: " if name else '') + cut.cutstr
+        return (f"{cut.name:<{name_len}}: " if name else "") + cut.cutstr
 
     def cut_exists(self, cut_name: str) -> bool:
         """check if cut exists in cutfile"""

@@ -18,17 +18,21 @@ plt.style.use([hep.style.ATLAS])
 # ===============================
 # ===== HISTOGRAM VARIABLES =====
 # ===============================
-def get_axis_labels(var_name: str | List[str], lepton: str = 'lepton', diff_xs: bool = False
-                    ) -> Tuple[str | None, str | None]:
+def get_axis_labels(
+    var_name: str | List[str], lepton: str = "lepton", diff_xs: bool = False
+) -> Tuple[str | None, str | None]:
     """Gets label for corresponding variable in axis labels dictionary"""
     if isinstance(var_name, list):
         # If a list is passed, check if all variables have the same name, otherwise throw warning and pick first
         try:
-            names = [variable_data[var]['name'] for var in var_name]
+            names = [variable_data[var]["name"] for var in var_name]
         except KeyError:
-            warn(f"Axis labels for {var_name} not found in label lookup dictionary. "
-                 f"Falling back to default", UserWarning)
-            return str(var_name), 'Entries'
+            warn(
+                f"Axis labels for {var_name} not found in label lookup dictionary. "
+                f"Falling back to default",
+                UserWarning,
+            )
+            return str(var_name), "Entries"
 
         name_set = set(names)
         if len(name_set) > 1:
@@ -38,31 +42,39 @@ def get_axis_labels(var_name: str | List[str], lepton: str = 'lepton', diff_xs: 
 
     # get name and units from data dictionary
     try:
-        name = variable_data[var_name]['name']
-        units = variable_data[var_name]['units']
+        name = variable_data[var_name]["name"]
+        units = variable_data[var_name]["units"]
     except KeyError:
-        warn(f"Axis labels for {var_name} not found in label lookup dictionary. "
-             f"Falling back to default", UserWarning)
-        return var_name, 'Entries'
+        warn(
+            f"Axis labels for {var_name} not found in label lookup dictionary. "
+            f"Falling back to default",
+            UserWarning,
+        )
+        return var_name, "Entries"
 
     # just the symbol(s) in latex math format if it exists
-    symbol = name.split('$')[1] if len(name.split('$')) > 1 else name
+    symbol = name.split("$")[1] if len(name.split("$")) > 1 else name
 
     # convert x label string for correct lepton if applicable
-    xlabel = name + (f" [{units}]" if units else '')
+    xlabel = name + (f" [{units}]" if units else "")
     try:
         xlabel %= lepton
     except TypeError:
         pass
 
-    if variable_data[var_name]['tag'] == 'truth':
+    if variable_data[var_name]["tag"] == "truth":
         # weird but it does the job
         if diff_xs:
-            ylabel = r'$\frac{d\sigma}{d' + symbol + r'}$ [pb' + ((f' {units}' + '$^{-1}$]') if units else ']')
+            ylabel = (
+                r"$\frac{d\sigma}{d"
+                + symbol
+                + r"}$ [pb"
+                + ((f" {units}" + "$^{-1}$]") if units else "]")
+            )
         else:
-            ylabel = r'$d\sigma$ [pb]'
+            ylabel = r"$d\sigma$ [pb]"
     else:
-        ylabel = 'Entries'
+        ylabel = "Entries"
 
     return xlabel, ylabel
 
@@ -87,21 +99,22 @@ def get_axis(bins: List[float] | Tuple[int, float, float], logbins: bool = False
         return bh.axis.Variable(bins)
     else:
         raise TypeError(
-            f"Bins must be formatted as either tuple (n_bins, start, stop) or a list of bin edges. Got {bins}")
+            f"Bins must be formatted as either tuple (n_bins, start, stop) or a list of bin edges. Got {bins}"
+        )
 
 
 def set_axis_options(
-        axis: plt.axes,
-        var_name: List[str] | str,
-        bins: tuple | list | ArrayLike,
-        lepton: str = None,
-        xlabel: str = '',
-        ylabel: str = '',
-        title: str = '',
-        logx: bool = False,
-        logy: bool = False,
-        label: bool = True,
-        diff_xs: bool = False
+    axis: plt.axes,
+    var_name: List[str] | str,
+    bins: tuple | list | ArrayLike,
+    lepton: str = None,
+    xlabel: str = "",
+    ylabel: str = "",
+    title: str = "",
+    logx: bool = False,
+    logy: bool = False,
+    label: bool = True,
+    diff_xs: bool = False,
 ) -> plt.axes:
     """
     Sets my default axis options
@@ -119,8 +132,10 @@ def set_axis_options(
     :param diff_xs: set yaxis label to differential cross-section
     :return: changed axis (also works in place)
     """
-    if logx: axis.semilogx()
-    if logy: axis.semilogy()
+    if logx:
+        axis.semilogx()
+    if logy:
+        axis.semilogy()
 
     if isinstance(bins, tuple) and len(bins) == 3:
         axis.set_xlim(bins[1], bins[2])
@@ -132,7 +147,7 @@ def set_axis_options(
     axis.set_xlabel(xlabel if xlabel else _xlabel)
     axis.set_ylabel(ylabel if ylabel else _ylabel)
     if label:
-        hep.atlas.label(italic=(True, True), ax=axis, loc=0, llabel='Internal', rlabel=title)
+        hep.atlas.label(italic=(True, True), ax=axis, loc=0, llabel="Internal", rlabel=title)
 
     return axis
 
@@ -141,14 +156,16 @@ def set_axis_options(
 # ==== BUILDING HISTOGRAMS ======
 # ===============================
 def histplot_2d(
-        var_x: pd.Series, var_y: pd.Series,
-        xbins: tuple | list, ybins: tuple | list,
-        weights: pd.Series,
-        ax: plt.axes,
-        fig: plt.figure,
-        n_threads: int = config.n_threads,
-        is_z_log: bool = True,
-        is_square: bool = True,
+    var_x: pd.Series,
+    var_y: pd.Series,
+    xbins: tuple | list,
+    ybins: tuple | list,
+    weights: pd.Series,
+    ax: plt.axes,
+    fig: plt.figure,
+    n_threads: int = config.n_threads,
+    is_z_log: bool = True,
+    is_square: bool = True,
 ) -> bh.Histogram:
     """
     Plots and prints out 2d histogram. Does not support axis transforms (yet!)
@@ -175,7 +192,7 @@ def histplot_2d(
         norm = None
 
     # setup mesh differently depending on bh storage
-    if hasattr(hist_2d.view(), 'value'):
+    if hasattr(hist_2d.view(), "value"):
         mesh = ax.pcolormesh(*hist_2d.axes.edges.T, hist_2d.view().value.T, norm=norm)
     else:
         mesh = ax.pcolormesh(*hist_2d.axes.edges.T, hist_2d.view().T, norm=norm)
