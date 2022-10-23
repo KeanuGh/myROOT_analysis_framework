@@ -11,6 +11,8 @@ import boost_histogram as bh
 import numpy as np
 import pandas as pd
 
+from utils import PMG_tool
+
 
 # ROOT settings
 def load_ROOT_settings(
@@ -175,12 +177,15 @@ def glob_chain(TTree: str, path: PathLike | str) -> ROOT.TChain:
 #         super().__init__(self.chain)
 
 
-def get_dta_sumw(path: str, ttree_name: str) -> pd.DataFrame:
-    """Return DataFrame containing sum of weights per DSID"""
+def get_dsid_values(path: str, ttree_name: str) -> pd.DataFrame:
+    """Return DataFrame containing sumw, xs and PMG factor per DSID"""
     files_list = glob.glob(path)
     dsid_sumw: Dict[int, float] = dict()
+    dsid_xs: Dict[int, float] = dict()
+    dsid_pmg_factor: Dict[int, float] = dict()
 
     # loop over files and sum sumw values per dataset ID (assuming each file only has one dataset ID value)
+    dsid_id = 1
     for file in files_list:
         with ROOT_TFile_mgr(file, "read") as tfile:
             tree = tfile.Get(ttree_name)
@@ -192,7 +197,22 @@ def get_dta_sumw(path: str, ttree_name: str) -> pd.DataFrame:
             else:
                 dsid_sumw[dsid] += sumw
 
-    df = pd.DataFrame.from_dict(dsid_sumw, orient="index", columns=["sumOfWeights"])
+        if dsid_id != dsid:  # do only for one cross-section
+            xs = PMG_tool.get_crossSection(dsid)
+            dsid_xs[dsid] = xs
+            dsid_pmg_factor[dsid] = xs * PMG_tool.get_kFactor(dsid) * PMG_tool.get_genFiltEff(dsid)
+
+        dsid_id = dsid
+
+    df = pd.concat(
+        [
+            pd.DataFrame.from_dict(dsid_sumw, orient="index", columns=["sumOfWeights"]),
+            pd.DataFrame.from_dict(dsid_xs, orient="index", columns=["cross-section"]),
+            pd.DataFrame.from_dict(dsid_pmg_factor, orient="index", columns=["PMG_factor"]),
+        ],
+        axis=1,
+        join="inner",
+    )
     df.index.name = "mcChannel"
 
     return df

@@ -5,25 +5,24 @@ from src.analysis import Analysis
 # DTA_PATH = '/data/keanu/ditau_output/'
 # ANALYSISTOP_PATH = '/data/atlas/HighMassDrellYan/mc16a'
 # DATA_OUT_DIR = '/data/keanu/framework_outputs/'
-DTA_PATH = '/data/DTA_outputs/2022-08-24/'
-ANALYSISTOP_PATH = '/data/analysistop_out/mc16a/'
-DATA_OUT_DIR = '/data/dataset_pkl_outputs/'
+DTA_PATH = "/data/DTA_outputs/2022-08-24/"
+ANALYSISTOP_PATH = "/data/analysistop_out/mc16a/"
+DATA_OUT_DIR = "/data/dataset_pkl_outputs/"
 
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     datasets = {
         # dta w->taunu->munu
-        'wtaunu_dta': {
-            'data_path': DTA_PATH + '/user.kghorban.Sh_2211_Wtaunu_*/*.root',
-            'cutfile_path': '../options/DTA_cuts/dta_init.txt',
+        "wtaunu_dta": {
+            "data_path": DTA_PATH + "/user.kghorban.Sh_2211_Wtaunu_*/*.root",
+            "cutfile_path": "../options/DTA_cuts/dta_init.txt",
             # 'TTree_name': 'T_s1thv_NOMINAL',
-            'TTree_name': {'T_s1thv_NOMINAL', 'T_s1tev_NOMINAL', 'T_s1tmv_NOMINAL'},
+            "TTree_name": {"T_s1thv_NOMINAL", "T_s1tev_NOMINAL", "T_s1tmv_NOMINAL"},
             # 'hard_cut': 'Muonic Tau',
-            'lepton': 'tau',
-            'dataset_type': 'dta',
+            "lepton": "tau",
+            "dataset_type": "dta",
             # 'force_rebuild': True,
             # 'force_recalc_weights': True,
-            'label': r'Sherpa 2211 $W\rightarrow\tau\nu$',
+            "label": r"Sherpa 2211 $W\rightarrow\tau\nu$",
         },
         # 'wtaunu_h_dta': {
         #     'data_path': DTA_PATH + '/user.kghorban.Sh_2211_Wtaunu_H*/*.root',
@@ -62,43 +61,48 @@ if __name__ == '__main__':
         #     'label': r'Sherpa 2211 $W\rightarrow\tau\nu\rightarrow \mu\nu$',
         # },
         # analysistop w->taunu->munu
-        'wtaunu_analysistop': {
-            'data_path': ANALYSISTOP_PATH + '/w*taunu_*/*.root',
-            'cutfile_path': '../options/DTA_cuts/analysistop.txt',
-            'lepton': 'tau',
-            'dataset_type': 'analysistop',
+        "wtaunu_analysistop": {
+            "data_path": ANALYSISTOP_PATH + "/w*taunu_*/*.root",
+            "cutfile_path": "../options/DTA_cuts/analysistop.txt",
+            "lepton": "tau",
+            "dataset_type": "analysistop",
             # 'force_rebuild': False,
-            'label': r'Powheg $W\rightarrow\tau\nu\rightarrow \mu\nu$',
+            "label": r"Powheg $W\rightarrow\tau\nu\rightarrow \mu\nu$",
         },
-        'wtaunu_analysistop_peak': {
-            'data_path': ANALYSISTOP_PATH + '/w*taunu/*.root',
-            'cutfile_path': '../options/DTA_cuts/analysistop_peak.txt',
-            'lepton': 'tau',
-            'dataset_type': 'analysistop',
-            'hard_cut': 'M_W',
+        "wtaunu_analysistop_peak": {
+            "data_path": ANALYSISTOP_PATH + "/w*taunu/*.root",
+            "cutfile_path": "../options/DTA_cuts/analysistop_peak.txt",
+            "lepton": "tau",
+            "dataset_type": "analysistop",
+            "hard_cut": "M_W",
             # 'force_rebuild': True,
-            'label': r'Powheg/Pythia 8 $W\rightarrow\tau\nu\rightarrow \mu\nu$',
+            "label": r"Powheg/Pythia 8 $W\rightarrow\tau\nu\rightarrow \mu\nu$",
         },
     }
 
     my_analysis = Analysis(
         datasets,
         data_dir=DATA_OUT_DIR,
-        year='2015+2016',
+        year="2015+2016",
         force_rebuild=True,
-        analysis_label='dta_analysistop_compare',
-        skip_verify_pkl=False,
+        analysis_label="dta_analysistop_compare",
+        skip_verify_pkl=True,
+        # validate_duplicated_events=False,
         # force_recalc_cuts=True,
         # log_level=10,
-        log_out='both',
+        log_out="both",
     )
     # my_analysis.merge_datasets('wtaunu_mu_dta', 'wtaunu_e_dta', verify=True)
-    my_analysis.merge_datasets('wtaunu_analysistop', 'wtaunu_analysistop_peak')
+    my_analysis.merge_datasets("wtaunu_analysistop", "wtaunu_analysistop_peak")
 
     # BR-scaled weight
-    my_analysis['wtaunu_dta'].df['br_scaled_weight'] = my_analysis['wtaunu_dta']['truth_weight'] / my_analysis.global_lumi
+    my_analysis["wtaunu_dta"].df["br_scaled_weight"] = (
+        my_analysis["wtaunu_dta"]["truth_weight"] / my_analysis.global_lumi
+    )
     # my_analysis['wtaunu_analysistop'].df['br_scaled_weight'] = my_analysis['wtaunu_analysistop']['truth_weight'] * 0.1138 / my_analysis.global_lumi
-    my_analysis['wtaunu_analysistop'].df['br_scaled_weight'] = my_analysis['wtaunu_analysistop']['truth_weight'] / my_analysis.global_lumi
+    my_analysis["wtaunu_analysistop"].df["br_scaled_weight"] = (
+        my_analysis["wtaunu_analysistop"]["truth_weight"] / my_analysis.global_lumi
+    )
 
     # HISTORGRAMS
     # ==================================================================================================================
@@ -117,88 +121,108 @@ if __name__ == '__main__':
 
     # argument dicts
     ratio_args = {
-        # 'ratio_axlim': 1.5,
-        'ratio_label': 'Powheg/Sherpa',
-        'stats_box': False,
-        'ratio_fit': True,
+        "ratio_axlim": 1.5,
+        "ratio_label": "Powheg/Sherpa",
+        "stats_box": False,
+        "ratio_fit": True,
     }
     mass_args = {
-        'bins': (30, 1, 5000),
-        'logbins': True,
-        'logx': True,
-        'ratio_axlim': 10,
+        "bins": (30, 1, 5000),
+        "logbins": True,
+        "logx": True,
+        "ratio_axlim": 10,
     }
     unweighted_args = {
-        'ylabel': 'Entries',
-        'weight': 1,
-        'name_prefix': 'unweighted',
-        'title': 'truth - unweighted',
-        'normalise': False,
+        "ylabel": "Entries",
+        "weight": 1,
+        "name_prefix": "unweighted",
+        "title": "truth - unweighted",
+        "normalise": False,
     }
     weighted_args = {
-        'weight': 'truth_weight',
-        'name_prefix': 'weighted',
-        'title': 'truth - 36.2fb$^{-1}$',
-        'normalise': False,
+        "weight": "truth_weight",
+        "name_prefix": "weighted",
+        "title": "truth - 36.2fb$^{-1}$",
+        "normalise": False,
     }
     bin_scaled_args = {
-        'weight': 'truth_weight',
-        'name_prefix': 'bin_scaled',
-        'title': 'truth - 36.2fb$^{-1}$',
-        'normalise': False,
-        'scale_by_bin_width': True,
+        "weight": "truth_weight",
+        "name_prefix": "bin_scaled",
+        "title": "truth - 36.2fb$^{-1}$",
+        "normalise": False,
+        "scale_by_bin_width": True,
     }
     normed_args = {
-        'ylabel': 'Normalised Entries',
-        'weight': 'truth_weight',
-        'name_prefix': 'normalised',
-        'title': 'truth - normalised to unity',
-        'normalise': True,
-        'scale_by_bin_width': True,
+        "ylabel": "Normalised Entries",
+        "weight": "truth_weight",
+        "name_prefix": "normalised",
+        "title": "truth - normalised to unity",
+        "normalise": True,
+        "scale_by_bin_width": True,
     }
     br_weighted_args = {
-        'weight': 'br_scaled_weight',
-        'name_prefix': 'br_weighted',
-        'title': 'truth - 36.2fb$^{-1}$',
-        'normalise': False,
+        "weight": "br_scaled_weight",
+        "name_prefix": "br_weighted",
+        "title": "truth - 36.2fb$^{-1}$",
+        "normalise": False,
     }
     bin_br_scaled_args = {
-        'weight': ['br_scaled_weight', 'truth_weight'],
-        'name_prefix': 'bin_br_scaled',
-        'title': 'truth - 36.2fb$^{-1}$',
-        'normalise': False,
-        'scale_by_bin_width': True,
+        "weight": ["br_scaled_weight", "truth_weight"],
+        "name_prefix": "bin_br_scaled",
+        "title": "truth - 36.2fb$^{-1}$",
+        "normalise": False,
+        "scale_by_bin_width": True,
     }
 
     # TRUTH
     # -----------------------------------
     for arg_dict in (
-            # unweighted_args,
-            # weighted_args,
-            # bin_scaled_args,
-            br_weighted_args,
-            # bin_br_scaled_args,
-            # normed_args
+        # unweighted_args,
+        # weighted_args,
+        # bin_scaled_args,
+        br_weighted_args,
+        # bin_br_scaled_args,
+        # normed_args
     ):
         # my_analysis.plot_hist(['wtaunu_dta', 'wtaunu_analysistop'], ['TruthBosonM', 'MC_WZ_dilep_m_born'],
         #                       **mass_args, **arg_dict, **ratio_args)
-        my_analysis.plot_hist(['wtaunu_dta', 'wtaunu_analysistop'], ['TruthTauPt', 'MC_WZmu_el_pt_born'],
-                              **mass_args, **arg_dict, **ratio_args)
-        my_analysis.plot_hist(['wtaunu_dta', 'wtaunu_analysistop'], ['TruthTauEta', 'MC_WZmu_el_eta_born'],
-                              bins=(30, -5, 5), **arg_dict, **ratio_args)
-        my_analysis.plot_hist(['wtaunu_dta', 'wtaunu_analysistop'], ['TruthTauPhi', 'MC_WZmu_el_phi_born'],
-                              bins=(30, -pi, pi), **arg_dict, **ratio_args)
+        my_analysis.plot_hist(
+            ["wtaunu_dta", "wtaunu_analysistop"],
+            ["TruthTauPt", "MC_WZmu_el_pt_born"],
+            **mass_args,
+            **arg_dict,
+            **ratio_args
+        )
+        my_analysis.plot_hist(
+            ["wtaunu_dta", "wtaunu_analysistop"],
+            ["TruthTauEta", "MC_WZmu_el_eta_born"],
+            bins=(30, -5, 5),
+            **arg_dict,
+            **ratio_args
+        )
+        my_analysis.plot_hist(
+            ["wtaunu_dta", "wtaunu_analysistop"],
+            ["TruthTauPhi", "MC_WZmu_el_phi_born"],
+            bins=(30, -pi, pi),
+            **arg_dict,
+            **ratio_args
+        )
         # my_analysis.plot_hist(['wtaunu_dta', 'wtaunu_analysistop'], ['TruthNeutrinoPt', 'MC_WZneutrino_pt_born'],
         #                       **mass_args, **arg_dict, **ratio_args)
         # my_analysis.plot_hist(['wtaunu_dta', 'wtaunu_analysistop'], ['TruthNeutrinoEta', 'MC_WZneutrino_eta_born'],
         #                       bins=(30, -5, 5), **arg_dict, **ratio_args)
         # my_analysis.plot_hist(['wtaunu_dta', 'wtaunu_analysistop'], ['TruthNeutrinoPhi', 'MC_WZneutrino_phi_born'],
         #                       bins=(30, -pi, pi), **arg_dict, **ratio_args)
-        my_analysis.plot_hist(['wtaunu_dta', 'wtaunu_analysistop'], ['TruthMTW', 'mt_born'],
-                              **mass_args, **arg_dict, **ratio_args)
+        my_analysis.plot_hist(
+            ["wtaunu_dta", "wtaunu_analysistop"],
+            ["TruthMTW", "mt_born"],
+            **mass_args,
+            **arg_dict,
+            **ratio_args
+        )
 
-    my_analysis['wtaunu_dta'].dsid_metadata_printout()
-    my_analysis['wtaunu_analysistop'].dsid_metadata_printout()
+    my_analysis["wtaunu_dta"].dsid_metadata_printout()
+    my_analysis["wtaunu_analysistop"].dsid_metadata_printout()
     my_analysis.histogram_printout()
 
     # # apply muon cut

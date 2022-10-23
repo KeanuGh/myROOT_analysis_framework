@@ -14,42 +14,42 @@ bins = np.array(
 DTA_PATH = '/data/DTA_outputs/2022-08-24/'
 DATA_OUT_DIR = '/data/dataset_pkl_outputs/'
 datasets = {
-    'wtaunu_l_dta_cvetobveto': {
-        'data_path': DTA_PATH + 'user.kghorban.Sh_2211_Wtaunu_L_maxHTpTV2_CVetoBVeto*_histograms.root/*.root',
-        'TTree_name': ['T_s1tmv_NOMINAL', 'T_s1tev_NOMINAL'],
-        'label': r'C Veto B Veto',
+    'wtaunu_l_dta_cvetobveto':{
+        'data_path':DTA_PATH + 'user.kghorban.Sh_2211_Wtaunu_L_maxHTpTV2_CVetoBVeto*_histograms.root/*.root',
+        'TTree_name':['T_s1tmv_NOMINAL', 'T_s1tev_NOMINAL'],
+        'label':r'C Veto B Veto',
     },
-    'wtaunu_l_dta_cfilterbveto': {
-        'data_path': DTA_PATH + 'user.kghorban.Sh_2211_Wtaunu_L_maxHTpTV2_CFilterBVeto*_histograms.root/*.root',
-        'TTree_name': ['T_s1tmv_NOMINAL', 'T_s1tev_NOMINAL'],
-        'label': r'C Filter B Veto',
+    'wtaunu_l_dta_cfilterbveto':{
+        'data_path':DTA_PATH + 'user.kghorban.Sh_2211_Wtaunu_L_maxHTpTV2_CFilterBVeto*_histograms.root/*.root',
+        'TTree_name':['T_s1tmv_NOMINAL', 'T_s1tev_NOMINAL'],
+        'label':r'C Filter B Veto',
     },
-    'wtaunu_l_dta_bfilter': {
-        'data_path': DTA_PATH + 'user.kghorban.Sh_2211_Wtaunu_L_maxHTpTV2_BFilter*_histograms.root/*.root',
-        'TTree_name': ['T_s1tmv_NOMINAL', 'T_s1tev_NOMINAL'],
-        'label': r'B Filter',
+    'wtaunu_l_dta_bfilter':{
+        'data_path':DTA_PATH + 'user.kghorban.Sh_2211_Wtaunu_L_maxHTpTV2_BFilter*_histograms.root/*.root',
+        'TTree_name':['T_s1tmv_NOMINAL', 'T_s1tev_NOMINAL'],
+        'label':r'B Filter',
     },
-    'wtaunu_h_dta_cvetobveto': {
-        'data_path': DTA_PATH + 'user.kghorban.Sh_2211_Wtaunu_H_maxHTpTV2_CVetoBVeto*_histograms.root/*.root',
-        'TTree_name': 'T_s1thv_NOMINAL',
-        'label': r'C Veto B Veto',
+    'wtaunu_h_dta_cvetobveto':{
+        'data_path':DTA_PATH + 'user.kghorban.Sh_2211_Wtaunu_H_maxHTpTV2_CVetoBVeto*_histograms.root/*.root',
+        'TTree_name':'T_s1thv_NOMINAL',
+        'label':r'C Veto B Veto',
     },
-    'wtaunu_h_dta_cfilterbveto': {
-        'data_path': DTA_PATH + 'user.kghorban.Sh_2211_Wtaunu_H_maxHTpTV2_CFilterBVeto*_histograms.root/*.root',
-        'TTree_name': 'T_s1thv_NOMINAL',
-        'label': r'C Filter B Veto',
+    'wtaunu_h_dta_cfilterbveto':{
+        'data_path':DTA_PATH + 'user.kghorban.Sh_2211_Wtaunu_H_maxHTpTV2_CFilterBVeto*_histograms.root/*.root',
+        'TTree_name':'T_s1thv_NOMINAL',
+        'label':r'C Filter B Veto',
     },
-    'wtaunu_h_dta_bfilter': {
-        'data_path': DTA_PATH + 'user.kghorban.Sh_2211_Wtaunu_H_maxHTpTV2_BFilter*_histograms.root/*.root',
-        'TTree_name': 'T_s1thv_NOMINAL',
-        'label': r'B Filter',
+    'wtaunu_h_dta_bfilter':{
+        'data_path':DTA_PATH + 'user.kghorban.Sh_2211_Wtaunu_H_maxHTpTV2_BFilter*_histograms.root/*.root',
+        'TTree_name':'T_s1thv_NOMINAL',
+        'label':r'B Filter',
     },
 }
 
 my_analysis = Analysis(
     datasets,
     analysis_label='dta_analysis',
-    force_rebuild=True,
+    # force_rebuild=True,
     dataset_type='dta',
     # log_level=10,
     data_dir=DATA_OUT_DIR,
@@ -84,7 +84,8 @@ for wgt_ver in (1, 2):
         my_analysis[ds]['base_no_filteff_wtg'] = my_analysis[ds]['weight_mc'] * xs / sumw
         my_analysis[ds]['base_wtg'] = my_analysis[ds]['weight_mc'] * xs * filt_eff / sumw
         my_analysis[ds]['truth_weight_lumi1'] = my_analysis[ds]['weight_mc'] * xs * filt_eff * kFactor / sumw
-        my_analysis[ds]['truth_weight'] = my_analysis[ds]['weight_mc'] * my_analysis[ds].lumi * xs * filt_eff * kFactor / sumw
+        my_analysis[ds]['truth_weight'] = my_analysis[ds]['weight_mc'] * my_analysis[
+            ds].lumi * xs * filt_eff * kFactor / sumw
 
         h = my_analysis.plot_hist(ds, 'TruthMTW', bins=bins, weight='base_no_filteff_wtg', stats_box=True,
                                   name_prefix='base_no_filteff')
@@ -111,14 +112,15 @@ for wgt_ver in (1, 2):
                              my_analysis[ds]['truth_weight'].mean(), xs])
 
     # sort
-    base_no_filteff.sort(key=lambda row: row[0])
-    base_metadata.sort(key=lambda row: row[0])
-    lumi_1_metadata.sort(key=lambda row: row[0])
-    reg_metadata.sort(key=lambda row: row[0])
-    bin_metadata.sort(key=lambda row: row[0])
+    base_no_filteff.sort(key=lambda row:row[0])
+    base_metadata.sort(key=lambda row:row[0])
+    lumi_1_metadata.sort(key=lambda row:row[0])
+    reg_metadata.sort(key=lambda row:row[0])
+    bin_metadata.sort(key=lambda row:row[0])
 
     my_analysis.save_histograms()
-    headers = ['DSID', 'Name', 'Entries', 'Bin sum', 'Integral', 'Filt. eff.', 'sum wgt.', 'avg. wgt.', 'PMG cross-section']
+    headers = ['DSID', 'Name', 'Entries', 'Bin sum', 'Integral', 'Filt. eff.', 'sum wgt.', 'avg. wgt.',
+               'PMG cross-section']
     my_analysis.logger.info("base no filter efficiency:")
     my_analysis.logger.info(tabulate(base_no_filteff, headers=headers))
     my_analysis.logger.info("Base:")
@@ -129,6 +131,5 @@ for wgt_ver in (1, 2):
     my_analysis.logger.info(tabulate(reg_metadata, headers=headers))
     my_analysis.logger.info("Bin-scaled:")
     my_analysis.logger.info(tabulate(bin_metadata, headers=headers))
-
 
 my_analysis.logger.info("DONE")
