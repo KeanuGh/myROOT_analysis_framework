@@ -34,60 +34,60 @@ class Histogram1D(bh.Histogram, family=None):
 
     @overload
     def __init__(
-            self,
-            th1: Type[ROOT.TH1],
-            logger: logging.Logger = None,
-            name: str = "",
-            title: str = "",
+        self,
+        th1: Type[ROOT.TH1],
+        logger: logging.Logger = None,
+        name: str = "",
+        title: str = "",
     ) -> None:
         ...
 
     @overload
     def __init__(
-            self,
-            bins: List[float] | np.ndarray,
-            logger: logging.Logger = None,
-            name: str = "",
-            title: str = "",
+        self,
+        bins: List[float] | np.ndarray,
+        logger: logging.Logger = None,
+        name: str = "",
+        title: str = "",
     ) -> None:
         ...
 
     @overload
     def __init__(
-            self,
-            bins: Tuple[int, float, float],
-            logbins: bool = False,
-            logger: logging.Logger = None,
-            name: str = "",
-            title: str = "",
+        self,
+        bins: Tuple[int, float, float],
+        logbins: bool = False,
+        logger: logging.Logger = None,
+        name: str = "",
+        title: str = "",
     ) -> None:
         ...
 
     @overload
     def __init__(
-            self,
-            var: ArrayLike = None,
-            bins: List[float] | np.ndarray | Tuple[int, float, float] | bh.axis.Axis = (10, 0, 10),
-            weight: ArrayLike | int = None,
-            logbins: bool = False,
-            logger: logging.Logger = None,
-            name: str = "",
-            title: str = "",
-            **kwargs,
+        self,
+        var: ArrayLike = None,
+        bins: List[float] | np.ndarray | Tuple[int, float, float] | bh.axis.Axis = (10, 0, 10),
+        weight: ArrayLike | int = None,
+        logbins: bool = False,
+        logger: logging.Logger = None,
+        name: str = "",
+        title: str = "",
+        **kwargs,
     ) -> None:
         ...
 
     def __init__(
-            self,
-            var: ArrayLike = None,
-            bins: List[float] | np.ndarray | Tuple[int, float, float] | bh.axis.Axis = (10, 0, 10),
-            weight: ArrayLike | float = None,
-            logbins: bool = False,
-            logger: logging.Logger = None,
-            name: str = "",
-            title: str = "",
-            th1: Type[ROOT.TH1] = None,
-            **kwargs,
+        self,
+        var: ArrayLike = None,
+        bins: List[float] | np.ndarray | Tuple[int, float, float] | bh.axis.Axis = (10, 0, 10),
+        weight: ArrayLike | float = None,
+        logbins: bool = False,
+        logger: logging.Logger = None,
+        name: str = "",
+        title: str = "",
+        th1: Type[ROOT.TH1] = None,
+        **kwargs,
     ) -> None:
         """
         :param bins: tuple of bins in x (n_bins, start, stop) or list of bin edges.
@@ -199,8 +199,8 @@ class Histogram1D(bh.Histogram, family=None):
             c1 = other.view(flow=True).value
             clsq = c1 * c1
             variance = (
-                               (self.view(flow=True).variance * clsq) + (other.view(flow=True).variance * c0 * c0)
-                       ) / (clsq * clsq)
+                (self.view(flow=True).variance * clsq) + (other.view(flow=True).variance * c0 * c0)
+            ) / (clsq * clsq)
 
             self.view(flow=True).value = self.view(flow=True).value / other.view(flow=True).value
             self.view(flow=True).variance = variance
@@ -229,7 +229,7 @@ class Histogram1D(bh.Histogram, family=None):
             c0 = self.view(flow=True).value
             c1 = other.view(flow=True).value
             variance = (
-                    self.view(flow=True).variance * c1 * c1 + other.view(flow=True).variance * c0 * c0
+                self.view(flow=True).variance * c1 * c1 + other.view(flow=True).variance * c0 * c0
             )
 
             self.view(flow=True).value.__imul__(other.view(flow=True).value)
@@ -258,7 +258,7 @@ class Histogram1D(bh.Histogram, family=None):
 
     @staticmethod
     def __gen_axis(
-            bins: List[float] | ArrayLike | Tuple[int, float, float], logbins: bool = False
+        bins: List[float] | ArrayLike | Tuple[int, float, float], logbins: bool = False
     ) -> bh.axis.Axis:
         """
         Returns the correct type of boost-histogram axis based on the input bins.
@@ -274,7 +274,7 @@ class Histogram1D(bh.Histogram, family=None):
 
     @staticmethod
     def __get_TH1_bins(
-            bins: List[float] | Tuple[int, float, float] | bh.axis.Axis
+        bins: List[float] | Tuple[int, float, float] | bh.axis.Axis
     ) -> Tuple[int, list | np.ndaray] | Tuple[int, float, float]:
         """Format bins for TH1 constructor"""
         if isinstance(bins, bh.axis.Axis):
@@ -438,16 +438,16 @@ class Histogram1D(bh.Histogram, family=None):
     # Plotting
     # ===================
     def plot(
-            self,
-            ax: plt.Axes = None,
-            yerr: ArrayLike | bool | None = True,
-            w2: bool = False,
-            normalise: float | bool = False,
-            scale_by_bin_width: bool = False,
-            stats_box: bool = False,
-            out_filename: str = None,
-            show: bool = False,
-            **kwargs,
+        self,
+        ax: plt.Axes = None,
+        yerr: ArrayLike | bool | None = True,
+        w2: bool = False,
+        normalise: float | bool = False,
+        scale_by_bin_width: bool = False,
+        stats_box: bool = False,
+        out_filename: str = None,
+        show: bool = False,
+        **kwargs,
     ) -> Histogram1D:
         """
         Plot histogram on axis ax
@@ -528,11 +528,11 @@ class Histogram1D(bh.Histogram, family=None):
         return hist
 
     def Rplot(
-            self,
-            normalise: float | bool = False,
-            plot_option: str = "",
-            stats_box: bool = False,
-            out_filename: str = False,
+        self,
+        normalise: float | bool = False,
+        plot_option: str = "",
+        stats_box: bool = False,
+        out_filename: str = False,
     ) -> None:
         """
         ROOT plot
@@ -557,19 +557,19 @@ class Histogram1D(bh.Histogram, family=None):
             c.Print(out_filename)
 
     def plot_ratio(
-            self,
-            other: Histogram1D,
-            ax: plt.Axes = None,
-            yerr: ArrayLike | bool | str = True,
-            normalise: bool = False,
-            label: str = None,
-            fit: bool = False,
-            name: str = "",
-            out_filename: str = None,
-            yax_lim: float = False,
-            display_stats: bool = True,
-            color: str = "k",
-            **kwargs,
+        self,
+        other: Histogram1D,
+        ax: plt.Axes = None,
+        yerr: ArrayLike | bool | str = True,
+        normalise: bool = False,
+        label: str = None,
+        fit: bool = False,
+        name: str = "",
+        out_filename: str = None,
+        yax_lim: float = False,
+        display_stats: bool = True,
+        color: str = "k",
+        **kwargs,
     ) -> Histogram1D:
         """
         Plot (and properly format) ratio between this histogram and another.
