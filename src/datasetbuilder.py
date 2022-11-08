@@ -647,8 +647,6 @@ class DatasetBuilder:
             lumi_weight = mc_weight * lumi_data / sum of event weights
 
             total event weight = lumi_weight * truth_weight * reco_weight
-
-            This is done in one line for efficiency with pandas (sorry)
             """
             self.logger.info(f"Calculating truth weights for {self.name}...")
             df["truth_weight"] = (
@@ -677,8 +675,6 @@ class DatasetBuilder:
             lumi_weight = mc_weight * lumi_data / sum of event weights
 
             total event weight = lumi_weight * truth_weight * reco_weight
-
-            This is done in one line for efficiency with pandas (sorry)
             """
             self.logger.info(f"Calculating reco weight for {self.name}...")
             df["reco_weight"] = (
@@ -696,9 +692,9 @@ class DatasetBuilder:
                 if df["reco_weight"].isna().any():
                     raise ValueError("NAN values in reco weights!")
             else:
-                assert (~df["reco_weight"].isna()).sum() == (
-                    ~df["weight_leptonSF"].isna()
-                ).sum(), "Different number of events for reco weight and lepton scale factors!"
+                assert (~df["reco_weight"].isna()).sum() == (~df["weight_leptonSF"].isna()).sum(), (
+                    "Different number of events between reco weight and lepton scale factors!"
+                )
 
         # output number of truth and reco events
         if self._is_truth:
@@ -712,9 +708,10 @@ class DatasetBuilder:
         else:
             n_reco = 0
         # small check
-        assert len(df) == max(
-            n_truth, n_reco
-        ), f"Length of DataFrame ({len(df.index)}) doesn't match number of truth ({n_truth}) or reco events ({n_reco})"
+        assert len(df) == max(n_truth, n_reco), (
+            f"Length of DataFrame ({len(df.index)}) "
+            f"doesn't match number of truth ({n_truth}) or reco events ({n_reco})"
+        )
 
         if self._is_truth and self._is_reco:
             # make sure KFactor is the same for all reco and truth variables

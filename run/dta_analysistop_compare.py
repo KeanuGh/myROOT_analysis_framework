@@ -84,7 +84,7 @@ if __name__ == "__main__":
         datasets,
         data_dir=DATA_OUT_DIR,
         year="2015+2016",
-        force_rebuild=True,
+        # force_rebuild=True,
         analysis_label="dta_analysistop_compare",
         skip_verify_pkl=True,
         # validate_duplicated_events=False,
@@ -130,7 +130,7 @@ if __name__ == "__main__":
         "bins": (30, 1, 5000),
         "logbins": True,
         "logx": True,
-        "ratio_axlim": 10,
+        # "ratio_axlim": 10,
     }
     unweighted_args = {
         "ylabel": "Entries",
@@ -184,8 +184,13 @@ if __name__ == "__main__":
         # bin_br_scaled_args,
         # normed_args
     ):
-        # my_analysis.plot_hist(['wtaunu_dta', 'wtaunu_analysistop'], ['TruthBosonM', 'MC_WZ_dilep_m_born'],
-        #                       **mass_args, **arg_dict, **ratio_args)
+        my_analysis.plot_hist(
+            ["wtaunu_dta", "wtaunu_analysistop"],
+            ["TruthDilepM", "MC_WZ_dilep_m_born"],
+            **mass_args,
+            **arg_dict,
+            **ratio_args
+        )
         my_analysis.plot_hist(
             ["wtaunu_dta", "wtaunu_analysistop"],
             ["TruthTauPt", "MC_WZmu_el_pt_born"],

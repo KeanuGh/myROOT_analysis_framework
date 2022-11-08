@@ -112,6 +112,10 @@ class Analysis:
                 )
             args = data_args | kwargs
 
+            # set correct pickle path if not passed as a build argument
+            if "pkl_path" not in args:
+                args["pkl_path"] = f"{self.paths['pkl_df_dir']}{name}_df.pkl"
+
             # make dataset
             builder = DatasetBuilder(
                 name=name,
@@ -129,18 +133,13 @@ class Analysis:
                 ),
             )
             dataset = builder.build(**self.__match_params(args, DatasetBuilder.build))
+            dataset.set_plot_dir(self.paths["plot_dir"])
             if separate_loggers:
                 # set new logger to append to analysis logger
                 dataset.logger = self.logger
                 dataset.logger.debug(f"{name} log handler returned to analysis.")  # test
 
             dataset.dsid_metadata_printout()
-
-            # set correct pickle path if not passed as a build argument
-            if "pkl_path" not in args:
-                args["pkl_path"] = f"{self.paths['pkl_df_dir']}{name}_df.pkl"
-            dataset.set_plot_dir(self.paths["plot_dir"])
-            dataset.set_pkl_path(args["pkl_path"])
 
             self[name] = dataset  # save to analysis
 

@@ -100,7 +100,7 @@ def TH1_to_bh(h_root: Type[ROOT.TH1]) -> bh.Histogram:
     axes = [bh.axis.Variable(ax_bins) for ax_bins in edges]
 
     # filling bins contents n-dimensionally for different storage types
-    # not very pythonic but shouldn't take too long as long as the histogram isn't too big
+    # not very pythonic but shouldn't take too long as the histogram isn't too big
     h_bh = bh.Histogram(*axes, storage=bh.storage.Weight())
     for idx, _ in np.ndenumerate(h_bh.view(flow=True)):
         h_bh.view(flow=True).value[idx] = h_root.GetBinContent(*idx)  # bin value
@@ -182,10 +182,10 @@ def get_dsid_values(path: str, ttree_name: str) -> pd.DataFrame:
     files_list = glob.glob(path)
     dsid_sumw: Dict[int, float] = dict()
     dsid_xs: Dict[int, float] = dict()
-    dsid_pmg_factor: Dict[int, float] = dict()
+    dsid_pmg_factor: Dict[int, float] = dict()  # PNG factor is cross-section * kfactor * filter eff.
 
     # loop over files and sum sumw values per dataset ID (assuming each file only has one dataset ID value)
-    dsid_id = 1
+    prev_dsid = 1
     for file in files_list:
         with ROOT_TFile_mgr(file, "read") as tfile:
             tree = tfile.Get(ttree_name)
@@ -197,12 +197,12 @@ def get_dsid_values(path: str, ttree_name: str) -> pd.DataFrame:
             else:
                 dsid_sumw[dsid] += sumw
 
-        if dsid_id != dsid:  # do only for one cross-section
+        if prev_dsid != dsid:  # do only for one dsid
             xs = PMG_tool.get_crossSection(dsid)
             dsid_xs[dsid] = xs
             dsid_pmg_factor[dsid] = xs * PMG_tool.get_kFactor(dsid) * PMG_tool.get_genFiltEff(dsid)
 
-        dsid_id = dsid
+        prev_dsid = dsid
 
     df = pd.concat(
         [

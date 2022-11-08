@@ -178,12 +178,14 @@ class Histogram1D(bh.Histogram, family=None):
         new = self._new_hist(copy.copy(self._hist))
         new.TH1 = self.TH1.Clone()
         new.name = self.name
+        new.logger = self.name
         return new
 
     def __deepcopy__(self, memo: Any) -> Histogram1D:
         new = self._new_hist(copy.deepcopy(self._hist), memo=memo)
         new.TH1 = self.TH1.Clone()
         new.name = self.name
+        new.logger = self.logger
         return new
 
     def __truediv__(self, other: bh.Histogram | "np.typing.NDArray[Any]" | float) -> Histogram1D:
