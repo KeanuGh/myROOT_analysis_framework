@@ -1,6 +1,8 @@
 import inspect
 import os
 from collections import OrderedDict
+from dataclasses import dataclass
+from pathlib import Path
 from typing import Dict, List, Tuple, Iterable, Callable, Any
 
 import matplotlib.pyplot as plt
@@ -17,7 +19,18 @@ from utils import file_utils, plotting_utils, ROOT_utils
 from utils.context import check_single_dataset, handle_dataset_arg
 
 
-# TODO: use pathlib instead of os
+@dataclass
+class AnalysisPath:
+    plot_dir: Path
+    pkl_df_dir: Path
+    latex_dir: Path
+    log_dir: Path
+
+    def create_paths(self):
+        for p in self.__dict__.values():
+            p.mkdir(parents=True, exist_ok=True)
+
+
 class Analysis:
     """
     Analysis class acts as a container for the src.dataset.Dataset class. Contains methods to apply either to
@@ -26,7 +39,7 @@ class Analysis:
     When calling a method that applies to only one dataset, naming the dataset in argument ds_name is optional.
     """
 
-    __slots__ = "name", "paths", "histograms", "logger", "datasets", "global_lumi", "__output_dir"
+    __slots__ = "name", "paths", "histograms", "logger", "datasets", "global_lumi", "_output_dir"
 
     def __init__(
         self,
@@ -64,21 +77,20 @@ class Analysis:
         if not output_dir:
             # root in the directory above this one
             output_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        self.__output_dir = output_dir + "/outputs/" + analysis_label + "/"  # where outputs go
-        self.paths = {
-            "plot_dir": self.__output_dir + "/plots/",  # where plots go
-            "pkl_df_dir": data_dir if data_dir else output_dir + "/data/",  # pickle file directory
-            "latex_dir": self.__output_dir + "/LaTeX/",  # where to print latex cutflow table
-            "log_dir": self.__output_dir + "/logs/",
-        }
-        for path in self.paths:
-            file_utils.makedir(self.paths[path])
+        self._output_dir = output_dir + "/outputs/" + analysis_label + "/"  # where outputs go
+        self.paths = AnalysisPath(
+            plot_dir=Path(self._output_dir) / "plots",  # where plots go
+            pkl_df_dir=Path(data_dir if data_dir else output_dir) / "data",  # pickle file directory
+            latex_dir=Path(self._output_dir) / "LaTeX",  # where to print latex cutflow table
+            log_dir=Path(self._output_dir) / "logs",
+        )
+        self.paths.create_paths()
 
         # LOGGING
         # ============================
         self.logger = get_logger(
             name=self.name,
-            log_dir=self.paths["log_dir"],
+            log_dir=self.paths.log_dir,
             log_level=log_level,
             log_out=log_out,
             timedatelog=timedatelog,
@@ -114,7 +126,7 @@ class Analysis:
 
             # set correct pickle path if not passed as a build argument
             if "pkl_path" not in args:
-                args["pkl_path"] = f"{self.paths['pkl_df_dir']}{name}_df.pkl"
+                args["pkl_path"] = self.paths.pkl_df_dir / (name + "_df.pkl")
 
             # make dataset
             builder = DatasetBuilder(
@@ -125,7 +137,7 @@ class Analysis:
                     if not separate_loggers  # use single logger
                     else get_logger(  # if seperate, make new logger for each Dataset
                         name=name,
-                        log_dir=self.paths["log_dir"],
+                        log_dir=self.paths.log_dir,
                         log_level=log_level,
                         log_out=log_out,
                         timedatelog=timedatelog,
@@ -133,7 +145,7 @@ class Analysis:
                 ),
             )
             dataset = builder.build(**self.__match_params(args, DatasetBuilder.build))
-            dataset.set_plot_dir(self.paths["plot_dir"])
+            dataset.set_plot_dir(self.paths.plot_dir)
             if separate_loggers:
                 # set new logger to append to analysis logger
                 dataset.logger = self.logger
@@ -555,16 +567,14 @@ class Analysis:
             )
 
         if filename:
-            filename = self.paths["plot_dir"] + "/" + filename
+            filename = self.paths.plot_dir / filename
         else:
             if isinstance(var, list):
                 varname = "_".join(var)
             else:
                 varname = var
-            filename = (
-                self.paths["plot_dir"]
-                + name_template.format(dataset="_".join(datasets), variable=varname)
-                + ".png"
+            filename = self.paths.plot_dir / (
+                name_template.format(dataset="_".join(datasets), variable=varname) + ".png"
             )
 
         fig.savefig(filename, bbox_inches="tight")
@@ -628,7 +638,7 @@ class Analysis:
         :param clear_hists: clears histograms in dictionary
         """
         if not filename:
-            filename = f"{self.__output_dir}/{self.name}.root"
+            filename = self._output_dir / (self.name + ".root")
 
         self.logger.info(f"Saving {len(self.histograms)} histograms to file {filename}...")
         with ROOT_utils.ROOT_TFile_mgr(filename, tfile_option) as file:
@@ -648,7 +658,7 @@ class Analysis:
         if not to_latex:
             self.logger.info(tabulate(rows, headers=header))
         else:
-            filepath = self.paths["latex_dir"] + f"{self.name}_histograms.tex"
+            filepath = self.paths.latex_dir / (self.name + "_histograms.tex")
             with open(filepath, "w") as f:
                 f.write(tabulate(rows, headers=header, tablefmt="latex_raw"))
                 self.logger.info(f"Saved LaTeX histogram table to {filepath}")
@@ -662,5 +672,5 @@ class Analysis:
         :return: None
         """
         self[datasets].print_latex_table(
-            f"{self.paths['latex_dir']}{self[datasets].name}_cutflow.tex"
+            self.paths.latex_dir / (self[datasets].name + "_cutflow.tex")
         )

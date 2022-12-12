@@ -3,7 +3,6 @@ import os
 from filecmp import cmp
 from glob import glob
 from pathlib import Path
-from typing import List
 from warnings import warn
 
 
@@ -60,19 +59,6 @@ def get_filename(filepath: str, suffix: bool = False) -> str:
 def get_file_parent(filepath: str) -> Path:
     """Get full path of directory containing file"""
     return Path(filepath).parent
-
-
-def makedir(dirpath: str | List[str]) -> None:
-    """creates director(y/ies) if it/they don't exist. Accepts either string or list of strings"""
-    if isinstance(dirpath, str):
-        if not os.path.exists(dirpath):
-            os.makedirs(dirpath)
-    elif isinstance(dirpath, list):
-        for path in dirpath:
-            if not os.path.exists(path):
-                os.makedirs(path)
-    else:
-        raise ValueError("dirpath should be a string or a list of strings")
 
 
 def file_exists(filepath: str | Path) -> bool:

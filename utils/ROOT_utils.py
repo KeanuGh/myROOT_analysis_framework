@@ -1,9 +1,8 @@
 import glob
 import logging
-import pathlib
 import pickle as pkl
 from contextlib import contextmanager
-from os import PathLike
+from pathlib import Path
 from typing import Type, Dict
 
 import ROOT
@@ -26,8 +25,8 @@ def load_ROOT_settings(
     ROOT.gStyle.SetOptStat(optstat)  # statsbox default options
 
     # load custom C++ functions
-    ROOT.gSystem.Load(f"{pathlib.Path(__file__).parent}/rootfuncs.h")
-    ROOT.gInterpreter.Declare(f'#include "{pathlib.Path(__file__).parent}/rootfuncs.h"')
+    ROOT.gSystem.Load(f"{Path(__file__).parent}/rootfuncs.h")
+    ROOT.gInterpreter.Declare(f'#include "{Path(__file__).parent}/rootfuncs.h"')
 
 
 # this dictionary decides which ROOT constructor needs to be called based on hist type and dimension
@@ -150,7 +149,7 @@ def convert_pkl_to_root(filename: str, histname: str | None = None) -> None:
 
 
 @contextmanager
-def ROOT_TFile_mgr(filename: str | PathLike, TFile_arg="RECREATE"):
+def ROOT_TFile_mgr(filename: str | Path, TFile_arg="RECREATE"):
     """Context manager for opening root files"""
     file = ROOT.TFile(filename, TFile_arg)
     try:
@@ -159,7 +158,7 @@ def ROOT_TFile_mgr(filename: str | PathLike, TFile_arg="RECREATE"):
         file.Close()
 
 
-def glob_chain(TTree: str, path: PathLike | str) -> ROOT.TChain:
+def glob_chain(TTree: str, path: Path | str) -> ROOT.TChain:
     """Return TChain with glob'd files because ROOT can't glob by itself"""
     chain = ROOT.TChain(TTree)
     for file in glob.glob(path):
@@ -179,10 +178,11 @@ def glob_chain(TTree: str, path: PathLike | str) -> ROOT.TChain:
 
 def get_dsid_values(path: str, ttree_name: str) -> pd.DataFrame:
     """Return DataFrame containing sumw, xs and PMG factor per DSID"""
+    # PNG factor is cross-section * kfactor * filter eff.
     files_list = glob.glob(path)
     dsid_sumw: Dict[int, float] = dict()
     dsid_xs: Dict[int, float] = dict()
-    dsid_pmg_factor: Dict[int, float] = dict()  # PNG factor is cross-section * kfactor * filter eff.
+    dsid_pmg_factor: Dict[int, float] = dict()
 
     # loop over files and sum sumw values per dataset ID (assuming each file only has one dataset ID value)
     prev_dsid = 1

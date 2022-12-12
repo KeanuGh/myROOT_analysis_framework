@@ -1,6 +1,7 @@
 import logging
 import sys
 import time
+from pathlib import Path
 
 
 def get_logger(
@@ -8,7 +9,7 @@ def get_logger(
     log_out: str = "console",
     name: str = "log",
     timedatelog: bool = False,
-    log_dir: str = None,
+    log_dir: Path = None,
     log_file: str = None,
     mode: str = "w",
 ) -> logging.Logger:

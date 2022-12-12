@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import List, Tuple, Iterable, OrderedDict
 
 import matplotlib.pyplot as plt
@@ -45,7 +46,7 @@ class Dataset:
     label: str = "data"
     logger: logging.Logger = field(default_factory=get_logger)
     lepton: str = "lepton"
-    plot_dir: str = "."
+    plot_dir: Path = Path(".")
     pkl_file: str = field(init=False)
 
     def __post_init__(self):
@@ -79,7 +80,7 @@ class Dataset:
 
     # Variable setting/getting
     # ===================
-    def set_plot_dir(self, path: str) -> None:
+    def set_plot_dir(self, path: Path) -> None:
         self.plot_dir = path
 
     def set_pkl_path(self, filepath: str) -> None:
@@ -270,7 +271,7 @@ class Dataset:
         self.logger.info(f"cross-section: {self.cross_section:.2f} fb")
         self.logger.info(f"luminosity   : {self.luminosity:.2f} fb-1")
 
-    def print_latex_table(self, filepath: str) -> None:
+    def print_latex_table(self, filepath: Path) -> None:
         """
         Prints a latex table containing cutflow to file in filepath with date and time.
         Returns the name of the printed table

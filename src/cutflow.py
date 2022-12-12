@@ -1,4 +1,5 @@
 import logging
+from pathlib import Path
 from typing import OrderedDict
 
 import matplotlib.pyplot as plt
@@ -164,7 +165,7 @@ class Cutflow:
             )
         self.logger.info("")
 
-    def print_latex_table(self, filepath: str) -> None:
+    def print_latex_table(self, filepath: Path) -> None:
         """
         Prints a latex table containing cutflow to file in filepath with date and time.
         Returns the name of the printed table
@@ -185,7 +186,7 @@ class Cutflow:
                 )
             f.write("\\hline\n\\end{tabular}\n")
 
-    def print_histogram(self, out_path: str, kind: str, plot_label: str = "", **kwargs) -> None:
+    def print_histogram(self, out_path: Path, kind: str, plot_label: str = "", **kwargs) -> None:
         """
         Generates and saves a cutflow histogram
 

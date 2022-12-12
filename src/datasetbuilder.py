@@ -692,9 +692,9 @@ class DatasetBuilder:
                 if df["reco_weight"].isna().any():
                     raise ValueError("NAN values in reco weights!")
             else:
-                assert (~df["reco_weight"].isna()).sum() == (~df["weight_leptonSF"].isna()).sum(), (
-                    "Different number of events between reco weight and lepton scale factors!"
-                )
+                assert (~df["reco_weight"].isna()).sum() == (
+                    ~df["weight_leptonSF"].isna()
+                ).sum(), "Different number of events between reco weight and lepton scale factors!"
 
         # output number of truth and reco events
         if self._is_truth:
