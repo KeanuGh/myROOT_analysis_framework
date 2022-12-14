@@ -23,12 +23,17 @@ class AnalysisPath:
     """Container class for paths needed by analyses"""
 
     plot_dir: Path
-    pkl_df_dir: Path
+    pkl_dir: Path
     latex_dir: Path
     log_dir: Path
 
     def create_paths(self):
-        for p in self.__dict__.values():
+        for p in (
+            self.plot_dir,
+            self.pkl_dir,
+            self.latex_dir,
+            self.log_dir,
+        ):
             p.mkdir(parents=True, exist_ok=True)
 
 
@@ -81,7 +86,7 @@ class Analysis:
         self._output_dir = output_dir / "outputs" / analysis_label  # where outputs go
         self.paths = AnalysisPath(
             plot_dir=Path(self._output_dir) / "plots",  # where plots go
-            pkl_df_dir=Path(data_dir if data_dir else output_dir) / "data",  # pickle file directory
+            pkl_dir=Path(data_dir if data_dir else output_dir) / "data",  # pickle file directory
             latex_dir=Path(self._output_dir) / "LaTeX",  # where to print latex cutflow table
             log_dir=Path(self._output_dir) / "logs",
         )
@@ -127,7 +132,7 @@ class Analysis:
 
             # set correct pickle path if not passed as a build argument
             if "pkl_path" not in args:
-                args["pkl_path"] = self.paths.pkl_df_dir / (name + "_df.pkl")
+                args["pkl_path"] = self.paths.pkl_dir / (name + "_df.pkl")
 
             # make dataset
             builder = DatasetBuilder(
