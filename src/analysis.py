@@ -1,5 +1,4 @@
 import inspect
-import os
 from collections import OrderedDict
 from dataclasses import dataclass
 from pathlib import Path
@@ -19,8 +18,10 @@ from utils import file_utils, plotting_utils, ROOT_utils
 from utils.context import check_single_dataset, handle_dataset_arg
 
 
-@dataclass
+@dataclass(slots=True)
 class AnalysisPath:
+    """Container class for paths needed by analyses"""
+
     plot_dir: Path
     pkl_df_dir: Path
     latex_dir: Path
@@ -76,8 +77,8 @@ class Analysis:
         # ===========================
         if not output_dir:
             # root in the directory above this one
-            output_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        self._output_dir = output_dir + "/outputs/" + analysis_label + "/"  # where outputs go
+            output_dir = Path(__file__).absolute().parent.parent
+        self._output_dir = output_dir / "outputs" / analysis_label  # where outputs go
         self.paths = AnalysisPath(
             plot_dir=Path(self._output_dir) / "plots",  # where plots go
             pkl_df_dir=Path(data_dir if data_dir else output_dir) / "data",  # pickle file directory
@@ -178,7 +179,6 @@ class Analysis:
     # ========== BUILTINS ===========
     # ===============================
     def __getitem__(self, key: str):
-        self.__check_ds(key)
         return self.datasets[key]
 
     def __setitem__(self, ds_name: str, dataset: Dataset):
@@ -187,7 +187,6 @@ class Analysis:
         self.datasets[ds_name] = dataset
 
     def __delitem__(self, key: str):
-        self.__check_ds(key)
         del self.datasets[key]
 
     def __len__(self):
@@ -243,11 +242,6 @@ class Analysis:
         :param cut: name of cut
         """
         self[name] = self[dataset].subset_cut(cut)
-
-    def __check_ds(self, key: str) -> None:
-        """Does dataset exist?"""
-        if key not in self.datasets:
-            raise ValueError(f"No dataset named {key} found in analysis {self.name}")
 
     def merge_datasets(
         self,
@@ -638,7 +632,7 @@ class Analysis:
         :param clear_hists: clears histograms in dictionary
         """
         if not filename:
-            filename = self._output_dir / (self.name + ".root")
+            filename = self._output_dir / f"{self.name}.root"
 
         self.logger.info(f"Saving {len(self.histograms)} histograms to file {filename}...")
         with ROOT_utils.ROOT_TFile_mgr(filename, tfile_option) as file:
@@ -658,7 +652,7 @@ class Analysis:
         if not to_latex:
             self.logger.info(tabulate(rows, headers=header))
         else:
-            filepath = self.paths.latex_dir / (self.name + "_histograms.tex")
+            filepath = self.paths.latex_dir / f"{self.name}_histograms.tex"
             with open(filepath, "w") as f:
                 f.write(tabulate(rows, headers=header, tablefmt="latex_raw"))
                 self.logger.info(f"Saved LaTeX histogram table to {filepath}")
@@ -672,5 +666,5 @@ class Analysis:
         :return: None
         """
         self[datasets].print_latex_table(
-            self.paths.latex_dir / (self[datasets].name + "_cutflow.tex")
+            self.paths.latex_dir / f"{self[datasets].name}_cutflow.tex"
         )
