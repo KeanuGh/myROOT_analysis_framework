@@ -201,8 +201,6 @@ class DatasetBuilder:
                 raise ValueError(
                     "Must provide variables to cut and cut dictionary list if not building from cutfile"
                 )
-            else:
-                is_truth, is_reco = Cutfile.truth_reco(tree_dict)
         else:
             raise ValueError("Must provide cutfile or tree dict to build DataFrame")
 

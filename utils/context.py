@@ -3,7 +3,7 @@ import os
 import sys
 from contextlib import contextmanager
 from functools import wraps
-from typing import Callable
+from typing import Callable, TextIO
 
 
 def check_single_dataset(func) -> Callable:
@@ -74,8 +74,8 @@ def handle_dataset_arg(func: Callable) -> Callable:
 
 # https://stackoverflow.com/questions/24277488/in-python-how-to-capture-the-stdout-from-a-c-shared-library-to-a-variable
 @contextmanager
-def redirect_stdout(out_stream=None, in_stream=None):
-    """Capture standard output"""
+def redirect_stdout(out_stream: TextIO = None, in_stream: TextIO = None):
+    """Capture C/C++ standard output"""
     if out_stream is None:
         out_stream = io.StringIO()
 

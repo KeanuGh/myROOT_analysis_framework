@@ -25,22 +25,31 @@ class TestGetSumW21D(object):
         expected_output = np.array([4.0, 4.0, 4.0, 4.0, 4.0])
         actual_output = pu.get_root_sumw2(h)
 
-        assert np.array_equal(actual_output, expected_output), f"Expected: {expected_output}. Actual: {actual_output}"
+        assert np.array_equal(
+            actual_output, expected_output
+        ), f"Expected: {expected_output}. Actual: {actual_output}"
 
 
 class TestGetAxisLabels(object):
     def test_label_read(self):
-        expected_output = ('testxlabel', 'testylabel')
-        actual_output = pu.get_axis_labels('testvar')
+        expected_output = ("testxlabel", "testylabel")
+        actual_output = pu.get_axis_labels("testvar")
 
-        assert expected_output == actual_output, f"Expected: {expected_output}. Actual: {actual_output}"
+        assert (
+            expected_output == actual_output
+        ), f"Expected: {expected_output}. Actual: {actual_output}"
 
     def test_no_label(self):
         with pytest.warns(UserWarning) as warning:
             expected_output = (None, None)
-            var_missing = 'test_var_missing'
+            var_missing = "test_var_missing"
             actual_output = pu.get_axis_labels(var_missing)
 
-            assert warning[0].message.args[0] == f"Axis labels for {var_missing} not found in label lookup " \
-                                                 f"dictionary. They will be left blank."
-            assert expected_output == actual_output, f"Expected: {expected_output}. Actual: {actual_output}"
+            assert (
+                warning[0].message.args[0]
+                == f"Axis labels for {var_missing} not found in label lookup "
+                f"dictionary. They will be left blank."
+            )
+            assert (
+                expected_output == actual_output
+            ), f"Expected: {expected_output}. Actual: {actual_output}"
