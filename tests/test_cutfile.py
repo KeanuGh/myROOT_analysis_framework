@@ -1,6 +1,8 @@
+from collections import OrderedDict
+
 import pytest
 
-from src.cutfile import *
+from src.cutfile import Cut, Cutfile
 
 
 class TestCut:

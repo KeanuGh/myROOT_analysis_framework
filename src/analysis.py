@@ -109,7 +109,9 @@ class Analysis:
             try:
                 self.global_lumi = lumi_year[kwargs["year"]]
             except KeyError:
-                raise KeyError(f"Unknown data-year: {kwargs['year']}")
+                raise KeyError(
+                    f"Unknown data-year: {kwargs['year']}. Known data-years: {lumi_year.keys()}"
+                )
         else:
             self.global_lumi = global_lumi
         self.logger.debug(f"Set global luminosity scale to {self.global_lumi} pb-1")

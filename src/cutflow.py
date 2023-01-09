@@ -163,6 +163,7 @@ class Cutflow:
                 f"{self.cutflow_a_ratio[i + 1]:.3f}    "
                 f"{self.cutflow_cum[i + 1]:.3f}"
             )
+
         self.logger.info("")
 
     def print_latex_table(self, filepath: Path) -> None:
@@ -179,9 +180,9 @@ class Cutflow:
             for i, cut_name in enumerate(self.cutflow_labels):
                 f.write(
                     f"{cut_name} & "
-                    f"{self.cutflow_n_events[i + 1]} & "
-                    f"{self.cutflow_ratio[i + 1]:.3f} & "
-                    f"{self.cutflow_cum[i + 1]:.3f} "
+                    f"{self.cutflow_n_events[i]} & "
+                    f"{self.cutflow_ratio[i]:.3f} & "
+                    f"{self.cutflow_cum[i]:.3f} "
                     f"\\\\\n"
                 )
             f.write("\\hline\n\\end{tabular}\n")
