@@ -14,8 +14,7 @@ class TestCut:
 class TestCutfile:
     @pytest.fixture(scope="session")
     def cutfile(self, tmp_cutfile):
-        cutfile = Cutfile(tmp_cutfile, default_tree="truth")
-        yield cutfile
+        yield Cutfile(tmp_cutfile, default_tree="truth")
 
     def test_cuts(self, cutfile):
         expected_cuts = OrderedDict()

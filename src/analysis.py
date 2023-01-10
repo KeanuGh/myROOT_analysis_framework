@@ -52,8 +52,8 @@ class Analysis:
         data_dict: Dict[str, Dict],
         analysis_label: str,
         global_lumi: float | None = 139.0,
-        output_dir: str = None,
-        data_dir: str = None,
+        output_dir: Path | str = None,
+        data_dir: Path | str = None,
         log_level: int = 20,
         log_out: str = "both",
         timedatelog: bool = True,
@@ -83,10 +83,10 @@ class Analysis:
         if not output_dir:
             # root in the directory above this one
             output_dir = Path(__file__).absolute().parent.parent
-        self._output_dir = output_dir / "outputs" / analysis_label  # where outputs go
+        self._output_dir = Path(output_dir) / "outputs" / analysis_label  # where outputs go
         self.paths = AnalysisPath(
-            plot_dir=Path(self._output_dir) / "plots",  # where plots go
-            pkl_dir=Path(data_dir if data_dir else output_dir) / "data",  # pickle file directory
+            plot_dir=Path(self._output_dir) / "plots",
+            pkl_dir=Path(data_dir if data_dir else (self._output_dir / "pickles")),
             latex_dir=Path(self._output_dir) / "LaTeX",  # where to print latex cutflow table
             log_dir=Path(self._output_dir) / "logs",
         )
