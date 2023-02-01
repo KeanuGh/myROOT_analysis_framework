@@ -5,7 +5,7 @@ from src.analysis import Analysis
 # DTA_PATH = '/data/keanu/ditau_output/'
 # ANALYSISTOP_PATH = '/data/atlas/HighMassDrellYan/mc16a'
 # DATA_OUT_DIR = '/data/keanu/framework_outputs/'
-DTA_PATH = "/data/DTA_outputs/2022-08-24/"
+DTA_PATH = "/data/DTA_outputs/2023-01-31/"
 ANALYSISTOP_PATH = "/data/analysistop_out/mc16a/"
 DATA_OUT_DIR = "/data/dataset_pkl_outputs/"
 
@@ -20,7 +20,7 @@ if __name__ == "__main__":
             # 'hard_cut': 'Muonic Tau',
             "lepton": "tau",
             "dataset_type": "dta",
-            # 'force_rebuild': True,
+            "force_rebuild": True,
             # 'force_recalc_weights': True,
             "label": r"Sherpa 2211 $W\rightarrow\tau\nu$",
         },
@@ -89,7 +89,7 @@ if __name__ == "__main__":
         skip_verify_pkl=True,
         # validate_duplicated_events=False,
         # force_recalc_cuts=True,
-        # log_level=10,
+        log_level=10,
         log_out="both",
     )
     # my_analysis.merge_datasets('wtaunu_mu_dta', 'wtaunu_e_dta', verify=True)

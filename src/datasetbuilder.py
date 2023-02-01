@@ -790,7 +790,7 @@ class DatasetBuilder:
 
             # import needed columns to pandas dataframe
             cols_to_extract = [c for c in import_cols if c not in badcols]
-            self.logger.info(f"Extracting {tree_dict[ttree]} from {ttree} tree...")
+            self.logger.info(f"Extracting {len(tree_dict[ttree])} branch(es) from {ttree} tree...")
             df = pd.DataFrame(Rdf.AsNumpy(columns=cols_to_extract))
             self.logger.info(f"Extracted {len(df.index)} events.")
 

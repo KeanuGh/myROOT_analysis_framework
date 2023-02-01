@@ -31,6 +31,7 @@ class TestSimpleAnalysisTop:
             year="2015+2016",
         )
 
+        # delete outputs
         shutil.rmtree(output_dir)
 
     def test_n_events(self, analysis):
