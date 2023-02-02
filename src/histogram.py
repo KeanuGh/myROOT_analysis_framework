@@ -9,6 +9,7 @@ import boost_histogram as bh
 import matplotlib.pyplot as plt
 import mplhep as hep
 import numpy as np
+import pandas as pd
 from matplotlib.offsetbox import AnchoredText
 from numpy.typing import ArrayLike
 
@@ -169,9 +170,13 @@ class Histogram1D(bh.Histogram, family=None):
         elif weight is None:
             weight = np.ones(len(var))
 
-        # TODO: got to be a faster way than this
-        for v, w in zip(var, weight):
-            self.TH1.Fill(v, w)
+        # fastest way to multifill a TH1 in pyROOT I've found is with an RDataFrame
+        if isinstance(var, pd.Series):
+            rdf = ROOT.RDF.MakeNumpyDataFrame({"x": var.values, "w": np.array(weight)})
+        else:
+            rdf = ROOT.RDF.MakeNumpyDataFrame({"x": np.array(var), "w": np.array(weight)})
+        self.TH1 = rdf.Fill(self.TH1, ["x", "w"]).GetPtr()
+
         return self
 
     def __copy__(self) -> Histogram1D:
