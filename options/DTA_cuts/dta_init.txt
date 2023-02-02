@@ -31,9 +31,9 @@ prwWeight
 TruthTauPt
 TruthTauEta
 TruthTauPhi
-VisTruthTauPt
-VisTruthTauEta
-VisTruthTauPhi
+# VisTruthTauPt
+# VisTruthTauEta
+# VisTruthTauPhi
 TruthNeutrinoPt
 TruthNeutrinoEta
 TruthNeutrinoPhi

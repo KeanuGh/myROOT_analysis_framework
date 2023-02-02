@@ -20,7 +20,7 @@ if __name__ == "__main__":
             # 'hard_cut': 'Muonic Tau',
             "lepton": "tau",
             "dataset_type": "dta",
-            "force_rebuild": True,
+            # "force_rebuild": True,
             # 'force_recalc_weights': True,
             "label": r"Sherpa 2211 $W\rightarrow\tau\nu$",
         },
@@ -121,7 +121,7 @@ if __name__ == "__main__":
 
     # argument dicts
     ratio_args = {
-        "ratio_axlim": 1.5,
+        # "ratio_axlim": 1.5,
         "ratio_label": "Powheg/Sherpa",
         "stats_box": False,
         "ratio_fit": True,
@@ -130,7 +130,7 @@ if __name__ == "__main__":
         "bins": (30, 1, 5000),
         "logbins": True,
         "logx": True,
-        # "ratio_axlim": 10,
+        "ratio_axlim": 1.5,
     }
     unweighted_args = {
         "ylabel": "Entries",
@@ -193,6 +193,14 @@ if __name__ == "__main__":
         )
         my_analysis.plot_hist(
             ["wtaunu_dta", "wtaunu_analysistop"],
+            ["TruthBosonM", "MC_WZ_dilep_m_born"],
+            xlabel="Truth Boson $M$",
+            **mass_args,
+            **arg_dict,
+            **ratio_args
+        )
+        my_analysis.plot_hist(
+            ["wtaunu_dta", "wtaunu_analysistop"],
             ["TruthTauPt", "MC_WZmu_el_pt_born"],
             **mass_args,
             **arg_dict,
@@ -208,6 +216,27 @@ if __name__ == "__main__":
         my_analysis.plot_hist(
             ["wtaunu_dta", "wtaunu_analysistop"],
             ["TruthTauPhi", "MC_WZmu_el_phi_born"],
+            bins=(30, -pi, pi),
+            **arg_dict,
+            **ratio_args
+        )
+        my_analysis.plot_hist(
+            ["wtaunu_dta", "wtaunu_analysistop"],
+            ["TruthNeutrinoPt", "MC_WZmu_el_pt_born"],
+            **mass_args,
+            **arg_dict,
+            **ratio_args
+        )
+        my_analysis.plot_hist(
+            ["wtaunu_dta", "wtaunu_analysistop"],
+            ["TruthNeutrinoEta", "MC_WZmu_el_eta_born"],
+            bins=(30, -5, 5),
+            **arg_dict,
+            **ratio_args
+        )
+        my_analysis.plot_hist(
+            ["wtaunu_dta", "wtaunu_analysistop"],
+            ["TruthNeutrinoPhi", "MC_WZmu_el_phi_born"],
             bins=(30, -pi, pi),
             **arg_dict,
             **ratio_args
