@@ -63,6 +63,23 @@ mine_h_div_scaled = mine_h / s
 mine_h_mul_scaled = mine_h * s
 
 
+class TestHistFill:
+    def test_no_weight(self):
+        h = Histogram1D(a, (nbins, xmin, xmax))
+        TH1_values = [h.TH1.GetBinContent(i) for i in range(h.TH1.GetNbinsX() + 2)]
+        np.testing.assert_allclose(h.bin_values(flow=True), TH1_values, rtol=1e-05)
+
+    def test_single_weight(self):
+        h = Histogram1D(a, (nbins, xmin, xmax), weight=5)
+        TH1_values = [h.TH1.GetBinContent(i) for i in range(h.TH1.GetNbinsX() + 2)]
+        np.testing.assert_allclose(h.bin_values(flow=True), TH1_values, rtol=1e-05)
+
+    def test_var_weight(self):
+        h = Histogram1D(a, (nbins, xmin, xmax), weight=w)
+        TH1_values = [h.TH1.GetBinContent(i) for i in range(h.TH1.GetNbinsX() + 2)]
+        np.testing.assert_allclose(h.bin_values(flow=True), TH1_values, rtol=1e-05)
+
+
 @pytest.mark.parametrize(
     "h,th",
     [

@@ -162,20 +162,17 @@ class Histogram1D(bh.Histogram, family=None):
                 self.Fill(var, weight=weight)
 
     def Fill(self, var: ArrayLike, weight: ArrayLike | int | float = None) -> Histogram1D:
+        """Fill boost-histogram and TH1. Only accepts numpy array and derivatives or scalar weight values."""
         super().fill(var, weight=weight, threads=0)
 
-        # fill vector with weight in order to zip
-        if isinstance(weight, (int, float)):
-            weight = np.full(len(var), weight)
-        elif weight is None:
-            weight = np.ones(len(var))
-
         # fastest way to multifill a TH1 in pyROOT I've found is with an RDataFrame
-        if isinstance(var, pd.Series):
-            rdf = ROOT.RDF.MakeNumpyDataFrame({"x": var.values, "w": np.array(weight)})
-        else:
-            rdf = ROOT.RDF.MakeNumpyDataFrame({"x": np.array(var), "w": np.array(weight)})
-        self.TH1 = rdf.Fill(self.TH1, ["x", "w"]).GetPtr()
+        rdf_dict = {"x": var.values if isinstance(var, pd.Series) else var}
+        if weight is not None:
+            if isinstance(weight, (int, float)):
+                weight = np.full(len(var), weight)
+            rdf_dict["w"] = weight.values if isinstance(weight, pd.Series) else weight
+        rdf = ROOT.RDF.MakeNumpyDataFrame(rdf_dict)
+        self.TH1 = rdf.Fill(self.TH1, list(rdf_dict.keys())).GetPtr()
 
         return self
 
