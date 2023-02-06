@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import copy
 import logging
+from collections import OrderedDict
 from typing import List, Tuple, Any, overload, Type
 
 import ROOT
@@ -166,7 +167,7 @@ class Histogram1D(bh.Histogram, family=None):
         super().fill(var, weight=weight, threads=0)
 
         # fastest way to multifill a TH1 in pyROOT I've found is with an RDataFrame
-        rdf_dict = {"x": var.values if isinstance(var, pd.Series) else var}
+        rdf_dict = OrderedDict(x=var.values if isinstance(var, pd.Series) else var)
         if weight is not None:
             if isinstance(weight, (int, float)):
                 weight = np.full(len(var), weight)
