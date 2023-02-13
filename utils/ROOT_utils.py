@@ -176,13 +176,14 @@ def glob_chain(TTree: str, path: Path | str) -> ROOT.TChain:
 #         super().__init__(self.chain)
 
 
-def get_dsid_values(path: str, ttree_name: str) -> pd.DataFrame:
+def get_dsid_values(path: str | Path, ttree_name: str = "") -> pd.DataFrame:
     """Return DataFrame containing sumw, xs and PMG factor per DSID"""
     # PNG factor is cross-section * kfactor * filter eff.
-    files_list = glob.glob(path)
+    files_list = glob.glob(str(path))
     dsid_sumw: Dict[int, float] = dict()
     dsid_xs: Dict[int, float] = dict()
     dsid_pmg_factor: Dict[int, float] = dict()
+    dsid_phys_short: Dict[int, str] = dict()
 
     # loop over files and sum sumw values per dataset ID (assuming each file only has one dataset ID value)
     prev_dsid = 1
@@ -201,13 +202,14 @@ def get_dsid_values(path: str, ttree_name: str) -> pd.DataFrame:
             xs = PMG_tool.get_crossSection(dsid)
             dsid_xs[dsid] = xs
             dsid_pmg_factor[dsid] = xs * PMG_tool.get_kFactor(dsid) * PMG_tool.get_genFiltEff(dsid)
+            dsid_phys_short[dsid] = PMG_tool.get_physics_short(dsid)
 
         prev_dsid = dsid
 
     df = pd.concat(
         [
             pd.DataFrame.from_dict(dsid_sumw, orient="index", columns=["sumOfWeights"]),
-            pd.DataFrame.from_dict(dsid_xs, orient="index", columns=["cross-section"]),
+            pd.DataFrame.from_dict(dsid_xs, orient="index", columns=["cross_section"]),
             pd.DataFrame.from_dict(dsid_pmg_factor, orient="index", columns=["PMG_factor"]),
         ],
         axis=1,

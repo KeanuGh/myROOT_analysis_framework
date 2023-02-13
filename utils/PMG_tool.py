@@ -6,6 +6,7 @@ import pandas as pd
 PMG_DB_FILE = "PMGxsecDB_mc16.txt"
 
 try:
+    print("reading pmg database file...")
     PMG_df = pd.read_csv(
         Path(__file__).parent / PMG_DB_FILE,
         delim_whitespace=True,

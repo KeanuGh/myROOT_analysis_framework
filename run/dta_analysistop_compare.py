@@ -1,4 +1,4 @@
-from numpy import pi
+import numpy as np
 
 from src.analysis import Analysis
 
@@ -15,12 +15,11 @@ if __name__ == "__main__":
         "wtaunu_dta": {
             "data_path": DTA_PATH + "/user.kghorban.Sh_2211_Wtaunu_*/*.root",
             "cutfile_path": "../options/DTA_cuts/dta_init.txt",
-            # 'TTree_name': 'T_s1thv_NOMINAL',
             "TTree_name": {"T_s1thv_NOMINAL", "T_s1tev_NOMINAL", "T_s1tmv_NOMINAL"},
             # 'hard_cut': 'Muonic Tau',
             "lepton": "tau",
             "dataset_type": "dta",
-            # "force_rebuild": True,
+            "force_rebuild": True,
             # 'force_recalc_weights': True,
             "label": r"Sherpa 2211 $W\rightarrow\tau\nu$",
         },
@@ -67,7 +66,7 @@ if __name__ == "__main__":
             "lepton": "tau",
             "dataset_type": "analysistop",
             # 'force_rebuild': False,
-            "label": r"Powheg $W\rightarrow\tau\nu\rightarrow \mu\nu$",
+            "label": r"Powheg/Pythia 8 $W\rightarrow\tau\nu$",
         },
         "wtaunu_analysistop_peak": {
             "data_path": ANALYSISTOP_PATH + "/w*taunu/*.root",
@@ -76,7 +75,7 @@ if __name__ == "__main__":
             "dataset_type": "analysistop",
             "hard_cut": "M_W",
             # 'force_rebuild': True,
-            "label": r"Powheg/Pythia 8 $W\rightarrow\tau\nu\rightarrow \mu\nu$",
+            "label": r"Powheg/Pythia 8 $W\rightarrow\tau\nu$",
         },
     }
 
@@ -112,12 +111,59 @@ if __name__ == "__main__":
     # my_analysis.plot_hist('wtaunu_mu_dta', 'weight_mc', bins=(50, -1e6, 1e6), filename_suffix='_mill', logy=True, yerr=None)
     # my_analysis.plot_hist('wtaunu_mu_dta', 'weight_mc', bins=(50, -5e9, 5e9), logy=True, filename_suffix='_bill', yerr=None)
 
-    # mass_bins = np.array(
-    #     [130, 140.3921, 151.6149, 163.7349, 176.8237, 190.9588, 206.2239, 222.7093, 240.5125, 259.7389, 280.5022,
-    #      302.9253, 327.1409, 353.2922, 381.5341, 412.0336, 444.9712, 480.5419, 518.956, 560.4409, 605.242, 653.6246,
-    #      705.8748, 762.3018, 823.2396, 889.0486, 960.1184, 1036.869, 1119.756, 1209.268, 1305.936, 1410.332, 1523.072,
-    #      1644.825, 1776.311, 1918.308, 2071.656, 2237.263, 2416.107, 2609.249, 2817.83, 3043.085, 3286.347, 3549.055,
-    #      3832.763, 4139.151, 4470.031, 4827.361, 5213.257])
+    mass_bins = np.array(
+        [
+            130,
+            140.3921,
+            151.6149,
+            163.7349,
+            176.8237,
+            190.9588,
+            206.2239,
+            222.7093,
+            240.5125,
+            259.7389,
+            280.5022,
+            302.9253,
+            327.1409,
+            353.2922,
+            381.5341,
+            412.0336,
+            444.9712,
+            480.5419,
+            518.956,
+            560.4409,
+            605.242,
+            653.6246,
+            705.8748,
+            762.3018,
+            823.2396,
+            889.0486,
+            960.1184,
+            1036.869,
+            1119.756,
+            1209.268,
+            1305.936,
+            1410.332,
+            1523.072,
+            1644.825,
+            1776.311,
+            1918.308,
+            2071.656,
+            2237.263,
+            2416.107,
+            2609.249,
+            2817.83,
+            3043.085,
+            3286.347,
+            3549.055,
+            3832.763,
+            4139.151,
+            4470.031,
+            4827.361,
+            5213.257,
+        ]
+    )
 
     # argument dicts
     ratio_args = {
@@ -126,8 +172,14 @@ if __name__ == "__main__":
         "stats_box": False,
         "ratio_fit": True,
     }
-    mass_args = {
+    truth_mass_args = {
         "bins": (30, 1, 5000),
+        "logbins": True,
+        "logx": True,
+        "ratio_axlim": 1.5,
+    }
+    reco_mass_args = {
+        "bins": mass_bins,
         "logbins": True,
         "logx": True,
         "ratio_axlim": 1.5,
@@ -176,108 +228,149 @@ if __name__ == "__main__":
 
     # TRUTH
     # -----------------------------------
-    for arg_dict in (
-        # unweighted_args,
-        # weighted_args,
-        # bin_scaled_args,
-        br_weighted_args,
-        # bin_br_scaled_args,
-        # normed_args
-    ):
-        my_analysis.plot_hist(
-            ["wtaunu_dta", "wtaunu_analysistop"],
-            ["TruthDilepM", "MC_WZ_dilep_m_born"],
-            **mass_args,
-            **arg_dict,
-            **ratio_args
-        )
-        my_analysis.plot_hist(
-            ["wtaunu_dta", "wtaunu_analysistop"],
-            ["TruthBosonM", "MC_WZ_dilep_m_born"],
-            xlabel="Truth Boson $M$",
-            **mass_args,
-            **arg_dict,
-            **ratio_args
-        )
-        my_analysis.plot_hist(
-            ["wtaunu_dta", "wtaunu_analysistop"],
-            ["TruthTauPt", "MC_WZmu_el_pt_born"],
-            **mass_args,
-            **arg_dict,
-            **ratio_args
-        )
-        my_analysis.plot_hist(
-            ["wtaunu_dta", "wtaunu_analysistop"],
-            ["TruthTauEta", "MC_WZmu_el_eta_born"],
-            bins=(30, -5, 5),
-            **arg_dict,
-            **ratio_args
-        )
-        my_analysis.plot_hist(
-            ["wtaunu_dta", "wtaunu_analysistop"],
-            ["TruthTauPhi", "MC_WZmu_el_phi_born"],
-            bins=(30, -pi, pi),
-            **arg_dict,
-            **ratio_args
-        )
-        my_analysis.plot_hist(
-            ["wtaunu_dta", "wtaunu_analysistop"],
-            ["TruthNeutrinoPt", "MC_WZmu_el_pt_born"],
-            **mass_args,
-            **arg_dict,
-            **ratio_args
-        )
-        my_analysis.plot_hist(
-            ["wtaunu_dta", "wtaunu_analysistop"],
-            ["TruthNeutrinoEta", "MC_WZmu_el_eta_born"],
-            bins=(30, -5, 5),
-            **arg_dict,
-            **ratio_args
-        )
-        my_analysis.plot_hist(
-            ["wtaunu_dta", "wtaunu_analysistop"],
-            ["TruthNeutrinoPhi", "MC_WZmu_el_phi_born"],
-            bins=(30, -pi, pi),
-            **arg_dict,
-            **ratio_args
-        )
-        # my_analysis.plot_hist(['wtaunu_dta', 'wtaunu_analysistop'], ['TruthNeutrinoPt', 'MC_WZneutrino_pt_born'],
-        #                       **mass_args, **arg_dict, **ratio_args)
-        # my_analysis.plot_hist(['wtaunu_dta', 'wtaunu_analysistop'], ['TruthNeutrinoEta', 'MC_WZneutrino_eta_born'],
-        #                       bins=(30, -5, 5), **arg_dict, **ratio_args)
-        # my_analysis.plot_hist(['wtaunu_dta', 'wtaunu_analysistop'], ['TruthNeutrinoPhi', 'MC_WZneutrino_phi_born'],
-        #                       bins=(30, -pi, pi), **arg_dict, **ratio_args)
-        my_analysis.plot_hist(
-            ["wtaunu_dta", "wtaunu_analysistop"],
-            ["TruthMTW", "mt_born"],
-            **mass_args,
-            **arg_dict,
-            **ratio_args
-        )
+    my_analysis.plot_hist(
+        ["wtaunu_dta", "wtaunu_analysistop"],
+        ["TruthDilepM", "MC_WZ_dilep_m_born"],
+        **truth_mass_args,
+        **weighted_args,
+        **ratio_args
+    )
+    my_analysis.plot_hist(
+        ["wtaunu_dta", "wtaunu_analysistop"],
+        ["TruthBosonM", "MC_WZ_dilep_m_born"],
+        xlabel="Truth Boson $M$",
+        **truth_mass_args,
+        **weighted_args,
+        **ratio_args
+    )
+    my_analysis.plot_hist(
+        ["wtaunu_dta", "wtaunu_analysistop"],
+        ["TruthTauPt", "MC_WZmu_el_pt_born"],
+        **truth_mass_args,
+        **weighted_args,
+        **ratio_args
+    )
+    my_analysis.plot_hist(
+        ["wtaunu_dta", "wtaunu_analysistop"],
+        ["TruthTauEta", "MC_WZmu_el_eta_born"],
+        bins=(30, -5, 5),
+        **weighted_args,
+        **ratio_args
+    )
+    my_analysis.plot_hist(
+        ["wtaunu_dta", "wtaunu_analysistop"],
+        ["TruthTauPhi", "MC_WZmu_el_phi_born"],
+        bins=(30, -np.pi, np.pi),
+        logy=False,
+        **weighted_args,
+        **ratio_args
+    )
+    my_analysis.plot_hist(
+        ["wtaunu_dta", "wtaunu_analysistop"],
+        ["TruthNeutrinoPt", "MC_WZmu_el_pt_born"],
+        **truth_mass_args,
+        **weighted_args,
+        **ratio_args
+    )
+    my_analysis.plot_hist(
+        ["wtaunu_dta", "wtaunu_analysistop"],
+        ["TruthNeutrinoEta", "MC_WZmu_el_eta_born"],
+        bins=(30, -5, 5),
+        **weighted_args,
+        **ratio_args
+    )
+    my_analysis.plot_hist(
+        ["wtaunu_dta", "wtaunu_analysistop"],
+        ["TruthNeutrinoPhi", "MC_WZmu_el_phi_born"],
+        bins=(30, -np.pi, np.pi),
+        logy=False,
+        **weighted_args,
+        **ratio_args
+    )
+    my_analysis.plot_hist(
+        ["wtaunu_dta", "wtaunu_analysistop"],
+        ["TruthMTW", "mt_born"],
+        **truth_mass_args,
+        **weighted_args,
+        **ratio_args
+    )
+
+    # # RECO
+    # # ------------------------------------------------------
+    # my_analysis.plot_hist(
+    #     ["wtaunu_dta", "wtaunu_analysistop"],
+    #     ["MET_met", "met_met"],
+    #     **truth_mass_args,
+    #     **weighted_args,
+    #     **ratio_args
+    # )
+    # my_analysis.plot_hist(
+    #     ["wtaunu_dta", "wtaunu_analysistop"],
+    #     ["ElePt", "el_pt"],
+    #     xlabel="Truth Boson $M$",
+    #     **truth_mass_args,
+    #     **weighted_args,
+    #     **ratio_args
+    # )
+    # my_analysis.plot_hist(
+    #     ["wtaunu_dta", "wtaunu_analysistop"],
+    #     ["MuonPt", "mu_pt"],
+    #     **truth_mass_args,
+    #     **weighted_args,
+    #     **ratio_args
+    # )
+    # my_analysis.plot_hist(
+    #     ["wtaunu_dta", "wtaunu_analysistop"],
+    #     ["Ele_delta_z0_sintheta", "e_delta_z0_sintheta"],
+    #     bins=(30, -5, 5),
+    #     **weighted_args,
+    #     **ratio_args
+    # )
+    # my_analysis.plot_hist(
+    #     ["wtaunu_dta", "wtaunu_analysistop"],
+    #     ["Muon_delta_z0_sintheta", "e_delta_z0_sintheta"],
+    #     bins=(30, -np.pi, np.pi),
+    #     **weighted_args,
+    #     **ratio_args
+    # )
+    # my_analysis.plot_hist(
+    #     ["wtaunu_dta", "wtaunu_analysistop"],
+    #     bins=(30, -np.pi, np.pi),
+    #     **truth_mass_args,
+    #     **weighted_args,
+    #     **ratio_args
+    # )
+    # my_analysis.plot_hist(
+    #     ["wtaunu_dta", "wtaunu_analysistop"],
+    #     ["el_phi", "ElePhi"],
+    #     bins=(30, -np.pi, np.pi),
+    #     **weighted_args,
+    #     **ratio_args
+    # )
+    # my_analysis.plot_hist(
+    #     ["wtaunu_dta", "wtaunu_analysistop"],
+    #     ["el_eta", "EleEta"],
+    #     bins=(30, -5, 5),
+    #     **weighted_args,
+    #     **ratio_args
+    # )
+    # my_analysis.plot_hist(
+    #     ["wtaunu_dta", "wtaunu_analysistop"],
+    #     ["el_phi", "ElePhi"],
+    #     bins=(30, -np.pi, np.pi),
+    #     **weighted_args,
+    #     **ratio_args
+    # )
+    # my_analysis.plot_hist(
+    #     ["wtaunu_dta", "wtaunu_analysistop"],
+    #     ["el_eta", "EleEta"],
+    #     bins=(30, -5, 5),
+    #     **weighted_args,
+    #     **ratio_args
+    # )
 
     my_analysis["wtaunu_dta"].dsid_metadata_printout()
     my_analysis["wtaunu_analysistop"].dsid_metadata_printout()
     my_analysis.histogram_printout()
-
-    # # apply muon cut
-    # my_analysis.apply_cuts(datasets='wtaunu_dta', labels='Muonic Tau')
-    #
-    # # replot
-    # for arg_dict in (
-    #         weighted_args,
-    #         bin_scaled_args,
-    # ):
-    #     arg_dict['name_prefix'] = 'muon_cut_' + arg_dict['name_prefix']
-    #     my_analysis.plot_hist(['wtaunu_dta', 'wtaunu_analysistop'], ['TruthTauPt', 'MC_WZmu_el_pt_born'],
-    #                           **mass_args, **arg_dict, **ratio_args)
-    #     my_analysis.plot_hist(['wtaunu_dta', 'wtaunu_analysistop'], ['TruthTauEta', 'MC_WZmu_el_eta_born'],
-    #                           bins=(30, -5, 5), **arg_dict, **ratio_args)
-    #     my_analysis.plot_hist(['wtaunu_dta', 'wtaunu_analysistop'], ['TruthTauPhi', 'MC_WZmu_el_phi_born'],
-    #                           bins=(30, -pi, pi), **arg_dict, **ratio_args)
-    #     my_analysis.plot_hist(['wtaunu_dta', 'wtaunu_analysistop'], ['TruthMTW', 'mt_born'],
-    #                           **mass_args, **arg_dict, **ratio_args)
-    #
-    # my_analysis['wtaunu_dta'].dsid_metadata_printout()
-    # my_analysis['wtaunu_analysistop'].dsid_metadata_printout()
 
     my_analysis.logger.info("DONE.")

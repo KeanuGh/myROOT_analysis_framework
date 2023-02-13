@@ -2,7 +2,7 @@ import inspect
 from collections import OrderedDict
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Tuple, Iterable, Callable, Any
+from typing import Dict, List, Tuple, Iterable, Callable, Any, Set
 
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -118,6 +118,7 @@ class Analysis:
 
         # BUILD DATASETS
         # ============================
+        merge_dict: Dict[str, Set[str]] = dict()  # if any datasets are to be merged, add here
         self.datasets: Dict[str, Dataset] = dict()
         for name, data_args in data_dict.items():
             self.logger.info("")
@@ -131,6 +132,14 @@ class Analysis:
                     f"Got multiple values for argument(s) {dup_args} for dataset {name}"
                 )
             args = data_args | kwargs
+
+            # check merges
+            if "merge_into" in data_args:
+                merged_name = data_args.pop("merge_into")
+                if merged_name in merge_dict:
+                    merge_dict[merged_name].add(name)
+                else:
+                    merge_dict[merged_name] = {name}
 
             # set correct pickle path if not passed as a build argument
             if "pkl_path" not in args:

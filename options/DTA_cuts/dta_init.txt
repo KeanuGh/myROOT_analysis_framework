@@ -37,7 +37,7 @@ TruthTauPhi
 TruthNeutrinoPt
 TruthNeutrinoEta
 TruthNeutrinoPhi
-TruthNeutrinoE
+# TruthNeutrinoE
 # TruthJetEta
 # TruthJetPhi
 # TruthJetE
@@ -46,8 +46,8 @@ TruthMTW
 # TruthEleEta
 # TruthElePhi
 # TruthEleE
-TruthBosonE
-TruthBosonEta
+# TruthBosonE
+# TruthBosonEta
 TruthBosonPt
 TruthBosonM
 TruthDilepM
@@ -66,6 +66,9 @@ TruthDilepM
 # ElePt
 # EleEta
 # ElePhi
+# MuonPt
+# MuonEta
+# MuonPhi
 # Ele_d0sig
 # Ele_delta_z0
 # Ele_delta_z0_sintheta

@@ -124,7 +124,7 @@ class Histogram1D(bh.Histogram, family=None):
             if n_inv := inv_bool.sum():
                 self.logger.error(f"{n_inv} invalid entries in histogram!")
 
-        if th1:
+        if th1 or isinstance(var, ROOT.TH1):
             # create from TH1
             self.logger.info(f"Creating histogram from TH1: '{th1}'...")
             edges = [th1.GetBinLowEdge(i + 1) for i in range(th1.GetNbinsX() + 1)]

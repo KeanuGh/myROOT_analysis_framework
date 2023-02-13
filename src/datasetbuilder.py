@@ -5,7 +5,6 @@ from glob import glob
 from typing import List, Dict, OrderedDict, Set, Iterable, overload, Final
 
 import ROOT
-import numpy as np
 import pandas as pd
 import uproot
 from awkward import to_pandas
@@ -738,78 +737,119 @@ class DatasetBuilder:
         return df
 
     def __build_dataframe_dta(self, data_path: str, tree_dict: dict[str, Set[str]]) -> pd.DataFrame:
-        self.logger.info(
-            f"Building DataFrame from {data_path} ({file_utils.n_files(data_path)} file(s))..."
-        )
-        t1 = time.time()
+        """Build DataFrame from given files and TTree/branch combinations from DTA output"""
 
-        self.logger.debug("Initialising RDataframe..")
+        t1 = time.time()
+        paths = [str(file) for file in glob(data_path)]
 
         # add variables necessary to calculate weights etc
         tree_dict = self.__add_necessary_dta_variables(tree_dict)
 
+        # should always be a set
         if not isinstance(self.TTree_name, set):
             ttrees = {self.TTree_name}
         else:
             ttrees = self.TTree_name
 
-        # Extract each tree
-        dfs = []
-        for ttree in ttrees:
-            files = glob(data_path)
-            Rdf = ROOT.RDataFrame(str(ttree), files)
+        # check all branches being extracted from each tree are the same, or TChain will throw a fit
+        if all(not x == next(iter(tree_dict.values())) for x in tree_dict.values()):
+            raise ValueError(
+                "Can only extract branches with the same name from multiple trees! "
+                "Trying to extract the following branches for each tree:\n\n"
+                + "\n".join(tree + ":\n\t" + "\n\t".join(tree_dict[tree]) for tree in tree_dict)
+            )
+        import_cols = tree_dict[next(iter(tree_dict))]
 
-            # check columns
-            import_cols = tree_dict[ttree]
-            if missing_cols := [
-                col for col in import_cols if col not in list(Rdf.GetColumnNames())
-            ]:
-                raise ValueError(
-                    f"No branch(es) named {', '.join(missing_cols)} in TTree {ttree} of file(s) {data_path}"
-                )
+        self.logger.info(
+            f"Initiating RDataFrame from trees {ttrees} in {len(paths)} files and {len(import_cols)} branches.."
+        )
 
-            # routine to separate vector branches into separate variables
-            badcols = set()  # save old vector column names to avoid extracting them later
-            for col_name in import_cols:
-                # unravel vector-type columns
-                col_type = Rdf.GetColumnType(col_name)
-                if "ROOT::VecOps::RVec" in col_type:
-                    # skip non-numeric vector types
-                    if col_type == "ROOT::VecOps::RVec<string>":
-                        self.logger.warning(f"Skipping string vector column {col_name}")
-                        badcols.add(col_name)
+        # create c++ map for dataset ID metadatas
+        # TODO: what's with this tree??
+        dsid_metadata = ROOT_utils.get_dsid_values(data_path, "T_s1thv_NOMINAL")
+        ROOT.gInterpreter.Declare(
+            f"""
+                std::map<int, float> dsid_sumw{{{','.join(f'{{{t.Index}, {t.sumOfWeights}}}' for t in dsid_metadata.itertuples())}}};
+                std::map<int, float> dsid_xsec{{{','.join(f'{{{t.Index}, {t.cross_section}}}' for t in dsid_metadata.itertuples())}}};
+                std::map<int, float> dsid_pmgf{{{','.join(f'{{{t.Index}, {t.PMG_factor}}}' for t in dsid_metadata.itertuples())}}};
+            """
+        )
 
-                    elif "jet" in str(col_name).lower():
-                        # create three new columns for each possible jet
-                        for i in range(3):
-                            Rdf = Rdf.Define(f"{col_name}{i + 1}", f"getVecVal({col_name},{i})")
-                        badcols.add(col_name)
+        # create TChain in c++ in order for it not to be garbage collected by python
+        ROOT.gInterpreter.Declare(
+            f"""
+                TChain chain;
+                void fill_chain() {{
+                    std::vector<std::string> paths = {{\"{'","'.join(paths)}\"}};
+                    std::vector<std::string> trees = {{\"{'","'.join(ttrees)}\"}};
+                    for (const auto& path : paths) {{
+                        for (const auto& tree : trees) {{
+                            chain.Add((path + "?#" + tree).c_str());
+                        }}
+                    }}
+                }}
+            """
+        )
+        ROOT.fill_chain()
 
-                    else:
-                        Rdf = Rdf.Redefine(col_name, f"getVecVal({col_name},0)")
+        # create RDataFrame
+        Rdf = ROOT.RDataFrame(ROOT.chain)
 
-            # import needed columns to pandas dataframe
-            cols_to_extract = [c for c in import_cols if c not in badcols]
-            self.logger.info(f"Extracting {len(tree_dict[ttree])} branch(es) from {ttree} tree...")
-            df = pd.DataFrame(Rdf.AsNumpy(columns=cols_to_extract))
-            self.logger.info(f"Extracted {len(df.index)} events.")
+        # create weights
+        Rdf = (
+            Rdf.Define(
+                "truth_weight",
+                f"(mcWeight * rwCorr * prwWeight * dsid_pmgf[mcChannel]) / dsid_sumw[mcChannel];",
+            )
+            .Define(
+                "base_weight",
+                f"(mcWeight * dsid_xsec[mcChannel]) / dsid_sumw[mcChannel];",
+            )
+            .Define(
+                "reco_weight",
+                f"(weight * dsid_pmgf[mcChannel]) / dsid_sumw[mcChannel];",
+            )
+        )
 
-            # calculate sum of weights
-            self.logger.info("Calculating sum of weights...")
-            meta_df = ROOT_utils.get_dsid_values(data_path, ttree)
-            df = pd.merge(df, meta_df, on="mcChannel", sort=False, copy=False)
+        # rescale energy columns to GeV
+        for gev_column in [
+            column
+            for column in import_cols
+            if (column in variable_data) and (variable_data[column]["units"] == "GeV")
+        ]:
+            Rdf.Redefine(gev_column, f"{gev_column} / 1000")
 
-            self.logger.debug("Setting DSID/eventNumber as index...")
-            df.set_index(["mcChannel", "eventNumber"], inplace=True)
-            df.index.names = ["DSID", "eventNumber"]
+        # routine to separate vector branches into separate variables
+        badcols = set()  # save old vector column names to avoid extracting them later
+        for col_name in import_cols:
+            # unravel vector-type columns
+            col_type = Rdf.GetColumnType(col_name)
+            if "ROOT::VecOps::RVec" in col_type:
+                # skip non-numeric vector types
+                if col_type == "ROOT::VecOps::RVec<string>":
+                    print(f"Skipping string vector column {col_name}")
+                    badcols.add(col_name)
 
-            dfs.append(df)
+                elif "jet" in str(col_name).lower():
+                    # create three new columns for each possible jet
+                    for i in range(3):
+                        Rdf = Rdf.Define(f"{col_name}{i + 1}", f"getVecVal({col_name},{i})")
+                    badcols.add(col_name)
 
-        if len(dfs) > 1:
-            self.logger.info("Merging trees into one dataset...")
-            df = pd.concat(dfs, copy=False)
-        else:
-            df = dfs[0]
+                else:
+                    Rdf = Rdf.Redefine(col_name, f"getVecVal({col_name},0)")
+
+        # import needed columns to pandas dataframe
+        cols_to_extract = [c for c in import_cols if c not in badcols]
+        self.logger.info(f"Extracting {len(cols_to_extract)} branch(es) from RDataFrame...")
+        df = pd.DataFrame(
+            Rdf.AsNumpy(columns=cols_to_extract + ["truth_weight", "base_weight", "reco_weight"])
+        )
+        self.logger.info(f"Extracted {len(df.index)} events.")
+
+        self.logger.debug("Setting DSID/eventNumber as index...")
+        df.set_index(["mcChannel", "eventNumber"], inplace=True)
+        df.index.names = ["DSID", "eventNumber"]
 
         self.logger.info("Sorting by DSID...")
         df.sort_index(level="DSID", inplace=True)
@@ -822,35 +862,8 @@ class DatasetBuilder:
         else:
             self.logger.info("Skipped duplicated event validation")
 
-        # rescale GeV columns
-        self.__rescale_to_gev(df)
-
         # rename mcWeight
         df.rename(columns={"mcWeight": "weight_mc"}, inplace=True)
-
-        # WEIGHTS
-        self.logger.info("Calculating DTA weights...")
-        df["truth_weight"] = (
-            df["weight_mc"]
-            * self.lumi
-            * df["rwCorr"]
-            * df["prwWeight"]
-            * df["PMG_factor"]
-            / df["sumOfWeights"]
-        )
-        df["base_weight"] = df["weight_mc"] * df["cross-section"] / df["sumOfWeights"]
-        df["reco_weight"] = df["weight"] * self.lumi * df["PMG_factor"] / df["sumOfWeights"]
-
-        # filter events with nan/inf weight values (why do these appear?)
-        self.logger.info("Filtering invalid weights...")
-        if nbad_rows := df["weight"].isna().sum():
-            df.dropna(subset=["weight", "truth_weight", "reco_weight"], inplace=True)
-            self.logger.info(f"Dropped {nbad_rows} rows with missing weight values")
-
-        inf_rows = np.isinf(df["truth_weight"]) | np.isinf(df["reco_weight"])
-        if nbad_rows := inf_rows.sum():
-            df = df.loc[~inf_rows]
-            self.logger.info(f"Dropped {nbad_rows} rows with infinite weight values")
 
         self.logger.info(
             f"time to build dataframe: {time.strftime('%H:%M:%S', time.gmtime(time.time() - t1))}"
