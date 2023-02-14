@@ -799,7 +799,7 @@ class DatasetBuilder:
         Rdf = (
             Rdf.Define(
                 "truth_weight",
-                f"(mcWeight * rwCorr * prwWeight * dsid_pmgf[mcChannel]) / dsid_sumw[mcChannel];",
+                f"(mcWeight * rwCorr * {self.lumi} * prwWeight * dsid_pmgf[mcChannel]) / dsid_sumw[mcChannel];",
             )
             .Define(
                 "base_weight",
@@ -807,7 +807,7 @@ class DatasetBuilder:
             )
             .Define(
                 "reco_weight",
-                f"(weight * dsid_pmgf[mcChannel]) / dsid_sumw[mcChannel];",
+                f"(weight * {self.lumi} * dsid_pmgf[mcChannel]) / dsid_sumw[mcChannel];",
             )
         )
 
@@ -817,7 +817,7 @@ class DatasetBuilder:
             for column in import_cols
             if (column in variable_data) and (variable_data[column]["units"] == "GeV")
         ]:
-            Rdf.Redefine(gev_column, f"{gev_column} / 1000")
+            Rdf = Rdf.Redefine(gev_column, f"{gev_column} / 1000")
 
         # routine to separate vector branches into separate variables
         badcols = set()  # save old vector column names to avoid extracting them later
