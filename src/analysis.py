@@ -303,6 +303,11 @@ class Analysis:
                         f"{cols_missing_from_curr}"
                     )
 
+        # check duplicate indices
+        for d in datasets:
+            if self[d].df.index.duplicated().sum() > 0:
+                self.logger.warning(f"Duplicate indexes in dataset {d}!")
+
         if apply_cuts:
             self.apply_cuts(list(datasets), labels=apply_cuts)
 
