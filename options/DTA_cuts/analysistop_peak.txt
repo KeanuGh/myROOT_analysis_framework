@@ -27,9 +27,15 @@ mt_born	truth
 # reco
 mu_d0sig	nominal_Loose
 mu_delta_z0_sintheta	nominal_Loose
+el_d0sig	nominal_Loose
+el_delta_z0_sintheta	nominal_Loose
 primaryVertices	nominal_Loose
 mu_pt	nominal_Loose
 mu_eta	nominal_Loose
+mu_phi	nominal_Loose
+el_pt	nominal_Loose
+el_eta	nominal_Loose
+el_phi	nominal_Loose
 met_met	nominal_Loose
 met_phi	nominal_Loose
 mu_mt_reco	nominal_Loose

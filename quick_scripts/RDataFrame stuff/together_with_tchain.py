@@ -66,6 +66,10 @@ if __name__ == "__main__":
     print(f"{h_taupt_vector.GetEntries()=}")
     print(f"{Rdf.GetNRuns()=}")
 
+    print("All columns and types (pre vector column shrinking):")
+    for col in Rdf.GetColumnNames():
+        print(f"{col}: {Rdf.GetColumnType(col)}")
+
     # routine to separate vector branches into separate variables
     badcols = set()  # save old vector column names to avoid extracting them later
     for col_name in cols_out:
@@ -85,6 +89,11 @@ if __name__ == "__main__":
 
             else:
                 Rdf = Rdf.Redefine(col_name, f"getVecVal({col_name},0)")
+
+    print("All columns and types (post vector column shrinking):")
+    for col in Rdf.GetColumnNames():
+        print(f"{col}: {Rdf.GetColumnType(col)}")
+
     # plot ROOT
     h_taupt = Rdf.Histo1D(histo_args, "TauPt", "truth_weight").GetPtr()
     h_taupt.SetStats(True)

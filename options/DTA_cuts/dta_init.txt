@@ -2,19 +2,17 @@
 # Name	Variable	</>	Cut (in GeV if applicable) tree
 # truth
 # Truth M_T	TruthMTW > 200
-Truth tau p_T	TruthTauPt > 25
-Truth tau eta	TruthTauEta.abs() < 2.47
-Truth tau eta crack	(TruthTauEta.abs() < 1.37) or (TruthTauEta.abs() > 1.52)
+# Truth tau p_T	TruthTauPt > 25
+# Truth tau eta	TruthTauEta.abs() < 2.47
+# Truth tau eta crack	(TruthTauEta.abs() < 1.37) or (TruthTauEta.abs() > 1.52)
 
 # reco
-Tau pt	TauPt > 150
-Tau eta	TauEta.abs() < 2.4
-E_{T}^{MISS}	MET_met > 85
-M_T	MTW > 200
+# Tau pt	TauPt > 150
+# Tau eta	TauEta.abs() < 2.4
+# E_{T}^{MISS}	MET_met > 85
+# M_T	MTW > 200
 
 [OUTPUTS]
-rwCorr
-prwWeight
 # Jet_btSF
 # Jet_JVT
 # TauSF_LooseWP
@@ -28,47 +26,48 @@ prwWeight
 # Ele_isoSF
 
 # truth
-TruthTauPt
-TruthTauEta
-TruthTauPhi
+# TruthTauPt
+# TruthTauEta
+# TruthTauPhi
 # VisTruthTauPt
 # VisTruthTauEta
 # VisTruthTauPhi
-TruthNeutrinoPt
-TruthNeutrinoEta
-TruthNeutrinoPhi
+# TruthNeutrinoPt
+# TruthNeutrinoEta
+# TruthNeutrinoPhi
 # TruthNeutrinoE
 # TruthJetEta
 # TruthJetPhi
 # TruthJetE
-TruthMTW
+# TruthMTW
 # TruthElePt
 # TruthEleEta
 # TruthElePhi
 # TruthEleE
 # TruthBosonE
 # TruthBosonEta
-TruthBosonPt
-TruthBosonM
-TruthDilepM
+# TruthBosonPt
+# TruthBosonM
+# TruthDilepM
 
 # reco
-# TauPt
-# TauEta
-# TauPhi
+TauPt
+TauEta
+TauPhi
 # TauE
 # JetEta
 # JetPhi
 # JetE
-# MET_met
-# MET_phi
-# MTW
-# ElePt
-# EleEta
-# ElePhi
-# MuonPt
-# MuonEta
-# MuonPhi
+MET_met
+MET_phi
+MTW
+ElePt
+EleEta
+ElePhi
+MuonPt
+MuonEta
+MuonPhi
 # Ele_d0sig
 # Ele_delta_z0
-# Ele_delta_z0_sintheta
+Ele_delta_z0_sintheta
+Muon_delta_z0_sintheta
