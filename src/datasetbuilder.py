@@ -840,11 +840,17 @@ class DatasetBuilder:
                     Rdf = Rdf.Redefine(col_name, f"getVecVal({col_name},0)")
 
         # import needed columns to pandas dataframe
-        cols_to_extract = [c for c in import_cols if c not in badcols]
+        cols_to_extract = [c for c in import_cols if c not in badcols] + [
+            "truth_weight",
+            "base_weight",
+            "reco_weight",
+        ]
+        self.logger.debug("All columns and types (post vector column shrinking):")
+        for col in cols_to_extract:
+            self.logger.debug(f"{col}: {Rdf.GetColumnType(col)}")
+
         self.logger.info(f"Extracting {len(cols_to_extract)} branch(es) from RDataFrame...")
-        df = pd.DataFrame(
-            Rdf.AsNumpy(columns=cols_to_extract + ["truth_weight", "base_weight", "reco_weight"])
-        )
+        df = pd.DataFrame(Rdf.AsNumpy(columns=cols_to_extract))
         self.logger.info(f"Extracted {len(df.index)} events.")
 
         self.logger.debug("Setting DSID/eventNumber as index...")
@@ -906,8 +912,8 @@ class DatasetBuilder:
             "weight",
             "mcWeight",
             "mcChannel",
-            "prwWeight",
-            "rwCorr",
+            # "prwWeight",
+            # "rwCorr",
             "runNumber",
             "eventNumber",
             # "passTruth",
