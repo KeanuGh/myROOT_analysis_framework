@@ -621,45 +621,52 @@ class Histogram1D(bh.Histogram, family=None):
                 h_ratio.TH1.SetBinError(i + 1, yerr[i])
 
         if fit:
-            self.logger.info("Performing fit on ratio..")
+            if h_ratio.TH1.GetEntries() == 0:
+                self.logger.warning("Ratio histogram empty. Skipping fit.")
+            else:
+                self.logger.info("Performing fit on ratio..")
 
-            with redirect_stdout() as fit_output:
-                fit_results = h_ratio.TH1.Fit("pol0", "VFSN")
+                with redirect_stdout() as fit_output:
+                    fit_results = h_ratio.TH1.Fit("pol0", "VFSN")
 
-            self.logger.debug(
-                f"ROOT fit output:\n"
-                f"==========================================================================\n"
-                f"{fit_output.getvalue()}"
-                f"=========================================================================="
-            )
-            c = fit_results.Parameters()[0]
-            err = fit_results.Errors()[0]
+                self.logger.debug(
+                    f"ROOT fit output:\n"
+                    f"==========================================================================\n"
+                    f"{fit_output.getvalue()}"
+                    f"=========================================================================="
+                )
+                c = fit_results.Parameters()[0]
+                err = fit_results.Errors()[0]
 
-            # display fit line
-            col = "r" if color == "k" else color
-            ax.fill_between(
-                [self.bin_edges[0], self.bin_edges[-1]], [c - err], [c + err], color=col, alpha=0.3
-            )
-            ax.axhline(c, color=col, linewidth=1.0)
+                # display fit line
+                col = "r" if color == "k" else color
+                ax.fill_between(
+                    [self.bin_edges[0], self.bin_edges[-1]],
+                    [c - err],
+                    [c + err],
+                    color=col,
+                    alpha=0.3,
+                )
+                ax.axhline(c, color=col, linewidth=1.0)
 
-            if display_stats:
-                textstr = "\n".join(
-                    (
-                        r"$\chi^2=%.3f$" % fit_results.Chi2(),
-                        r"$\mathrm{NDF}=%.3f$" % fit_results.Ndf(),
-                        r"$c=%.2f\pm%.3f$" % (c, err),
+                if display_stats:
+                    textstr = "\n".join(
+                        (
+                            r"$\chi^2=%.3f$" % fit_results.Chi2(),
+                            r"$\mathrm{NDF}=%.3f$" % fit_results.Ndf(),
+                            r"$c=%.2f\pm%.3f$" % (c, err),
+                        )
                     )
-                )
-                # dumb workaround to avoid the stats boxes from overlapping eachother
-                loc = "upper left"
-                for artist in ax.get_children():
-                    if isinstance(artist, AnchoredText):
-                        if r"$\chi^2=" in artist.get_children()[0].get_text():
-                            loc = "lower left"
-                stats_box = AnchoredText(
-                    textstr, loc=loc, frameon=False, prop=dict(fontsize="x-small")
-                )
-                ax.add_artist(stats_box)
+                    # dumb workaround to avoid the stats boxes from overlapping eachother
+                    loc = "upper left"
+                    for artist in ax.get_children():
+                        if isinstance(artist, AnchoredText):
+                            if r"$\chi^2=" in artist.get_children()[0].get_text():
+                                loc = "lower left"
+                    stats_box = AnchoredText(
+                        textstr, loc=loc, frameon=False, prop=dict(fontsize="x-small")
+                    )
+                    ax.add_artist(stats_box)
 
         ax.axhline(1.0, linestyle="--", linewidth=1.0, c="k")
         ax.errorbar(
