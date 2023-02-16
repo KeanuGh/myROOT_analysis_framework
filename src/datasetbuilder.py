@@ -1,8 +1,9 @@
 import logging
+import re
 import time
 from dataclasses import dataclass, field
 from glob import glob
-from typing import List, Dict, OrderedDict, Set, Iterable, overload, Final
+from typing import Dict, OrderedDict, Set, Iterable, overload, Final
 
 import ROOT
 import pandas as pd
@@ -27,6 +28,12 @@ lumi_year: Final[dict] = {
 }
 
 
+def find_variables_in_string(s: str):
+    """Find any variables in the variable list that are in given string"""
+    split_string = set(re.findall(r"\w+|[.,!?;]", s))
+    return split_string & set(variable_data.keys())
+
+
 @dataclass(slots=True)
 class DatasetBuilder:
     """
@@ -41,7 +48,7 @@ class DatasetBuilder:
     :param label: Label to put on plots
     :param lepton: Name of charged DY lepton channel in dataset (if applicable)
     :param logger: logger to write to. Defaults to console output at DEBUG-level
-    :param hard_cut: name(s) of cut(s) that should be applied to dataframe immediately
+    :param hard_cut: string representing a cut that should be applied to dataframe immediately (eg. "TauPt > 20")
     :param force_rebuild: whether to force build of DataFrame
     :param force_recalc_weights: whether to force recalculating weights, no matter if the column already exists
     :param force_recalc_cuts: whether to force recalculating cuts, whether columns exist or not
@@ -61,7 +68,7 @@ class DatasetBuilder:
     label: str = ("data",)
     lepton: str = "lepton"
     logger: logging.Logger = field(default_factory=get_logger)
-    hard_cut: str | List[str] = field(default_factory=list)
+    hard_cut: str = ""
     dataset_type: str = "DTA"
     force_rebuild: bool = False
     force_recalc_cuts: bool = False
@@ -210,9 +217,6 @@ class DatasetBuilder:
         # check if vars are contained in label dictionary
         self.__check_axis_labels(tree_dict, vars_to_calc)
 
-        # check if hard cut(s) exists in cutfile. If not, skip them
-        self.__check_hard_cuts(cuts)
-
         # print debug information
         self.logger.debug("")
         self.logger.debug("DEBUG DATASET OPTIONS: ")
@@ -225,12 +229,7 @@ class DatasetBuilder:
         if cutfile:
             self.logger.debug("Cuts from cutfile:")
             cutfile.log_cuts(debug=True)
-        hard_cuts_str = (
-            "\n\t".join([f"{cut}: {cutfile.get_cut_string(cut)}" for cut in self.hard_cut])
-            if self.hard_cut
-            else None
-        )
-        self.logger.debug(f"Hard cut(s) applied: {hard_cuts_str}")
+        self.logger.debug(f"Hard cut applied: {self.hard_cut}")
         self.logger.debug(f"Forced dataset rebuild: {self.force_rebuild}")
         self.logger.debug(f"Calculating cuts: {__create_cut_cols or self.force_recalc_cuts}")
         if pkl_path:
@@ -307,32 +306,6 @@ class DatasetBuilder:
         if __create_cut_cols or self.force_recalc_cuts:
             self.__create_cut_columns(df, cuts)
 
-        # apply hard cut(s) if it exists in cut columns
-        # TODO: apply hard cuts on import instead of after
-        hard_cuts_to_apply = []
-        for h_cut in self.hard_cut:
-            if h_cut + config.cut_label not in df.columns:
-                self.logger.debug(
-                    f"No cut {h_cut} in DataFrame. Assuming hard cut has already been applied"
-                )
-                self.hard_cut.remove(h_cut)
-                cutfile.cuts.pop(h_cut)
-            else:
-                hard_cuts_to_apply.append(h_cut)
-        # apply hard cuts
-        if hard_cuts_to_apply:
-            self.logger.info(f"Applying hard cut(s): {self.hard_cut}...")
-            if isinstance(self.hard_cut, str):
-                cuts = [self.hard_cut]
-            else:
-                cuts = self.hard_cut
-            cut_cols = [cut + config.cut_label for cut in cuts]
-            df = df.loc[df[cut_cols].all(1)]
-            df.drop(columns=cut_cols, inplace=True)
-            # remove cut from cutflow as well
-            for h_cut in self.hard_cut:
-                cutfile.cuts.pop(h_cut)
-
         # GENERATE CUTFLOW
         cutflow = Cutflow(
             df,
@@ -388,29 +361,6 @@ class DatasetBuilder:
                 "Some unexpected behaviour may occur."
             )
 
-    def __check_hard_cuts(self, cuts: OrderedDict[str, Cut], error: bool = False) -> None:
-        """
-        Check whether cuts passed as hard cuts exist in cutfile. If not, ignore.
-        Raise ValueError if 'error' is True
-        """
-        if self.hard_cut is not None:
-            if not isinstance(self.hard_cut, (str, list)):
-                raise TypeError(
-                    f"hard_cut parameter must be of type string or list of strings. "
-                    f"Got type {type(self.hard_cut)}"
-                )
-            elif isinstance(self.hard_cut, str):
-                self.hard_cut = [self.hard_cut]
-            for cut in self.hard_cut:
-                if cut not in cuts:
-                    if error:
-                        raise ValueError(f"No cut named '{self.hard_cut}' in cutfile")
-                    else:
-                        self.logger.debug(
-                            f"No cut named '{self.hard_cut}' in cutfile; skipping this hard cut"
-                        )
-                        self.hard_cut.remove(cut)
-
     def __check_var_cols(
         self, df_cols: Iterable, tree_dict: Dict[str, Set[str]], raise_error: bool = False
     ) -> bool:
@@ -459,7 +409,6 @@ class DatasetBuilder:
     ) -> bool:
         """Check whether all necessary cut columns exist in DataFrame columns not including any hard cut"""
         cut_cols = {cut_name + config.cut_label for cut_name in cuts}
-        cut_cols -= {h_cut + config.cut_label for h_cut in self.hard_cut}
         if missing_vars := {var for var in cut_cols if var not in df_cols}:
             if raise_error:
                 raise ValueError(f"Cut column(s) {missing_vars} missing from DataFrame")
@@ -495,7 +444,6 @@ class DatasetBuilder:
         :param tree_dict: dictionary of tree: variables to extract from Datapath
         :return: output dataframe containing columns corresponding to necessary variables
         """
-        # TODO switch to using pure ROOT instead of uproot
         self.logger.info(
             f"Building DataFrame from {data_path} ({file_utils.n_files(data_path)} file(s))..."
         )
@@ -727,6 +675,11 @@ class DatasetBuilder:
         # ---------------------------------------------------------------------------------------
         self.__rescale_to_gev(df)  # properly scale GeV columns
 
+        # apply hard cuts
+        if self.hard_cut:
+            self.logger.debug(f"Applying hard cut on dataset: {self.hard_cut}")
+            df.query(self.hard_cut, inplace=True)
+
         self.logger.info("Sorting by DSID...")
         df.sort_index(level="DSID", inplace=True)
 
@@ -821,7 +774,8 @@ class DatasetBuilder:
 
         # routine to separate vector branches into separate variables
         badcols = set()  # save old vector column names to avoid extracting them later
-        for col_name in import_cols:
+        hard_cut_vars = find_variables_in_string(self.hard_cut)  # check for variables in hard cut
+        for col_name in import_cols | hard_cut_vars:
             # unravel vector-type columns
             col_type = Rdf.GetColumnType(col_name)
             if "ROOT::VecOps::RVec" in col_type:
@@ -838,6 +792,10 @@ class DatasetBuilder:
 
                 else:
                     Rdf = Rdf.Redefine(col_name, f"getVecVal({col_name},0)")
+
+        # apply any hard cuts
+        if self.hard_cut:
+            Rdf = Rdf.Filter(self.hard_cut)
 
         # import needed columns to pandas dataframe
         cols_to_extract = [c for c in import_cols if c not in badcols] + [
@@ -887,6 +845,11 @@ class DatasetBuilder:
         # only add these to 'main tree' to avoid merge issues
         tree_dict[self.TTree_name] |= {"weight_mc", "weight_pileup"}
 
+        # check for variables in hard cut
+        hard_cut_vars = find_variables_in_string(self.hard_cut)
+        reco_vars = {var for var in hard_cut_vars if variable_data[var]["tag"] == "RECO"}
+        truth_vars = {var for var in hard_cut_vars if variable_data[var]["tag"] == "TRUTH"}
+
         for tree in tree_dict:
             # add necessary metadata to all trees
             tree_dict[tree] |= {"mcChannelNumber", "eventNumber"}
@@ -895,13 +858,13 @@ class DatasetBuilder:
                     f"Detected {tree} as reco tree, "
                     f"adding 'weight_leptonSF' and 'weight_KFactor' to tree variables"
                 )
-                tree_dict[tree] |= {"weight_leptonSF", "weight_KFactor"}
+                tree_dict[tree] |= {"weight_leptonSF", "weight_KFactor"} | reco_vars
             elif "truth" in tree.lower():
                 self.logger.debug(
                     f"Detected {tree} as truth tree, "
                     f"adding 'KFactor_weight_truth' to tree variables"
                 )
-                tree_dict[tree].add("KFactor_weight_truth")
+                tree_dict[tree] |= {"KFactor_weight_truth"} | truth_vars
             else:
                 self.logger.debug(f"Neither {tree} as truth nor reco dataset detected.")
 

@@ -418,6 +418,7 @@ variable_data: Dict[str, Branch] = {
         "units": "",
         "tag": VarTag.RECO,
     },
+    "TauCharge": {"name:": "Tau Charge", "units": "", "tag": VarTag.RECO},
     "TauPt": {
         "name": r"Tau $p_{T}$",
         "units": "GeV",
@@ -797,6 +798,7 @@ variable_data: Dict[str, Branch] = {
         "units": "GeV",
         "tag": VarTag.TRUTH,
     },
+    "TruthTauCharge": {"name:": "Truth Tau Charge", "units": "", "tag": VarTag.TRUTH},
     "TruthTauEta": {
         "name": r"Truth tau $\eta$",
         "units": "",
