@@ -466,7 +466,8 @@ class DatasetBuilder:
                 tree_dict[self.TTree_name],
                 num_workers=config.n_threads,
                 begin_chunk_size=self.chunksize,
-            )
+            ),
+            how="outer",
         )
         self.logger.debug(f"Extracted {len(df)} events.")
 
@@ -477,7 +478,8 @@ class DatasetBuilder:
                 ["totalEventsWeighted", "dsid"],
                 num_workers=config.n_threads,
                 begin_chunk_size=self.chunksize,
-            )
+            ),
+            how="outer",
         )
 
         self.logger.info(f"Calculating sum of weights and merging...")
@@ -502,7 +504,8 @@ class DatasetBuilder:
                     tree_dict[tree],
                     num_workers=config.n_threads,
                     begin_chunk_size=self.chunksize,
-                )
+                ),
+                how="outer",
             )
             self.logger.debug(f"Extracted {len(alt_df)} events.")
 
@@ -634,13 +637,9 @@ class DatasetBuilder:
             )
             # every reco event MUST have a reco weight
             self.logger.info(f"Verifying reco weight for {self.name}...")
-            if not self._is_truth:
-                if df["reco_weight"].isna().any():
-                    raise ValueError("NAN values in reco weights!")
-            else:
-                assert (~df["reco_weight"].isna()).sum() == (
-                    ~df["weight_leptonSF"].isna()
-                ).sum(), "Different number of events between reco weight and lepton scale factors!"
+            assert (
+                df["reco_weight"].notna().sum() == df["weight_leptonSF"].notna().sum()
+            ), "Different number of events between reco weight and lepton scale factors!"
 
         # output number of truth and reco events
         if self._is_truth:
@@ -653,11 +652,13 @@ class DatasetBuilder:
             self.logger.info(f"number of reco events: {n_reco}")
         else:
             n_reco = 0
+
         # small check
-        assert len(df) == max(n_truth, n_reco), (
-            f"Length of DataFrame ({len(df.index)}) "
-            f"doesn't match number of truth ({n_truth}) or reco events ({n_reco})"
-        )
+        if self._is_truth and self._is_reco:
+            assert len(df) == max(n_truth, n_reco), (
+                f"Length of DataFrame ({len(df.index)}) "
+                f"doesn't match number of truth ({n_truth}) or reco events ({n_reco})"
+            )
 
         if self._is_truth and self._is_reco:
             # make sure KFactor is the same for all reco and truth variables
