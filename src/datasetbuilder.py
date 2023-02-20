@@ -3,6 +3,7 @@ import re
 import time
 from dataclasses import dataclass, field
 from glob import glob
+from pathlib import Path
 from typing import Dict, OrderedDict, Set, Iterable, overload, Final
 
 import ROOT
@@ -109,19 +110,19 @@ class DatasetBuilder:
         ...
 
     @overload
-    def build(self, pkl_path: str, cutfile_path: str) -> Dataset:
+    def build(self, pkl_path: Path, cutfile_path: str) -> Dataset:
         ...
 
     @overload
-    def build(self, pkl_path: str, cutfile: Cutfile) -> Dataset:
+    def build(self, pkl_path: Path, cutfile: Cutfile) -> Dataset:
         ...
 
     @overload
-    def build(self, data_path: str, pkl_path: str, cutfile_path: str) -> Dataset:
+    def build(self, data_path: str, pkl_path: Path, cutfile_path: str) -> Dataset:
         ...
 
     @overload
-    def build(self, data_path: str, pkl_path: str, cutfile: Cutfile) -> Dataset:
+    def build(self, data_path: str, pkl_path: Path, cutfile: Cutfile) -> Dataset:
         ...
 
     @overload
@@ -139,7 +140,7 @@ class DatasetBuilder:
         data_path: str = None,
         cutfile: Cutfile = None,
         cutfile_path: str = None,
-        pkl_path: str = None,
+        pkl_path: Path = None,
         tree_dict: Dict[str, Set[str]] = None,
         vars_to_calc: Set[str] = None,
         cuts: OrderedDict[str, Cut] = None,
@@ -253,7 +254,7 @@ class DatasetBuilder:
         df = pd.DataFrame()  # literally just to stop pycharm from complaining
 
         # load dataframe from pickle
-        if pkl_path and (file_utils.file_exists(pkl_path)) and (not self.force_rebuild):
+        if pkl_path and pkl_path.exists() and (not self.force_rebuild):
             df = self.__read_pkl_df(pkl_path)
 
             # Pickle file checks
@@ -334,7 +335,7 @@ class DatasetBuilder:
 
         return dataset
 
-    def __read_pkl_df(self, pkl_path: str) -> pd.DataFrame:
+    def __read_pkl_df(self, pkl_path: str | Path) -> pd.DataFrame:
         """Read in a dataset pickle file and check its type and index"""
         self.logger.info(f"Reading data from {pkl_path}...")
         df: pd.DataFrame = pd.read_pickle(pkl_path)
@@ -752,15 +753,23 @@ class DatasetBuilder:
         Rdf = (
             Rdf.Define(
                 "truth_weight",
-                f"(mcWeight * rwCorr * {self.lumi} * prwWeight * dsid_pmgf[mcChannel]) / dsid_sumw[mcChannel];",
+                f"(mcWeight * rwCorr * {self.lumi} * prwWeight * dsid_pmgf[mcChannel]) / dsid_sumw[mcChannel]",
             )
             .Define(
                 "base_weight",
-                f"(mcWeight * dsid_xsec[mcChannel]) / dsid_sumw[mcChannel];",
+                f"(mcWeight * dsid_xsec[mcChannel]) / dsid_sumw[mcChannel]",
             )
             .Define(
                 "reco_weight",
-                f"(weight * {self.lumi} * dsid_pmgf[mcChannel]) / dsid_sumw[mcChannel];",
+                f"(weight * {self.lumi} * dsid_pmgf[mcChannel]) / dsid_sumw[mcChannel]",
+            )
+            .Define(
+                "ele_reco_weight",
+                "reco_weight * Ele_recoSF * Ele_idSF * Ele_isoSF",
+            )
+            .Define(
+                "muon_reco_weight",
+                "reco_weight * Muon_recoSF * Muon_isoSF * Muon_ttvaSF",
             )
         )
 
@@ -803,9 +812,9 @@ class DatasetBuilder:
             "base_weight",
             "reco_weight",
         ]
-        self.logger.debug("All columns and types (post vector column shrinking):")
-        for col in cols_to_extract:
-            self.logger.debug(f"{col}: {Rdf.GetColumnType(col)}")
+        # self.logger.debug("All columns and types (post vector column shrinking):")
+        # for col in cols_to_extract:
+        #     self.logger.debug(f"{col}: {Rdf.GetColumnType(col)}")
 
         self.logger.info(f"Extracting {len(cols_to_extract)} branch(es) from RDataFrame...")
         df = pd.DataFrame(Rdf.AsNumpy(columns=cols_to_extract))
