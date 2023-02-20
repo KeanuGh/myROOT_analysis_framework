@@ -502,7 +502,7 @@ class Analysis:
         for i, dataset in enumerate(datasets):
             varname = var if isinstance(var, str) else var[i]
             label = labels[i] if labels else self[dataset].label
-            hist_name = name_template.format(dataset=dataset, variable=var)
+            hist_name = name_template.format(dataset=dataset, variable=varname)
 
             # plot
             hist = self[dataset].plot_hist(
@@ -645,7 +645,7 @@ class Analysis:
         """
         Saves current histograms into root file
 
-        :param filename: Should end in '.root'. if not given will set as '<analysis_name>.root'
+        :param filename: Should end in '.root'. if not given will set as '<analysis_name>_histograms.root'
         :param tfile_option: TFile option.
                              See: https://root.cern.ch/doc/master/classTFile.html#ad0377adf2f3d88da1a1f77256a140d60
         :param write_option: WriteObject() option.
@@ -653,7 +653,7 @@ class Analysis:
         :param clear_hists: clears histograms in dictionary
         """
         if not filename:
-            filename = self._output_dir / f"{self.name}.root"
+            filename = self._output_dir / f"{self.name}_histograms.root"
 
         self.logger.info(f"Saving {len(self.histograms)} histograms to file {filename}...")
         with ROOT_utils.ROOT_TFile_mgr(filename, tfile_option) as file:
