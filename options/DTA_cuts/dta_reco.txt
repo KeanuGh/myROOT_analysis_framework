@@ -7,10 +7,10 @@
 # Truth tau eta crack	(TruthTauEta.abs() < 1.37) or (TruthTauEta.abs() > 1.52)
 
 # reco
-# Tau pt	TauPt > 150
-# Tau eta	TauEta.abs() < 2.4
-# E_{T}^{MISS}	MET_met > 85
-# M_T	MTW > 200
+Tau pt	TauPt > 150
+Tau eta	TauEta.abs() < 2.4
+E_{T}^{MISS}	MET_met > 85
+M_T	MTW > 200
 
 [OUTPUTS]
 # Jet_btSF
@@ -21,34 +21,6 @@
 # TauLooseWP
 # TauMediumWP
 # TauTightWP
-# Ele_recoSF
-# Ele_idSF
-# Ele_isoSF
-
-# truth
-# TruthTauPt
-# TruthTauEta
-# TruthTauPhi
-# VisTruthTauPt
-# VisTruthTauEta
-# VisTruthTauPhi
-# TruthNeutrinoPt
-# TruthNeutrinoEta
-# TruthNeutrinoPhi
-# TruthNeutrinoE
-# TruthJetEta
-# TruthJetPhi
-# TruthJetE
-# TruthMTW
-# TruthElePt
-# TruthEleEta
-# TruthElePhi
-# TruthEleE
-# TruthBosonE
-# TruthBosonEta
-# TruthBosonPt
-# TruthBosonM
-# TruthDilepM
 
 # reco
 TauPt

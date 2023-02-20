@@ -425,19 +425,7 @@ class DatasetBuilder:
     # ===== DATAFRAME FUNCTIONS =====
     # ===============================
     def build_dataframe(self, data_path: str, tree_dict: Dict[str, Set[str]]) -> pd.DataFrame:
-        # check hard cut variable(s) exist
-        vars_to_extract = set().union(*tree_dict.values())
-        hard_cut_vars = find_variables_in_string(self.hard_cut)
-        for hard_cut_var in hard_cut_vars:
-            if hard_cut_var in derived_vars:
-                assert (
-                    set(derived_vars[hard_cut_var]) & vars_to_extract
-                ), f"Missing variables necessary to apply hard cut '{self.hard_cut}': Missing dependencies for {hard_cut_var}"
-            else:
-                assert (
-                    hard_cut_var in vars_to_extract
-                ), f"Missing variables necessary to apply hard cut '{self.hard_cut}': Missing {hard_cut_var}"
-
+        """send off dataframe builder to correct dataset type"""
         match self.dataset_type:
             case "analysistop":
                 return self.__build_dataframe_analysistop(data_path=data_path, tree_dict=tree_dict)
@@ -461,6 +449,19 @@ class DatasetBuilder:
         self.logger.info(
             f"Building DataFrame from {data_path} ({file_utils.n_files(data_path)} file(s))..."
         )
+
+        # check hard cut variable(s) exist
+        vars_to_extract = set().union(*tree_dict.values())
+        hard_cut_vars = find_variables_in_string(self.hard_cut)
+        for hard_cut_var in hard_cut_vars:
+            if hard_cut_var in derived_vars:
+                assert (
+                    set(derived_vars[hard_cut_var]) & vars_to_extract
+                ), f"Missing variables necessary to apply hard cut '{self.hard_cut}': Missing dependencies for {hard_cut_var}"
+            else:
+                assert (
+                    hard_cut_var in vars_to_extract
+                ), f"Missing variables necessary to apply hard cut '{self.hard_cut}': Missing {hard_cut_var}"
 
         # is the default tree a truth tree?
         default_tree_truth = "truth" in self.TTree_name
@@ -804,7 +805,7 @@ class DatasetBuilder:
             if "ROOT::VecOps::RVec" in col_type:
                 # skip non-numeric vector types
                 if col_type == "ROOT::VecOps::RVec<string>":
-                    print(f"Skipping string vector column {col_name}")
+                    self.logger.debug(f"Skipping string vector column {col_name}")
                     badcols.add(col_name)
 
                 elif "jet" in str(col_name).lower():

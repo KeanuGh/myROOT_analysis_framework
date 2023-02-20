@@ -12,39 +12,39 @@ DATA_OUT_DIR = "/data/dataset_pkl_outputs/"
 
 def main():
     datasets = {
-        # plus
-        # dta w->taunu->munu
-        "wplustaunu_dta": {
-            "data_path": DTA_PATH + "/user.kghorban.Sh_2211_Wtaunu_*/*.root",
-            "cutfile_path": "../../options/DTA_cuts/dta_truth.txt",
-            "TTree_name": {"T_s1thv_NOMINAL", "T_s1tev_NOMINAL", "T_s1tmv_NOMINAL"},
-            "hard_cut": "TruthTauCharge == 1",
-            "lepton": "tau",
-            "dataset_type": "dta",
-            # "force_rebuild": True,
-            "label": r"Sherpa 2211 $W^+\rightarrow\tau\nu$",
-        },
-        # analysistop w->taunu->munu
-        "wplustaunu_analysistop": {
-            "data_path": ANALYSISTOP_PATH + "/wplustaunu_*/*.root",
-            "cutfile_path": "../../options/DTA_cuts/analysistop.txt",
-            "lepton": "tau",
-            "dataset_type": "analysistop",
-            # "force_rebuild": True,
-            "label": r"Powheg/Pythia 8 $W^+\rightarrow\tau\nu$",
-        },
-        "wplustaunu_analysistop_peak": {
-            "data_path": ANALYSISTOP_PATH + "/wplustaunu/*.root",
-            "cutfile_path": "../../options/DTA_cuts/analysistop.txt",
-            "lepton": "tau",
-            "dataset_type": "analysistop",
-            "hard_cut": "MC_WZ_m < 120",
-            # "force_rebuild": True,
-            "label": r"Powheg/Pythia 8 $W^+\rightarrow\tau\nu$",
-        },
+        # # plus
+        # # dta w->taunu->munu
+        # "wplustaunu_dta": {
+        #     "data_path": DTA_PATH + "/user.kghorban.Sh_2211_Wtaunu_*/*.root",
+        #     "cutfile_path": "../../options/DTA_cuts/dta_truth.txt",
+        #     "TTree_name": {"T_s1thv_NOMINAL", "T_s1tev_NOMINAL", "T_s1tmv_NOMINAL"},
+        #     "hard_cut": "TruthTauCharge == 1",
+        #     "lepton": "tau",
+        #     "dataset_type": "dta",
+        #     # "force_rebuild": True,
+        #     "label": r"Sherpa 2211 $W^+\rightarrow\tau\nu$",
+        # },
+        # # analysistop w->taunu->munu
+        # "wplustaunu_analysistop": {
+        #     "data_path": ANALYSISTOP_PATH + "/wplustaunu_*/*.root",
+        #     "cutfile_path": "../../options/DTA_cuts/analysistop.txt",
+        #     "lepton": "tau",
+        #     "dataset_type": "analysistop",
+        #     # "force_rebuild": True,
+        #     "label": r"Powheg/Pythia 8 $W^+\rightarrow\tau\nu$",
+        # },
+        # "wplustaunu_analysistop_peak": {
+        #     "data_path": ANALYSISTOP_PATH + "/wplustaunu/*.root",
+        #     "cutfile_path": "../../options/DTA_cuts/analysistop.txt",
+        #     "lepton": "tau",
+        #     "dataset_type": "analysistop",
+        #     "hard_cut": "MC_WZ_m < 120",
+        #     # "force_rebuild": True,
+        #     "label": r"Powheg/Pythia 8 $W^+\rightarrow\tau\nu$",
+        # },
         # minus
         # dta w->taunu->munu
-        "wmintau_dta": {
+        "wmintaunu_dta": {
             "data_path": DTA_PATH + "/user.kghorban.Sh_2211_Wtaunu_*/*.root",
             "cutfile_path": "../../options/DTA_cuts/dta_truth.txt",
             "TTree_name": {"T_s1thv_NOMINAL", "T_s1tev_NOMINAL", "T_s1tmv_NOMINAL"},
@@ -64,7 +64,7 @@ def main():
             # "force_rebuild": True,
             "label": r"Powheg/Pythia 8 $W^-\rightarrow\tau\nu$",
         },
-        "wmintaunumin_analysistop_peak": {
+        "wmintaunu_analysistop_peak": {
             "data_path": ANALYSISTOP_PATH + "/wmintaunu/*.root",
             "cutfile_path": "../../options/DTA_cuts/analysistop.txt",
             "lepton": "tau",
@@ -79,14 +79,12 @@ def main():
         datasets,
         data_dir=DATA_OUT_DIR,
         year="2015+2016",
-        force_rebuild=True,
+        # force_rebuild=True,
         analysis_label="dta_analysistop_sep_charge",
         skip_verify_pkl=True,
         log_level=10,
         log_out="both",
     )
-    my_analysis.merge_datasets("wplustaunu_analysistop", "wplustaunu_analysistop_peak")
-    my_analysis.merge_datasets("wmintaunu_analysistop", "wmintaunu_analysistop_peak")
 
     # HISTORGRAMS
     # ==================================================================================================================
@@ -112,7 +110,14 @@ def main():
 
     # TRUTH
     # -----------------------------------
-    for charge in ["plus", "min"]:
+    for charge in [
+        # "plus",
+        "min",
+    ]:
+        my_analysis.merge_datasets(
+            f"w{charge}taunu_analysistop", f"w{charge}taunu_analysistop_peak"
+        )
+
         my_analysis.plot_hist(
             [f"w{charge}taunu_dta", f"w{charge}taunu_analysistop"],
             ["TruthDilepM", "MC_WZ_dilep_m_born"],
