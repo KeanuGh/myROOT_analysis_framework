@@ -744,25 +744,8 @@ class DatasetBuilder:
             """
         )
 
-        # create TChain in c++ in order for it not to be garbage collected by python
-        ROOT.gInterpreter.Declare(
-            f"""
-                TChain chain;
-                void fill_chain() {{
-                    std::vector<std::string> paths = {{\"{'","'.join(paths)}\"}};
-                    std::vector<std::string> trees = {{\"{'","'.join(ttrees)}\"}};
-                    for (const auto& path : paths) {{
-                        for (const auto& tree : trees) {{
-                            chain.Add((path + "?#" + tree).c_str());
-                        }}
-                    }}
-                }}
-            """
-        )
-        ROOT.fill_chain()
-
-        # create RDataFrame
-        Rdf = ROOT.RDataFrame(ROOT.chain)
+        # make rdataframe
+        Rdf = ROOT_utils.init_rdataframe(self.name, paths, ttrees)
 
         # create weights
         Rdf = (
@@ -787,6 +770,13 @@ class DatasetBuilder:
                 "reco_weight * Muon_recoSF * Muon_isoSF * Muon_ttvaSF",
             )
         )
+        weight_cols = {  # MUST change this if weights are changed
+            "truth_weight",
+            "base_weight",
+            "reco_weight",
+            "ele_reco_weight",
+            "muon_reco_weight",
+        }
 
         # rescale energy columns to GeV
         for gev_column in [
@@ -799,37 +789,37 @@ class DatasetBuilder:
         # routine to separate vector branches into separate variables
         badcols = set()  # save old vector column names to avoid extracting them later
         hard_cut_vars = find_variables_in_string(self.hard_cut)  # check for variables in hard cut
-        for col_name in import_cols | hard_cut_vars:
+        self.logger.debug("Shrinking vectors:")
+        for col_name in import_cols | hard_cut_vars | weight_cols:
             # unravel vector-type columns
             col_type = Rdf.GetColumnType(col_name)
+            debug_str = f"\t- {col_name}: {col_type}"
             if "ROOT::VecOps::RVec" in col_type:
                 # skip non-numeric vector types
                 if col_type == "ROOT::VecOps::RVec<string>":
-                    self.logger.debug(f"Skipping string vector column {col_name}")
+                    self.logger.debug(f"\t- Skipping string vector column {col_name}")
                     badcols.add(col_name)
 
                 elif "jet" in str(col_name).lower():
                     # create three new columns for each possible jet
+                    debug_str += " -> "
                     for i in range(3):
-                        Rdf = Rdf.Define(f"{col_name}{i + 1}", f"getVecVal({col_name},{i})")
+                        new_name = col_name + str(i + 1)
+                        Rdf = Rdf.Define(f"{new_name}", f"getVecVal({col_name},{i})")
+                        debug_str += f"{new_name}: {Rdf.GetColumnType(new_name)}, "
                     badcols.add(col_name)
 
                 else:
                     Rdf = Rdf.Redefine(col_name, f"getVecVal({col_name},0)")
+                    debug_str += f" -> {Rdf.GetColumnType(col_name)}"
+            self.logger.debug(debug_str)
 
         # apply any hard cuts
         if self.hard_cut:
             Rdf = Rdf.Filter(self.hard_cut)
 
         # import needed columns to pandas dataframe
-        cols_to_extract = [c for c in import_cols if c not in badcols] + [
-            "truth_weight",
-            "base_weight",
-            "reco_weight",
-        ]
-        # self.logger.debug("All columns and types (post vector column shrinking):")
-        # for col in cols_to_extract:
-        #     self.logger.debug(f"{col}: {Rdf.GetColumnType(col)}")
+        cols_to_extract = [c for c in import_cols if c not in badcols] + list(weight_cols)
 
         self.logger.info(f"Extracting {len(cols_to_extract)} branch(es) from RDataFrame...")
         df = pd.DataFrame(Rdf.AsNumpy(columns=cols_to_extract))

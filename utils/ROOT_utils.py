@@ -3,7 +3,7 @@ import logging
 import pickle as pkl
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Type, Dict
+from typing import Type, Dict, Iterable
 
 import ROOT
 import boost_histogram as bh
@@ -26,7 +26,7 @@ def load_ROOT_settings(
 
     # load custom C++ functions
     ROOT.gSystem.Load(f"{Path(__file__).parent}/rootfuncs.h")
-    ROOT.gInterpreter.Declare(f'#include "{Path(__file__).parent}/rootfuncs.h"')
+    ROOT.gInterpreter.ProcessLine(f'#include "{Path(__file__).parent}/rootfuncs.h"')
 
 
 # this dictionary decides which ROOT constructor needs to be called based on hist type and dimension
@@ -186,7 +186,7 @@ def get_dsid_values(path: str | Path, ttree_name: str = "") -> pd.DataFrame:
     dsid_phys_short: Dict[int, str] = dict()
 
     # loop over files and sum sumw values per dataset ID (assuming each file only has one dataset ID value)
-    prev_dsid = 1
+    prev_dsid = None
     for file in files_list:
         with ROOT_TFile_mgr(file, "read") as tfile:
             tree = tfile.Get(ttree_name)
@@ -218,3 +218,19 @@ def get_dsid_values(path: str | Path, ttree_name: str = "") -> pd.DataFrame:
     df.index.name = "mcChannel"
 
     return df
+
+
+def init_rdataframe(name, paths: Iterable[str], trees: Iterable[str]):
+    """
+    Returns an RDataFrame for a given name
+
+    Defines a TChain in the global ROOT namespace.
+    This is to be able to create multiple separate TChains and keep them accessable by their corresponding RDataFrames
+    """
+    chain_name = f"{name}_chain"
+    ROOT.gInterpreter.Declare(f"TChain {chain_name};")
+    for path in paths:
+        for tree in trees:
+            getattr(ROOT, chain_name).Add(f"{path}?#{tree}")
+
+    return ROOT.RDataFrame(getattr(ROOT, chain_name))

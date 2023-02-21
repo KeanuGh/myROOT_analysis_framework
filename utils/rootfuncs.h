@@ -19,7 +19,6 @@ float getVecVal(ROOT::VecOps::RVec<float> x, int i) {
     else               return NAN;
 };
 
-
 // extract sum of weights from DTA outputs
 std::map<int, float> get_sumw(std::string data_dir, std::string ttree_name) {
     std::map<int, float> dsid_map;
