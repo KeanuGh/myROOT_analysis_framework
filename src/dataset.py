@@ -64,6 +64,9 @@ class Dataset:
     def __setitem__(self, col, item):
         self.df[col] = item
 
+    def __getattr__(self, item):
+        return getattr(self.df, item)
+
     def __repr__(self):
         return f'Dataset("{self.name}",Variables:{self.variables},Cuts:{self.cut_cols},Events:{len(self)})'
 
