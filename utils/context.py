@@ -74,11 +74,10 @@ def handle_dataset_arg(func: Callable) -> Callable:
 
 # https://stackoverflow.com/questions/24277488/in-python-how-to-capture-the-stdout-from-a-c-shared-library-to-a-variable
 @contextmanager
-def redirect_stdout(out_stream: TextIO = None, in_stream: TextIO = None):
+def redirect_stdout(out_stream: TextIO | None = None, in_stream: TextIO | None = None):
     """Capture C/C++ standard output"""
     if out_stream is None:
         out_stream = io.StringIO()
-
     if in_stream is None:
         in_stream = sys.stdout
 

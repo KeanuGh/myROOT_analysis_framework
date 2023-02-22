@@ -4,7 +4,7 @@ if __name__ == "__main__":
     datasets = {
         "wminmunu": {
             "data_path": "../tests/resources/test_analysistop_mcwmintaunu.root",
-            "cutfile_path": "../tests/resources/cutfile_EXAMPLE.txt",
+            "cutfile": "../tests/resources/cutfile_EXAMPLE.txt",
             "TTree_name": "truth",
             "lepton": "muon",
             "label": r"$W^-\rightarrow\mu\nu$",
@@ -12,7 +12,7 @@ if __name__ == "__main__":
         # "wmintaunu": {
         #     "data_path": "/data/test_mc16a_wmintaunu/*/*.root",
         #     # 'data_path': '/data/atlas/HighMassDrellYan/test_mc16a/wmintaunu_*/*.root',
-        #     "cutfile_path": "../options/cutfile_EXAMPLE.txt",
+        #     "cutfile": "../options/cutfile_EXAMPLE.txt",
         #     "TTree_name": "truth",
         #     "hard_cut": r"Muon $|#eta|$",
         #     "lepton": "tau",

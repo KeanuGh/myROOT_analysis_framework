@@ -6,10 +6,10 @@ from glob import glob
 from pathlib import Path
 from typing import Dict, OrderedDict, Set, Iterable, overload, Final
 
-import ROOT
-import pandas as pd
-import uproot
-from awkward import to_pandas
+import ROOT  # type: ignore
+import pandas as pd  # type: ignore
+import uproot  # type: ignore
+from awkward import to_pandas  # type: ignore
 
 import src.config as config
 from src.cutfile import Cutfile, Cut
@@ -65,8 +65,8 @@ class DatasetBuilder:
     name: str = "data"
     TTree_name: str | Set[str] = "truth"
     year: str = "2015+2016"
-    lumi: float = None
-    label: str = ("data",)
+    lumi: float = 139.0
+    label: str = "data"
     lepton: str = "lepton"
     logger: logging.Logger = field(default_factory=get_logger)
     hard_cut: str = ""
@@ -84,17 +84,13 @@ class DatasetBuilder:
 
     def __post_init__(self):
         # argument checks
-        if (self.dataset_type == "analysistop") and (not isinstance(self.TTree_name, str)):
-            raise ValueError("Only use one default tree with analysistop ntuples.")
         if self.dataset_type == "dta":
             if not isinstance(self.TTree_name, str):
                 self.TTree_name = set(self.TTree_name)
             else:
                 self.TTree_name = {self.TTree_name}
 
-        if self.lumi and self.year:
-            raise ValueError("Pass either lumi or year")
-        elif self.year:
+        if self.year:
             self.lumi = lumi_year[self.year]
 
         self.dataset_type = self.dataset_type.lower()
@@ -102,55 +98,34 @@ class DatasetBuilder:
             raise ValueError("Known dataset types: 'DTA', 'AnalysisTop'")
 
     @overload
-    def build(self, data_path: str, cutfile_path: str) -> Dataset:
-        ...
-
-    @overload
-    def build(self, data_path: str, cutfile: Cutfile) -> Dataset:
-        ...
-
-    @overload
-    def build(self, pkl_path: Path, cutfile_path: str) -> Dataset:
-        ...
-
-    @overload
-    def build(self, pkl_path: Path, cutfile: Cutfile) -> Dataset:
-        ...
-
-    @overload
-    def build(self, data_path: str, pkl_path: Path, cutfile_path: str) -> Dataset:
-        ...
-
-    @overload
-    def build(self, data_path: str, pkl_path: Path, cutfile: Cutfile) -> Dataset:
+    def build(self, data_path: str, cutfile: str | Path | Cutfile) -> Dataset:
         ...
 
     @overload
     def build(
         self,
         data_path: str,
-        tree_dict: Dict[str, Set[str]],
-        vars_to_calc: Set[str],
-        cuts: OrderedDict[str, Cut] | None = None,
+        cutfile: str | Path | Cutfile,
+        *,
+        pkl_path: Path,
     ) -> Dataset:
         ...
 
     def build(
         self,
-        data_path: str = None,
-        cutfile: Cutfile = None,
-        cutfile_path: str = None,
-        pkl_path: Path = None,
-        tree_dict: Dict[str, Set[str]] = None,
-        vars_to_calc: Set[str] = None,
-        cuts: OrderedDict[str, Cut] = None,
+        data_path: str,
+        cutfile: Cutfile | str | Path,
+        *,
+        pkl_path: Path | None = None,
+        tree_dict: Dict[str, Set[str]] | None = None,
+        vars_to_calc: Set[str] | None = None,
+        cuts: OrderedDict[str, Cut] | None = None,
     ) -> Dataset:
         """
         Builds a dataframe from cutfile inputs.
 
         :param data_path: Path to ROOT file(s) must be passed if not providing a pickle file
-        :param cutfile: If passed, uses Cutfile object to build dataframe
-        :param cutfile_path: If passed, builds Cutfile object from file and dataframe
+        :param cutfile: If passed, uses Cutfile object to build dataframe can pass cutfile object or path to cutfile
         :param pkl_path: If passed opens pickle file, checks against cut and variable options
                          and calculates cuts and weighs if needed.
                          Can be passed instead of ROOT file but then will not be checked against cutfile
@@ -181,14 +156,12 @@ class DatasetBuilder:
         if data_path and not file_utils.file_exists(data_path):
             raise FileExistsError(f"File {data_path} not found.")
 
-        if (not cutfile) and (not cutfile_path):
-            raise ValueError("Cutfile must be provided")
-
         # Parsing cutfile
-        if cutfile_path:
-            self.logger.info(f"Parsting cutfile '{cutfile_path}'...")
-            cutfile = Cutfile(cutfile_path, self.TTree_name, logger=self.logger)
+        if isinstance(cutfile, (str, Path)):
+            cutfile_path = cutfile
+            cutfile = Cutfile(cutfile, self.TTree_name, logger=self.logger)
 
+            self.logger.info(f"Parsting cutfile '{cutfile_path}'...")
             if self.logger.level == logging.DEBUG:
                 # log contents of cutfile
                 self.logger.debug("CUTFILE CONTENTS")
@@ -197,6 +170,9 @@ class DatasetBuilder:
                     for line in f.readlines():
                         self.logger.debug(line.rstrip("\n"))
                 self.logger.debug("---------------------------")
+        else:
+            cutfile_path = ""
+
         if cutfile:
             # get tree dictionary, set of variables to calculate, and whether the dataset will contain truth, reco data
             tree_dict = cutfile.tree_dict
@@ -329,7 +305,7 @@ class DatasetBuilder:
 
         # print pickle file if anything is new/changed
         if pkl_path and (__build_df or __create_cut_cols or __calculate_vars):
-            dataset.save_pkl_file(pkl_path)
+            dataset.save_pkl_file(str(pkl_path))
         else:
             self.logger.debug("No pickle file saved.")
 
@@ -449,6 +425,9 @@ class DatasetBuilder:
         self.logger.info(
             f"Building DataFrame from {data_path} ({file_utils.n_files(data_path)} file(s))..."
         )
+
+        if isinstance(self.TTree_name, set):
+            raise ValueError("Pass only one default tree for analysistop dataset")
 
         # check hard cut variable(s) exist
         vars_to_extract = set().union(*tree_dict.values())
@@ -856,6 +835,9 @@ class DatasetBuilder:
         self, tree_dict: Dict[str, Set[str]]
     ) -> Dict[str, Set[str]]:
         """Add variables necessary to extract for analysistop output"""
+        if isinstance(self.TTree_name, set):
+            raise ValueError("Pass only one default tree for analysistop dataset")
+
         # only add these to 'main tree' to avoid merge issues
         tree_dict[self.TTree_name] |= {"weight_mc", "weight_pileup"}
 

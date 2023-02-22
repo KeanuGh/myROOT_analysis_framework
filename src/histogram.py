@@ -5,17 +5,17 @@ import logging
 from collections import OrderedDict
 from typing import List, Tuple, Any, overload, Type
 
-import ROOT
+import ROOT  # type: ignore
 import boost_histogram as bh
-import matplotlib.pyplot as plt
-import mplhep as hep
+import matplotlib.pyplot as plt  # type: ignore
+import mplhep as hep  # type: ignore
 import numpy as np
-import pandas as pd
-from matplotlib.offsetbox import AnchoredText
+import pandas as pd  # type: ignore
+from matplotlib.offsetbox import AnchoredText  # type: ignore
 from numpy.typing import ArrayLike
 
 from src.logger import get_logger
-from utils.AtlasStyle import set_atlas_style
+from utils.AtlasStyle import set_atlas_style  # type: ignore
 from utils.ROOT_utils import load_ROOT_settings
 from utils.context import redirect_stdout
 
@@ -38,7 +38,7 @@ class Histogram1D(bh.Histogram, family=None):
     def __init__(
         self,
         th1: Type[ROOT.TH1],
-        logger: logging.Logger = None,
+        logger: logging.Logger | None = None,
         name: str = "",
         title: str = "",
     ) -> None:
@@ -48,7 +48,7 @@ class Histogram1D(bh.Histogram, family=None):
     def __init__(
         self,
         bins: List[float] | np.ndarray,
-        logger: logging.Logger = None,
+        logger: logging.Logger | None = None,
         name: str = "",
         title: str = "",
     ) -> None:
@@ -59,7 +59,7 @@ class Histogram1D(bh.Histogram, family=None):
         self,
         bins: Tuple[int, float, float],
         logbins: bool = False,
-        logger: logging.Logger = None,
+        logger: logging.Logger | None = None,
         name: str = "",
         title: str = "",
     ) -> None:
@@ -68,11 +68,11 @@ class Histogram1D(bh.Histogram, family=None):
     @overload
     def __init__(
         self,
-        var: ArrayLike = None,
+        var: ArrayLike | None = None,
         bins: List[float] | np.ndarray | Tuple[int, float, float] | bh.axis.Axis = (10, 0, 10),
-        weight: ArrayLike | int = None,
+        weight: ArrayLike | int | None = None,
         logbins: bool = False,
-        logger: logging.Logger = None,
+        logger: logging.Logger | None = None,
         name: str = "",
         title: str = "",
         **kwargs,
@@ -81,17 +81,18 @@ class Histogram1D(bh.Histogram, family=None):
 
     def __init__(
         self,
-        var: ArrayLike = None,
+        var: ArrayLike | None = None,
         bins: List[float] | np.ndarray | Tuple[int, float, float] | bh.axis.Axis = (10, 0, 10),
-        weight: ArrayLike | float = None,
+        weight: ArrayLike | float | None = None,
         logbins: bool = False,
-        logger: logging.Logger = None,
+        logger: logging.Logger | None = None,
         name: str = "",
         title: str = "",
-        th1: Type[ROOT.TH1] = None,
+        th1: Type[ROOT.TH1] | None = None,
         **kwargs,
     ) -> None:
         """
+        :type bins: object
         :param bins: tuple of bins in x (n_bins, start, stop) or list of bin edges.
                      In the first case returns an axis of type Regular(), otherwise of type Variable().
                      Raises error if not formatted in one of these ways.
@@ -108,23 +109,7 @@ class Histogram1D(bh.Histogram, family=None):
             logger = get_logger()
         self.logger = logger
 
-        self.logger.debug("Checking variables..")
-        # check length of var and weight
-        if hasattr(weight, "__len__") and (len(var) != len(weight)):
-            raise ValueError(
-                f"Weight and value arrays are of different lengths! {len(weight)}, {len(var)}"
-            )
-
-        # check for invalid entries (nan or inf in weights or values)
-        if weight is not None:
-            inv_bool = np.logical_xor(
-                np.logical_xor(np.isnan(var), np.isnan(weight)),
-                np.logical_xor(np.isinf(var), np.isinf(weight)),
-            )
-            if n_inv := inv_bool.sum():
-                self.logger.error(f"{n_inv} invalid entries in histogram!")
-
-        if th1 or isinstance(var, ROOT.TH1):
+        if th1:
             # create from TH1
             self.logger.info(f"Creating histogram from TH1: '{th1}'...")
             edges = [th1.GetBinLowEdge(i + 1) for i in range(th1.GetNbinsX() + 1)]
@@ -142,27 +127,43 @@ class Histogram1D(bh.Histogram, family=None):
 
             # fill
             for idx, _ in np.ndenumerate(self.view(flow=True)):
-                self.view(flow=True).value[idx] = th1.GetBinContent(*idx)  # bin value
-                self.view(flow=True).variance[idx] = th1.GetBinError(*idx) ** 2
+                self.view(flow=True).value[idx] = th1.GetBinContent(*idx)  # type: ignore # bin value
+                self.view(flow=True).variance[idx] = th1.GetBinError(*idx) ** 2  # type: ignore
 
             if var is not None:
                 self.Fill(var, weight=weight)
 
         else:
+            self.logger.debug("Checking variables..")
+            # check length of var and weight
+            if hasattr(weight, "__len__") and (len(var) != len(weight)):  # type: ignore
+                raise ValueError(
+                    f"Weight and value arrays are of different lengths! {len(weight)}, {len(var)}"  # type: ignore
+                )
+
+            # check for invalid entries (nan or inf in weights or values)
+            if weight is not None:
+                inv_bool = np.logical_xor(
+                    np.logical_xor(np.isnan(var), np.isnan(weight)),  # type: ignore
+                    np.logical_xor(np.isinf(var), np.isinf(weight)),  # type: ignore
+                )
+                if n_inv := inv_bool.sum():
+                    self.logger.error(f"{n_inv} invalid entries in histogram!")
+
             self.logger.debug(f"Initialising histogram {name}...")
 
             # TH1
-            self.TH1 = ROOT.TH1F(name, title, *self.__get_TH1_bins(bins))
+            self.TH1 = ROOT.TH1F(name, title, *self.__get_TH1_bins(bins))  # type: ignore
             self.name = name
 
             # get axis
-            axis = bins if isinstance(bins, bh.axis.Axis) else self.__gen_axis(bins, logbins)
+            axis = bins if isinstance(bins, bh.axis.Axis) else self.__gen_axis(bins, logbins)  # type: ignore
             super().__init__(axis, storage=bh.storage.Weight(), **kwargs)
 
             if var is not None:
                 self.Fill(var, weight=weight)
 
-    def Fill(self, var: ArrayLike, weight: ArrayLike | int | float = None) -> Histogram1D:
+    def Fill(self, var: ArrayLike, weight: ArrayLike | int | float | None = None) -> Histogram1D:
         """Fill boost-histogram and TH1. Only accepts numpy array and derivatives or scalar weight values."""
         super().fill(var, weight=weight, threads=0)
 
@@ -170,7 +171,7 @@ class Histogram1D(bh.Histogram, family=None):
         rdf_dict = OrderedDict(x=var.values if isinstance(var, pd.Series) else var)
         if weight is not None:
             if isinstance(weight, (int, float)):
-                weight = np.full(len(var), weight)
+                weight = np.full(len(var), weight)  # type: ignore
             rdf_dict["w"] = weight.values if isinstance(weight, pd.Series) else weight
         rdf = ROOT.RDF.MakeNumpyDataFrame(rdf_dict)
         self.TH1 = rdf.Fill(self.TH1, list(rdf_dict.keys())).GetPtr()
@@ -181,7 +182,7 @@ class Histogram1D(bh.Histogram, family=None):
         new = self._new_hist(copy.copy(self._hist))
         new.TH1 = self.TH1.Clone()
         new.name = self.name
-        new.logger = self.name
+        new.logger = self.logger
         return new
 
     def __deepcopy__(self, memo: Any) -> Histogram1D:
@@ -200,15 +201,17 @@ class Histogram1D(bh.Histogram, family=None):
         """boost-histogram doesn't allow dividing weighted histograms so implement that here"""
         if isinstance(other, Histogram1D):
             # Scale variances based on ROOT method. See https://root.cern.ch/doc/master/TH1_8cxx_source.html#l02929
-            c0 = self.view(flow=True).value
-            c1 = other.view(flow=True).value
+            c0 = self.view(flow=True).value  # type: ignore
+            c1 = other.view(flow=True).value  # type: ignore
             clsq = c1 * c1
             variance = (
-                (self.view(flow=True).variance * clsq) + (other.view(flow=True).variance * c0 * c0)
+                (self.view(flow=True).variance * clsq)
+                + (other.view(flow=True).variance * c0 * c0)
+                # type: ignore
             ) / (clsq * clsq)
 
-            self.view(flow=True).value = self.view(flow=True).value / other.view(flow=True).value
-            self.view(flow=True).variance = variance
+            self.view(flow=True).value = self.view(flow=True).value / other.view(flow=True).value  # type: ignore
+            self.view(flow=True).variance = variance  # type: ignore
             self.TH1.Divide(other.TH1)
             return self
         else:
@@ -218,7 +221,7 @@ class Histogram1D(bh.Histogram, family=None):
                     self.TH1.SetBinContent(i + 1, self.TH1.GetBinContent(i + 1) / val)
                     self.TH1.SetBinError(i + 1, self.TH1.GetBinError(i + 1) / val)
             else:
-                self.TH1.Scale(1 / other)
+                self.TH1.Scale(1 / other)  # type: ignore
             # let boost-histogram handle return
             return self._compute_inplace_op("__itruediv__", other)
 
@@ -231,14 +234,14 @@ class Histogram1D(bh.Histogram, family=None):
         """boost-histogram doesn't allow multiplying weighted histograms so implement that here"""
         if isinstance(other, Histogram1D):
             # Scale variances based on ROOT method. See https://root.cern.ch/doc/master/TH1_8cxx_source.html#l06116
-            c0 = self.view(flow=True).value
-            c1 = other.view(flow=True).value
+            c0 = self.view(flow=True).value  # type: ignore
+            c1 = other.view(flow=True).value  # type: ignore
             variance = (
-                self.view(flow=True).variance * c1 * c1 + other.view(flow=True).variance * c0 * c0
+                self.view(flow=True).variance * c1 * c1 + other.view(flow=True).variance * c0 * c0  # type: ignore
             )
 
-            self.view(flow=True).value.__imul__(other.view(flow=True).value)
-            self.view(flow=True).variance = variance
+            self.view(flow=True).value.__imul__(other.view(flow=True).value)  # type: ignore
+            self.view(flow=True).variance = variance  # type: ignore
             self.TH1.Multiply(other.TH1)
             return self
         else:
@@ -272,15 +275,15 @@ class Histogram1D(bh.Histogram, family=None):
                      In the first case returns an axis of type Regular(), otherwise of type Variable().
         :param logbins: whether logarithmic bins. Silently ignored if using variable bins.
         """
-        if len(bins) == 3 and isinstance(bins, tuple):
+        if len(bins) == 3 and isinstance(bins, tuple):  # type: ignore
             return bh.axis.Regular(*bins, transform=bh.axis.transform.log if logbins else None)
         else:
-            return bh.axis.Variable(bins)
+            return bh.axis.Variable(bins)  # type: ignore
 
     @staticmethod
     def __get_TH1_bins(
         bins: List[float] | Tuple[int, float, float] | bh.axis.Axis
-    ) -> Tuple[int, list | np.ndaray] | Tuple[int, float, float]:
+    ) -> Tuple[int, list | np.typing.ArrayLike] | Tuple[int, float, float]:
         """Format bins for TH1 constructor"""
         if isinstance(bins, bh.axis.Axis):
             return bins.size, bins.edges
@@ -305,22 +308,22 @@ class Histogram1D(bh.Histogram, family=None):
         return self.axes[0].extent
 
     @property
-    def bin_widths(self) -> np.array:
+    def bin_widths(self) -> np.typing.ArrayLike:
         """get bin widths"""
         return self.axes[0].widths
 
     @property
-    def bin_range(self) -> np.array:
+    def bin_range(self) -> np.typing.ArrayLike:
         """get histogram range"""
-        return self.bin_edges[-1] - self.bin_edges[0]
+        return self.bin_edges[-1] - self.bin_edges[0]  # type: ignore
 
     @property
-    def bin_edges(self) -> np.array:
+    def bin_edges(self) -> np.typing.ArrayLike:
         """get bin edges"""
         return self.axes[0].edges
 
     @property
-    def bin_centres(self) -> np.array:
+    def bin_centres(self) -> np.typing.ArrayLike:
         """get bin centres"""
         return self.axes[0].centers
 
@@ -331,33 +334,33 @@ class Histogram1D(bh.Histogram, family=None):
 
     def eff_entries(self, flow: bool = False) -> float:
         """get effective number of entries"""
-        return self.bin_sum(flow) * self.bin_sum(flow) / sum(self.sumw2(flow))
+        return self.bin_sum(flow) * self.bin_sum(flow) / sum(self.sumw2(flow))  # type: ignore
 
-    def sumw2(self, flow: bool = False) -> np.array:
+    def sumw2(self, flow: bool = False) -> np.typing.ArrayLike:
         """get squared sum of weights"""
-        return self.view(flow).variance
+        return self.view(flow).variance  # type: ignore
 
-    def root_sumw2(self, flow: bool = False) -> np.array:
+    def root_sumw2(self, flow: bool = False) -> np.typing.ArrayLike:
         """get squared sum of weights"""
         return np.sqrt(self.sumw2(flow))
 
-    def bin_values(self, flow: bool = False) -> np.array:
+    def bin_values(self, flow: bool = False) -> np.typing.ArrayLike:
         """get bin values"""
         return self.values(flow)
 
     @property
-    def areas(self) -> np.array:
+    def areas(self) -> np.typing.ArrayLike:
         """get bin areas"""
-        return self.bin_values() * self.bin_widths
+        return self.bin_values() * self.bin_widths  # type: ignore
 
     @property
     def integral(self) -> float:
         """get integral of histogram"""
-        return sum(self.areas)
+        return sum(self.areas)  # type: ignore
 
     def bin_sum(self, flow: bool = False) -> float:
         """Get sum of bin contents"""
-        return sum(self.bin_values(flow))
+        return sum(self.bin_values(flow))  # type: ignore
 
     # Stats
     # ===================
@@ -450,7 +453,7 @@ class Histogram1D(bh.Histogram, family=None):
         normalise: float | bool = False,
         scale_by_bin_width: bool = False,
         stats_box: bool = False,
-        out_filename: str = None,
+        out_filename: str | None = None,
         show: bool = False,
         **kwargs,
     ) -> Histogram1D:
@@ -478,7 +481,7 @@ class Histogram1D(bh.Histogram, family=None):
 
         if scale_by_bin_width:
             self.logger.debug(f"Scaling histogram {self.name} by bin width...")
-            hist /= hist.bin_widths
+            hist /= hist.bin_widths  # type: ignore
 
         # normalise/scale
         if not normalise:
@@ -537,7 +540,7 @@ class Histogram1D(bh.Histogram, family=None):
         normalise: float | bool = False,
         plot_option: str = "",
         stats_box: bool = False,
-        out_filename: str = False,
+        out_filename: str | None = None,
     ) -> None:
         """
         ROOT plot
@@ -567,10 +570,10 @@ class Histogram1D(bh.Histogram, family=None):
         ax: plt.Axes = None,
         yerr: ArrayLike | bool | str = True,
         normalise: bool = False,
-        label: str = None,
+        label: str | None = None,
         fit: bool = False,
         name: str = "",
-        out_filename: str = None,
+        out_filename: str | None = None,
         yax_lim: float = False,
         display_stats: bool = True,
         color: str = "k",
@@ -616,9 +619,9 @@ class Histogram1D(bh.Histogram, family=None):
         if yerr is True:
             yerr = h_ratio.root_sumw2()
         elif yerr == "carry":
-            yerr = (self.root_sumw2() / self.bin_values()) * h_ratio.bin_values()
+            yerr = (self.root_sumw2() / self.bin_values()) * h_ratio.bin_values()  # type: ignore
             for i in range(h_ratio.TH1.GetNbinsX()):
-                h_ratio.TH1.SetBinError(i + 1, yerr[i])
+                h_ratio.TH1.SetBinError(i + 1, yerr[i])  # type: ignore
 
         if fit:
             if h_ratio.TH1.GetEntries() == 0:
@@ -641,7 +644,7 @@ class Histogram1D(bh.Histogram, family=None):
                 # display fit line
                 col = "r" if color == "k" else color
                 ax.fill_between(
-                    [self.bin_edges[0], self.bin_edges[-1]],
+                    [self.bin_edges[0], self.bin_edges[-1]],  # type: ignore
                     [c - err],
                     [c + err],
                     color=col,
@@ -672,7 +675,7 @@ class Histogram1D(bh.Histogram, family=None):
         ax.errorbar(
             h_ratio.bin_centres,
             h_ratio.bin_values(),
-            xerr=h_ratio.bin_widths / 2,
+            xerr=h_ratio.bin_widths / 2,  # type: ignore
             yerr=yerr,
             linestyle="None",
             label=label,
@@ -685,8 +688,8 @@ class Histogram1D(bh.Histogram, family=None):
             ax.set_ylim(1 - yax_lim, 1 + yax_lim)
         else:
             # I don't know why the matplotlib automatic yaxis scaling doesn't work, but I've done it for them here
-            ymax = np.max(np.ma.masked_invalid(h_ratio.bin_values() + (yerr / 2)))
-            ymin = np.min(np.ma.masked_invalid(h_ratio.bin_values() - (yerr / 2)))
+            ymax = np.max(np.ma.masked_invalid(h_ratio.bin_values() + (yerr / 2)))  # type: ignore
+            ymin = np.min(np.ma.masked_invalid(h_ratio.bin_values() - (yerr / 2)))  # type: ignore
             vspace = (ymax - ymin) * 0.1
             ax.set_ylim(ymin - vspace, ymax + vspace)
 

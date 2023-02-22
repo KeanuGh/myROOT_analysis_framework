@@ -13,7 +13,7 @@ class TestSimpleAnalysisTop:
         datasets = {
             "wmintaunu": {
                 "data_path": "tests/resources/test_analysistop_mcwmintaunu.root",
-                "cutfile_path": "tests/resources/cutfile_EXAMPLE.txt",
+                "cutfile": "tests/resources/cutfile_EXAMPLE.txt",
                 "TTree_name": "truth",
                 "lepton": "tau",
                 "label": r"$W^-\rightarrow\tau\nu\rightarrow\mu\nu$",

@@ -2,6 +2,7 @@ import logging
 import re
 from collections import OrderedDict
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Tuple, Dict, Set
 
 from src.logger import get_logger
@@ -44,9 +45,9 @@ class Cutfile:
 
     def __init__(
         self,
-        file_path: str,
+        file_path: str | Path,
         default_tree: str | Set[str] = "0:NONE",
-        logger: logging.Logger = None,
+        logger: logging.Logger | None = None,
         sep="\t",
     ):
         """
@@ -138,7 +139,7 @@ class Cutfile:
         return Cut(name=name, cutstr=cut_str, var=var, tree=tree, is_reco=is_reco)
 
     def parse_cutfile(
-        self, path: str = None, sep="\t"
+        self, path: str | None = None, sep="\t"
     ) -> Tuple[OrderedDict[str, Cut], Dict[str, Set[str]]]:
         """
         | Generates pythonic outputs from input cutfile

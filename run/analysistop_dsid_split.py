@@ -6,14 +6,61 @@ from tabulate import tabulate
 from analysis import Analysis
 from utils.PMG_tool import get_crossSection
 
-ANALYSISTOP_PATH = pathlib.Path('/data/analysistop_out/mc16a')
-DATA_OUT_DIR = '/data/dataset_pkl_outputs/'
+ANALYSISTOP_PATH = pathlib.Path("/data/analysistop_out/mc16a")
+DATA_OUT_DIR = "/data/dataset_pkl_outputs/"
 bins = np.array(
-    [130, 140.3921, 151.6149, 163.7349, 176.8237, 190.9588, 206.2239, 222.7093, 240.5125, 259.7389, 280.5022,
-     302.9253, 327.1409, 353.2922, 381.5341, 412.0336, 444.9712, 480.5419, 518.956, 560.4409, 605.242, 653.6246,
-     705.8748, 762.3018, 823.2396, 889.0486, 960.1184, 1036.869, 1119.756, 1209.268, 1305.936, 1410.332, 1523.072,
-     1644.825, 1776.311, 1918.308, 2071.656, 2237.263, 2416.107, 2609.249, 2817.83, 3043.085, 3286.347, 3549.055,
-     3832.763, 4139.151, 4470.031, 4827.361, 5213.257])
+    [
+        130,
+        140.3921,
+        151.6149,
+        163.7349,
+        176.8237,
+        190.9588,
+        206.2239,
+        222.7093,
+        240.5125,
+        259.7389,
+        280.5022,
+        302.9253,
+        327.1409,
+        353.2922,
+        381.5341,
+        412.0336,
+        444.9712,
+        480.5419,
+        518.956,
+        560.4409,
+        605.242,
+        653.6246,
+        705.8748,
+        762.3018,
+        823.2396,
+        889.0486,
+        960.1184,
+        1036.869,
+        1119.756,
+        1209.268,
+        1305.936,
+        1410.332,
+        1523.072,
+        1644.825,
+        1776.311,
+        1918.308,
+        2071.656,
+        2237.263,
+        2416.107,
+        2609.249,
+        2817.83,
+        3043.085,
+        3286.347,
+        3549.055,
+        3832.763,
+        4139.151,
+        4470.031,
+        4827.361,
+        5213.257,
+    ]
+)
 # BRANCH = "MC_WZmu_el_pt_born"
 BRANCH = "MC_WZ_dilep_m_born"
 
@@ -21,62 +68,63 @@ BRANCH = "MC_WZ_dilep_m_born"
 datasets = dict()
 dataset_dirs = [d for d in ANALYSISTOP_PATH.iterdir() if d.is_dir()]
 for dataset_dir in dataset_dirs:
-    datasets[str(dataset_dir.name) + '_analysistop'] = {
-        'data_path': dataset_dir / '*.root',
-        'label': dataset_dir.name,
-        'cutfile_path': '../options/DTA_cuts/analysistop.txt',
+    datasets[str(dataset_dir.name) + "_analysistop"] = {
+        "data_path": dataset_dir / "*.root",
+        "label": dataset_dir.name,
+        "cutfile": "../options/DTA_cuts/analysistop.txt",
     }
     # add MTW cut to peak samples
-    if dataset_dir.name in ('wmintaunu', 'wplustaunu'):
-        datasets[str(dataset_dir.name) + '_analysistop']['cutfile_path'] = '../options/DTA_cuts/analysistop_peak.txt'
-        datasets[str(dataset_dir.name) + '_analysistop']['hard cut'] = 'M_W'
+    if dataset_dir.name in ("wmintaunu", "wplustaunu"):
+        datasets[str(dataset_dir.name) + "_analysistop"][
+            "cutfile"
+        ] = "../options/DTA_cuts/analysistop_peak.txt"
+        datasets[str(dataset_dir.name) + "_analysistop"]["hard cut"] = "M_W"
 datasets |= {
     # analysistop w->taunu->munu
-    'wplustaunu_full_analysistop': {
-        'data_path': ANALYSISTOP_PATH / 'wplustaunu_*/*.root',
-        'cutfile_path': '../options/DTA_cuts/analysistop.txt',
-        'label': r'Powheg $W\rightarrow\tau\nu\rightarrow \mu\nu$',
+    "wplustaunu_full_analysistop": {
+        "data_path": ANALYSISTOP_PATH / "wplustaunu_*/*.root",
+        "cutfile": "../options/DTA_cuts/analysistop.txt",
+        "label": r"Powheg $W\rightarrow\tau\nu\rightarrow \mu\nu$",
     },
-    'wplustaunu_full_analysistop_peak': {
-        'data_path': ANALYSISTOP_PATH / 'wplustaunu/*.root',
-        'cutfile_path': '../options/DTA_cuts/analysistop_peak.txt',
-        'hard_cut': 'M_W',
+    "wplustaunu_full_analysistop_peak": {
+        "data_path": ANALYSISTOP_PATH / "wplustaunu/*.root",
+        "cutfile": "../options/DTA_cuts/analysistop_peak.txt",
+        "hard_cut": "M_W",
         # 'force_rebuild': True,
-        'label': r'Powheg/Pythia 8 $W\rightarrow\tau\nu\rightarrow \mu\nu$',
+        "label": r"Powheg/Pythia 8 $W\rightarrow\tau\nu\rightarrow \mu\nu$",
     },
     # analysistop w->taunu->munu
-    'wmintaunu_full_analysistop': {
-        'data_path': ANALYSISTOP_PATH / 'wmintaunu_*/*.root',
-        'cutfile_path': '../options/DTA_cuts/analysistop.txt',
+    "wmintaunu_full_analysistop": {
+        "data_path": ANALYSISTOP_PATH / "wmintaunu_*/*.root",
+        "cutfile": "../options/DTA_cuts/analysistop.txt",
         # 'force_rebuild': False,
-        'label': r'Powheg $W\rightarrow\tau\nu\rightarrow \mu\nu$',
+        "label": r"Powheg $W\rightarrow\tau\nu\rightarrow \mu\nu$",
     },
-    'wmintaunu_full_analysistop_peak': {
-        'data_path': ANALYSISTOP_PATH / 'wmintaunu/*.root',
-        'cutfile_path': '../options/DTA_cuts/analysistop_peak.txt',
-        'hard_cut': 'M_W',
+    "wmintaunu_full_analysistop_peak": {
+        "data_path": ANALYSISTOP_PATH / "wmintaunu/*.root",
+        "cutfile": "../options/DTA_cuts/analysistop_peak.txt",
+        "hard_cut": "M_W",
         # 'force_rebuild': True,
-        'label': r'Powheg/Pythia 8 $W\rightarrow\tau\nu\rightarrow \mu\nu$',
+        "label": r"Powheg/Pythia 8 $W\rightarrow\tau\nu\rightarrow \mu\nu$",
     },
 }
 
-
 my_analysis = Analysis(
     datasets,
-    analysis_label='analysistop_dsid_analysis',
+    analysis_label="analysistop_dsid_analysis",
     # force_rebuild=True,
-    TTree_name='truth',
-    dataset_type='analysistop',
-    lumi_year='2016+2015',
+    TTree_name="truth",
+    dataset_type="analysistop",
+    lumi_year="2016+2015",
     # log_level=10,
     data_dir=DATA_OUT_DIR,
-    log_out='console',
-    lepton='tau',
+    log_out="console",
+    lepton="tau",
     validate_duplicated_events=False,
     # force_recalc_weights=True,
 )
-my_analysis.merge_datasets('wplustaunu_full_analysistop', 'wplustaunu_full_analysistop_peak')
-my_analysis.merge_datasets('wmintaunu_full_analysistop', 'wmintaunu_full_analysistop_peak')
+my_analysis.merge_datasets("wplustaunu_full_analysistop", "wplustaunu_full_analysistop_peak")
+my_analysis.merge_datasets("wmintaunu_full_analysistop", "wmintaunu_full_analysistop_peak")
 
 base_metadata = []
 reg_metadata = []
@@ -85,39 +133,67 @@ min_xs_sum = 0
 plus_xs_sum = 0
 for ds in my_analysis.datasets:
     dsid = my_analysis[ds].df.index[0][0]
-    my_analysis[ds].label += '_' + str(dsid)  # set label to include DSID
+    my_analysis[ds].label += "_" + str(dsid)  # set label to include DSID
 
     xs = get_crossSection(dsid)
     # get total cross-section
-    if ds not in ('wmintaunu', 'wplustaunu'):
-        if 'min' in ds: min_xs_sum += xs
-        elif 'plus' in ds: plus_xs_sum += xs
+    if ds not in ("wmintaunu", "wplustaunu"):
+        if "min" in ds:
+            min_xs_sum += xs
+        elif "plus" in ds:
+            plus_xs_sum += xs
 
     # a new weight
-    my_analysis[ds]['base_weight'] = my_analysis[ds]['weight_mc'] * abs(my_analysis[ds]['weight_mc']) / my_analysis[ds]['totalEventsWeighted']
+    my_analysis[ds]["base_weight"] = (
+        my_analysis[ds]["weight_mc"]
+        * abs(my_analysis[ds]["weight_mc"])
+        / my_analysis[ds]["totalEventsWeighted"]
+    )
 
     # base weight histogram
-    h = my_analysis.plot_hist(ds, 'MC_WZ_dilep_m_born',  bins=bins, weight='base_weight', logx=True, stats_box=True,
-                              name_prefix='base_weighted')
+    h = my_analysis.plot_hist(
+        ds,
+        "MC_WZ_dilep_m_born",
+        bins=bins,
+        weight="base_weight",
+        logx=True,
+        stats_box=True,
+        name_prefix="base_weighted",
+    )
     base_metadata.append([dsid, h[0].name, h[0].n_entries, h[0].bin_sum(True), h[0].integral, xs])
     base_metadata.sort(key=lambda row: row[0])
 
     # regular histogram
-    h = my_analysis.plot_hist(ds, 'MC_WZ_dilep_m_born',  bins=bins, weight='truth_weight', logx=True, stats_box=True)
+    h = my_analysis.plot_hist(
+        ds, "MC_WZ_dilep_m_born", bins=bins, weight="truth_weight", logx=True, stats_box=True
+    )
     reg_metadata.append([dsid, h[0].name, h[0].n_entries, h[0].bin_sum(True), h[0].integral, xs])
     reg_metadata.sort(key=lambda row: row[0])
 
     # bin-scaled histogram
-    h = my_analysis.plot_hist(ds, 'MC_WZ_dilep_m_born', bins=bins, weight='truth_weight', logx=True, stats_box=True,
-                              scale_by_bin_width=True, name_prefix='bin_scaled')
-    bin_scaled_metadata.append([dsid, h[0].name, h[0].n_entries, h[0].bin_sum(True), h[0].integral, xs])
+    h = my_analysis.plot_hist(
+        ds,
+        "MC_WZ_dilep_m_born",
+        bins=bins,
+        weight="truth_weight",
+        logx=True,
+        stats_box=True,
+        scale_by_bin_width=True,
+        name_prefix="bin_scaled",
+    )
+    bin_scaled_metadata.append(
+        [dsid, h[0].name, h[0].n_entries, h[0].bin_sum(True), h[0].integral, xs]
+    )
     bin_scaled_metadata.sort(key=lambda row: row[0])
 
 my_analysis.save_histograms()
 
 # print histogram metadata
-headers = ['DSID', 'Name', 'Entries', 'Bin sum', 'Integral', 'PMG cross-section']
-total = ['TOTAL', '-', ]
+headers = ["DSID", "Name", "Entries", "Bin sum", "Integral", "PMG cross-section"]
+total = [
+    "TOTAL",
+    "-",
+]
 my_analysis.logger.info("Base:")
 my_analysis.logger.info(tabulate(base_metadata, headers=headers))
 my_analysis.logger.info("Regular:")
@@ -126,23 +202,36 @@ my_analysis.logger.info("Bin-width-scaled:")
 my_analysis.logger.info(tabulate(bin_scaled_metadata, headers=headers))
 
 # compare with jesal for both plus and minus
-for c in ('wmin', 'wplus'):
-    ds_name = f'{c}taunu_analysistop'
-    ds_name_full = f'{c}taunu_full_analysistop'
+for c in ("wmin", "wplus"):
+    ds_name = f"{c}taunu_analysistop"
+    ds_name_full = f"{c}taunu_full_analysistop"
 
     # merge all wmin
-    wc_strs = [ds for ds in datasets.keys()
-               if (c in ds) and ds not in (ds_name_full, ds_name, ds_name_full + '_peak')]
+    wc_strs = [
+        ds
+        for ds in datasets.keys()
+        if (c in ds) and ds not in (ds_name_full, ds_name, ds_name_full + "_peak")
+    ]
     my_analysis.merge_datasets(ds_name, *wc_strs)
     my_analysis[ds_name].dsid_metadata_printout()
 
-    print(f'{c} full length: ', len(my_analysis[ds_name_full]))
-    print(f'{c} merged length: ', len(my_analysis[ds_name]))
+    print(f"{c} full length: ", len(my_analysis[ds_name_full]))
+    print(f"{c} merged length: ", len(my_analysis[ds_name]))
     my_analysis[ds_name].dsid_metadata_printout()
     my_analysis[ds_name_full].dsid_metadata_printout()
 
     # compare with unseparated
-    my_analysis.plot_hist([ds_name_full, ds_name], BRANCH, labels=[f'{c}_full', f'{c}_merged'], bins=bins, logx=True, logy=True, weight='truth_weight', ratio_fit=True, stats_box=True)
+    my_analysis.plot_hist(
+        [ds_name_full, ds_name],
+        BRANCH,
+        labels=[f"{c}_full", f"{c}_merged"],
+        bins=bins,
+        logx=True,
+        logy=True,
+        weight="truth_weight",
+        ratio_fit=True,
+        stats_box=True,
+    )
 
     # # import jesal histogram
     # h_jesal_root = ROOT.TFile(f"../{c}taunu_{'wminus' if c == 'wmin' else 'wplus'}_Total.root").Get("h_WZ_dilep_m_born")

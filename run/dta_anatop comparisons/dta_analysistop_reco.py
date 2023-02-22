@@ -14,7 +14,7 @@ if __name__ == "__main__":
         # dta w->taunu->munu
         "wtaunu_L_dta": {
             "data_path": DTA_PATH + "/user.kghorban.Sh_2211_Wtaunu_L*/*.root",
-            "cutfile_path": "../../options/DTA_cuts/dta_reco.txt",
+            "cutfile": "../../options/DTA_cuts/dta_reco.txt",
             "TTree_name": {"T_s1thv_NOMINAL", "T_s1tev_NOMINAL", "T_s1tmv_NOMINAL"},
             "lepton": "tau",
             "dataset_type": "dta",
@@ -25,7 +25,7 @@ if __name__ == "__main__":
         # analysistop
         "wtaunu_analysistop_reco": {
             "data_path": ANALYSISTOP_PATH + "/w*taunu_*/*.root",
-            "cutfile_path": "../../options/DTA_cuts/analysistop.txt",
+            "cutfile": "../../options/DTA_cuts/analysistop.txt",
             "lepton": "tau",
             "dataset_type": "analysistop",
             # "force_rebuild": True,
@@ -33,7 +33,7 @@ if __name__ == "__main__":
         },
         "wtaunu_analysistop_reco_peak": {
             "data_path": ANALYSISTOP_PATH + "/w*taunu/*.root",
-            "cutfile_path": "../../options/DTA_cuts/analysistop.txt",
+            "cutfile": "../../options/DTA_cuts/analysistop.txt",
             "lepton": "tau",
             "dataset_type": "analysistop",
             "hard_cut": "MC_WZ_m < 120",

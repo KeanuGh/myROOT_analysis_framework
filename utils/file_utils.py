@@ -1,38 +1,7 @@
-import logging
 import os
-from filecmp import cmp
 from glob import glob
 from pathlib import Path
 from warnings import warn
-
-
-def get_last_backup(backup_dir: str, name: str = "") -> str | None:
-    if is_dir_empty(backup_dir) or len(glob(backup_dir + name + "*")) == 0:
-        return None
-    else:
-        return max(glob(backup_dir + name + "*"), key=os.path.getctime)
-
-
-def identical_to_backup(
-    file: str,
-    logger: logging.Logger,
-    backup_dir: str | None = None,
-    backup_file: str | None = None,
-    name: str = "",
-) -> bool:
-    """
-    checks whether current file is the same as the last backup file.
-    input either backup directory or backup file.
-    Returns False if backup_file or backup_dir is None
-    """
-    if backup_dir and backup_file:
-        raise Exception("Input either directory or filepath")
-    elif not backup_dir and not backup_file:
-        logger.warning("Backup directory is empty")
-        return False
-    elif backup_dir:
-        backup_file = get_last_backup(backup_dir, name)
-    return cmp(file, backup_file)
 
 
 def is_dir_empty(dirpath: str) -> bool:
@@ -48,7 +17,7 @@ def delete_file(file: str) -> None:
         warn(f"No file named {file}. No file deleted")
 
 
-def get_filename(filepath: str, suffix: bool = False) -> str:
+def get_filename(filepath: str | Path, suffix: bool = False) -> str:
     """gets the name of file contained in path"""
     if suffix:
         return Path(filepath).name

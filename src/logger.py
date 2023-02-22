@@ -9,8 +9,8 @@ def get_logger(
     log_out: str = "console",
     name: str = "log",
     timedatelog: bool = False,
-    log_dir: Path = None,
-    log_file: str = None,
+    log_dir: Path | None = None,
+    log_file: str | None = None,
     mode: str = "w",
 ) -> logging.Logger:
     """

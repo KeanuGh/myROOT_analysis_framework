@@ -4,7 +4,7 @@ Defines helper functions to calculate various kinematic/other physical variables
 from typing import Dict, TypedDict, Callable, List
 
 import numpy as np
-import pandas as pd
+import pandas as pd  # type: ignore
 
 
 # VARIABLE FUNCTIONS

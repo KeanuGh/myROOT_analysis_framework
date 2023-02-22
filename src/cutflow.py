@@ -2,9 +2,9 @@ import logging
 from pathlib import Path
 from typing import OrderedDict
 
-import matplotlib.pyplot as plt
-import mplhep as hep
-import pandas as pd
+import matplotlib.pyplot as plt  # type: ignore
+import mplhep as hep  # type: ignore
+import pandas as pd  # type: ignore
 
 import src.config as config
 from src.cutfile import Cut

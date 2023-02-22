@@ -1,5 +1,6 @@
 import os
-import ROOT
+
+import ROOT  # type: ignore
 
 
 def set_atlas_style():

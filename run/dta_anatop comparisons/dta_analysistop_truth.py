@@ -15,7 +15,7 @@ def main():
         # dta w->taunu->munu
         "wtaunu_dta": {
             "data_path": DTA_PATH + "/user.kghorban.Sh_2211_Wtaunu_*/*.root",
-            "cutfile_path": "../../options/DTA_cuts/dta_truth.txt",
+            "cutfile": "../../options/DTA_cuts/dta_truth.txt",
             "TTree_name": {"T_s1thv_NOMINAL", "T_s1tev_NOMINAL", "T_s1tmv_NOMINAL"},
             "lepton": "tau",
             "dataset_type": "dta",
@@ -26,7 +26,7 @@ def main():
         # analysistop w->taunu->munu
         "wtaunu_analysistop": {
             "data_path": ANALYSISTOP_PATH + "/w*taunu_*/*.root",
-            "cutfile_path": "../../options/DTA_cuts/analysistop.txt",
+            "cutfile": "../../options/DTA_cuts/analysistop.txt",
             "lepton": "tau",
             "dataset_type": "analysistop",
             "force_rebuild": True,
@@ -34,7 +34,7 @@ def main():
         },
         "wtaunu_analysistop_peak": {
             "data_path": ANALYSISTOP_PATH + "/w*taunu/*.root",
-            "cutfile_path": "../../options/DTA_cuts/analysistop.txt",
+            "cutfile": "../../options/DTA_cuts/analysistop.txt",
             "lepton": "tau",
             "dataset_type": "analysistop",
             "hard_cut": "MC_WZ_m < 120",

@@ -5,12 +5,12 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List, Tuple, Iterable, OrderedDict
 
-import matplotlib.pyplot as plt
-import mplhep as hep
+import matplotlib.pyplot as plt  # type: ignore
+import mplhep as hep  # type: ignore
 import numpy as np
-import pandas as pd
+import pandas as pd  # type: ignore
 from numpy.typing import ArrayLike
-from tabulate import tabulate
+from tabulate import tabulate  # type: ignore
 
 import src.config as config
 from src.cutfile import Cutfile, Cut
@@ -215,7 +215,7 @@ class Dataset:
 
     @classmethod
     def get_luminosity(
-        cls, df: pd.DataFrame, xs: float = None, weight_col: str = "weight"
+        cls, df: pd.DataFrame, xs: float | None = None, weight_col: str = "weight"
     ) -> float:
         """
         Calculates luminosity from dataframe
@@ -255,7 +255,7 @@ class Dataset:
     # ===============================
     # ========= PRINTOUTS ===========
     # ===============================
-    def save_pkl_file(self, path: str = None) -> None:
+    def save_pkl_file(self, path: str | None = None) -> None:
         """Saves pickle"""
         if not path:
             path = self.pkl_file
@@ -392,6 +392,7 @@ class Dataset:
         if inplace:
             self.df = self.df.loc[self.df[cut_cols].all(1)]
             self.df.drop(columns=cut_cols, inplace=True)
+            return None
         else:
             return self.df.loc[self.df[cut_cols].all(1)].drop(columns=cut_cols)
 
@@ -465,7 +466,7 @@ class Dataset:
         df = self.apply_cuts(apply_cuts) if apply_cuts else self.df
 
         weights = df[weight] if isinstance(weight, str) else weight
-        hist = Histogram1D(df[var], bins, weights, logbins, name=name, logger=self.logger)
+        hist = Histogram1D(df[var], bins, weights, logbins, name=name, logger=self.logger)  # type: ignore
         hist = hist.plot(ax=ax, yerr=yerr, normalise=normalise, **kwargs)
         return hist
 
@@ -490,6 +491,10 @@ class Dataset:
         self.logger.info(f"Plotting cuts on {var}...")
 
         fig, (fig_ax, accept_ax) = plt.subplots(2, 1, gridspec_kw={"height_ratios": [3, 1]})
+        if normalise == "lumi":
+            normalise = self.lumi
+        elif isinstance(normalise, str):
+            raise ValueError(f"Unknown normalisation factor '{normalise}'")
 
         # INCLUSIVE PLOT
         # ================
@@ -597,21 +602,21 @@ class Dataset:
             self.logger.debug(f"Plotting DSID {dsid}...")
             weights = dsid_df[weight] if isinstance(weight, str) else weight
             hist = Histogram1D(
-                dsid_df[var], bins=bins, weight=weights, logbins=logbins, logger=self.logger
+                dsid_df[var], bins=bins, weight=weights, logbins=logbins, logger=self.logger  # type: ignore
             )
             hist.plot(ax=ax, label=dsid, **kwargs)
         # inclusive
         self.logger.debug(f"Plotting inclusive histogram...")
         weights = self.df[weight] if isinstance(weight, str) else weight
         hist = Histogram1D(
-            self.df[var], bins=bins, weight=weights, logbins=logbins, logger=self.logger
+            self.df[var], bins=bins, weight=weights, logbins=logbins, logger=self.logger  # type: ignore
         )
         hist.plot(ax=ax, label="Inclusive", color="k", **kwargs)
 
         ax.legend(fontsize=10, ncol=2)
         title = self.label if not title else title
         plotting_utils.set_axis_options(
-            ax, var, bins, self.lepton, xlabel, ylabel, title, logx, logy
+            ax, var, bins, self.lepton, xlabel, ylabel, title, logx, logy  # type: ignore
         )
 
         filename = f"{self.plot_dir}{self.name}_{var}_SLICES.png"
@@ -656,8 +661,8 @@ class Dataset:
         ylabel: str = "",
         ax: plt.Axes = None,
         to_file: bool = True,
-        xlim: Tuple[float, float] = None,
-        ylim: Tuple[float, float] = None,
+        xlim: Tuple[float, float] | None = None,
+        ylim: Tuple[float, float] | None = None,
         logx: bool = False,
         logy: bool = False,
         lepton: str = "lepton",

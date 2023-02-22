@@ -108,7 +108,7 @@ my_analysis = Analysis(
     data_dir=DATA_OUT_DIR,
     log_out="both",
     lepton="tau",
-    cutfile_path="../options/DTA_cuts/dta_init.txt",
+    cutfile="../options/DTA_cuts/dta_init.txt",
     # force_recalc_weights=True,
 )
 

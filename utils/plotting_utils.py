@@ -1,14 +1,12 @@
-from typing import Tuple, List
+from typing import Tuple, Sequence
 from warnings import warn
 
 import boost_histogram as bh
-import matplotlib.pyplot as plt
-import mplhep as hep
-import pandas as pd
-from matplotlib.colors import LogNorm
-from numpy.typing import ArrayLike
+import matplotlib.pyplot as plt  # type: ignore
+import mplhep as hep  # type: ignore
+import pandas as pd  # type: ignore
+from matplotlib.colors import LogNorm  # type: ignore
 
-import src.config as config
 from utils.variable_names import variable_data
 
 # set plot style
@@ -19,10 +17,13 @@ plt.style.use([hep.style.ATLAS])
 # ===== HISTOGRAM VARIABLES =====
 # ===============================
 def get_axis_labels(
-    var_name: str | List[str], lepton: str = "lepton", diff_xs: bool = False
+    var_name: str | Sequence[str], lepton: str | None = None, diff_xs: bool = False
 ) -> Tuple[str | None, str | None]:
     """Gets label for corresponding variable in axis labels dictionary"""
-    if isinstance(var_name, list):
+    if not lepton:
+        lepton = "lepton"
+
+    if not isinstance(var_name, str):
         # If a list is passed, check if all variables have the same name, otherwise throw warning and pick first
         try:
             names = [variable_data[var]["name"] for var in var_name]
@@ -79,7 +80,9 @@ def get_axis_labels(
     return xlabel, ylabel
 
 
-def get_axis(bins: List[float] | Tuple[int, float, float], logbins: bool = False) -> bh.axis.Axis:
+def get_axis(
+    bins: Sequence[float | int] | Tuple[int, float, float], logbins: bool = False
+) -> bh.axis.Axis:
     """
     Returns the correct type of boost-histogram axis based on the input bins.
 
@@ -105,9 +108,9 @@ def get_axis(bins: List[float] | Tuple[int, float, float], logbins: bool = False
 
 def set_axis_options(
     axis: plt.axes,
-    var_name: List[str] | str,
-    bins: tuple | list | ArrayLike,
-    lepton: str = None,
+    var_name: Sequence[str] | str,
+    bins: Sequence[float | int],
+    lepton: str = "",
     xlabel: str = "",
     ylabel: str = "",
     title: str = "",
@@ -158,12 +161,12 @@ def set_axis_options(
 def histplot_2d(
     var_x: pd.Series,
     var_y: pd.Series,
-    xbins: tuple | list,
-    ybins: tuple | list,
+    xbins: Sequence[float | int],
+    ybins: Sequence[float | int],
     weights: pd.Series,
     ax: plt.axes,
     fig: plt.figure,
-    n_threads: int = config.n_threads,
+    n_threads: int = -1,
     is_z_log: bool = True,
     is_square: bool = True,
 ) -> bh.Histogram:
@@ -193,7 +196,7 @@ def histplot_2d(
 
     # setup mesh differently depending on bh storage
     if hasattr(hist_2d.view(), "value"):
-        mesh = ax.pcolormesh(*hist_2d.axes.edges.T, hist_2d.view().value.T, norm=norm)
+        mesh = ax.pcolormesh(*hist_2d.axes.edges.T, hist_2d.view().value.T, norm=norm)  # type: ignore
     else:
         mesh = ax.pcolormesh(*hist_2d.axes.edges.T, hist_2d.view().T, norm=norm)
 

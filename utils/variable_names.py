@@ -273,7 +273,7 @@ variable_data: Dict[str, Branch] = {
         "tag": VarTag.RECO,
     },
     "e_d0sig": {
-        "xlabel": r"Electron $d_0$ significance",
+        "name": r"Electron $d_0$ significance",
         "units": "",
         "tag": VarTag.RECO,
     },
@@ -369,7 +369,7 @@ variable_data: Dict[str, Branch] = {
         "tag": VarTag.RECO,
     },
     "Ele_d0sig": {
-        "xlabel": r"Electron $d_0$ significance",
+        "name": r"Electron $d_0$ significance",
         "units": "",
         "tag": VarTag.RECO,
     },
@@ -418,7 +418,11 @@ variable_data: Dict[str, Branch] = {
         "units": "",
         "tag": VarTag.RECO,
     },
-    "TauCharge": {"name:": "Tau Charge", "units": "", "tag": VarTag.RECO},
+    "TauCharge": {
+        "name": "Tau Charge",
+        "units": "",
+        "tag": VarTag.RECO,
+    },
     "TauPt": {
         "name": r"Tau $p_{T}$",
         "units": "GeV",
@@ -559,7 +563,8 @@ variable_data: Dict[str, Branch] = {
     },
     "MC_WZ_dilep_pt_bare": {
         "name": r"bare dilepton $p_{T}$",
-        "units" "GeV" "tag": VarTag.TRUTH,
+        "units": "GeV",
+        "tag": VarTag.TRUTH,
     },
     "MC_WZ_dilep_pt_dres": {
         "name": r"dressed dilepton $p_{T}$",
@@ -798,7 +803,11 @@ variable_data: Dict[str, Branch] = {
         "units": "GeV",
         "tag": VarTag.TRUTH,
     },
-    "TruthTauCharge": {"name:": "Truth Tau Charge", "units": "", "tag": VarTag.TRUTH},
+    "TruthTauCharge": {
+        "name": "Truth Tau Charge",
+        "units": "",
+        "tag": VarTag.TRUTH,
+    },
     "TruthTauEta": {
         "name": r"Truth tau $\eta$",
         "units": "",

@@ -2,12 +2,12 @@ import inspect
 from collections import OrderedDict
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Tuple, Iterable, Callable, Any, Set
+from typing import Dict, List, Tuple, Iterable, Callable, Any, Set, Sequence
 
-import matplotlib.pyplot as plt
-import pandas as pd
+import matplotlib.pyplot as plt  # type: ignore
+import pandas as pd  # type: ignore
 from numpy.typing import ArrayLike
-from tabulate import tabulate
+from tabulate import tabulate  # type: ignore
 
 import src.config as config
 from src.dataset import Dataset
@@ -52,8 +52,8 @@ class Analysis:
         data_dict: Dict[str, Dict],
         analysis_label: str,
         global_lumi: float | None = 139.0,
-        output_dir: Path | str = None,
-        data_dir: Path | str = None,
+        output_dir: Path | str | None = None,
+        data_dir: Path | str | None = None,
         log_level: int = 20,
         log_out: str = "both",
         timedatelog: bool = True,
@@ -263,7 +263,7 @@ class Analysis:
         self,
         *datasets: str,
         apply_cuts: bool | str | List[str] = False,
-        new_name: str = None,
+        new_name: str | None = None,
         delete: bool = True,
         to_pkl: bool = False,
         verify: bool = False,
@@ -353,23 +353,29 @@ class Analysis:
                  If False returns DataFrame with cuts applied and associated cut columns removed.
                  Raises ValueError if cuts do not exist in dataframe
         """
-        # skip cuts that don't exist in dataset
-        if isinstance(labels, str):
-            if labels + config.cut_label not in self[datasets].df.columns:
-                self.logger.debug(f"No cut '{labels}' in dataset '{datasets}'; skipping.")
-                return
+        if isinstance(datasets, str):
+            datasets = [datasets]
 
-        elif isinstance(labels, list):
-            if missing_cuts := [
-                label
-                for label in labels
-                if label + config.cut_label not in self[datasets].df.columns
-            ]:
-                self.logger.debug(f"No cuts {missing_cuts} in dataset '{datasets}'; skipping.")
-                # remove missing cuts from list
-                labels = [label for label in labels if label + config.cut_label not in missing_cuts]
+        for dataset in datasets:
+            # skip cuts that don't exist in dataset
+            if isinstance(labels, str):
+                if labels + config.cut_label not in self[dataset].df.columns:
+                    self.logger.debug(f"No cut '{labels}' in dataset '{dataset}'; skipping.")
+                    return
 
-        self[datasets].apply_cuts(labels, reco, truth, inplace=True)
+            elif isinstance(labels, list):
+                if missing_cuts := [
+                    label
+                    for label in labels
+                    if label + config.cut_label not in self[dataset].df.columns
+                ]:
+                    self.logger.debug(f"No cuts {missing_cuts} in dataset '{dataset}'; skipping.")
+                    # remove missing cuts from list
+                    labels = [
+                        label for label in labels if label + config.cut_label not in missing_cuts
+                    ]
+
+            self[dataset].apply_cuts(labels, reco, truth, inplace=True)
 
     @check_single_dataset
     def __delete_dataset(self, ds_name: str) -> None:
@@ -386,12 +392,12 @@ class Analysis:
     # ===============================
     def plot_hist(
         self,
-        datasets: str | ArrayLike | List[str],
-        var: str | ArrayLike | List[str],
-        bins: List[float] | ArrayLike | Tuple[int, float, float],
+        datasets: str | Sequence[str],
+        var: str | Sequence[str],
+        bins: Sequence[float | int] | Tuple[int, float, float],
         weight: List[str | float] | str | float = 1.0,
         yerr: ArrayLike | str = True,
-        labels: List[str] = None,
+        labels: List[str] | None = None,
         w2: bool = False,
         normalise: float | bool | str = False,
         apply_cuts: bool | str | List[str] = False,
@@ -406,9 +412,9 @@ class Analysis:
         stats_box: bool = False,
         ratio_plot: bool = True,
         ratio_fit: bool = False,
-        ratio_axlim: float = None,
+        ratio_axlim: float | None = None,
         ratio_label: str = "Ratio",
-        filename: str = None,
+        filename: str | Path | None = None,
         name_suffix: str = "",
         name_prefix: str = "",
         **kwargs,
@@ -584,7 +590,7 @@ class Analysis:
         if filename:
             filename = self.paths.plot_dir / filename
         else:
-            if isinstance(var, list):
+            if isinstance(var, Sequence):
                 varname = "_".join(var)
             else:
                 varname = var
@@ -598,7 +604,7 @@ class Analysis:
         return hists
 
     @check_single_dataset
-    def gen_cutflow_hist(self, ds_name: str | None, **kwargs) -> None:
+    def gen_cutflow_hist(self, ds_name: str, **kwargs) -> None:
         """
         Generates and saves cutflow histograms. Choose which cutflow histogram option to print. Default: only by-event.
 
@@ -608,7 +614,7 @@ class Analysis:
         self[ds_name].gen_cutflow_hist(**kwargs)
 
     @handle_dataset_arg
-    def plot_mass_slices(self, datasets: str | Iterable[str], xvar: str, **kwargs) -> None:
+    def plot_mass_slices(self, datasets: str, xvar: str, **kwargs) -> None:
         """
         Plots mass slices for input variable xvar if dataset is_slices
 
@@ -622,7 +628,7 @@ class Analysis:
     # ========= PRINTOUTS ===========
     # ===============================
     @handle_dataset_arg
-    def cutflow_printout(self, datasets: str | Iterable[str]) -> None:
+    def cutflow_printout(self, datasets: str) -> None:
         """Prints cutflow table to terminal"""
         self[datasets].cutflow.printout()
 
@@ -637,7 +643,7 @@ class Analysis:
 
     def save_histograms(
         self,
-        filename: str = None,
+        filename: str | Path | None = None,
         tfile_option: str = "Update",
         write_option: str = "Overwrite",
         clear_hists: bool = False,
@@ -679,7 +685,7 @@ class Analysis:
                 self.logger.info(f"Saved LaTeX histogram table to {filepath}")
 
     @handle_dataset_arg
-    def print_latex_table(self, datasets: str | Iterable[str]) -> None:
+    def print_latex_table(self, datasets: str) -> None:
         """
         Prints a latex table(s) of cutflow.
 

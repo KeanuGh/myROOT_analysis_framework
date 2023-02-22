@@ -5,10 +5,10 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Type, Dict, Iterable
 
-import ROOT
+import ROOT  # type: ignore
 import boost_histogram as bh
 import numpy as np
-import pandas as pd
+import pandas as pd  # type: ignore
 
 from utils import PMG_tool
 
@@ -102,8 +102,8 @@ def TH1_to_bh(h_root: Type[ROOT.TH1]) -> bh.Histogram:
     # not very pythonic but shouldn't take too long as the histogram isn't too big
     h_bh = bh.Histogram(*axes, storage=bh.storage.Weight())
     for idx, _ in np.ndenumerate(h_bh.view(flow=True)):
-        h_bh.view(flow=True).value[idx] = h_root.GetBinContent(*idx)  # bin value
-        h_bh.view(flow=True).variance[idx] = h_root.GetBinError(*idx) ** 2
+        h_bh.view(flow=True).value[idx] = h_root.GetBinContent(*idx)  # type: ignore # bin value
+        h_bh.view(flow=True).variance[idx] = h_root.GetBinError(*idx) ** 2  # type: ignore
 
     return h_bh
 
@@ -123,7 +123,9 @@ def convert_pkl_to_root(filename: str, histname: str | None = None) -> None:
     if isinstance(obj, bh.Histogram):
         logging.info(f"Printing {histname} to {rootfilename}")
         with ROOT_TFile_mgr(rootfilename):
-            bh_to_TH1(obj, name=histname, title=histname).Write()
+            bh_to_TH1(
+                obj, name=histname if histname else "", title=histname if histname else ""
+            ).Write()
         return
     elif isinstance(obj, dict):
         TH1s = [
@@ -161,7 +163,7 @@ def ROOT_TFile_mgr(filename: str | Path, TFile_arg="RECREATE"):
 def glob_chain(TTree: str, path: Path | str) -> ROOT.TChain:
     """Return TChain with glob'd files because ROOT can't glob by itself"""
     chain = ROOT.TChain(TTree)
-    for file in glob.glob(path):
+    for file in glob.glob(str(path)):
         chain.Add(file)
     return chain
 
@@ -220,7 +222,7 @@ def get_dsid_values(path: str | Path, ttree_name: str = "") -> pd.DataFrame:
     return df
 
 
-def init_rdataframe(name, paths: Iterable[str], trees: Iterable[str]):
+def init_rdataframe(name: str, paths: Iterable[str], trees: Iterable[str]):
     """
     Returns an RDataFrame for a given name
 

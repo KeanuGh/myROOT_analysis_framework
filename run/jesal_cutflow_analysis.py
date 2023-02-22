@@ -2,8 +2,7 @@
 
 from src.analysis import Analysis
 
-if __name__ == '__main__':
-
+if __name__ == "__main__":
     # dataset inputs
     datasets = {
         # 'wmintaunu_slices': {
@@ -34,12 +33,12 @@ if __name__ == '__main__':
         #     'is_slices': False,
         #     'lepton': 'tau'
         # },
-        'wminmunu_slices': {
-            'datapath': '/data/atlas/HighMassDrellYan/test_mc16a/wminmunu_*/*.root',
-            'cutfile': 'options/jesal_cutflow/cutfile_jesal.txt',
-            'TTree_name': 'nominal_Loose',
-            'is_slices': True,
-            'lepton': 'muon'
+        "wminmunu_slices": {
+            "datapath": "/data/atlas/HighMassDrellYan/test_mc16a/wminmunu_*/*.root",
+            "cutfile": "options/jesal_cutflow/cutfile_jesal.txt",
+            "TTree_name": "nominal_Loose",
+            "is_slices": True,
+            "lepton": "muon",
         },
         # 'wminmunu_inclusive': {
         #     'datapath': '/data/atlas/HighMassDrellYan/test_mc16a/wminmunu/*.root',
@@ -184,11 +183,21 @@ if __name__ == '__main__':
         # },
     }
 
-    my_analysis = Analysis(datasets, analysis_label='jesal_cutflow',
-                           force_rebuild=False, log_level=10, log_out='console')
+    my_analysis = Analysis(
+        datasets,
+        analysis_label="jesal_cutflow",
+        force_rebuild=False,
+        log_level=10,
+        log_out="console",
+    )
 
-    my_analysis.plot_1d(x='mu_mt', bins=(50, 120, 4000), title=r'$W\rightarrow\tau\nu$ (13 TeV)',
-                        scaling='xs', log_y=True)
+    my_analysis.plot_1d(
+        x="mu_mt",
+        bins=(50, 120, 4000),
+        title=r"$W\rightarrow\tau\nu$ (13 TeV)",
+        scaling="xs",
+        log_y=True,
+    )
     # pipeline
     # my_analysis.plot_mass_slices(ds_name='wmintaunu_slices', xvar='MC_WZ_m',
     #                              inclusive_dataset='wmintaunu_inclusive', logx=True, to_pkl=True)

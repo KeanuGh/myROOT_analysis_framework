@@ -16,7 +16,7 @@ def main():
         # # dta w->taunu->munu
         # "wplustaunu_dta": {
         #     "data_path": DTA_PATH + "/user.kghorban.Sh_2211_Wtaunu_*/*.root",
-        #     "cutfile_path": "../../options/DTA_cuts/dta_truth.txt",
+        #     "cutfile": "../../options/DTA_cuts/dta_truth.txt",
         #     "TTree_name": {"T_s1thv_NOMINAL", "T_s1tev_NOMINAL", "T_s1tmv_NOMINAL"},
         #     "hard_cut": "TruthTauCharge == 1",
         #     "lepton": "tau",
@@ -27,7 +27,7 @@ def main():
         # # analysistop w->taunu->munu
         # "wplustaunu_analysistop": {
         #     "data_path": ANALYSISTOP_PATH + "/wplustaunu_*/*.root",
-        #     "cutfile_path": "../../options/DTA_cuts/analysistop.txt",
+        #     "cutfile": "../../options/DTA_cuts/analysistop.txt",
         #     "lepton": "tau",
         #     "dataset_type": "analysistop",
         #     # "force_rebuild": True,
@@ -35,7 +35,7 @@ def main():
         # },
         # "wplustaunu_analysistop_peak": {
         #     "data_path": ANALYSISTOP_PATH + "/wplustaunu/*.root",
-        #     "cutfile_path": "../../options/DTA_cuts/analysistop.txt",
+        #     "cutfile": "../../options/DTA_cuts/analysistop.txt",
         #     "lepton": "tau",
         #     "dataset_type": "analysistop",
         #     "hard_cut": "MC_WZ_m < 120",
@@ -46,7 +46,7 @@ def main():
         # dta w->taunu->munu
         "wmintaunu_dta": {
             "data_path": DTA_PATH + "/user.kghorban.Sh_2211_Wtaunu_*/*.root",
-            "cutfile_path": "../../options/DTA_cuts/dta_truth.txt",
+            "cutfile": "../../options/DTA_cuts/dta_truth.txt",
             "TTree_name": {"T_s1thv_NOMINAL", "T_s1tev_NOMINAL", "T_s1tmv_NOMINAL"},
             "hard_cut": "TruthTauCharge == -1",
             "lepton": "tau",
@@ -58,7 +58,7 @@ def main():
         # analysistop w->taunu->munu
         "wmintaunu_analysistop": {
             "data_path": ANALYSISTOP_PATH + "/wmintaunu_*/*.root",
-            "cutfile_path": "../../options/DTA_cuts/analysistop.txt",
+            "cutfile": "../../options/DTA_cuts/analysistop.txt",
             "lepton": "tau",
             "dataset_type": "analysistop",
             # "force_rebuild": True,
@@ -66,7 +66,7 @@ def main():
         },
         "wmintaunu_analysistop_peak": {
             "data_path": ANALYSISTOP_PATH + "/wmintaunu/*.root",
-            "cutfile_path": "../../options/DTA_cuts/analysistop.txt",
+            "cutfile": "../../options/DTA_cuts/analysistop.txt",
             "lepton": "tau",
             "dataset_type": "analysistop",
             "hard_cut": "MC_WZ_m < 120",
