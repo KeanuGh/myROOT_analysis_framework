@@ -662,7 +662,7 @@ class Analysis:
             filename = self._output_dir / f"{self.name}_histograms.root"
 
         self.logger.info(f"Saving {len(self.histograms)} histograms to file {filename}...")
-        with ROOT_utils.ROOT_TFile_mgr(filename, tfile_option) as file:
+        with ROOT_utils.ROOT_TFile_mgr(str(filename), tfile_option) as file:
             for name, histo in self.histograms.items():
                 file.WriteObject(histo.TH1, name, write_option)
 
