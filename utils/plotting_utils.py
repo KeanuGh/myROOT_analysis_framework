@@ -17,29 +17,21 @@ plt.style.use([hep.style.ATLAS])
 # ===== HISTOGRAM VARIABLES =====
 # ===============================
 def get_axis_labels(
-    var_name: str | Sequence[str], lepton: str | None = None, diff_xs: bool = False
+    var_name: str | Sequence[str], lepton: str | None = "lepton", diff_xs: bool = False
 ) -> Tuple[str | None, str | None]:
     """Gets label for corresponding variable in axis labels dictionary"""
-    if not lepton:
-        lepton = "lepton"
-
     if not isinstance(var_name, str):
-        # If a list is passed, check if all variables have the same name, otherwise throw warning and pick first
-        try:
-            names = [variable_data[var]["name"] for var in var_name]
-        except KeyError:
-            warn(
-                f"Axis labels for {var_name} not found in label lookup dictionary. "
-                f"Falling back to default",
-                UserWarning,
-            )
-            return str(var_name), "Entries"
+        new_varname = ""
+        # pick first one that appears in variable data dictionary
+        for var in var_name:
+            if var in variable_data:
+                new_varname = var
+                break
 
-        name_set = set(names)
-        if len(name_set) > 1:
-            w = f"Variables have different names: {names}. Picking {names[0]} as axis label"
-            warn(w)
-        var_name = var_name[0]
+        if new_varname:
+            var_name = new_varname
+        else:
+            var_name = var_name[0]
 
     # get name and units from data dictionary
     try:

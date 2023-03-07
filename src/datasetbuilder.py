@@ -726,6 +726,10 @@ class DatasetBuilder:
         # make rdataframe
         Rdf = ROOT_utils.init_rdataframe(self.name, paths, ttrees)
 
+        # check columns exist in dataframe
+        if missing_cols := (set(import_cols) - set(Rdf.GetColumnNames())):
+            raise ValueError("Missing column(s) in RDataFrame: \n\t" + "\n\t".join(missing_cols))
+
         # create weights
         Rdf = (
             Rdf.Define(
@@ -784,12 +788,24 @@ class DatasetBuilder:
                     debug_str += " -> "
                     for i in range(3):
                         new_name = col_name + str(i + 1)
-                        Rdf = Rdf.Define(f"{new_name}", f"getVecVal({col_name},{i})")
+                        Rdf = Rdf.Define(f"{new_name}", f"getVecVal(&{col_name},{i})")
                         debug_str += f"{new_name}: {Rdf.GetColumnType(new_name)}, "
+                        import_cols.add(new_name)
                     badcols.add(col_name)
 
+                # elif "neutrino" in str(col_name).lower():
+                #     Rdf = Rdf.Define(f"{col_name}1", f"(&{col_name})->at(0);")
+                #     Rdf = Rdf.Define(f"{col_name}2", f"(&{col_name})->at(1);")
+                #     Rdf = Rdf.Define(
+                #         f"{col_name}3", f"((&{col_name})->size() > 2) ? (&{col_name})->at(2) : NAN;"
+                #     )
+                #     badcols.add(col_name)
+                #     import_cols |= {f"{col_name}1", f"{col_name}2", f"{col_name}3"}
+
                 else:
-                    Rdf = Rdf.Redefine(col_name, f"getVecVal({col_name},0)")
+                    Rdf = Rdf.Redefine(
+                        f"{col_name}", f"((&{col_name})->size() > 0) ? (&{col_name})->at(0) : NAN;"
+                    )
                     debug_str += f" -> {Rdf.GetColumnType(col_name)}"
             self.logger.debug(debug_str)
 

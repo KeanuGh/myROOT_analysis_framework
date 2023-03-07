@@ -12,10 +12,12 @@ bool filterPeak(float inv_mass) {
 	return inv_mass < 120.;
 };
 
-float getVecVal(ROOT::VecOps::RVec<float> x, int i = 0);
+float getVecVal(ROOT::VecOps::RVec<float>* x, int i = 0);
 
-float getVecVal(ROOT::VecOps::RVec<float> x, int i) {
-    if (x.size() > i)  return x[i];
+float getVecVal(ROOT::VecOps::RVec<double>* x, int i = 0);
+
+float getVecVal(ROOT::VecOps::RVec<double>* x, int i) {
+    if (x->size() > i)  return x->at(i);
     else               return NAN;
 };
 

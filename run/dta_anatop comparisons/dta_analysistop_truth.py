@@ -29,7 +29,7 @@ def main():
             "cutfile": "../../options/DTA_cuts/analysistop.txt",
             "lepton": "tau",
             "dataset_type": "analysistop",
-            "force_rebuild": True,
+            # "force_rebuild": True,
             "label": r"Powheg/Pythia 8 $W\rightarrow\tau\nu$",
         },
         "wtaunu_analysistop_peak": {
@@ -38,7 +38,7 @@ def main():
             "lepton": "tau",
             "dataset_type": "analysistop",
             "hard_cut": "MC_WZ_m < 120",
-            "force_rebuild": True,
+            # "force_rebuild": True,
             "label": r"Powheg/Pythia 8 $W\rightarrow\tau\nu$",
         },
     }
@@ -47,25 +47,21 @@ def main():
         datasets,
         data_dir=DATA_OUT_DIR,
         year="2015+2016",
-        # force_rebuild=True,
+        force_rebuild=True,
         analysis_label="dta_analysistop_compare",
-        # skip_verify_pkl=True,
-        # validate_duplicated_events=False,
-        # force_recalc_cuts=True,
+        skip_verify_pkl=True,
+        validate_duplicated_events=False,
+        force_recalc_cuts=True,
         log_level=10,
-        log_out="both",
+        log_out="console",
     )
     # my_analysis.merge_datasets('wtaunu_mu_dta', 'wtaunu_e_dta', verify=True)
     my_analysis.merge_datasets("wtaunu_analysistop", "wtaunu_analysistop_peak")
 
-    # BR-scaled weight
-    my_analysis["wtaunu_dta"].df["br_scaled_weight"] = (
-        my_analysis["wtaunu_dta"]["truth_weight"] / my_analysis.global_lumi
-    )
-    # my_analysis['wtaunu_analysistop'].df['br_scaled_weight'] = my_analysis['wtaunu_analysistop']['truth_weight'] * 0.1138 / my_analysis.global_lumi
-    my_analysis["wtaunu_analysistop"].df["br_scaled_weight"] = (
-        my_analysis["wtaunu_analysistop"]["truth_weight"] / my_analysis.global_lumi
-    )
+    # calculate boson E
+    # my_analysis["wtaunu_dta"]["CalcBosonE"] = (
+    #     my_analysis["wtaunu_dta"]["TruthTauE"] + my_analysis["wtaunu_dta"]["TruthNeutrinoE"]
+    # )
 
     # HISTORGRAMS
     # ==================================================================================================================
@@ -137,68 +133,38 @@ def main():
         "ratio_fit": True,
     }
     truth_mass_args = {
-        "bins": (30, 1, 5000),
-        "logbins": True,
-        "logx": True,
-        "ratio_axlim": 1.5,
-    }
-    reco_mass_args = {
         "bins": mass_bins,
+        # "bins": (30, 1, 5000),
         "logbins": True,
         "logx": True,
         "ratio_axlim": 1.5,
-    }
-    unweighted_args = {
-        "ylabel": "Entries",
-        "weight": 1,
-        "name_prefix": "unweighted",
-        "title": "truth - unweighted",
-        "normalise": False,
     }
     weighted_args = {
         "weight": "truth_weight",
-        "name_prefix": "weighted",
+        "name_prefix": "cut",
         "title": "truth - 36.2fb$^{-1}$",
         "normalise": False,
     }
-    bin_scaled_args = {
-        "weight": "truth_weight",
-        "name_prefix": "bin_scaled",
-        "title": "truth - 36.2fb$^{-1}$",
-        "normalise": False,
-        "scale_by_bin_width": True,
-    }
-    normed_args = {
-        "ylabel": "Normalised Entries",
-        "weight": "truth_weight",
-        "name_prefix": "normalised",
-        "title": "truth - normalised to unity",
-        "normalise": True,
-        "scale_by_bin_width": True,
-    }
-    br_weighted_args = {
-        "weight": "br_scaled_weight",
-        "name_prefix": "br_weighted",
-        "title": "truth - 36.2fb$^{-1}$",
-        "normalise": False,
-    }
-    bin_br_scaled_args = {
-        "weight": ["br_scaled_weight", "truth_weight"],
-        "name_prefix": "bin_br_scaled",
-        "title": "truth - 36.2fb$^{-1}$",
-        "normalise": False,
-        "scale_by_bin_width": True,
-    }
+
+    my_analysis.apply_cuts(truth=True)
 
     # TRUTH
     # -----------------------------------
+
     my_analysis.plot_hist(
         ["wtaunu_dta", "wtaunu_analysistop"],
-        ["TruthDilepM", "MC_WZ_dilep_m_born"],
+        ["TruthMTW", "mt_born"],
         **truth_mass_args,
         **weighted_args,
         **ratio_args
     )
+    # my_analysis.plot_hist(
+    #     ["wtaunu_dta", "wtaunu_analysistop"],
+    #     ["TruthDilepM", "MC_WZ_dilep_m_born"],
+    #     **truth_mass_args,
+    #     **weighted_args,
+    #     **ratio_args
+    # )
     my_analysis.plot_hist(
         ["wtaunu_dta", "wtaunu_analysistop"],
         ["TruthBosonM", "MC_WZ_dilep_m_born"],
@@ -207,6 +173,17 @@ def main():
         **weighted_args,
         **ratio_args
     )
+    # my_analysis.plot_hist(
+    #     "wtaunu_dta",
+    #     ["CalcBosonE", "TruthBosonE"],
+    #     labels=["Calculated Boson $E$", "Truth Boson $E$"],
+    #     xlabel="$E$ [GeV]",
+    #     **truth_mass_args,
+    #     **weighted_args,
+    #     **ratio_args
+    # )
+
+    # truth taus
     my_analysis.plot_hist(
         ["wtaunu_dta", "wtaunu_analysistop"],
         ["TruthTauPt", "MC_WZmu_el_pt_born"],
@@ -229,35 +206,138 @@ def main():
         **weighted_args,
         **ratio_args
     )
-    my_analysis.plot_hist(
-        ["wtaunu_dta", "wtaunu_analysistop"],
-        ["TruthNeutrinoPt", "MC_WZmu_el_pt_born"],
-        **truth_mass_args,
-        **weighted_args,
-        **ratio_args
-    )
-    my_analysis.plot_hist(
-        ["wtaunu_dta", "wtaunu_analysistop"],
-        ["TruthNeutrinoEta", "MC_WZmu_el_eta_born"],
-        bins=(30, -5, 5),
-        **weighted_args,
-        **ratio_args
-    )
-    my_analysis.plot_hist(
-        ["wtaunu_dta", "wtaunu_analysistop"],
-        ["TruthNeutrinoPhi", "MC_WZmu_el_phi_born"],
-        bins=(30, -np.pi, np.pi),
-        logy=False,
-        **weighted_args,
-        **ratio_args
-    )
-    my_analysis.plot_hist(
-        ["wtaunu_dta", "wtaunu_analysistop"],
-        ["TruthMTW", "mt_born"],
-        **truth_mass_args,
-        **weighted_args,
-        **ratio_args
-    )
+
+    # neutrinos
+    # my_analysis.plot_hist(
+    #     ["wtaunu_dta", "wtaunu_analysistop"],
+    #     ["TruthNeutrinoPt1", "MC_WZmu_el_pt_born"],
+    #     labels=["Sherpa Truth Neutrino 1", "Powheg Truth Neutrino"],
+    #     **truth_mass_args,
+    #     **weighted_args,
+    #     **ratio_args
+    # )
+    # my_analysis.plot_hist(
+    #     ["wtaunu_dta", "wtaunu_analysistop"],
+    #     ["TruthNeutrinoEta1", "MC_WZmu_el_eta_born"],
+    #     labels=["Sherpa Truth Neutrino 1", "Powheg Truth Neutrino"],
+    #     bins=(30, -5, 5),
+    #     **weighted_args,
+    #     **ratio_args
+    # )
+    # my_analysis.plot_hist(
+    #     ["wtaunu_dta", "wtaunu_analysistop"],
+    #     ["TruthNeutrinoPhi1", "MC_WZmu_el_phi_born"],
+    #     labels=["Sherpa Truth Neutrino 1", "Powheg Truth Neutrino"],
+    #     bins=(30, -np.pi, np.pi),
+    #     logy=False,
+    #     **weighted_args,
+    #     **ratio_args
+    # )
+    # my_analysis.plot_hist(
+    #     ["wtaunu_dta", "wtaunu_analysistop"],
+    #     ["TruthNeutrinoPt2", "MC_WZmu_el_pt_born"],
+    #     labels=["Sherpa Truth Neutrino 2", "Powheg Truth Neutrino"],
+    #     **truth_mass_args,
+    #     **weighted_args,
+    #     **ratio_args
+    # )
+    # my_analysis.plot_hist(
+    #     ["wtaunu_dta", "wtaunu_analysistop"],
+    #     ["TruthNeutrinoEta2", "MC_WZmu_el_eta_born"],
+    #     labels=["Sherpa Truth Neutrino 2", "Powheg Truth Neutrino"],
+    #     bins=(30, -5, 5),
+    #     **weighted_args,
+    #     **ratio_args
+    # )
+    # my_analysis.plot_hist(
+    #     ["wtaunu_dta", "wtaunu_analysistop"],
+    #     ["TruthNeutrinoPhi2", "MC_WZmu_el_phi_born"],
+    #     labels=["Sherpa Truth Neutrino 2", "Powheg Truth Neutrino"],
+    #     bins=(30, -np.pi, np.pi),
+    #     logy=False,
+    #     **weighted_args,
+    #     **ratio_args
+    # )
+    # my_analysis.plot_hist(
+    #     ["wtaunu_dta", "wtaunu_analysistop"],
+    #     ["TruthNeutrinoPt3", "MC_WZmu_el_pt_born"],
+    #     labels=["Sherpa Truth Neutrino 3", "Powheg Truth Neutrino"],
+    #     **truth_mass_args,
+    #     **weighted_args,
+    #     **ratio_args
+    # )
+    # my_analysis.plot_hist(
+    #     ["wtaunu_dta", "wtaunu_analysistop"],
+    #     ["TruthNeutrinoEta3", "MC_WZmu_el_eta_born"],
+    #     labels=["Sherpa Truth Neutrino 3", "Powheg Truth Neutrino"],
+    #     bins=(30, -5, 5),
+    #     **weighted_args,
+    #     **ratio_args
+    # )
+    # my_analysis.plot_hist(
+    #     ["wtaunu_dta", "wtaunu_analysistop"],
+    #     ["TruthNeutrinoPhi3", "MC_WZmu_el_phi_born"],
+    #     labels=["Sherpa Truth Neutrino 3", "Powheg Truth Neutrino"],
+    #     bins=(30, -np.pi, np.pi),
+    #     logy=False,
+    #     **weighted_args,
+    #     **ratio_args
+    # )
+    #
+    # # tau against neutrino
+    # my_analysis.plot_hist(
+    #     ["wtaunu_dta", "wtaunu_dta"],
+    #     ["TruthNeutrinoPt1", "TruthTauPt"],
+    #     labels=["Sherpa Truth Neutrino 1", "Sherpa Truth Tau"],
+    #     xlabel="$p_T$ [GeV]",
+    #     **truth_mass_args,
+    #     **weighted_args,
+    #     **ratio_args
+    # )
+    # # tau against neutrino
+    # my_analysis.plot_hist(
+    #     ["wtaunu_dta", "wtaunu_dta"],
+    #     ["TruthNeutrinoPt2", "TruthTauPt"],
+    #     labels=["Sherpa Truth Neutrino 2", "Sherpa Truth Tau"],
+    #     xlabel="$p_T$ [GeV]",
+    #     **truth_mass_args,
+    #     **weighted_args,
+    #     **ratio_args
+    # )
+    # # tau against neutrino
+    # my_analysis.plot_hist(
+    #     ["wtaunu_dta", "wtaunu_dta"],
+    #     ["TruthNeutrinoPt3", "TruthTauPt"],
+    #     labels=["Sherpa Truth Neutrino 3", "Sherpa Truth Tau"],
+    #     xlabel="$p_T$ [GeV]",
+    #     **truth_mass_args,
+    #     **weighted_args,
+    #     **ratio_args
+    # )
+
+    # vis tau
+    # my_analysis.plot_hist(
+    #     ["wtaunu_dta", "wtaunu_analysistop"],
+    #     ["VisTruthTauPt", "MC_WZmu_el_pt_born"],
+    #     **truth_mass_args,
+    #     **weighted_args,
+    #     **ratio_args
+    # )
+    # my_analysis.plot_hist(
+    #     ["wtaunu_dta", "wtaunu_analysistop"],
+    #     ["VisTruthTauEta", "MC_WZmu_el_eta_born"],
+    #     bins=(30, -5, 5),
+    #     **weighted_args,
+    #     **ratio_args
+    # )
+    # my_analysis.plot_hist(
+    #     ["wtaunu_dta", "wtaunu_analysistop"],
+    #     ["VisTruthTauPhi", "MC_WZmu_el_phi_born"],
+    #     bins=(30, -np.pi, np.pi),
+    #     logy=False,
+    #     **weighted_args,
+    #     **ratio_args
+    # )
 
     my_analysis["wtaunu_dta"].dsid_metadata_printout()
     my_analysis["wtaunu_analysistop"].dsid_metadata_printout()
