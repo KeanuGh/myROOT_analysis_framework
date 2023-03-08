@@ -150,7 +150,6 @@ def main():
 
     # TRUTH
     # -----------------------------------
-
     my_analysis.plot_hist(
         ["wtaunu_dta", "wtaunu_analysistop"],
         ["TruthMTW", "mt_born"],

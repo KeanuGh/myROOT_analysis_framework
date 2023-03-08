@@ -2,7 +2,6 @@ import logging
 import re
 import time
 from dataclasses import dataclass, field
-from glob import glob
 from pathlib import Path
 from typing import Dict, OrderedDict, Set, Iterable, overload, Final
 
@@ -158,10 +157,11 @@ class DatasetBuilder:
 
         # Parsing cutfile
         if isinstance(cutfile, (str, Path)):
+            self.logger.info(f"Parsting cutfile '{cutfile}'...")
+
             cutfile_path = cutfile
             cutfile = Cutfile(cutfile, self.TTree_name, logger=self.logger)
 
-            self.logger.info(f"Parsting cutfile '{cutfile_path}'...")
             if self.logger.level == logging.DEBUG:
                 # log contents of cutfile
                 self.logger.debug("CUTFILE CONTENTS")
@@ -400,13 +400,19 @@ class DatasetBuilder:
     # ===============================
     # ===== DATAFRAME FUNCTIONS =====
     # ===============================
-    def build_dataframe(self, data_path: str, tree_dict: Dict[str, Set[str]]) -> pd.DataFrame:
+    def build_dataframe(
+        self, data_path: str, tree_dict: Dict[str, Set[str]], rdataframe: bool = True
+    ) -> pd.DataFrame | ROOT.RDataFrame:
         """send off dataframe builder to correct dataset type"""
         match self.dataset_type:
             case "analysistop":
-                return self.__build_dataframe_analysistop(data_path=data_path, tree_dict=tree_dict)
+                return self.__build_dataframe_analysistop(
+                    data_path=data_path, tree_dict=tree_dict, rdataframe=rdataframe
+                )
             case "dta":
-                return self.__build_dataframe_dta(data_path=data_path, tree_dict=tree_dict)
+                return self.__build_dataframe_dta(
+                    data_path=data_path, tree_dict=tree_dict, rdataframe=rdataframe
+                )
             case _:
                 raise ValueError(f"Unknown dataset {self.dataset_type}")
 
@@ -414,7 +420,8 @@ class DatasetBuilder:
         self,
         data_path: str,
         tree_dict: Dict[str, Set[str]],
-    ) -> pd.DataFrame:
+        rdataframe: bool = True,
+    ) -> pd.DataFrame | ROOT.RDataFrame:
         """
          Builds a dataframe
 
@@ -684,11 +691,12 @@ class DatasetBuilder:
 
         return df
 
-    def __build_dataframe_dta(self, data_path: str, tree_dict: dict[str, Set[str]]) -> pd.DataFrame:
+    def __build_dataframe_dta(
+        self, data_path: str | Path, tree_dict: dict[str, Set[str]], rdataframe: bool = True
+    ) -> pd.DataFrame | ROOT.RDataFrame:
         """Build DataFrame from given files and TTree/branch combinations from DTA output"""
 
         t1 = time.time()
-        paths = [str(file) for file in glob(data_path)]
 
         # add variables necessary to calculate weights etc
         tree_dict = self.__add_necessary_dta_variables(tree_dict)
@@ -724,7 +732,7 @@ class DatasetBuilder:
         )
 
         # make rdataframe
-        Rdf = ROOT_utils.init_rdataframe(self.name, paths, ttrees)
+        Rdf = ROOT_utils.init_rdataframe(self.name, data_path, ttrees)
 
         # check columns exist in dataframe
         if missing_cols := (set(import_cols) - set(Rdf.GetColumnNames())):

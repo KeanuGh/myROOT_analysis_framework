@@ -18,6 +18,7 @@ from src.logger import get_logger
 from utils.AtlasStyle import set_atlas_style  # type: ignore
 from utils.ROOT_utils import load_ROOT_settings
 from utils.context import redirect_stdout
+from utils.plotting_tools import get_TH1_bins
 
 # settings
 load_ROOT_settings()
@@ -153,7 +154,7 @@ class Histogram1D(bh.Histogram, family=None):
             self.logger.debug(f"Initialising histogram {name}...")
 
             # TH1
-            self.TH1 = ROOT.TH1F(name, title, *self.__get_TH1_bins(bins))  # type: ignore
+            self.TH1 = ROOT.TH1F(name, title, *get_TH1_bins(bins))  # type: ignore
             self.name = name
 
             # get axis
@@ -279,22 +280,6 @@ class Histogram1D(bh.Histogram, family=None):
             return bh.axis.Regular(*bins, transform=bh.axis.transform.log if logbins else None)
         else:
             return bh.axis.Variable(bins)  # type: ignore
-
-    @staticmethod
-    def __get_TH1_bins(
-        bins: List[float] | Tuple[int, float, float] | bh.axis.Axis
-    ) -> Tuple[int, list | np.typing.ArrayLike] | Tuple[int, float, float]:
-        """Format bins for TH1 constructor"""
-        if isinstance(bins, bh.axis.Axis):
-            return bins.size, bins.edges
-
-        elif hasattr(bins, "__iter__"):
-            if len(bins) == 3 and isinstance(bins, tuple):
-                return bins
-            else:
-                return len(bins) - 1, np.array(bins)
-
-        raise ValueError("Bins should be list of bin edges or tuple like (nbins, xmin, xmax)")
 
     # Variables
     # ===================

@@ -1,10 +1,10 @@
 [CUTS]
 # Name	Variable	</>	Cut (in GeV if applicable) tree
 # truth
-Truth M_T	TruthMTW > 130
-Truth tau p_T	TruthTauPt > 25
-Truth tau eta	TruthTauEta.abs() < 2.47
-Truth tau eta crack	(TruthTauEta.abs() < 1.37) or (TruthTauEta.abs() > 1.52)
+Truth_M_T	TruthMTW > 130
+Truth_tau_p_T	TruthTauPt > 25
+Truth_tau_eta	abs(TruthTauEta) < 2.47
+Truth_tau_eta_crack	(abs(TruthTauEta) < 1.37) or (abs(TruthTauEta) > 1.52)
 
 [OUTPUTS]
 # truth

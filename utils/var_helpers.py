@@ -37,6 +37,7 @@ class OtherVar(TypedDict):
     var_args: List[str]
     tree: str
     func: Callable
+    cfunc: str
 
 
 # this dictionary of special variables aren't in the usual root ntuples
@@ -52,6 +53,7 @@ derived_vars: Dict[str, OtherVar] = {
         ],
         "tree": "nominal_Loose",
         "func": calc_mt,
+        "cfunc": "mt",
     },
     "mu_mt_reco": {
         "var_args": [
@@ -62,6 +64,7 @@ derived_vars: Dict[str, OtherVar] = {
         ],
         "tree": "nominal_Loose",
         "func": calc_mt,
+        "cfunc": "mt",
     },
     "mt_born": {  # boson mt
         "var_args": [
@@ -72,6 +75,7 @@ derived_vars: Dict[str, OtherVar] = {
         ],
         "tree": "truth",
         "func": calc_mt,
+        "cfunc": "mt",
     },
     "mt_bare": {  # boson mt
         "var_args": [
@@ -82,6 +86,7 @@ derived_vars: Dict[str, OtherVar] = {
         ],
         "tree": "truth",
         "func": calc_mt,
+        "cfunc": "mt",
     },
     "mt_dres": {  # boson mt
         "var_args": [
@@ -92,6 +97,7 @@ derived_vars: Dict[str, OtherVar] = {
         ],
         "tree": "truth",
         "func": calc_mt,
+        "cfunc": "mt",
     },
     "w_y": {  # boson rapidity
         "var_args": [
@@ -100,6 +106,7 @@ derived_vars: Dict[str, OtherVar] = {
         ],
         "tree": "truth",
         "func": calc_vy,
+        "cfunc": "vy",
     },
     "z_y": {  # boson rapidity
         "var_args": [
@@ -108,6 +115,7 @@ derived_vars: Dict[str, OtherVar] = {
         ],
         "tree": "truth",
         "func": calc_vy,
+        "cfunc": "vy",
     },
     "v_y": {  # boson rapidity
         "var_args": [
@@ -116,6 +124,7 @@ derived_vars: Dict[str, OtherVar] = {
         ],
         "tree": "truth",
         "func": calc_vy,
+        "cfunc": "vy",
     },
     # DTA
     "MTW": {
@@ -127,6 +136,7 @@ derived_vars: Dict[str, OtherVar] = {
         ],
         "tree": "",
         "func": calc_mt,
+        "cfunc": "mt",
     },
     "TruthMTW": {  # boson mt
         "var_args": [
@@ -137,6 +147,7 @@ derived_vars: Dict[str, OtherVar] = {
         ],
         "tree": "",
         "func": calc_mt,
+        "cfunc": "mt",
     },
     "Muon_delta_z0_sintheta": {
         "var_args": [
@@ -145,6 +156,7 @@ derived_vars: Dict[str, OtherVar] = {
         ],
         "tree": "",
         "func": calc_delta_z0_sintheta,
+        "cfunc": "delta_z0_sintheta",
     },
     "Ele_delta_z0_sintheta": {
         "var_args": [
@@ -153,6 +165,7 @@ derived_vars: Dict[str, OtherVar] = {
         ],
         "tree": "",
         "func": calc_delta_z0_sintheta,
+        "cfunc": "delta_z0_sintheta",
     },
     "DilepM": {
         "var_args": [
@@ -161,5 +174,6 @@ derived_vars: Dict[str, OtherVar] = {
         ],
         "tree": "",
         "func": calc_dilep_m,
+        "cfunc": "dilep_m",
     },
 }

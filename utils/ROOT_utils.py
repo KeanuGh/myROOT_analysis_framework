@@ -222,16 +222,19 @@ def get_dsid_values(path: str | Path, ttree_name: str = "") -> pd.DataFrame:
     return df
 
 
-def init_rdataframe(name: str, paths: Iterable[str], trees: Iterable[str]):
+def init_rdataframe(name: str, filepaths: Path | str | Iterable[str], trees: Iterable[str]):
     """
     Returns an RDataFrame for a given name
 
     Defines a TChain in the global ROOT namespace.
     This is to be able to create multiple separate TChains and keep them accessable by their corresponding RDataFrames
     """
+    if isinstance(filepaths, (str, Path)):
+        filepaths = [str(file) for file in glob.glob(str(filepaths))]
+
     chain_name = f"{name}_chain"
     ROOT.gInterpreter.Declare(f"TChain {chain_name};")
-    for path in paths:
+    for path in filepaths:
         for tree in trees:
             getattr(ROOT, chain_name).Add(f"{path}?#{tree}")
 

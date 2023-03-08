@@ -1,11 +1,14 @@
-from typing import Tuple, Sequence
+from typing import Tuple, Sequence, List
 from warnings import warn
 
+import ROOT  # type: ignore
 import boost_histogram as bh
 import matplotlib.pyplot as plt  # type: ignore
 import mplhep as hep  # type: ignore
+import numpy as np
 import pandas as pd  # type: ignore
 from matplotlib.colors import LogNorm  # type: ignore
+from numpy.typing import ArrayLike
 
 from utils.variable_names import variable_data
 
@@ -16,6 +19,22 @@ plt.style.use([hep.style.ATLAS])
 # ===============================
 # ===== HISTOGRAM VARIABLES =====
 # ===============================
+def get_TH1_bins(
+    bins: List[float] | Tuple[int, float, float] | bh.axis.Axis
+) -> Tuple[int, list | ArrayLike] | Tuple[int, float, float]:
+    """Format bins for TH1 constructor"""
+    if isinstance(bins, bh.axis.Axis):
+        return bins.size, bins.edges
+
+    elif hasattr(bins, "__iter__"):
+        if len(bins) == 3 and isinstance(bins, tuple):
+            return bins
+        else:
+            return len(bins) - 1, np.array(bins)
+
+    raise ValueError("Bins should be list of bin edges or tuple like (nbins, xmin, xmax)")
+
+
 def get_axis_labels(
     var_name: str | Sequence[str], lepton: str | None = "lepton", diff_xs: bool = False
 ) -> Tuple[str | None, str | None]:

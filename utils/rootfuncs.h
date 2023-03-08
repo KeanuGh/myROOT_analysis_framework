@@ -1,4 +1,7 @@
 #include <filesystem>
+#include <cmath>
+
+const double PI = 3.141592653589793238463;
 
 float calcWeights(float mc_weight, float lumi_sample, float sumw) {
 	return (mc_weight * lumi_sample) / sumw;
@@ -62,3 +65,23 @@ std::map<int, float> get_sumw(std::string data_dir, std::string ttree_name) {
 
     return dsid_map;
 };
+
+
+// Variable calculations
+double mt(double l1_pt, double l2_pt, double l1_phi, double l2_phi) {
+	double dphi = std::abs(l1_phi - l2_phi);
+	if (dphi > PI) dphi = 2 * PI - dphi;
+	return std::sqrt(2.0 * l1_pt * l2_pt * (1 - std::cos(dphi)));
+};
+
+double vy(double x1, double x2) {
+	return 0.5 * std::log(x1 / x2);
+}
+
+double delta_z0_sintheta(double z0, double eta) {
+	return z0 * std::sin(2.0 * std::atan(std::exp(-eta)));
+}
+
+double dilep_m(double m1, double m2) {
+	return m1 + m2;
+}
