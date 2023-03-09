@@ -1,9 +1,11 @@
+from collections import OrderedDict
 from typing import List, Tuple
 
 import ROOT
 import matplotlib.pyplot as plt
 import numpy as np
 from numpy.typing import ArrayLike
+from tabulate import tabulate
 
 from histogram import Histogram1D
 from src.cutfile import Cutfile
@@ -67,23 +69,26 @@ def plot(
     name: str = "",
     title: str = "",
     show: bool = False,
-    name_prefix: str = "",
-    name_suffix: str = "",
+    prefix: str = "",
+    suffix: str = "",
+    logx: bool = False,
     logy: bool = False,
     **kwargs,
 ) -> Histogram1D:
     # naming template for file/histogram name
     if not name:
         name_template = (
-            ((name_prefix + "_") if name_prefix else "")  # prefix
+            ((prefix + "_") if prefix else "")  # prefix
             + "{variable}"  # name of variable(s)
             + ("_NORMED" if normalise else "")  # normalisation flag
-            + (("_" + name_suffix) if name_suffix else "")  # suffix
+            + (("_" + suffix) if suffix else "")  # suffix
         )
         name = name_template.format(variable=x)
 
     if not ax:
         fig, ax = plt.subplots()
+    if logbins:
+        logx = True
 
     hist = plot_rdf(
         rdf=df,
@@ -98,7 +103,7 @@ def plot(
         title=title,
         **kwargs,
     )
-    set_axis_options(ax, x, bins, lepton="tau", title=title, logx=logbins, logy=logy)
+    set_axis_options(ax, x, bins, lepton="tau", title=title, logx=logx, logy=logy)
 
     if show:
         plt.show()
@@ -227,10 +232,49 @@ if __name__ == "__main__":
 
         Rdf = Rdf.Define(derived_var, func_str)
 
-    # create cut columns
-    print("Creating cuts...")
+    # apply cuts and print cutflow
+    print("calculating cutflow...")
+    filtered = Rdf.Filter("true", "Inclusive")
     for cut in cutfile.cuts.values():
-        Rdf = Rdf.Define(("PASS_" + cut.name), cut.cutstr)
+        filtered = filtered.Filter(cut.cutstr, cut.name)
+
+    print("Cutflow:")
+    report = filtered.Report()
+
+    cutflow = OrderedDict(
+        (
+            (
+                cut.name,
+                {
+                    "value": cut.cutstr,
+                    "npass": report.At(cut.name).GetPass(),
+                    "eff": report.At(cut.name).GetEff(),
+                },
+            )
+            for cut in cutfile.cuts.values()
+        )
+    )
+    for cut_name in cutflow:
+        cutflow[cut_name]["ceff"] = (
+            100 * cutflow[cut_name]["npass"] / report.At("Inclusive").GetAll()
+        )
+
+    print(
+        tabulate(
+            [["Inclusive", "-", report.At("Inclusive").GetAll(), "-", "-"]]
+            + [
+                [
+                    cut_name,
+                    cut["value"],
+                    cut["npass"],
+                    f"{cut['eff']:.3f}%",
+                    f"{cut['ceff']:.3f}%",
+                ]
+                for cut_name, cut in cutflow.items()
+            ],
+            headers=["name", "value", "npass", "eff", "cum. eff"],
+        )
+    )
 
     # PLOTTING
     # ========================================================================================
@@ -239,6 +283,63 @@ if __name__ == "__main__":
     truth_mass_args = {
         "bins": (30, 1, 5000),
         "logbins": True,
+        "logy": True,
+    }
+    truth_highmass_args = {
+        "bins": np.array(
+            [
+                130,
+                140.3921,
+                151.6149,
+                163.7349,
+                176.8237,
+                190.9588,
+                206.2239,
+                222.7093,
+                240.5125,
+                259.7389,
+                280.5022,
+                302.9253,
+                327.1409,
+                353.2922,
+                381.5341,
+                412.0336,
+                444.9712,
+                480.5419,
+                518.956,
+                560.4409,
+                605.242,
+                653.6246,
+                705.8748,
+                762.3018,
+                823.2396,
+                889.0486,
+                960.1184,
+                1036.869,
+                1119.756,
+                1209.268,
+                1305.936,
+                1410.332,
+                1523.072,
+                1644.825,
+                1776.311,
+                1918.308,
+                2071.656,
+                2237.263,
+                2416.107,
+                2609.249,
+                2817.83,
+                3043.085,
+                3286.347,
+                3549.055,
+                3832.763,
+                4139.151,
+                4470.031,
+                4827.361,
+                5213.257,
+            ]
+        ),
+        "logx": True,
         "logy": True,
     }
     weighted_args = {
@@ -281,4 +382,46 @@ if __name__ == "__main__":
         bins=(30, -np.pi, np.pi),
         **weighted_args,
         show=True,
+    )
+
+    print("With cuts:")
+    plot(
+        filtered,
+        x="TruthMTW",
+        **truth_highmass_args,
+        **weighted_args,
+        show=True,
+        prefix="cut",
+    )
+    plot(
+        filtered,
+        x="TruthBosonM",
+        **truth_highmass_args,
+        **weighted_args,
+        show=True,
+        prefix="cut",
+    )
+    plot(
+        filtered,
+        x="TruthTauPt",
+        **truth_highmass_args,
+        **weighted_args,
+        show=True,
+        prefix="cut",
+    )
+    plot(
+        filtered,
+        x="TruthTauEta",
+        bins=(30, -5, 5),
+        **weighted_args,
+        show=True,
+        prefix="cut",
+    )
+    plot(
+        filtered,
+        x="TruthTauPhi",
+        bins=(30, -np.pi, np.pi),
+        **weighted_args,
+        show=True,
+        prefix="cut",
     )
