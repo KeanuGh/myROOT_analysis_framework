@@ -10,10 +10,9 @@ import pandas as pd  # type: ignore
 import uproot  # type: ignore
 from awkward import to_pandas  # type: ignore
 
-import src.config as config
 from src.cutfile import Cutfile, Cut
-from src.cutflow import Cutflow
-from src.dataset import Dataset
+from src.cutflow import PCutflow
+from src.dataset import Dataset, PDataset, RDataset, CUT_PREFIX
 from src.logger import get_logger
 from utils import file_utils, ROOT_utils
 from utils.var_helpers import derived_vars
@@ -151,6 +150,8 @@ class DatasetBuilder:
             __create_cut_cols = False
         elif data_path and not pkl_path:
             __build_df = True
+        if self.dataset_type.lower() == "dta":
+            self.force_rebuild = True  # TODO: rework this
 
         if data_path and not file_utils.file_exists(data_path):
             raise FileExistsError(f"File {data_path} not found.")
@@ -275,39 +276,62 @@ class DatasetBuilder:
 
         # POST-PROCESSING
         # ===============================
-        # calculate variables
-        if __calculate_vars or self.force_recalc_vars:
-            self.__calculate_vars(df, vars_to_calc)
+        if isinstance(df, pd.DataFrame):
+            # calculate variables
+            if __calculate_vars or self.force_recalc_vars:
+                self.__calculate_vars(df, vars_to_calc)
 
-        # calculate cut columns
-        if __create_cut_cols or self.force_recalc_cuts:
-            self.__create_cut_columns(df, cuts)
+            # calculate cut columns
+            if __create_cut_cols or self.force_recalc_cuts:
+                self.__create_cut_columns(df, cuts)
 
-        # GENERATE CUTFLOW
-        cutflow = Cutflow(
-            df,
-            cutfile.cuts,
-            self.logger,
-        )
+            # GENERATE CUTFLOW
+            cutflow = PCutflow(
+                df,
+                cutfile.cuts,
+                logger=self.logger,
+            )
 
-        # BUILD DATASET
-        # ===============================
-        dataset = Dataset(
-            name=self.name,
-            df=df,
-            cutfile=cutfile,
-            cutflow=cutflow,
-            logger=self.logger,
-            lumi=self.lumi,
-            label=self.label,
-            lepton=self.lepton,
-        )
+            # BUILD DATASET
+            # ===============================
+            dataset: Dataset = PDataset(
+                name=self.name,
+                df=df,
+                cutfile=cutfile,
+                cutflow=cutflow,
+                logger=self.logger,
+                lumi=self.lumi,
+                label=self.label,
+                lepton=self.lepton,
+            )
 
-        # print pickle file if anything is new/changed
-        if pkl_path and (__build_df or __create_cut_cols or __calculate_vars):
-            dataset.save_pkl_file(str(pkl_path))
+            # print pickle file if anything is new/changed
+            if pkl_path and (__build_df or __create_cut_cols or __calculate_vars):
+                dataset.save_file(str(pkl_path))
+            else:
+                self.logger.debug("No pickle file saved.")
+
         else:
-            self.logger.debug("No pickle file saved.")
+            # calculate derived variables
+            print("calculating variables...")
+            for derived_var in vars_to_calc:
+                function = derived_vars[derived_var]["cfunc"]
+                args = derived_vars[derived_var]["var_args"]
+                func_str = f"{function}({','.join(args)})"
+
+                df = df.Define(derived_var, func_str)
+
+            # BUILD DATASET
+            # ===============================
+            dataset = RDataset(
+                name=self.name,
+                df=df,
+                cutfile=cutfile,
+                logger=self.logger,
+                lumi=self.lumi,
+                label=self.label,
+                lepton=self.lepton,
+            )
 
         return dataset
 
@@ -385,7 +409,7 @@ class DatasetBuilder:
         self, df_cols: Iterable, cuts: OrderedDict[str, Cut], raise_error: bool = False
     ) -> bool:
         """Check whether all necessary cut columns exist in DataFrame columns not including any hard cut"""
-        cut_cols = {cut_name + config.cut_label for cut_name in cuts}
+        cut_cols = {CUT_PREFIX + cut_name for cut_name in cuts}
         if missing_vars := {var for var in cut_cols if var not in df_cols}:
             if raise_error:
                 raise ValueError(f"Cut column(s) {missing_vars} missing from DataFrame")
@@ -401,18 +425,14 @@ class DatasetBuilder:
     # ===== DATAFRAME FUNCTIONS =====
     # ===============================
     def build_dataframe(
-        self, data_path: str, tree_dict: Dict[str, Set[str]], rdataframe: bool = True
+        self, data_path: str, tree_dict: Dict[str, Set[str]]
     ) -> pd.DataFrame | ROOT.RDataFrame:
         """send off dataframe builder to correct dataset type"""
         match self.dataset_type:
             case "analysistop":
-                return self.__build_dataframe_analysistop(
-                    data_path=data_path, tree_dict=tree_dict, rdataframe=rdataframe
-                )
+                return self.__build_dataframe_analysistop(data_path=data_path, tree_dict=tree_dict)
             case "dta":
-                return self.__build_dataframe_dta(
-                    data_path=data_path, tree_dict=tree_dict, rdataframe=rdataframe
-                )
+                return self.__build_dataframe_dta(data_path=data_path, tree_dict=tree_dict)
             case _:
                 raise ValueError(f"Unknown dataset {self.dataset_type}")
 
@@ -420,8 +440,7 @@ class DatasetBuilder:
         self,
         data_path: str,
         tree_dict: Dict[str, Set[str]],
-        rdataframe: bool = True,
-    ) -> pd.DataFrame | ROOT.RDataFrame:
+    ) -> pd.DataFrame:
         """
          Builds a dataframe
 
@@ -464,7 +483,7 @@ class DatasetBuilder:
             uproot.concatenate(
                 str(data_path) + ":" + self.TTree_name,
                 tree_dict[self.TTree_name],
-                num_workers=config.n_threads,
+                num_workers=-1,
                 begin_chunk_size=self.chunksize,
             ),
             how="outer",
@@ -476,7 +495,7 @@ class DatasetBuilder:
             uproot.concatenate(
                 str(data_path) + ":sumWeights",
                 ["totalEventsWeighted", "dsid"],
-                num_workers=config.n_threads,
+                num_workers=-1,
                 begin_chunk_size=self.chunksize,
             ),
             how="outer",
@@ -502,7 +521,7 @@ class DatasetBuilder:
                 uproot.concatenate(
                     str(data_path) + ":" + tree,
                     tree_dict[tree],
-                    num_workers=config.n_threads,
+                    num_workers=-1,
                     begin_chunk_size=self.chunksize,
                 ),
                 how="outer",
@@ -692,8 +711,8 @@ class DatasetBuilder:
         return df
 
     def __build_dataframe_dta(
-        self, data_path: str | Path, tree_dict: dict[str, Set[str]], rdataframe: bool = True
-    ) -> pd.DataFrame | ROOT.RDataFrame:
+        self, data_path: str | Path, tree_dict: dict[str, Set[str]], unravel_vectors: bool = True
+    ) -> ROOT.RDataFrame:
         """Build DataFrame from given files and TTree/branch combinations from DTA output"""
 
         t1 = time.time()
@@ -716,12 +735,11 @@ class DatasetBuilder:
             )
         import_cols = tree_dict[next(iter(tree_dict))]
 
-        self.logger.info(
-            f"Initiating RDataFrame from trees {ttrees} in {len(paths)} files and {len(import_cols)} branches.."
-        )
+        self.logger.info(f"Initiating RDataFrame from trees {ttrees} in {data_path}")
 
         # create c++ map for dataset ID metadatas
         # TODO: what's with this tree??
+        self.logger.debug("Calculating DSID metadata...")
         dsid_metadata = ROOT_utils.get_dsid_values(data_path, "T_s1thv_NOMINAL")
         ROOT.gInterpreter.Declare(
             f"""
@@ -745,29 +763,20 @@ class DatasetBuilder:
                 f"(mcWeight * rwCorr * {self.lumi} * prwWeight * dsid_pmgf[mcChannel]) / dsid_sumw[mcChannel]",
             )
             .Define(
-                "base_weight",
-                f"(mcWeight * dsid_xsec[mcChannel]) / dsid_sumw[mcChannel]",
-            )
-            .Define(
                 "reco_weight",
                 f"(weight * {self.lumi} * dsid_pmgf[mcChannel]) / dsid_sumw[mcChannel]",
             )
             .Define(
-                "ele_reco_weight",
+                "ele_weight_reco",
                 "reco_weight * Ele_recoSF * Ele_idSF * Ele_isoSF",
             )
             .Define(
-                "muon_reco_weight",
+                "muon_weight_reco",
                 "reco_weight * Muon_recoSF * Muon_isoSF * Muon_ttvaSF",
             )
+            .Define("tau_weight_reco", "reco_weight * TauRecoSF")
+            .Define("jet_weight_reco", "reco_weight * Jet_btSF")
         )
-        weight_cols = {  # MUST change this if weights are changed
-            "truth_weight",
-            "base_weight",
-            "reco_weight",
-            "ele_reco_weight",
-            "muon_reco_weight",
-        }
 
         # rescale energy columns to GeV
         for gev_column in [
@@ -777,80 +786,58 @@ class DatasetBuilder:
         ]:
             Rdf = Rdf.Redefine(gev_column, f"{gev_column} / 1000")
 
-        # routine to separate vector branches into separate variables
-        badcols = set()  # save old vector column names to avoid extracting them later
-        hard_cut_vars = find_variables_in_string(self.hard_cut)  # check for variables in hard cut
-        self.logger.debug("Shrinking vectors:")
-        for col_name in import_cols | hard_cut_vars | weight_cols:
-            # unravel vector-type columns
-            col_type = Rdf.GetColumnType(col_name)
-            debug_str = f"\t- {col_name}: {col_type}"
-            if "ROOT::VecOps::RVec" in col_type:
-                # skip non-numeric vector types
-                if col_type == "ROOT::VecOps::RVec<string>":
-                    self.logger.debug(f"\t- Skipping string vector column {col_name}")
-                    badcols.add(col_name)
+        if unravel_vectors:
+            # routine to separate vector branches into separate variables
+            badcols = set()  # save old vector column names to avoid extracting them later
+            hard_cut_vars = find_variables_in_string(self.hard_cut)
+            self.logger.debug("Shrinking vectors:")
+            for col_name in import_cols | hard_cut_vars | set(Rdf.GetDefinedColumnNames()):
+                # unravel vector-type columns
+                col_type = Rdf.GetColumnType(col_name)
+                debug_str = f"\t- {col_name}: {col_type}"
+                if "ROOT::VecOps::RVec" in col_type:
+                    # skip non-numeric vector types
+                    if col_type == "ROOT::VecOps::RVec<string>":
+                        self.logger.debug(f"\t- Skipping string vector column {col_name}")
+                        badcols.add(col_name)
 
-                elif "jet" in str(col_name).lower():
-                    # create three new columns for each possible jet
-                    debug_str += " -> "
-                    for i in range(3):
-                        new_name = col_name + str(i + 1)
-                        Rdf = Rdf.Define(f"{new_name}", f"getVecVal(&{col_name},{i})")
-                        debug_str += f"{new_name}: {Rdf.GetColumnType(new_name)}, "
-                        import_cols.add(new_name)
-                    badcols.add(col_name)
+                    # elif "jet" in str(col_name).lower():
+                    #     # create three new columns for each possible jet
+                    #     debug_str += " -> "
+                    #     for i in range(3):
+                    #         new_name = col_name + str(i + 1)
+                    #         Rdf = Rdf.Define(f"{new_name}", f"getVecVal(&{col_name},{i})")
+                    #         debug_str += f"{new_name}: {Rdf.GetColumnType(new_name)}, "
+                    #         import_cols.add(new_name)
+                    #     badcols.add(col_name)
 
-                # elif "neutrino" in str(col_name).lower():
-                #     Rdf = Rdf.Define(f"{col_name}1", f"(&{col_name})->at(0);")
-                #     Rdf = Rdf.Define(f"{col_name}2", f"(&{col_name})->at(1);")
-                #     Rdf = Rdf.Define(
-                #         f"{col_name}3", f"((&{col_name})->size() > 2) ? (&{col_name})->at(2) : NAN;"
-                #     )
-                #     badcols.add(col_name)
-                #     import_cols |= {f"{col_name}1", f"{col_name}2", f"{col_name}3"}
+                    # elif "neutrino" in str(col_name).lower():
+                    #     Rdf = Rdf.Define(f"{col_name}1", f"(&{col_name})->at(0);")
+                    #     Rdf = Rdf.Define(f"{col_name}2", f"(&{col_name})->at(1);")
+                    #     Rdf = Rdf.Define(
+                    #         f"{col_name}3",
+                    #         f"((&{col_name})->size() > 2) ? (&{col_name})->at(2) : NAN;",
+                    #     )
+                    #     badcols.add(col_name)
+                    #     import_cols |= {f"{col_name}1", f"{col_name}2", f"{col_name}3"}
 
-                else:
-                    Rdf = Rdf.Redefine(
-                        f"{col_name}", f"((&{col_name})->size() > 0) ? (&{col_name})->at(0) : NAN;"
-                    )
-                    debug_str += f" -> {Rdf.GetColumnType(col_name)}"
-            self.logger.debug(debug_str)
+                    else:
+                        Rdf = Rdf.Redefine(
+                            f"{col_name}",
+                            f"((&{col_name})->size() > 0) ? (&{col_name})->at(0) : NAN;",
+                        )
+                        debug_str += f" -> {Rdf.GetColumnType(col_name)}"
+                self.logger.debug(debug_str)
 
         # apply any hard cuts
         if self.hard_cut:
             Rdf = Rdf.Filter(self.hard_cut)
 
-        # import needed columns to pandas dataframe
-        cols_to_extract = [c for c in import_cols if c not in badcols] + list(weight_cols)
-
-        self.logger.info(f"Extracting {len(cols_to_extract)} branch(es) from RDataFrame...")
-        df = pd.DataFrame(Rdf.AsNumpy(columns=cols_to_extract))
-        self.logger.info(f"Extracted {len(df.index)} events.")
-
-        self.logger.debug("Setting DSID/eventNumber as index...")
-        df.set_index(["mcChannel", "eventNumber"], inplace=True)
-        df.index.names = ["DSID", "eventNumber"]
-
-        self.logger.info("Sorting by DSID...")
-        df.sort_index(level="DSID", inplace=True)
-
-        # validate
-        if self.validate_duplicated_events:
-            self.logger.info(f"Validating duplicated events in tree {self.TTree_name}...")
-            # self.__drop_duplicates(df)
-            df = self.__drop_duplicate_index(df)
-        else:
-            self.logger.info("Skipped duplicated event validation")
-
-        # rename mcWeight
-        df.rename(columns={"mcWeight": "weight_mc"}, inplace=True)
-
         self.logger.info(
             f"time to build dataframe: {time.strftime('%H:%M:%S', time.gmtime(time.time() - t1))}"
         )
 
-        return df
+        return Rdf
 
     # ===============================
     # ========== HELPERS ============
@@ -945,11 +932,11 @@ class DatasetBuilder:
 
     def __create_cut_columns(self, df: pd.DataFrame, cuts: OrderedDict[str, Cut]) -> None:
         """Creates boolean columns in dataframe corresponding to each cut"""
-        label = config.cut_label  # get cut label from config
+        label = CUT_PREFIX  # get cut label from config
         self.logger.info(f"Calculating {len(cuts)} cut columns...")
 
         for cut in cuts.values():
             try:
-                df[cut.name + label] = df.eval(cut.cutstr)
+                df[label + cut.name] = df.eval(cut.cutstr)
             except ValueError as e:
                 raise Exception(f"Error in cut {cut.cutstr}:\n {e}")

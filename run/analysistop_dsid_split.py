@@ -158,7 +158,7 @@ for ds in my_analysis.datasets:
         weight="base_weight",
         logx=True,
         stats_box=True,
-        name_prefix="base_weighted",
+        prefix="base_weighted",
     )
     base_metadata.append([dsid, h[0].name, h[0].n_entries, h[0].bin_sum(True), h[0].integral, xs])
     base_metadata.sort(key=lambda row: row[0])
@@ -179,7 +179,7 @@ for ds in my_analysis.datasets:
         logx=True,
         stats_box=True,
         scale_by_bin_width=True,
-        name_prefix="bin_scaled",
+        prefix="bin_scaled",
     )
     bin_scaled_metadata.append(
         [dsid, h[0].name, h[0].n_entries, h[0].bin_sum(True), h[0].integral, xs]

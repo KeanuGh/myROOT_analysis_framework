@@ -149,6 +149,7 @@ if __name__ == "__main__":
 
     print("Making RDataFrame...")
     Rdf = ROOT_utils.init_rdataframe("test_dataframe", in_path, trees)
+    print(f"{Rdf.GetNSlots()=}")
 
     # check columns exist in dataframe
     if missing_cols := (set(import_cols) - set(Rdf.GetColumnNames())):
@@ -232,52 +233,11 @@ if __name__ == "__main__":
 
         Rdf = Rdf.Define(derived_var, func_str)
 
-    # apply cuts and print cutflow
-    print("calculating cutflow...")
-    filtered = Rdf.Filter("true", "Inclusive")
-    for cut in cutfile.cuts.values():
-        filtered = filtered.Filter(cut.cutstr, cut.name)
-
-    print("Cutflow:")
-    report = filtered.Report()
-
-    cutflow = OrderedDict(
-        (
-            (
-                cut.name,
-                {
-                    "value": cut.cutstr,
-                    "npass": report.At(cut.name).GetPass(),
-                    "eff": report.At(cut.name).GetEff(),
-                },
-            )
-            for cut in cutfile.cuts.values()
-        )
-    )
-    for cut_name in cutflow:
-        cutflow[cut_name]["ceff"] = (
-            100 * cutflow[cut_name]["npass"] / report.At("Inclusive").GetAll()
-        )
-
-    print(
-        tabulate(
-            [["Inclusive", "-", report.At("Inclusive").GetAll(), "-", "-"]]
-            + [
-                [
-                    cut_name,
-                    cut["value"],
-                    cut["npass"],
-                    f"{cut['eff']:.3f}%",
-                    f"{cut['ceff']:.3f}%",
-                ]
-                for cut_name, cut in cutflow.items()
-            ],
-            headers=["name", "value", "npass", "eff", "cum. eff"],
-        )
-    )
+    print(f"{Rdf.GetNRuns()=}")
 
     # PLOTTING
     # ========================================================================================
+    print(f"{Rdf.GetNRuns()=}")
 
     # truth
     truth_mass_args = {
@@ -384,6 +344,58 @@ if __name__ == "__main__":
         show=True,
     )
 
+    print(f"{Rdf.GetNRuns()=}")
+
+    # apply cuts and print cutflow
+    print("calculating cutflow...")
+    filtered = Rdf.Filter("true", "Inclusive")
+    for cut in cutfile.cuts.values():
+        filtered = filtered.Filter(cut.cutstr, cut.name)
+
+    print(f"{Rdf.GetNRuns()=}")
+    print(f"{filtered.GetNRuns()=}")
+
+    print("Cutflow:")
+    report = filtered.Report()
+
+    cutflow = OrderedDict(
+        (
+            (
+                cut.name,
+                {
+                    "value": cut.cutstr,
+                    "npass": report.At(cut.name).GetPass(),
+                    "eff": report.At(cut.name).GetEff(),
+                },
+            )
+            for cut in cutfile.cuts.values()
+        )
+    )
+    for cut_name in cutflow:
+        cutflow[cut_name]["ceff"] = (
+            100 * cutflow[cut_name]["npass"] / report.At("Inclusive").GetAll()
+        )
+
+    print(
+        tabulate(
+            [["Inclusive", "-", report.At("Inclusive").GetAll(), "-", "-"]]
+            + [
+                [
+                    cut_name,
+                    cut["value"],
+                    cut["npass"],
+                    f"{cut['eff']:.3G} %",
+                    f"{cut['ceff']:.3G} %",
+                ]
+                for cut_name, cut in cutflow.items()
+            ],
+            headers=["name", "value", "npass", "eff", "cum. eff"],
+        )
+    )
+
+    print(f"{Rdf.GetNRuns()=}")
+    print(f"{filtered.GetNRuns()=}")
+
     print("With cuts:")
     plot(
         filtered,
@@ -425,3 +437,6 @@ if __name__ == "__main__":
         show=True,
         prefix="cut",
     )
+
+    print(f"{Rdf.GetNRuns()=}")
+    print(f"{filtered.GetNRuns()=}")

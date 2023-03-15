@@ -1,0 +1,37 @@
+[CUTS]
+# Name	cutstring	tree
+# truth
+High_mass	MC_WZ_m > 130
+Truth_tau_pt	MC_WZmu_el_pt_born > 25
+Truth_tau_eta	abs(MC_WZmu_el_eta_born) < 2.47
+Truth_tau_eta_crack	(abs(MC_WZmu_el_eta_born) < 1.37) or (abs(MC_WZmu_el_eta_born) > 1.52)
+
+# reco
+muon_pt	mu_pt > 7	nominal_Loose
+tau_tight	passTightQuality == 1	nominal_Loose
+
+[OUTPUTS]
+# truth
+MC_WZ_dilep_m_born	truth
+MC_WZneutrino_eta_born	truth
+MC_WZneutrino_pt_born	truth
+MC_WZmu_el_eta_born	truth
+MC_WZmu_el_pt_born	truth
+mt_born	truth
+MC_WZ_m
+
+# reco
+mu_d0sig	nominal_Loose
+mu_delta_z0_sintheta	nominal_Loose
+el_d0sig	nominal_Loose
+el_delta_z0_sintheta	nominal_Loose
+# primaryVertices	nominal_Loose
+mu_pt	nominal_Loose
+mu_eta	nominal_Loose
+mu_phi	nominal_Loose
+el_pt	nominal_Loose
+el_eta	nominal_Loose
+el_phi	nominal_Loose
+met_met	nominal_Loose
+met_phi	nominal_Loose
+mu_mt_reco	nominal_Loose

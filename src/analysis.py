@@ -2,19 +2,18 @@ import inspect
 from collections import OrderedDict
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Tuple, Iterable, Callable, Any, Set, Sequence
+from typing import Dict, List, Tuple, Iterable, Callable, Any, Set, Sequence, Generator
 
 import matplotlib.pyplot as plt  # type: ignore
 import pandas as pd  # type: ignore
 from numpy.typing import ArrayLike
 from tabulate import tabulate  # type: ignore
 
-import src.config as config
-from src.dataset import Dataset
+from src.dataset import Dataset, CUT_PREFIX
 from src.datasetbuilder import DatasetBuilder, lumi_year
 from src.histogram import Histogram1D
 from src.logger import get_logger
-from utils import file_utils, plotting_utils, ROOT_utils
+from utils import plotting_tools, ROOT_utils
 from utils.context import check_single_dataset, handle_dataset_arg
 
 
@@ -162,13 +161,15 @@ class Analysis:
                 ),
             )
             dataset = builder.build(**self.__match_params(args, DatasetBuilder.build))
-            dataset.set_plot_dir(self.paths.plot_dir)
             if separate_loggers:
                 # set new logger to append to analysis logger
                 dataset.logger = self.logger
                 dataset.logger.debug(f"{name} log handler returned to analysis.")  # test
 
-            dataset.dsid_metadata_printout()
+            try:
+                dataset.dsid_metadata_printout()
+            except NotImplementedError:
+                pass
 
             self[name] = dataset  # save to analysis
 
@@ -194,37 +195,31 @@ class Analysis:
     # ===============================
     # ========== BUILTINS ===========
     # ===============================
-    def __getitem__(self, key: str):
+    def __getitem__(self, key: str) -> Dataset:
         return self.datasets[key]
 
-    def __setitem__(self, ds_name: str, dataset: Dataset):
+    def __setitem__(self, ds_name: str, dataset: Dataset) -> None:
         if not isinstance(dataset, Dataset):
             raise ValueError(f"Analysis dataset must be of type {Dataset}")
         self.datasets[ds_name] = dataset
 
-    def __delitem__(self, key: str):
+    def __getattr__(self, item) -> Dataset:
+        return self.datasets[item]
+
+    def __delitem__(self, key: str) -> None:
         del self.datasets[key]
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.datasets)
 
-    def __iter__(self):
+    def __iter__(self) -> Generator[Dataset, None, None]:
         yield from self.datasets.values()
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f'Analysis("{self.name}",Datasets:{{{", ".join([f"{name}: {len(d)}, {list(d.df.columns)}" for name, d in self.datasets.items()])}}}'
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f'"{self.name}",Datasets:{{{", ".join([f"{name}: {len(d)}, {list(d.df.columns)}" for name, d in self.datasets.items()])}}}'
-
-    def __or__(self, other):
-        return self.datasets | other.datasets
-
-    def __ror__(self, other):
-        return other.datasets | self.datasets
-
-    def __ior__(self, other):
-        self.datasets |= other.datasets
 
     # ===============================
     # ====== DATASET FUNCTIONS ======
@@ -267,7 +262,7 @@ class Analysis:
         delete: bool = True,
         to_pkl: bool = False,
         verify: bool = False,
-        delete_pkl: bool = False,
+        delete_file: bool = False,
         sort: bool = True,
     ) -> None:
         """
@@ -280,7 +275,7 @@ class Analysis:
         :param delete: whether to delete datasets internally
         :param to_pkl: whether to print new dataset to a pickle file (will replace original pickle file)
         :param verify: whether to check for duplicated events
-        :param delete_pkl: whether to delete pickle files of merged datasets (not the one that is merged into)
+        :param delete_file: whether to delete pickle files of merged datasets (not the one that is merged into)
         :param sort: whether to sort output dataset
         """
         for n in datasets:
@@ -327,12 +322,12 @@ class Analysis:
         for n in datasets[1:]:
             if delete:
                 self.__delete_dataset(n)
-            if delete_pkl:
-                self.__delete_pickled_dataset(n)
+            if delete_file:
+                self.__delete_dataset_file(n)
 
         if to_pkl:
-            pd.to_pickle(self[datasets[0]].df, self[datasets[0]].pkl_file)
-            self.logger.info(f"Saved merged dataset to file {self[datasets[0]].pkl_file}")
+            pd.to_pickle(self[datasets[0]].df, self[datasets[0]].file)
+            self.logger.info(f"Saved merged dataset to file {self[datasets[0]].file}")
 
     @handle_dataset_arg
     def apply_cuts(
@@ -359,21 +354,17 @@ class Analysis:
         for dataset in datasets:
             # skip cuts that don't exist in dataset
             if isinstance(labels, str):
-                if labels + config.cut_label not in self[dataset].df.columns:
+                if CUT_PREFIX + labels not in self[dataset].df.columns:
                     self.logger.debug(f"No cut '{labels}' in dataset '{dataset}'; skipping.")
                     return
 
             elif isinstance(labels, list):
                 if missing_cuts := [
-                    label
-                    for label in labels
-                    if label + config.cut_label not in self[dataset].df.columns
+                    label for label in labels if CUT_PREFIX + label not in self[dataset].df.columns
                 ]:
                     self.logger.debug(f"No cuts {missing_cuts} in dataset '{dataset}'; skipping.")
                     # remove missing cuts from list
-                    labels = [
-                        label for label in labels if label + config.cut_label not in missing_cuts
-                    ]
+                    labels = [label for label in labels if CUT_PREFIX + label not in missing_cuts]
 
             self[dataset].apply_cuts(labels, reco, truth, inplace=True)
 
@@ -383,9 +374,9 @@ class Analysis:
         del self[ds_name]
 
     @check_single_dataset
-    def __delete_pickled_dataset(self, ds_name: str) -> None:
+    def __delete_dataset_file(self, ds_name: str) -> None:
         self.logger.info(f"Deleting pickled dataset {ds_name}")
-        file_utils.delete_file(self[ds_name].pkl_file)
+        self[ds_name].file.unlink()
 
     # ===============================
     # =========== PLOTS =============
@@ -394,12 +385,12 @@ class Analysis:
         self,
         datasets: str | Sequence[str],
         var: str | Sequence[str],
-        bins: Sequence[float | int] | Tuple[int, float, float],
+        bins: List[float | int] | Tuple[int, float, float],
         weight: List[str | float] | str | float = 1.0,
         yerr: ArrayLike | str = True,
         labels: List[str] | None = None,
         w2: bool = False,
-        normalise: float | bool | str = False,
+        normalise: float | bool = False,
         apply_cuts: bool | str | List[str] = False,
         logbins: bool = False,
         logx: bool = False,
@@ -415,8 +406,8 @@ class Analysis:
         ratio_axlim: float | None = None,
         ratio_label: str = "Ratio",
         filename: str | Path | None = None,
-        name_suffix: str = "",
-        name_prefix: str = "",
+        suffix: str = "",
+        prefix: str = "",
         **kwargs,
     ) -> List[Histogram1D]:
         """
@@ -458,19 +449,19 @@ class Analysis:
         :param ratio_axlim: pass to yax_lim in rato plotter
         :param ratio_label: y-axis label for ratio plot
         :param filename: name of output
-        :param name_suffix: suffix to add at end of histogram/file name
-        :param name_prefix: prefix to add at start of histogram/file
+        :param suffix: suffix to add at end of histogram/file name
+        :param prefix: prefix to add at start of histogram/file
         :param kwargs: keyword arguments to pass to mplhep.histplot()
         """
         self.logger.info(f"Plotting {var} in as overlay in {datasets}...")
 
         # naming template for file/histogram name
         name_template = (
-            ((name_prefix + "_") if name_prefix else "")  # prefix
+            ((prefix + "_") if prefix else "")  # prefix
             + "{dataset}"  # name of dataset(s)
             + "_{variable}"  # name of variable(s)
             + ("_NORMED" if normalise else "")  # normalisation flag
-            + (("_" + name_suffix) if name_suffix else "")  # suffix
+            + (("_" + suffix) if suffix else "")  # suffix
         )
 
         if isinstance(datasets, str):
@@ -561,7 +552,7 @@ class Analysis:
                 self.histograms[ratio_hist_name] = ratio_hist
 
         ax.legend(fontsize=10, loc="upper right")
-        plotting_utils.set_axis_options(
+        plotting_tools.set_axis_options(
             ax, var, bins, lepton, xlabel, ylabel, title, logx, logy, diff_xs=scale_by_bin_width
         )
         if ratio_plot:
@@ -573,7 +564,7 @@ class Analysis:
             if len(datasets) > 2:  # don't show legend if there's only two datasets
                 ratio_ax.legend(fontsize=10, loc=1)
 
-            plotting_utils.set_axis_options(
+            plotting_tools.set_axis_options(
                 axis=ratio_ax,
                 var_name=var,
                 bins=bins,

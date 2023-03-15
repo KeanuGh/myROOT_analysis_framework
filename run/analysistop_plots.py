@@ -125,7 +125,7 @@ my_analysis.plot_hist(
     bins=bins,
     logx=True,
     stats_box=True,
-    name_suffix="unweighted",
+    suffix="unweighted",
 )
 
 my_analysis.logger.info("DONE")

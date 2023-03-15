@@ -1,17 +1,29 @@
 import logging
+from collections import OrderedDict
+from dataclasses import dataclass, field
+from logging import Logger
 from pathlib import Path
-from typing import OrderedDict
+from typing import List, Generator
 
+import ROOT  # type: ignore
 import matplotlib.pyplot as plt  # type: ignore
 import mplhep as hep  # type: ignore
 import pandas as pd  # type: ignore
+from tabulate import tabulate  # type: ignore
 
-import src.config as config
 from src.cutfile import Cut
 from src.logger import get_logger
 
 
-class Cutflow:
+@dataclass(slots=True)
+class CutflowItem:
+    value: str
+    npass: float
+    eff: float
+    ceff: float
+
+
+class PCutflow:
     __slots__ = (
         "logger",
         "_n_events_tot",
@@ -23,10 +35,11 @@ class Cutflow:
         "cutflow_str",
         "_cuthist_options",
         "__first_reco_cut",
+        "logger",
     )
 
     def __init__(
-        self, df: pd.DataFrame, cuts: OrderedDict[str, Cut], logger: logging.Logger = None
+        self, df: pd.DataFrame, cuts: OrderedDict[str, Cut], logger: logging.Logger | None = None
     ):
         """
         Generates cutflow object that keeps track of various properties and ratios of selections made on given dataset
@@ -35,12 +48,13 @@ class Cutflow:
         :param cuts: Ordered dict of cuts made.
         :param logger: logger to output to
         """
-        if missing_cuts := {
-            cut_name for cut_name in cuts if cut_name + config.cut_label not in df.columns
-        }:
+        if missing_cuts := {cut_name for cut_name in cuts if "PASS_" + cut_name not in df.columns}:
             raise ValueError(f"Missing cut(s) {missing_cuts} in DataFrame")
 
-        self.logger = logger if logger else get_logger()
+        if logger is None:
+            self.logger = get_logger()
+        else:
+            self.logger = logger
 
         # generate cutflow
         self._n_events_tot = len(df.index)
@@ -71,7 +85,7 @@ class Cutflow:
         self.cutflow_cum = [1.0]  # contains ratio of each cut to inclusive sample
 
         # extract only the cut columns from the dataframe
-        df = df[[col for col in df.columns if config.cut_label in col]]
+        df = df[[col for col in df.columns if "PASS_" in col]]
 
         # generate cutflow
         prev_n = self._n_events_tot  # saves the last cut in loop
@@ -79,7 +93,7 @@ class Cutflow:
 
         # loop over individual cuts
         for cut in self.cutflow_labels[1:]:
-            curr_cut_columns += [cut + config.cut_label]
+            curr_cut_columns += ["PASS_" + cut]
             # number of events passing current cut & all previous cuts
             n_events_left = len(df.loc[df[curr_cut_columns].all(1)].index)
             self.cutflow_n_events.append(n_events_left)
@@ -93,7 +107,7 @@ class Cutflow:
             self.cutflow_cum.append(n_events_left / self._n_events_tot)
 
             self.cutflow_a_ratio.append(
-                len(df[df[[cut + config.cut_label]].all(1)].index) / self._n_events_tot
+                len(df[df[["PASS_" + cut]].all(axis=1)].index) / self._n_events_tot
             )
 
             prev_n = n_events_left
@@ -123,11 +137,16 @@ class Cutflow:
         }
 
         if logger.level == logging.DEBUG:
-            self.printout()
+            self.print()
 
-    def printout(self) -> None:
+    def print(self, latex_path: Path | None = None) -> None:
         """Prints out cutflow table to terminal"""
         # lengths of characters needed to get everything to line up properly
+
+        if latex_path:
+            self.print_latex_table(latex_path)
+            return None
+
         max_n_len = len(str(self._n_events_tot))
         max_name_len = max([len(cut) for cut in self.cutflow_str])
 
@@ -230,3 +249,82 @@ class Cutflow:
         filepath = self._cuthist_options[kind]["filepath"].format(out_path)
         fig.savefig(filepath)
         self.logger.info(f"Cutflow histogram saved to {filepath}")
+
+
+@dataclass(slots=True)
+class RCutflow:
+    rdf: ROOT.RDataFrame
+    _cutflow: OrderedDict[str, CutflowItem] = field(init=False, default_factory=OrderedDict)
+    report: ROOT.RDF.RCutFlowReport | None = field(init=False, default=None)
+    logger: Logger = field(default_factory=get_logger)
+
+    def __getitem__(self, item) -> CutflowItem:
+        return self._cutflow[item]
+
+    def __getattr__(self, item) -> CutflowItem:
+        return self._cutflow[item]
+
+    def __iter__(self) -> Generator[CutflowItem, None, None]:
+        yield from self._cutflow.values()
+
+    def __len__(self) -> int:
+        return len(self._cutflow)
+
+    @property
+    def total_events(self) -> int:
+        if self.report is None:
+            raise AttributeError("Must have run one event loop in order to obtain number of events")
+        return self.report.At("Inclusive").GetAll()
+
+    def gen_cutflow(self, cuts: List[Cut]) -> None:
+        """
+        Generate cutflow - forces an event loop to run if not already.
+
+        :param cuts: List of Cut objects to ov
+        """
+        self.report = self.rdf.Report()
+        self._cutflow = OrderedDict(
+            (
+                (
+                    cut.name,
+                    CutflowItem(
+                        value=cut.cutstr,
+                        npass=self.report.At(cut.name).GetPass(),
+                        eff=self.report.At(cut.name).GetEff(),
+                        ceff=0.0,  # calculate this next
+                    ),
+                )
+                for cut in cuts
+            )
+        )
+        for cut_name in self._cutflow:
+            self._cutflow[cut_name].ceff = (
+                100 * self._cutflow[cut_name].npass / self.report.At("Inclusive").GetAll()
+            )
+
+    def print(self, latex_path: Path | None = None) -> None:
+        if self.report is None:
+            raise AttributeError("Must first generate cutflow before being able to print")
+
+        table = tabulate(
+            [["Inclusive", "-", self.report.At("Inclusive").GetAll(), "-", "-"]]
+            + [
+                [
+                    cut_name,
+                    cut.value,
+                    cut.npass,
+                    f"{cut.eff:.3G} %",
+                    f"{cut.ceff:.3G} %",
+                ]
+                for cut_name, cut in self._cutflow.items()
+            ],
+            headers=["name", "value", "npass", "eff", "cum. eff"],
+            tablefmt="latex" if latex_path else "simple",
+        )
+
+        if latex_path:
+            with open(latex_path, "w") as f:
+                f.write(table)
+
+        else:
+            print(table)

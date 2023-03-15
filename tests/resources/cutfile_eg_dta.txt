@@ -1,0 +1,61 @@
+[CUTS]
+# Name	cutstring	tree
+# !!REMEMBER DEFAULT ANALYSISTOP OUTPUT IS IN MeV NOT GeV!!
+tau_eta	abs(TruthTauEta) < 2.4
+tau_pt	abs(TruthTauPt) > 25
+
+[OUTPUTS]
+# variables to process
+# truth
+TruthTauPt
+TruthTauEta
+TruthTauPhi
+VisTruthTauPt
+VisTruthTauEta
+VisTruthTauPhi
+TruthNeutrinoPt
+TruthNeutrinoEta
+TruthNeutrinoPhi
+TruthNeutrinoE
+TruthJetEta
+TruthJetPhi
+TruthJetE
+TruthElePt
+TruthEleEta
+TruthElePhi
+TruthEleE
+TruthMuonPt
+TruthMuonEta
+TruthMuonPhi
+TruthMuonE
+TruthBosonE
+TruthBosonEta
+TruthBosonPt
+TruthBosonM
+TruthDilepM
+TruthMTW
+
+# reco
+TauEta
+TauPhi
+TauPt
+TauE
+MuonEta
+MuonPhi
+MuonPt
+MuonE
+Muon_d0sig
+Muon_delta_z0
+EleEta
+ElePhi
+ElePt
+EleE
+Ele_d0sig
+Muon_delta_z0
+PhotonEta
+PhotonPt
+PhotonE
+MET_etx
+MET_ety
+MET_met
+MET_phi

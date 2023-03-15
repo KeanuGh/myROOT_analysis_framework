@@ -347,6 +347,11 @@ variable_data: Dict[str, Branch] = {
         "units": "",
         "tag": VarTag.RECO,
     },
+    "passTightQuality": {
+        "name": "Is Tight",
+        "units": "",
+        "tag": VarTag.RECO,
+    },
     # from DTA
     "ElePt": {
         "name": r"Electron $p_{T}$",

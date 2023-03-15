@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import logging
+from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import List, Tuple, Iterable, OrderedDict
+from typing import List, Tuple, Iterable, OrderedDict, Final, Set
 
+import ROOT  # type: ignore
 import matplotlib.pyplot as plt  # type: ignore
 import mplhep as hep  # type: ignore
 import numpy as np
@@ -12,92 +14,51 @@ import pandas as pd  # type: ignore
 from numpy.typing import ArrayLike
 from tabulate import tabulate  # type: ignore
 
-import src.config as config
 from src.cutfile import Cutfile, Cut
-from src.cutflow import Cutflow
+from src.cutflow import PCutflow, RCutflow
 from src.histogram import Histogram1D
 from src.logger import get_logger
-from utils import plotting_utils, PMG_tool
+from utils import plotting_tools, PMG_tool, ROOT_utils
 from utils.variable_names import variable_data, VarTag
 
+CUT_PREFIX: Final = "PASS_"
 
-@dataclass(slots=True)
-class Dataset:
-    """
-    Dataset class. Contains/will contain all the variables needed for a singular analysis dataset.
 
-    :param name: Name of Dataset
-    :param df: pandas DataFrame containing data
-    :param cutfile: Cutfile object containg cuts applied to dataset
-    :param cutflow: Cutflow object containing cutflow variables
-    :param lumi: Dataset Luminosity
-    :param label: Label to put on plots
-    :param logger: Logger object to print to. Defaults to console output at DEBUG-level
-    :param lepton: Name of charged DY lepton channel in dataset (if applicable)
-    :param plot_dir: directory to save plots to. Defaults to current directory
-    :param pkl_file: File containing pickled DataFrame. Defaults to '<name>.pkl' in current directory
-    """
-
+@dataclass
+class Dataset(ABC):
     name: str
-    df: pd.DataFrame
+    df: pd.DataFrame | ROOT.RDataFrame
     cutfile: Cutfile
-    cutflow: Cutflow
+    cutflow: PCutflow | RCutflow
     lumi: float = 139.0
     label: str = "data"
     logger: logging.Logger = field(default_factory=get_logger)
     lepton: str = "lepton"
-    plot_dir: Path = Path(".")
-    pkl_file: str = field(init=False)
+    file: Path = field(init=False)
+    histograms: OrderedDict[str, Histogram1D] = field(init=False)
 
-    def __post_init__(self):
-        self.pkl_file = self.name + "_df.pkl"
-
-    # Builtins
-    # ===================
+    @abstractmethod
     def __len__(self):
-        """Return number of rows in dataframe"""
-        return self.df.index.__len__()
+        ...
 
-    def __getitem__(self, col):
-        return self.df[col]
-
-    def __setitem__(self, col, item):
-        self.df[col] = item
-
+    @abstractmethod
     def __getattr__(self, item):
-        return getattr(self.df, item)
-
-    def __repr__(self):
-        return f'Dataset("{self.name}",Variables:{self.variables},Cuts:{self.cut_cols},Events:{len(self)})'
-
-    def __str__(self):
-        return f"{self.name},Variable:{self.variables},Cuts:{self.cut_cols},Events:{len(self)}"
-
-    def __add__(self, other) -> pd.DataFrame:
-        """Concatenate two dataframes"""
-        return pd.concat([self.df, other.df], ignore_index=True, copy=False)
-
-    def __iadd__(self, other):
-        """Concatenate dataframe to self.df"""
-        self.df.append(other.df, ignore_index=True)
+        ...
 
     # Variable setting/getting
     # ===================
-    def set_plot_dir(self, path: Path) -> None:
-        self.plot_dir = path
-
-    def set_pkl_path(self, filepath: str) -> None:
-        self.pkl_file = filepath
+    @property
+    @abstractmethod
+    def columns(self) -> List[str]:
+        ...
 
     @property
-    def variables(self) -> set:
-        """Column names that do not contain a cut label"""
-        return {col for col in self.df.columns if config.cut_label not in col}
+    @abstractmethod
+    def variables(self) -> Set[str]:
+        ...
 
-    @property
-    def cut_cols(self) -> set:
-        """Column names that contain a cut label"""
-        return {col for col in self.df.columns if config.cut_label in col}
+    def set_filepath(self, filepath: Path | str) -> None:
+        self.file = Path(filepath)
 
     @property
     def cuts(self) -> OrderedDict[str, Cut]:
@@ -131,7 +92,7 @@ class Dataset:
     @property
     def __var_tags(self) -> list[str]:
         """Get tags for all variables"""
-        return [variable_data[col]["tag"] for col in self.df.columns if col in variable_data]
+        return [variable_data[col]["tag"] for col in self.columns if col in variable_data]
 
     def __get_var_tag(self, tag: VarTag | str) -> list[str]:
         """Get all variables in dataset with given tag"""
@@ -141,20 +102,115 @@ class Dataset:
             if col in variable_data and variable_data[col]["tag"] == VarTag(tag)
         ]
 
+    # ===============================
+    # ========= PRINTOUTS ===========
+    # ===============================
+    @abstractmethod
+    def save_file(self, path: str | Path | None = None) -> None:
+        ...
+
+    def cutflow_printout(self, latex_path: Path | None = None) -> None:
+        """Prints cutflow table. Pass path to .tex file if you want to print to latex"""
+        if self.cutflow is not None:
+            self.cutflow.print(latex_path=latex_path)
+        else:
+            raise AttributeError("Must have applied cuts to obtain cutflow")
+
+    @abstractmethod
+    def dsid_metadata_printout(self, truth: bool = True, reco: bool = False) -> None:
+        ...
+
+    # ===============================
+    # ========== CUTTING ============
+    # ===============================
+    @abstractmethod
+    def apply_cuts(
+        self,
+        labels: bool | str | List[str] = True,
+        reco: bool = False,
+        truth: bool = False,
+    ) -> None:
+        ...
+
+    # ===========================================
+    # =========== PLOTING FUNCTIONS =============
+    # ===========================================
+    @abstractmethod
+    def plot_hist(
+        self,
+        var: str,
+        bins: List[float] | Tuple[int, float, float],
+        weight: str | float = 1.0,
+        ax: plt.Axes = None,
+        yerr: ArrayLike | bool = False,
+        normalise: float | bool = False,
+        logbins: bool = False,
+        name: str = "",
+        title: str = "",
+        **kwargs,
+    ) -> Histogram1D:
+        ...
+
+    # def gen_histograms(self, to_file: bool = True) -> Dict[str, Histogram1D]:
+    #     output_histograms = self.cutfile.all_vars()
+
+
+@dataclass(slots=True)
+class PDataset(Dataset):
+    """
+    PDataset class. Contains/will contain all the variables needed for a singular analysis dataset.
+
+    :param name: Name of Dataset
+    :param df: pandas DataFrame containing data
+    :param cutfile: Cutfile object containg cuts applied to dataset
+    :param cutflow: Cutflow object containing cutflow variables
+    :param lumi: Dataset Luminosity
+    :param label: Label to put on plots
+    :param logger: Logger object to print to. Defaults to console output at DEBUG-level
+    :param lepton: Name of charged DY lepton channel in dataset (if applicable)
+    :param plot_dir: directory to save plots to. Defaults to current directory
+    :param file: File containing pickled DataFrame. Defaults to '<name>.pkl' in current directory
+    """
+
+    def __post_init__(self):
+        self.file = Path(self.name + "_df.pkl")
+
+    # Builtins
+    # ===================
+    def __len__(self):
+        """Return number of rows in dataframe"""
+        return self.df.index.__len__()
+
+    def __getitem__(self, col):
+        return self.df[col]
+
+    def __setitem__(self, col, item):
+        self.df[col] = item
+
+    def __getattr__(self, item):
+        return getattr(self.df, item)
+
+    def __repr__(self):
+        return f'Dataset("{self.name}",Variables:{self.variables},Cuts:{self.cut_cols},Events:{len(self)})'
+
+    def __str__(self):
+        return f"{self.name},Variable:{self.variables},Cuts:{self.cut_cols},Events:{len(self)}"
+
+    # Variable setting/getting
+    # ===================
     @property
-    def meta_cols(self) -> pd.DataFrame:
-        """Get meta columns in dataset"""
-        return self.df.loc[:, self.meta_vars]
+    def columns(self) -> List[str]:
+        return list(self.df.columms)
 
     @property
-    def truth_cols(self) -> pd.DataFrame:
-        """Get truth columns in dataset"""
-        return self.df.loc[:, self.truth_vars]
+    def variables(self) -> set:
+        """Column names that do not contain a cut label"""
+        return {col for col in self.df.columns if CUT_PREFIX not in col}
 
     @property
-    def reco_cols(self) -> pd.DataFrame:
-        """Get reconstructed variables in dataset"""
-        return self.df.loc[:, self.reco_vars]
+    def cut_cols(self) -> set:
+        """Column names that contain a cut label"""
+        return {col for col in self.df.columns if CUT_PREFIX in col}
 
     def get_dsid(self, dsid: str | int) -> pd.DataFrame:
         """Get events from partcular DSID"""
@@ -233,7 +289,7 @@ class Dataset:
     # ===============================
     def subset(self, args) -> Dataset:
         """Create new dataset that is subset of this dataset"""
-        return Dataset(
+        return PDataset(
             name=self.name,
             df=self.df.loc[args],
             cutfile=self.cutfile,
@@ -250,22 +306,18 @@ class Dataset:
 
     def subset_cut(self, cut_name: str) -> Dataset:
         """Get cut subset of Dataset"""
-        return self.subset(self.df[[cut_name + config.cut_label]].all(1))
+        return self.subset(self.df[[cut_name + CUT_PREFIX]].all(1))
 
     # ===============================
     # ========= PRINTOUTS ===========
     # ===============================
-    def save_pkl_file(self, path: str | None = None) -> None:
-        """Saves pickle"""
+    def save_file(self, path: str | Path | None = None) -> None:
+        """Saves pickled dataframe to file"""
         if not path:
-            path = self.pkl_file
+            path = Path(self.file)
         self.logger.info(f"Saving pickle file...")
         self.df.to_pickle(path)
         self.logger.info(f"Saved pickled DataFrame to {path}")
-
-    def cutflow_printout(self) -> None:
-        """Prints cutflow table to terminal"""
-        self.cutflow.printout()
 
     def kinematics_printout(self) -> None:
         """Prints some kinematic variables to terminal"""
@@ -273,14 +325,6 @@ class Dataset:
         self.logger.info(f"========{self.name.upper()} KINEMATICS ===========")
         self.logger.info(f"cross-section: {self.cross_section:.2f} fb")
         self.logger.info(f"luminosity   : {self.luminosity:.2f} fb-1")
-
-    def print_latex_table(self, filepath: Path) -> None:
-        """
-        Prints a latex table containing cutflow to file in filepath with date and time.
-        Returns the name of the printed table
-        """
-        self.cutflow.print_latex_table(filepath)
-        self.logger.info(f"Saved LaTeX cutflow table in {filepath}")
 
     def dsid_metadata_printout(self, truth: bool = True, reco: bool = False) -> None:
         """print some dataset ID metadata"""
@@ -338,8 +382,8 @@ class Dataset:
         labels: bool | str | List[str] = True,
         reco: bool = False,
         truth: bool = False,
-        inplace: bool = False,
-    ) -> pd.DataFrame | None:
+        inplace: bool = True,
+    ) -> None:
         """
         Apply cut(s) to DataFrame.
 
@@ -364,25 +408,23 @@ class Dataset:
         if truth:
             self.logger.debug(f"Applying truth cuts to {self.name}...")
             cut_cols += [
-                cut.name + config.cut_label for cut in self.cuts.values() if cut.is_reco is False
+                CUT_PREFIX + cut.name for cut in self.cuts.values() if cut.is_reco is False
             ]
         if reco:
             self.logger.debug(f"Applying reco cuts to {self.name}...")
-            cut_cols += [
-                cut.name + config.cut_label for cut in self.cuts.values() if cut.is_reco is True
-            ]
+            cut_cols += [CUT_PREFIX + cut.name for cut in self.cuts.values() if cut.is_reco is True]
 
         if isinstance(labels, list):
             self.logger.debug(f"Applying cuts: {labels} to {self.name}...")
-            cut_cols += [label + config.cut_label for label in labels]
+            cut_cols += [CUT_PREFIX + label for label in labels]
 
         elif isinstance(labels, str):
             self.logger.debug(f"Applying cut: '{labels}' to {self.name}...")
-            cut_cols += [labels + config.cut_label]
+            cut_cols += [CUT_PREFIX + labels]
 
         elif labels is True:
             self.logger.debug(f"Applying all cuts to {self.name}...")
-            cut_cols += [str(col) for col in self.df.columns if config.cut_label in col]
+            cut_cols += [str(col) for col in self.df.columns if CUT_PREFIX in col]
 
         elif labels is not False:
             raise TypeError("'labels' must be a bool, a string or a list of strings")
@@ -429,8 +471,8 @@ class Dataset:
         yerr: ArrayLike | bool = False,
         normalise: float | bool = False,
         logbins: bool = False,
-        apply_cuts: bool | str | List[str] = False,
         name: str = "",
+        title: str = "",
         **kwargs,
     ) -> Histogram1D:
         """
@@ -452,9 +494,8 @@ class Dataset:
                           - True for normalisation of unity
                           - False (default) for no normalisation
         :param logbins: whether logarithmic binnings
-        :param apply_cuts: True to apply all cuts to dataset before plotting or False for no cuts
-                           pass a string or list of strings of the cut label(s) to apply just those cuts
         :param name: histogram name
+        :param title: histogram title
         :param kwargs: keyword arguments to pass to mplhep.histplot()
         :return: Histgoram
         """
@@ -463,10 +504,8 @@ class Dataset:
         if not ax:
             _, ax = plt.subplots()
 
-        df = self.apply_cuts(apply_cuts) if apply_cuts else self.df
-
-        weights = df[weight] if isinstance(weight, str) else weight
-        hist = Histogram1D(df[var], bins, weights, logbins, name=name, logger=self.logger)  # type: ignore
+        weights = self.df[weight] if isinstance(weight, str) else weight
+        hist = Histogram1D(df[var], bins, weights, logbins, name=name, title=title, logger=self.logger)  # type: ignore
         hist = hist.plot(ax=ax, yerr=yerr, normalise=normalise, **kwargs)
         return hist
 
@@ -548,14 +587,14 @@ class Dataset:
         fig.subplots_adjust(hspace=0.1, wspace=0)
 
         # figure plot
-        plotting_utils.set_axis_options(
+        plotting_tools.set_axis_options(
             fig_ax, var, bins, lepton, xlabel, ylabel, title, logx, logy
         )
         fig_ax.legend()
         fig_ax.get_xaxis().set_visible(False)
 
         # ratio plot
-        plotting_utils.set_axis_options(
+        plotting_tools.set_axis_options(
             accept_ax, var, bins, lepton, xlabel, ylabel, title, logx, False, label=False
         )
         accept_ax.set_ylabel("Acceptance")
@@ -615,42 +654,13 @@ class Dataset:
 
         ax.legend(fontsize=10, ncol=2)
         title = self.label if not title else title
-        plotting_utils.set_axis_options(
+        plotting_tools.set_axis_options(
             ax, var, bins, self.lepton, xlabel, ylabel, title, logx, logy  # type: ignore
         )
 
         filename = f"{self.plot_dir}{self.name}_{var}_SLICES.png"
         fig.savefig(filename, bbox_inches="tight")
         self.logger.info(f"Saved dsid slice plot of {var} in {self.name} to {filename}")
-
-    def gen_cutflow_hist(
-        self,
-        event: bool = True,
-        ratio: bool = False,
-        cummulative: bool = False,
-        a_ratio: bool = False,
-        all_plots: bool = False,
-    ) -> None:
-        """
-        Generates and saves cutflow histograms. Choose which cutflow histogram option to print. Default: only by-event.
-
-        :param event: y-axis is number of events passing each cut
-        :param ratio: ratio of events passing each cut to inclusive sample
-        :param cummulative: ratio of each cut to the previous cut
-        :param a_ratio: ratio of cut to inclusive sample
-        :param all_plots: it True, plot all
-        :return: None
-        """
-        if all_plots:
-            event = ratio = cummulative = a_ratio = True
-        if event:
-            self.cutflow.print_histogram(self.plot_dir, "event")
-        if ratio:
-            self.cutflow.print_histogram(self.plot_dir, "ratio")
-        if cummulative:
-            self.cutflow.print_histogram(self.plot_dir, "cummulative")
-        if a_ratio:
-            self.cutflow.print_histogram(self.plot_dir, "a_ratio")
 
     def profile_plot(
         self,
@@ -675,8 +685,8 @@ class Dataset:
 
         ax.scatter(self.df[varx], self.df[vary], c="k", s=0.2, **kwargs)
 
-        ax.set_xlabel(xlabel if xlabel else plotting_utils.get_axis_labels(varx, lepton)[0])
-        ax.set_ylabel(ylabel if ylabel else plotting_utils.get_axis_labels(vary, lepton)[0])
+        ax.set_xlabel(xlabel if xlabel else plotting_tools.get_axis_labels(varx, lepton)[0])
+        ax.set_ylabel(ylabel if ylabel else plotting_tools.get_axis_labels(vary, lepton)[0])
         if xlim:
             ax.set_xlim(*xlim)
         if ylim:
@@ -701,3 +711,222 @@ class Dataset:
             plt.show()
 
         return ax
+
+
+@dataclass(slots=True)
+class RDataset(Dataset):
+    """
+    Dataset class. Contains/will contain all the variables needed for a singular analysis dataset.
+
+    :param name: Name of Dataset
+    :param df: pandas DataFrame containing data
+    :param cutfile: Cutfile object containg cuts applied to dataset
+    :param filtered_df: view of dataframe with cuts applied. Must be generated with gen_cutflow() or apply_cuts() first
+    :param lumi: Dataset Luminosity
+    :param label: Label to put on plots
+    :param logger: Logger object to print to. Defaults to console output at DEBUG-level
+    :param lepton: Name of charged DY lepton channel in dataset (if applicable)
+    :param plot_dir: directory to save plots to. Defaults to current directory
+    """
+
+    cutflow: RCutflow = field(init=False)
+    filtered_df: ROOT.RDataFrame | None = None
+
+    def __post_init__(self) -> None:
+        self.file = Path(self.name + ".root")
+
+        # generate filtered dataframe for cuts
+        self.filtered_df: ROOT.RDataFrame = self.df.Filter("true", "Inclusive")
+        for cut in self.cutfile.cuts.values():
+            self.filtered_df = self.filtered_df.Filter(cut.cutstr, cut.name)
+
+    def __len__(self) -> int:
+        return self.cutflow.total_events
+
+    def __getattr__(self, item):
+        return getattr(self.df, item)
+
+    @property
+    def columns(self) -> List[str]:
+        return list(self.df.GetColumnNames())
+
+    # Variable setting/getting
+    # ===================
+    @property
+    def variables(self) -> Set[str]:
+        """Column names that do not contain a cut label"""
+        return {col for col in self.columns if CUT_PREFIX not in col}
+
+    # ===============================
+    # ========= PRINTOUTS ===========
+    # ===============================
+    def save_file(
+        self, path: str | Path | None = None, ttree: str = "default", tfile_option: str = "recreate"
+    ) -> None:
+        """Saves pickle"""
+        if not path:
+            path = Path(self.file)
+        self.logger.info(f"Saving to ROOT file...")
+        with ROOT_utils.ROOT_TFile_mgr(path, tfile_option):
+            self.df.Snapshot(ttree, path, tfile_option)
+        self.logger.info(f"Saved to {path}")
+
+    def dsid_metadata_printout(self, truth: bool = True, reco: bool = False) -> None:
+        # TODO
+        raise NotImplementedError()
+
+    # ===============================
+    # ========== CUTTING ============
+    # ===============================
+    def apply_cuts(
+        self,
+        labels: bool | str | List[str] = True,
+        reco: bool = False,
+        truth: bool = False,
+        inplace: bool = True,
+    ) -> ROOT.RDataFrame | None:
+        """
+        Apply specific cut(s) to DataFrame.
+
+        :param labels: list of cut labels or single cut label. If True applies all cuts. Skips if logical false.
+        :param reco: cut on reco cuts
+        :param truth: cut on truth cuts
+        :param inplace: If True, applies cuts in place to dataframe in self.
+                        If False returns DataFrame object
+        :return: None if inplace is True.
+                 If False returns DataFrame with cuts applied.
+                 Raises ValueError if cuts do not exist
+        """
+        if not labels and (not reco) and (not truth):
+            raise ValueError("No cuts supplied")
+        if (reco or truth) and isinstance(labels, (str, list)):
+            raise ValueError("Supply either named cut labels, truth or reco")
+        if truth or reco:
+            labels = False
+
+        # handle which cuts to apply depending on what is passed as 'labels'
+        cuts_to_apply: List[Cut] = []
+        if truth:
+            self.logger.debug(f"Applying truth cuts to {self.name}...")
+            cuts_to_apply += [cut for cut in self.cuts.values() if cut.is_reco is False]
+        if reco:
+            self.logger.debug(f"Applying reco cuts to {self.name}...")
+            cuts_to_apply += [cut for cut in self.cuts.values() if cut.is_reco is True]
+
+        if isinstance(labels, list):
+            self.logger.debug(f"Applying cuts: {labels} to {self.name}...")
+            for cut_name in labels:
+                try:
+                    cuts_to_apply.append(self.cuts[cut_name])
+                except KeyError:
+                    raise ValueError(f"No cut named {cut_name} in cuts ")
+
+        elif isinstance(labels, str):
+            self.logger.debug(f"Applying cut: '{labels}' to {self.name}...")
+            try:
+                cuts_to_apply.append(self.cuts[labels])
+            except KeyError:
+                raise ValueError(f"No cut named {labels} in cuts ")
+
+        elif labels is True:
+            self.logger.debug(f"Applying all cuts to {self.name}...")
+            cuts_to_apply = list(self.cuts.values())
+
+        elif labels is not False:
+            raise TypeError("'labels' must be a bool, a string or a list of strings")
+
+        # apply spefic cuts
+        return self.gen_cutflow(cuts_to_apply, inplace=inplace)
+
+    def gen_cutflow(
+        self, cuts: List[Cut] | None = None, inplace: bool = True
+    ) -> None | Tuple[ROOT.RDataFrame, RCutflow]:
+        """Generate cutflow, optionally with specific cuts applied"""
+        if cuts is None:
+            cuts = list(self.cuts.values())
+            filtered_df = self.filtered_df
+        else:
+            filtered_df = self.df.Filter("true", "Inclusive")
+            for cut in cuts:
+                filtered_df = filtered_df.Filter(cut.cutstr, cut.name)
+
+        cutflow = RCutflow(self.filtered_df)
+        cutflow.gen_cutflow(cuts)
+
+        if inplace:
+            self.filtered_df = filtered_df
+            self.cutflow = cutflow
+            return None
+        else:
+            return filtered_df, cutflow
+
+    # ===========================================
+    # =========== PLOTING FUNCTIONS =============
+    # ===========================================
+    def plot_hist(
+        self,
+        var: str,
+        bins: List[float] | Tuple[int, float, float],
+        weight: str | float = 1.0,
+        ax: plt.Axes = None,
+        yerr: ArrayLike | bool = False,
+        normalise: float | bool = False,
+        logbins: bool = False,
+        name: str = "",
+        title: str = "",
+        **kwargs,
+    ) -> Histogram1D:
+        """
+        Generate 1D plots of given variables in dataframe. Returns figure object of list of figure objects.
+
+        :param var: variable name to be plotted. must exist in all datasets
+        :param bins: tuple of bins in x (n_bins, start, stop) or list of bin edges.
+                     In the first case returns an axis of type Regular(), otherwise of type Variable().
+                     Raises error if not formatted in one of these ways.
+        :param weight: variable name in dataset to weight by or numeric value to weight all
+        :param ax: axis to plot on. Will create new plot if not given
+        :param yerr: Histogram uncertainties. Following modes are supported:
+                     - 'rsumw2', sqrt(SumW2) errors
+                     - 'sqrtN', sqrt(N) errors or poissonian interval when w2 is specified
+                     - shape(N) array of for one-sided errors or list thereof
+                     - shape(Nx2) array of for two-sided errors or list thereof
+        :param normalise: Normalisation value:
+                          - int or float
+                          - True for normalisation of unity
+                          - False (default) for no normalisation
+        :param logbins: whether logarithmic binnings
+        :param name: histogram name
+        :param title: histgoram title
+        :param kwargs: keyword arguments to pass to mplhep.histplot()
+        :return: Histgoram
+        """
+
+        if var not in self.columns:
+            raise ValueError(f"No column named {var} in RDataFrame.")
+
+        self.logger.debug(f"Generating {var} histogram in {self.name}...")
+
+        if not ax:
+            _, ax = plt.subplots()
+
+        if logbins:
+            if not isinstance(bins, tuple) or (len(bins) != 3):
+                raise ValueError(
+                    "Must pass tuple of (nbins, xmin, xmax) as bins to calculate logarithmic bins"
+                )
+            bins = np.geomspace(bins[1], bins[2], bins[0] + 1)  # type: ignore
+
+        # handle weight
+        if weight:
+            fill_args = [var, weight]
+        else:
+            fill_args = [var]
+
+        th1 = ROOT.TH1F(name, title, *plotting_tools.get_TH1_bins(bins))
+        th1 = self.df.Fill(th1, fill_args).GetPtr()
+
+        # convert to boost
+        hist = Histogram1D(th1=th1)
+        hist = hist.plot(ax=ax, yerr=yerr, normalise=normalise, **kwargs)
+
+        return hist

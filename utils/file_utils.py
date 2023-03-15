@@ -1,20 +1,11 @@
 import os
 from glob import glob
 from pathlib import Path
-from warnings import warn
 
 
 def is_dir_empty(dirpath: str) -> bool:
     """checks if input directory is empty"""
     return len(os.listdir(dirpath)) == 0
-
-
-def delete_file(file: str) -> None:
-    """deletes a file"""
-    try:
-        os.remove(file)
-    except FileNotFoundError:
-        warn(f"No file named {file}. No file deleted")
 
 
 def get_filename(filepath: str | Path, suffix: bool = False) -> str:

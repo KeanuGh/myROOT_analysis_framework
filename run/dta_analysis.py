@@ -149,7 +149,7 @@ for wgt_ver in (1, 2):
             bins=bins,
             weight="base_no_filteff_wtg",
             stats_box=True,
-            name_prefix="base_no_filteff",
+            prefix="base_no_filteff",
         )
         base_no_filteff.append(
             [
@@ -166,7 +166,7 @@ for wgt_ver in (1, 2):
         )
 
         h = my_analysis.plot_hist(
-            ds, "TruthMTW", bins=bins, weight="base_wtg", stats_box=True, name_prefix="base"
+            ds, "TruthMTW", bins=bins, weight="base_wtg", stats_box=True, prefix="base"
         )
         base_metadata.append(
             [
@@ -188,7 +188,7 @@ for wgt_ver in (1, 2):
             bins=bins,
             weight="truth_weight_lumi1",
             stats_box=True,
-            name_prefix="lumi1",
+            prefix="lumi1",
         )
         lumi_1_metadata.append(
             [
@@ -205,7 +205,7 @@ for wgt_ver in (1, 2):
         )
 
         h = my_analysis.plot_hist(
-            ds, "TruthMTW", bins=bins, weight="truth_weight", stats_box=True, name_prefix="truth"
+            ds, "TruthMTW", bins=bins, weight="truth_weight", stats_box=True, prefix="truth"
         )
         reg_metadata.append(
             [
@@ -228,7 +228,7 @@ for wgt_ver in (1, 2):
             weight="truth_weight",
             stats_box=True,
             scale_by_bin_width=True,
-            name_prefix="bin_scaled",
+            prefix="bin_scaled",
         )
         bin_metadata.append(
             [

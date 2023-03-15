@@ -559,7 +559,7 @@ class Histogram1D(bh.Histogram, family=None):
         fit: bool = False,
         name: str = "",
         out_filename: str | None = None,
-        yax_lim: float = False,
+        yax_lim: float | None = None,
         display_stats: bool = True,
         color: str = "k",
         **kwargs,
@@ -586,7 +586,9 @@ class Histogram1D(bh.Histogram, family=None):
         :param kwargs: Args to pass to ax.errorbar()
         :return: axis object with plot
         """
-        if not np.array_equal(self.bin_edges, other.bin_edges):
+        try:
+            np.testing.assert_allclose(np.array(self.bin_edges), np.array(other.bin_edges))
+        except AssertionError:
             raise ValueError("Bins do not match!")
         if not ax:
             _, ax = plt.subplots()
