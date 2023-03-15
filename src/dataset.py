@@ -843,14 +843,16 @@ class RDataset(Dataset):
     ) -> None | Tuple[ROOT.RDataFrame, RCutflow]:
         """Generate cutflow, optionally with specific cuts applied"""
         if cuts is None:
+            # use all cuts already in dataset
             cuts = list(self.cuts.values())
             filtered_df = self.filtered_df
         else:
+            # create new filters for dataset
             filtered_df = self.df.Filter("true", "Inclusive")
             for cut in cuts:
                 filtered_df = filtered_df.Filter(cut.cutstr, cut.name)
 
-        cutflow = RCutflow(self.filtered_df)
+        cutflow = RCutflow(filtered_df)
         cutflow.gen_cutflow(cuts)
 
         if inplace:
