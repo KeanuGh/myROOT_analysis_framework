@@ -7,7 +7,7 @@ from src.cutfile import Cut, Cutfile
 
 class TestCut:
     def test_str(self):
-        test_cut = Cut("met phi", "met_phi > 50", "met_phi", "truth", is_reco=False)
+        test_cut = Cut("met phi", "met_phi > 50", {"met_phi"}, {"truth"}, is_reco=False)
         assert str(test_cut) == "met phi: met_phi > 50"
 
 
@@ -21,32 +21,34 @@ class TestCutfile:
         expected_cuts["tight muon"] = Cut(
             "tight muon",
             "testvartruth == 1",
-            "testvartruth",
-            "truth",
+            {"testvartruth"},
+            {"truth"},
             is_reco=False,
         )
         expected_cuts["lepton pt"] = Cut(
             "lepton pt",
             "MC_WZneutrino_pt_born > 25 and MC_WZmu_el_pt_born > 25",
             {"MC_WZmu_el_pt_born", "MC_WZneutrino_pt_born"},
-            "truth",
-            is_reco=False,
+            {"truth"},
+            False,
         )
         expected_cuts["muon eta"] = Cut(
             "muon eta",
             "MC_WZmu_el_eta_bare.abs() < 25",
-            "MC_WZmu_el_eta_bare",
-            "truth",
+            {"MC_WZmu_el_eta_bare"},
+            {"truth"},
             is_reco=False,
         )
         expected_cuts["exclude crack region"] = Cut(
             "exclude crack region",
             "MC_WZmu_el_eta_bare.abs() < 1.37 or MC_WZmu_el_eta_bare.abs() > 1.57",
-            "MC_WZmu_el_eta_bare",
-            "truth",
+            {"MC_WZmu_el_eta_bare"},
+            {"truth"},
             is_reco=False,
         )
-        expected_cuts["met phi"] = Cut("met phi", "met_phi > 200", "met_phi", "reco", is_reco=True)
+        expected_cuts["met phi"] = Cut(
+            "met phi", "met_phi > 200", {"met_phi"}, {"reco"}, is_reco=True
+        )
 
         assert cutfile.cuts == expected_cuts
 
@@ -114,6 +116,25 @@ class TestCutfile:
 
         assert cutfile.tree_dict == expected_treedict
         assert cutfile.vars_to_calc == expected_vars_to_cut
+
+    def test_all_vars(self, cutfile):
+        expected_output = {
+            "testvartruth",
+            "PDFinfo_Q",
+            "MC_WZneutrino_pt_born",
+            "MC_WZmu_el_pt_born",
+            "MC_WZmu_el_eta_bare",
+            "met_phi",
+            "MC_WZ_dilep_pt_born",
+            "mu_d0sig",
+            "mu_mt_reco",
+            "jet_e",
+            "met_met",
+            "met_phi",
+            "mu_pt",
+            "mu_phi",
+        }
+        assert cutfile.all_vars == expected_output
 
     def test_reco_cut_in_wrong_place(self, tmp_path):
         wrong_cutfile = """

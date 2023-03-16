@@ -12,8 +12,8 @@ class TestSimpleAnalysisTop:
         output_dir = "tests/framework_test_outputs"
         datasets = {
             "wmintaunu": {
-                "data_path": "resources/test_analysistop_mcwmintaunu.root",
-                "cutfile": "resources/cutfile_eg_analysistop.txt",
+                "data_path": "tests/resources/test_analysistop_mcwmintaunu.root",
+                "cutfile": "tests/resources/cutfile_eg_analysistop.txt",
                 "TTree_name": "truth",
                 "lepton": "tau",
                 "label": r"$W^-\rightarrow\tau\nu\rightarrow\mu\nu$",
@@ -64,8 +64,8 @@ class TestSimpleDTA:
         output_dir = "tests/framework_test_outputs"
         datasets = {
             "wmintaunu": {
-                "data_path": "resources/wtaunu_h_cvbv_1000.root",
-                "cutfile": "resources/cutfile_eg_dta.txt",
+                "data_path": "tests/resources/wtaunu_h_cvbv_1000.root",
+                "cutfile": "tests/resources/cutfile_eg_dta.txt",
                 "TTree_name": "T_s1thv_NOMINAL",
                 "lepton": "tau",
                 "label": r"$W^-\rightarrow\tau\nu\rightarrow\mu\nu$",

@@ -465,7 +465,7 @@ class PDataset(Dataset):
     def plot_hist(
         self,
         var: str | List[str],
-        bins: tuple | list,
+        bins: Tuple[int, float, float] | List[float],
         weight: str | float = 1.0,
         ax: plt.Axes = None,
         yerr: ArrayLike | bool = False,
@@ -505,7 +505,9 @@ class PDataset(Dataset):
             _, ax = plt.subplots()
 
         weights = self.df[weight] if isinstance(weight, str) else weight
-        hist = Histogram1D(df[var], bins, weights, logbins, name=name, title=title, logger=self.logger)  # type: ignore
+        hist = Histogram1D(
+            self.df[var], bins, weights, logbins, name=name, title=title, logger=self.logger
+        )  # type: ignore
         hist = hist.plot(ax=ax, yerr=yerr, normalise=normalise, **kwargs)
         return hist
 
@@ -746,16 +748,16 @@ class RDataset(Dataset):
     def __getattr__(self, item):
         return getattr(self.df, item)
 
+    # Variable setting/getting
+    # ===================
     @property
     def columns(self) -> List[str]:
         return list(self.df.GetColumnNames())
 
-    # Variable setting/getting
-    # ===================
     @property
     def variables(self) -> Set[str]:
         """Column names that do not contain a cut label"""
-        return {col for col in self.columns if CUT_PREFIX not in col}
+        return set(self.columns)
 
     # ===============================
     # ========= PRINTOUTS ===========

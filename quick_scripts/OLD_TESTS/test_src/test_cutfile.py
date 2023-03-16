@@ -43,13 +43,6 @@ test_options_dict = {
 
 
 class TestExtractCutVariables(object):
-    def test_cutvars_input(self):
-        expected_output = {"testvar1", "testvar3", "testvar4"}
-        actual_output = Cutfile.all_vars(test_cut_list_of_dicts, test_uncut_set)
-        assert (
-            expected_output == actual_output
-        ), f"Expected: {expected_output}. Actual: {actual_output}"
-
     def test_calculated_variables(self):
         derived_vars = {
             "dev_var1": {
