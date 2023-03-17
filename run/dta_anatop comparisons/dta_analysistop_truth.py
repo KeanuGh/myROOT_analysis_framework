@@ -1,6 +1,7 @@
 import numpy as np
 
 from src.analysis import Analysis
+from utils.plotting_tools import default_mass_bins
 
 # DTA_PATH = '/data/keanu/ditau_output/'
 # ANALYSISTOP_PATH = '/data/atlas/HighMassDrellYan/mc16a'
@@ -70,60 +71,6 @@ def main():
     # my_analysis.plot_hist('wtaunu_analysistop', 'weight_mc', bins=(100, -10000, 10000), filename_suffix='full', yerr=None, logy=True)
     # my_analysis.plot_hist('wtaunu_mu_dta', 'weight_mc', bins=(50, -1e6, 1e6), filename_suffix='_mill', logy=True, yerr=None)
     # my_analysis.plot_hist('wtaunu_mu_dta', 'weight_mc', bins=(50, -5e9, 5e9), logy=True, filename_suffix='_bill', yerr=None)
-
-    mass_bins = np.array(
-        [
-            130,
-            140.3921,
-            151.6149,
-            163.7349,
-            176.8237,
-            190.9588,
-            206.2239,
-            222.7093,
-            240.5125,
-            259.7389,
-            280.5022,
-            302.9253,
-            327.1409,
-            353.2922,
-            381.5341,
-            412.0336,
-            444.9712,
-            480.5419,
-            518.956,
-            560.4409,
-            605.242,
-            653.6246,
-            705.8748,
-            762.3018,
-            823.2396,
-            889.0486,
-            960.1184,
-            1036.869,
-            1119.756,
-            1209.268,
-            1305.936,
-            1410.332,
-            1523.072,
-            1644.825,
-            1776.311,
-            1918.308,
-            2071.656,
-            2237.263,
-            2416.107,
-            2609.249,
-            2817.83,
-            3043.085,
-            3286.347,
-            3549.055,
-            3832.763,
-            4139.151,
-            4470.031,
-            4827.361,
-            5213.257,
-        ]
-    )
 
     # argument dicts
     ratio_args = {
@@ -214,7 +161,7 @@ def main():
     # CUTS
     # ------------------------------------------------------------------
     cut_mass_args = {
-        "bins": mass_bins,
+        "bins": default_mass_bins,
         "logx": True,
         "logy": True,
         "ratio_axlim": 1.5,

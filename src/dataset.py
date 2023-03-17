@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import logging
 from abc import ABC, abstractmethod
+from collections import OrderedDict
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import List, Tuple, Iterable, OrderedDict, Final, Set
+from typing import List, Tuple, Iterable, Final, Set, Dict
 
 import ROOT  # type: ignore
 import matplotlib.pyplot as plt  # type: ignore
@@ -35,7 +36,7 @@ class Dataset(ABC):
     logger: logging.Logger = field(default_factory=get_logger)
     lepton: str = "lepton"
     file: Path = field(init=False)
-    histograms: OrderedDict[str, Histogram1D] = field(init=False)
+    histograms: OrderedDict[str, Histogram1D] = field(init=False, default_factory=OrderedDict)
 
     @abstractmethod
     def __len__(self):
@@ -151,8 +152,16 @@ class Dataset(ABC):
     ) -> Histogram1D:
         ...
 
-    # def gen_histograms(self, to_file: bool = True) -> Dict[str, Histogram1D]:
-    #     output_histograms = self.cutfile.all_vars()
+    @abstractmethod
+    def gen_histograms(self, cut: bool = True, to_file: bool = True) -> Dict[str, Histogram1D]:
+        ...
+
+    def save_hists_to_file(self):
+        filename = self.name + "_histograms.root"
+        with ROOT_utils.ROOT_TFile_mgr(filename) as file:
+            for name, hist in self.histograms.items():
+                file.WriteObject(hist.TH1, name)
+        self.logger.info(f"Written {len(self.histograms)} histograms to {filename}")
 
 
 @dataclass(slots=True)
@@ -714,6 +723,60 @@ class PDataset(Dataset):
 
         return ax
 
+    def gen_histograms(self, cut: bool = True, to_file: bool = True) -> Dict[str, Histogram1D]:
+        """Generate histograms for all variables mentioned in cutfile. Optionally with cuts applied as well"""
+
+        output_histogram_variables = self.cutfile.all_vars
+        n_hists = len(output_histogram_variables)
+        if cut:
+            n_hists *= 2
+
+        def match_weight(var) -> str:
+            match variable_data[var]:
+                case {"tag": VarTag.TRUTH}:
+                    return "truth_weight"
+                case {"tag": VarTag.RECO}:
+                    return "reco_weight"
+                case _:
+                    return "truth_weight"
+
+        for variable_name in output_histogram_variables:
+            i = 1
+
+            print(f"Producing histogram {i}/{n_hists}: {variable_name}", end="\r")
+            i += 1
+
+            # which binning?
+            bin_args = match_bin_args(variable_name)
+            weight = match_weight(variable_name)
+
+            self.histograms[variable_name] = Histogram1D(
+                self[variable_name],
+                name=variable_name,
+                **bin_args,
+                weight=self[weight],
+                title=variable_name,
+            )
+
+            if cut:
+                print(f"Producing histogram {i}/{n_hists}: {variable_name}", end="\r")
+                i += 1
+                cut_hist_name = "cut_" + variable_name
+                self.histograms[cut_hist_name] = Histogram1D(
+                    self[variable_name],
+                    name=cut_hist_name,
+                    **bin_args,
+                    weight=self[weight],
+                    title=variable_name,
+                )
+
+        self.logger.info(f"Producted {n_hists} histograms.")
+
+        if to_file:
+            self.save_hists_to_file()
+
+        return self.histograms
+
 
 @dataclass(slots=True)
 class RDataset(Dataset):
@@ -732,7 +795,7 @@ class RDataset(Dataset):
     """
 
     cutflow: RCutflow = field(init=False)
-    filtered_df: ROOT.RDataFrame | None = None
+    filtered_df: ROOT.RDataFrame = field(init=False)
 
     def __post_init__(self) -> None:
         self.file = Path(self.name + ".root")
@@ -913,20 +976,13 @@ class RDataset(Dataset):
         if not ax:
             _, ax = plt.subplots()
 
-        if logbins:
-            if not isinstance(bins, tuple) or (len(bins) != 3):
-                raise ValueError(
-                    "Must pass tuple of (nbins, xmin, xmax) as bins to calculate logarithmic bins"
-                )
-            bins = np.geomspace(bins[1], bins[2], bins[0] + 1)  # type: ignore
-
         # handle weight
         if weight:
             fill_args = [var, weight]
         else:
             fill_args = [var]
 
-        th1 = ROOT.TH1F(name, title, *plotting_tools.get_TH1_bins(bins))
+        th1 = ROOT.TH1F(name, title, *plotting_tools.get_TH1_bins(bins, logbins=logbins))
         th1 = self.df.Fill(th1, fill_args).GetPtr()
 
         # convert to boost
@@ -934,3 +990,84 @@ class RDataset(Dataset):
         hist = hist.plot(ax=ax, yerr=yerr, normalise=normalise, **kwargs)
 
         return hist
+
+    def gen_histograms(self, cut: bool = True, to_file: bool = True) -> Dict[str, Histogram1D]:
+        """Generate histograms for all variables mentioned in cutfile. Optionally with cuts applied as well"""
+
+        output_histogram_variables = self.cutfile.all_vars
+
+        # to contain smart pointers to TH1s
+        th1_histograms: Dict[str, ROOT.RResultsPtr] = dict()
+
+        def match_weight(var) -> str:
+            match variable_data[var]:
+                case {"tag": VarTag.TRUTH}:
+                    return "truth_weight"
+                case {"tag": VarTag.RECO, "name": name}:
+                    if "tau" in name.lower():
+                        return "tau_weight_reco"
+                    elif "ele" in name.lower():
+                        return "ele_weight_reco"
+                    elif "mu" in name.lower():
+                        return "muon_weight_reco"
+                    elif "jet" in name.lower():
+                        return "jet_weight_reco"
+                    else:
+                        return "reco_weight"
+                case _:
+                    return "truth_weight"
+
+        for variable_name in output_histogram_variables:
+            # which binning?
+            bin_args = match_bin_args(variable_name)
+            weight = match_weight(variable_name)
+
+            th1 = ROOT.TH1F(
+                variable_name,
+                variable_name,
+                *plotting_tools.get_TH1_bins(bin_args["bins"], bin_args["logbins"]),
+            )
+            th1_histograms[variable_name] = self.df.Fill(th1, [variable_name, weight])
+
+            if cut:
+                cut_hist_name = "cut_" + variable_name
+                cut_th1 = ROOT.TH1F(
+                    cut_hist_name,
+                    variable_name,
+                    *plotting_tools.get_TH1_bins(bin_args["bins"], bin_args["logbins"]),
+                )
+                th1_histograms[cut_hist_name] = self.filtered_df.Fill(
+                    cut_th1, [variable_name, weight]
+                )
+
+        # generate histograms
+        for i, (hist_name, th1_ptr) in enumerate(th1_histograms.items()):
+            print(f"Producing histogram {i + 1}/{len(th1_histograms)}: {hist_name}", end="\r")
+            self.histograms[hist_name] = Histogram1D(th1=th1_histograms[hist_name].GetValue())
+
+        self.logger.info(f"Producted {len(self.histograms)} histograms.")
+
+        if to_file:
+            self.save_hists_to_file()
+
+        return self.histograms
+
+
+def match_bin_args(var) -> dict:
+    """Match arguments for plotting bins from variable name"""
+    match variable_data[var]:
+        case {"units": "GeV", "tag": VarTag.TRUTH}:
+            return {"bins": (30, 1, 5000), "logbins": True}
+        case {"units": "GeV", "tag": VarTag.RECO}:
+            return {"bins": plotting_tools.default_mass_bins, "logbins": False}
+        case {"units": ""}:
+            if "phi" in var.lower():
+                return {"bins": (30, -np.pi, np.pi), "logbins": False}
+            elif "eta" in var.lower():
+                return {"bins": (30, -5, 5), "logbins": False}
+            elif "delta_z0_sintheta" in var.lower():
+                return {"bins": (30, 0, 2 * np.pi), "logbins": False}
+            else:
+                return {"bins": (30, 0, 30), "logbins": False}
+        case _:
+            return {"bins": (30, 0, 30), "logbins": False}

@@ -1,4 +1,5 @@
-from typing import Tuple, Sequence, List
+from dataclasses import dataclass
+from typing import Tuple, Sequence, List, Dict
 from warnings import warn
 
 import ROOT  # type: ignore
@@ -15,18 +16,86 @@ from utils.variable_names import variable_data
 # set plot style
 plt.style.use([hep.style.ATLAS])
 
+default_mass_bins = [
+    130,
+    140.3921,
+    151.6149,
+    163.7349,
+    176.8237,
+    190.9588,
+    206.2239,
+    222.7093,
+    240.5125,
+    259.7389,
+    280.5022,
+    302.9253,
+    327.1409,
+    353.2922,
+    381.5341,
+    412.0336,
+    444.9712,
+    480.5419,
+    518.956,
+    560.4409,
+    605.242,
+    653.6246,
+    705.8748,
+    762.3018,
+    823.2396,
+    889.0486,
+    960.1184,
+    1036.869,
+    1119.756,
+    1209.268,
+    1305.936,
+    1410.332,
+    1523.072,
+    1644.825,
+    1776.311,
+    1918.308,
+    2071.656,
+    2237.263,
+    2416.107,
+    2609.249,
+    2817.83,
+    3043.085,
+    3286.347,
+    3549.055,
+    3832.763,
+    4139.151,
+    4470.031,
+    4827.361,
+    5213.257,
+]
+
+
+@dataclass
+class PlottingOptionItem:
+    bins: Tuple[int, float, float] | List[float]
+    weight_col: str
+
+
+default_plotting_options: Dict[str, PlottingOptionItem]
+
 
 # ===============================
 # ===== HISTOGRAM VARIABLES =====
 # ===============================
 def get_TH1_bins(
-    bins: List[float] | Tuple[int, float, float] | bh.axis.Axis
+    bins: List[float] | Tuple[int, float, float] | bh.axis.Axis, logbins: bool = False
 ) -> Tuple[int, list | ArrayLike] | Tuple[int, float, float]:
     """Format bins for TH1 constructor"""
     if isinstance(bins, bh.axis.Axis):
         return bins.size, bins.edges
 
     elif hasattr(bins, "__iter__"):
+        if logbins:
+            if not isinstance(bins, tuple) or (len(bins) != 3):
+                raise ValueError(
+                    "Must pass tuple of (nbins, xmin, xmax) as bins to calculate logarithmic bins"
+                )
+            return bins[0], np.geomspace(bins[1], bins[2], bins[0] + 1)  # type: ignore
+
         if len(bins) == 3 and isinstance(bins, tuple):
             return bins
         else:

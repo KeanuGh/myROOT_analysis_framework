@@ -1,5 +1,6 @@
 import shutil
 
+import numpy as np
 import pandas as pd  # type: ignore
 import pytest
 
@@ -9,11 +10,11 @@ from analysis import Analysis
 class TestSimpleAnalysisTop:
     @pytest.fixture(scope="class")
     def analysis(self) -> Analysis:
-        output_dir = "tests/framework_test_outputs"
+        output_dir = "framework_test_outputs"
         datasets = {
             "wmintaunu": {
-                "data_path": "tests/resources/test_analysistop_mcwmintaunu.root",
-                "cutfile": "tests/resources/cutfile_eg_analysistop.txt",
+                "data_path": "resources/test_analysistop_mcwmintaunu.root",
+                "cutfile": "resources/cutfile_eg_analysistop.txt",
                 "TTree_name": "truth",
                 "lepton": "tau",
                 "label": r"$W^-\rightarrow\tau\nu\rightarrow\mu\nu$",
@@ -53,9 +54,15 @@ class TestSimpleAnalysisTop:
 
     def test_pickle(self, analysis):
         pkl_output = pd.read_pickle(
-            "tests/framework_test_outputs/outputs/test_analysis/pickles/wmintaunu_df.pkl"
+            "framework_test_outputs/outputs/test_analysis/pickles/wmintaunu_df.pkl"
         )
         assert pkl_output.equals(analysis["wmintaunu"].df)
+
+    def test_histograms(self, analysis):
+        histograms = analysis["wmintaunu"].gen_histograms(cut=True)
+
+        assert histograms["MC_WZmu_el_eta_born"].n_bins == 30
+        assert round(histograms["mu_pt"].bin_values()[0], 5) == 283.18032
 
 
 class TestSimpleDTA:
@@ -64,8 +71,8 @@ class TestSimpleDTA:
         output_dir = "tests/framework_test_outputs"
         datasets = {
             "wmintaunu": {
-                "data_path": "tests/resources/wtaunu_h_cvbv_1000.root",
-                "cutfile": "tests/resources/cutfile_eg_dta.txt",
+                "data_path": "resources/wtaunu_h_cvbv_1000.root",
+                "cutfile": "resources/cutfile_eg_dta.txt",
                 "TTree_name": "T_s1thv_NOMINAL",
                 "lepton": "tau",
                 "label": r"$W^-\rightarrow\tau\nu\rightarrow\mu\nu$",
@@ -95,3 +102,46 @@ class TestSimpleDTA:
 
         assert analysis["wmintaunu"].cutflow["tau_eta"].value == "abs(TruthTauEta) < 2.4"
         assert analysis["wmintaunu"].cutflow["tau_eta"].npass == 3577
+
+    def test_histograms(self, analysis):
+        histograms = analysis["wmintaunu"].gen_histograms(cut=True)
+
+        assert histograms["TauEta"].n_bins == 30
+
+        np.testing.assert_allclose(
+            histograms["TruthTauPt"].bin_values(),
+            np.array(
+                [
+                    4.02496986e01,
+                    3.50997391e01,
+                    8.88594116e02,
+                    7.75344299e02,
+                    3.19974060e02,
+                    1.51049792e03,
+                    4.37209229e03,
+                    6.09370801e03,
+                    1.28474688e04,
+                    2.77360547e04,
+                    4.21289922e04,
+                    8.46178984e04,
+                    1.37219031e05,
+                    6.33462969e04,
+                    9.65051074e03,
+                    2.51681860e03,
+                    9.62219299e02,
+                    2.85374146e02,
+                    9.01328125e01,
+                    7.12713575e00,
+                    1.04047089e01,
+                    4.74639368e00,
+                    9.92996693e-01,
+                    0.00000000e00,
+                    0.00000000e00,
+                    0.00000000e00,
+                    0.00000000e00,
+                    0.00000000e00,
+                    0.00000000e00,
+                    0.00000000e00,
+                ]
+            ),
+        )

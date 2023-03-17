@@ -405,12 +405,14 @@ class Analysis:
         ratio_axlim: float | None = None,
         ratio_label: str = "Ratio",
         filename: str | Path | None = None,
+        apply_cuts: bool = False,
         suffix: str = "",
         prefix: str = "",
         **kwargs,
     ) -> List[Histogram1D]:
         """
-        Plot same variable from different datasets
+        Plot same variable from different datasets.
+        Checks to see if histogram exists in dataset histogram dictionary first, to avoid refilling histogram
 
         :param datasets: string or list of strings corresponding to datasets in the analysis
         :param var: variable name to be plotted. Either a string that exists in all datasets
@@ -448,6 +450,7 @@ class Analysis:
         :param ratio_axlim: pass to yax_lim in rato plotter
         :param ratio_label: y-axis label for ratio plot
         :param filename: name of output
+        :param apply_cuts: applies cuts before plotting
         :param suffix: suffix to add at end of histogram/file name
         :param prefix: prefix to add at start of histogram/file
         :param kwargs: keyword arguments to pass to mplhep.histplot()
