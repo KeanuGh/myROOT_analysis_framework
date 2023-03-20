@@ -222,9 +222,6 @@ class Analysis:
             raise ValueError(f"Analysis dataset must be of type {Dataset}")
         self.datasets[ds_name] = dataset
 
-    def __getattr__(self, item) -> Dataset:
-        return self.datasets[item]
-
     def __delitem__(self, key: str) -> None:
         del self.datasets[key]
 

@@ -10,8 +10,7 @@ DTA_PATH = "/data/DTA_outputs/2023-01-31/"
 ANALYSISTOP_PATH = "/data/analysistop_out/mc16a/"
 DATA_OUT_DIR = "/data/dataset_pkl_outputs/"
 
-
-def main():
+if __name__ == "__main__":
     datasets = {
         # dta w->taunu->munu
         "wtaunu_dta": {
@@ -52,13 +51,15 @@ def main():
         analysis_label="dta_analysistop_compare",
         # skip_verify_pkl=True,
         validate_duplicated_events=False,
+        # regen_histograms=True,
         force_recalc_cuts=True,
         log_level=10,
-        log_out="console",
+        log_out="both",
     )
     # my_analysis.merge_datasets('wtaunu_mu_dta', 'wtaunu_e_dta', verify=True)
     my_analysis.merge_datasets("wtaunu_analysistop", "wtaunu_analysistop_peak")
     my_analysis["wtaunu_analysistop"].gen_histograms()
+    my_analysis["wtaunu_analysistop"].dsid_metadata_printout()
 
     # calculate boson E
     # my_analysis["wtaunu_dta"]["CalcBosonE"] = (
@@ -333,7 +334,3 @@ def main():
     my_analysis.save_histograms()
 
     my_analysis.logger.info("DONE.")
-
-
-if __name__ == "__main__":
-    main()

@@ -422,7 +422,7 @@ class PDataset(Dataset):
         reco: bool = False,
         truth: bool = False,
         inplace: bool = True,
-    ) -> None:
+    ) -> pd.DataFrame:
         """
         Apply cut(s) to DataFrame.
 
@@ -473,7 +473,7 @@ class PDataset(Dataset):
         if inplace:
             self.df = self.df.loc[self.df[cut_cols].all(1)]
             self.df.drop(columns=cut_cols, inplace=True)
-            return None
+            return self.df
         else:
             return self.df.loc[self.df[cut_cols].all(1)].drop(columns=cut_cols)
 
@@ -546,7 +546,7 @@ class PDataset(Dataset):
         else:
             histname = var
 
-        if var in self.histograms:
+        if histname in self.histograms:
             hist = self.histograms[histname]
         else:
             self.logger.debug(f"Generating {histname} histogram in {self.name}...")
@@ -783,9 +783,8 @@ class PDataset(Dataset):
                 case _:
                     return "truth_weight"
 
+        i = 1
         for variable_name in output_histogram_variables:
-            i = 1
-
             print(f"Producing histogram {i}/{n_hists}: {variable_name}", end="\r")
             i += 1
 
@@ -801,15 +800,23 @@ class PDataset(Dataset):
                 title=variable_name,
             )
 
-            if cut:
+        if cut:
+            cut_df = self.apply_cuts(inplace=False)
+
+            for variable_name in output_histogram_variables:
                 print(f"Producing histogram {i}/{n_hists}: {variable_name}", end="\r")
+
+                # which binning?
+                bin_args = match_bin_args(variable_name)
+                weight = match_weight(variable_name)
+
                 i += 1
                 cut_hist_name = "cut_" + variable_name
                 self.histograms[cut_hist_name] = Histogram1D(
-                    self[variable_name],
+                    cut_df[variable_name],
                     name=cut_hist_name,
                     **bin_args,
-                    weight=self[weight],
+                    weight=cut_df[weight],
                     title=variable_name,
                 )
 
@@ -1018,7 +1025,7 @@ class RDataset(Dataset):
             histname = var
 
         # if histogram already exists
-        if var in self.histograms:
+        if histname in self.histograms:
             hist = self.histograms[histname]
 
         else:
@@ -1115,7 +1122,7 @@ class RDataset(Dataset):
         for i, (hist_name, th1_ptr) in enumerate(th1_histograms.items()):
             self.histograms[hist_name] = Histogram1D(th1=th1_histograms[hist_name].GetValue())
         self.logger.info(
-            f"Took {time.time() - t:.2G}s to produce {len(self.histograms)} histograms over {self.df.GetNRuns()} runs."
+            f"Took {time.time() - t:.3f}s to produce {len(self.histograms)} histograms over {self.df.GetNRuns()} run(s)."
         )
 
         self.logger.info(f"Producted {len(self.histograms)} histograms.")

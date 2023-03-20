@@ -8,7 +8,7 @@ Truth_tau_eta_crack	(abs(MC_WZmu_el_eta_born) < 1.37) or (abs(MC_WZmu_el_eta_bor
 
 # reco
 muon_pt	mu_pt > 7	nominal_Loose
-tau_tight	passTightQuality == 1	nominal_Loose
+#tau_tight	passTightQuality == 1	nominal_Loose
 
 [OUTPUTS]
 # truth
