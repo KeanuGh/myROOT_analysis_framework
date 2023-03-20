@@ -57,7 +57,7 @@ class Analysis:
         log_out: str = "both",
         timedatelog: bool = True,
         separate_loggers: bool = False,
-        regen_histograms: bool = True,
+        regen_histograms: bool = False,
         **kwargs,
     ):
         """
@@ -71,6 +71,7 @@ class Analysis:
         :param timedatelog: Whether to output log filename with timedate
                (useful to turn off for testing or you'll be flooded with log files)
         :param separate_loggers: Whether each dataset should output logs to separate log files
+        :param regen_histograms: Whether to regenerate all histograms for all datasets (can be applied separately)
         :param kwargs: Options arguments to pass to all dataset builders
         """
         self.name = analysis_label
@@ -120,40 +121,42 @@ class Analysis:
         # ============================
         merge_dict: Dict[str, Set[str]] = dict()  # if any datasets are to be merged, add here
         self.datasets: Dict[str, Dataset] = dict()
-        for name, data_args in data_dict.items():
+        for dataset_name, data_args in data_dict.items():
             self.logger.info("")
-            self.logger.info("=" * (42 + len(name)))
-            self.logger.info(f"======== INITIALISING DATASET '{name}' =========")
-            self.logger.info("=" * (42 + len(name)))
+            self.logger.info("=" * (42 + len(dataset_name)))
+            self.logger.info(f"======== INITIALISING DATASET '{dataset_name}' =========")
+            self.logger.info("=" * (42 + len(dataset_name)))
 
             # get dataset build arguments out of options passed to analysis
+            if "regen_histograms" in data_args and "regen_histograms" in kwargs:
+                raise SyntaxError(
+                    f"Got multiple values for argument 'regen_histograsms' for dataset {dataset_name}"
+                )
             if dup_args := set(data_args) & set(kwargs):
                 raise SyntaxError(
-                    f"Got multiple values for argument(s) {dup_args} for dataset {name}"
+                    f"Got multiple values for argument(s) {dup_args} for dataset {dataset_name}"
                 )
             args = data_args | kwargs
 
-            # check merges
-            if "merge_into" in data_args:
-                merged_name = data_args.pop("merge_into")
-                if merged_name in merge_dict:
-                    merge_dict[merged_name].add(name)
-                else:
-                    merge_dict[merged_name] = {name}
+            # this argument should be handled separately
+            if "regen_histograms" in args:
+                indiv_regen_hists = args.pop("regen_histograms")
+            else:
+                indiv_regen_hists = regen_histograms
 
             # set correct pickle path if not passed as a build argument
             if "pkl_path" not in args:
-                args["pkl_path"] = self.paths.pkl_dir / (name + "_df.pkl")
+                args["pkl_path"] = self.paths.pkl_dir / (dataset_name + "_df.pkl")
 
             # make dataset
             builder = DatasetBuilder(
-                name=name,
+                name=dataset_name,
                 **self.__match_params(args, DatasetBuilder.__init__),
                 logger=(
                     self.logger
                     if not separate_loggers  # use single logger
                     else get_logger(  # if seperate, make new logger for each Dataset
-                        name=name,
+                        name=dataset_name,
                         log_dir=self.paths.log_dir,
                         log_level=log_level,
                         log_out=log_out,
@@ -165,25 +168,33 @@ class Analysis:
             if separate_loggers:
                 # set new logger to append to analysis logger
                 dataset.logger = self.logger
-                dataset.logger.debug(f"{name} log handler returned to analysis.")  # test
+                dataset.logger.debug(f"{dataset_name} log handler returned to analysis.")  # test
 
             # histogramming
-            histogram_file = self._output_dir / f"{name}_histograms.root"
-            # if not regen_histograms:
-            #     if histogram_file.exists():
-            #         dataset.histograms =
-            dataset.gen_histograms(to_file=histogram_file)
+            histogram_file = self._output_dir / f"{dataset_name}_histograms.root"
+            if not indiv_regen_hists and histogram_file.exists():
+                # just read in previous histogram file if it exists
+                dataset.import_histograms(histogram_file)
+                dataset.logger.info(
+                    f"Imported {len(dataset.histograms)} histogram(s) from file {histogram_file}"
+                )
+            else:
+                dataset.gen_histograms(to_file=histogram_file)
+
+            # integrate into own histogram dictionary
+            for hist_name, hist in dataset.histograms.items():
+                self.histograms[dataset_name + "_" + hist_name] = hist
 
             try:
                 dataset.dsid_metadata_printout()
             except NotImplementedError:
                 pass
 
-            self[name] = dataset  # save to analysis
+            self[dataset_name] = dataset  # save to analysis
 
-            self.logger.info("=" * (42 + len(name)))
-            self.logger.info(f"========= DATASET '{name}' INITIALISED =========")
-            self.logger.info("=" * (42 + len(name)))
+            self.logger.info("=" * (42 + len(dataset_name)))
+            self.logger.info(f"========= DATASET '{dataset_name}' INITIALISED =========")
+            self.logger.info("=" * (42 + len(dataset_name)))
             self.logger.info("")
 
         self.logger.info("=" * (len(analysis_label) + 23))
@@ -374,7 +385,7 @@ class Analysis:
                     # remove missing cuts from list
                     labels = [label for label in labels if CUT_PREFIX + label not in missing_cuts]
 
-            self[dataset].apply_cuts(labels, reco, truth, inplace=True)
+            self[dataset].apply_cuts(labels, reco, truth)
 
     @check_single_dataset
     def __delete_dataset(self, ds_name: str) -> None:
@@ -466,10 +477,14 @@ class Analysis:
         # naming template for file/histogram name
         name_template = (
             ((prefix + "_") if prefix else "")  # prefix
-            + "{dataset}"  # name of dataset(s)
-            + "_{variable}"  # name of variable(s)
+            + "{short}"
             + ("_NORMED" if normalise else "")  # normalisation flag
             + (("_" + suffix) if suffix else "")  # suffix
+        )
+        name_template_short = (
+            ("cut_" if cut else "")  # cut flag
+            + "{dataset}"  # name of dataset(s)
+            + "_{variable}"  # name of variable(s)
         )
 
         if isinstance(datasets, str):
@@ -507,25 +522,40 @@ class Analysis:
         for i, dataset in enumerate(datasets):
             varname = var if isinstance(var, str) else var[i]
             label = labels[i] if labels else self[dataset].label
-            hist_name = name_template.format(dataset=dataset, variable=varname)
+            hist_name = name_template.format(
+                short=name_template_short.format(dataset=dataset, variable=varname)
+            )
 
             # plot
-            hist = self[dataset].plot_hist(
-                var=varname,
-                bins=bins,
-                weight=weight[i] if isinstance(weight, list) else weight,
-                ax=ax,
-                yerr=yerr,
-                normalise=normalise,
-                logbins=logbins,
-                name=hist_name,
-                label=label,
-                w2=w2,
-                stats_box=stats_box,
-                scale_by_bin_width=scale_by_bin_width,
-                cut=cut,
-                **kwargs,
-            )
+            if name_template_short in self.histograms:
+                hist = self.histograms[name_template_short]
+                hist.plot(
+                    ax=ax,
+                    yerr=yerr,
+                    normalise=normalise,
+                    stats_box=stats_box,
+                    scale_by_bin_width=scale_by_bin_width,
+                    label=label,
+                    w2=w2,
+                    **kwargs,
+                )
+            else:
+                hist = self[dataset].plot_hist(
+                    var=varname,
+                    bins=bins,
+                    weight=weight[i] if isinstance(weight, list) else weight,
+                    ax=ax,
+                    yerr=yerr,
+                    normalise=normalise,
+                    logbins=logbins,
+                    name=hist_name,
+                    label=label,
+                    w2=w2,
+                    stats_box=stats_box,
+                    scale_by_bin_width=scale_by_bin_width,
+                    cut=cut,
+                    **kwargs,
+                )
 
             # save
             hists.append(hist)
@@ -542,7 +572,11 @@ class Analysis:
                     "k" if (len(datasets) == 2) else ax.get_lines()[-1].get_color()
                 )  # match ratio colour to plot
                 ratio_hist_name = (
-                    name_template.format(dataset=f"{dataset}_{datasets[0]}", variable=varname)
+                    name_template.format(
+                        short=name_template_short.format(
+                            dataset=f"{dataset}_{datasets[0]}", variable=varname
+                        )
+                    )
                     + "_ratio"
                 )
                 ratio_hist = hists[0].plot_ratio(
@@ -589,12 +623,15 @@ class Analysis:
         if filename:
             filename = self.paths.plot_dir / filename
         else:
-            if isinstance(var, Sequence):
-                varname = "_".join(var)
-            else:
+            if isinstance(var, str):
                 varname = var
+            else:
+                varname = "_".join(var)
             filename = self.paths.plot_dir / (
-                name_template.format(dataset="_".join(datasets), variable=varname) + ".png"
+                name_template.format(
+                    short=name_template_short.format(dataset="_".join(datasets), variable=varname)
+                )
+                + ".png"
             )
 
         fig.savefig(filename, bbox_inches="tight")
@@ -629,7 +666,7 @@ class Analysis:
     @handle_dataset_arg
     def cutflow_printout(self, datasets: str) -> None:
         """Prints cutflow table to terminal"""
-        self[datasets].cutflow.printout()
+        self[datasets].cutflow.print()
 
     def kinematics_printouts(self) -> None:
         """Prints some kinematic variables to terminal"""

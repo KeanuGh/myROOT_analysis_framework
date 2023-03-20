@@ -58,7 +58,6 @@ def main():
     )
     # my_analysis.merge_datasets('wtaunu_mu_dta', 'wtaunu_e_dta', verify=True)
     my_analysis.merge_datasets("wtaunu_analysistop", "wtaunu_analysistop_peak")
-    my_analysis["wtaunu_dta"].gen_histograms()
     my_analysis["wtaunu_analysistop"].gen_histograms()
 
     # calculate boson E
@@ -166,17 +165,15 @@ def main():
         "bins": default_mass_bins,
         "logx": True,
         "logy": True,
-        "ratio_axlim": 1.5,
+        # "ratio_axlim": 1.5,
     }
     cut_truth_args = {
-        "prefix": "cut_truth",
+        "cut": True,
         "title": "truth - 36.2fb$^{-1}$",
-        "normalise": False,
     }
     cut_reco_args = {
-        "prefix": "cut_reco",
+        "cut": True,
         "title": "reco - 36.2fb$^{-1}$",
-        "normalise": False,
     }
     el_weighted_args = {
         "weight": ["ele_weight_reco", "reco_weight"],
@@ -233,7 +230,7 @@ def main():
 
     # reco
     my_analysis.plot_hist(
-        "wtaunu_L_dta",
+        "wtaunu_dta",
         "TauPt",
         **cut_mass_args,
         **cut_reco_args,
@@ -241,7 +238,7 @@ def main():
         **ratio_args,
     )
     my_analysis.plot_hist(
-        "wtaunu_L_dta",
+        "wtaunu_dta",
         "TauPhi",
         bins=(30, -np.pi, np.pi),
         **cut_reco_args,
@@ -249,7 +246,7 @@ def main():
         **ratio_args,
     )
     my_analysis.plot_hist(
-        "wtaunu_L_dta",
+        "wtaunu_dta",
         "TauEta",
         bins=(30, -5, 5),
         **cut_reco_args,
@@ -257,7 +254,7 @@ def main():
         **ratio_args,
     )
     my_analysis.plot_hist(
-        ["wtaunu_L_dta", "wtaunu_analysistop_reco"],
+        ["wtaunu_dta", "wtaunu_analysistop"],
         ["ElePt", "el_pt"],
         xlabel="Truth Boson $M$",
         **cut_mass_args,
@@ -265,16 +262,16 @@ def main():
         **el_weighted_args,
         **ratio_args,
     )
+    # my_analysis.plot_hist(
+    #     ["wtaunu_dta", "wtaunu_analysistop"],
+    #     ["Ele_delta_z0_sintheta", "e_delta_z0_sintheta"],
+    #     bins=(30, 0, 2 * np.pi),
+    #     **cut_reco_args,
+    #     **el_weighted_args,
+    #     **ratio_args,
+    # )
     my_analysis.plot_hist(
-        ["wtaunu_L_dta", "wtaunu_analysistop_reco"],
-        ["Ele_delta_z0_sintheta", "e_delta_z0_sintheta"],
-        bins=(30, 0, 2 * np.pi),
-        **cut_reco_args,
-        **el_weighted_args,
-        **ratio_args,
-    )
-    my_analysis.plot_hist(
-        ["wtaunu_L_dta", "wtaunu_analysistop_reco"],
+        ["wtaunu_dta", "wtaunu_analysistop"],
         ["ElePhi", "el_phi"],
         bins=(30, -np.pi, np.pi),
         **cut_reco_args,
@@ -282,7 +279,7 @@ def main():
         **ratio_args,
     )
     my_analysis.plot_hist(
-        ["wtaunu_L_dta", "wtaunu_analysistop_reco"],
+        ["wtaunu_dta", "wtaunu_analysistop"],
         ["EleEta", "el_eta"],
         bins=(30, -5, 5),
         **cut_reco_args,
@@ -290,23 +287,23 @@ def main():
         **ratio_args,
     )
     my_analysis.plot_hist(
-        ["wtaunu_L_dta", "wtaunu_analysistop_reco"],
+        ["wtaunu_dta", "wtaunu_analysistop"],
         ["MuonPt", "mu_pt"],
         **cut_mass_args,
         **cut_reco_args,
         **mu_weighted_args,
         **ratio_args,
     )
+    # my_analysis.plot_hist(
+    #     ["wtaunu_dta", "wtaunu_analysistop"],
+    #     ["Muon_delta_z0_sintheta", "mu_delta_z0_sintheta"],
+    #     bins=(30, 0, 2 * np.pi),
+    #     **cut_reco_args,
+    #     **mu_weighted_args,
+    #     **ratio_args,
+    # )
     my_analysis.plot_hist(
-        ["wtaunu_L_dta", "wtaunu_analysistop_reco"],
-        ["Muon_delta_z0_sintheta", "mu_delta_z0_sintheta"],
-        bins=(30, 0, 2 * np.pi),
-        **cut_reco_args,
-        **mu_weighted_args,
-        **ratio_args,
-    )
-    my_analysis.plot_hist(
-        ["wtaunu_L_dta", "wtaunu_analysistop_reco"],
+        ["wtaunu_dta", "wtaunu_analysistop"],
         ["MuonPhi", "mu_phi"],
         bins=(30, -np.pi, np.pi),
         **cut_reco_args,
@@ -314,7 +311,7 @@ def main():
         **ratio_args,
     )
     my_analysis.plot_hist(
-        ["wtaunu_L_dta", "wtaunu_analysistop_reco"],
+        ["wtaunu_dta", "wtaunu_analysistop"],
         ["MuonEta", "mu_eta"],
         bins=(30, -5, 5),
         **cut_reco_args,
@@ -322,7 +319,7 @@ def main():
         **ratio_args,
     )
     my_analysis.plot_hist(
-        ["wtaunu_L_dta", "wtaunu_analysistop_reco"],
+        ["wtaunu_dta", "wtaunu_analysistop"],
         ["MET_met", "met_met"],
         weight="reco_weight",
         **cut_mass_args,

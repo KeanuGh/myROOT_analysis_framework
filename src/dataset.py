@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import time
 from abc import ABC, abstractmethod
 from collections import OrderedDict
 from dataclasses import dataclass, field
@@ -1036,7 +1037,11 @@ class RDataset(Dataset):
                 fill_args = [var]
 
             th1 = ROOT.TH1F(name, title, *plotting_tools.get_TH1_bins(bins, logbins=logbins))
-            th1 = self.df.Fill(th1, fill_args).GetPtr()
+
+            if cut:
+                th1 = self.filtered_df.Fill(th1, fill_args).GetPtr()
+            else:
+                th1 = self.df.Fill(th1, fill_args).GetPtr()
 
             # convert to boost
             hist = Histogram1D(th1=th1)
@@ -1080,11 +1085,11 @@ class RDataset(Dataset):
                     return "truth_weight"
 
         for variable_name in output_histogram_variables:
-            print(f"Producing histogram {variable_name}...")
             # which binning?
             bin_args = match_bin_args(variable_name)
             weight = match_weight(variable_name)
 
+            self.logger.debug(f"Producing histogram {variable_name}...")
             th1 = ROOT.TH1F(
                 variable_name,
                 variable_name,
@@ -1094,6 +1099,7 @@ class RDataset(Dataset):
 
             if cut:
                 cut_hist_name = "cut_" + variable_name
+                self.logger.debug(f"Producing histogram cut_{variable_name}...")
                 cut_th1 = ROOT.TH1F(
                     cut_hist_name,
                     variable_name,
@@ -1104,9 +1110,13 @@ class RDataset(Dataset):
                 )
 
         # generate histograms
+        self.logger.info(f"Producing {len(th1_histograms)} histograms...")
+        t = time.time()
         for i, (hist_name, th1_ptr) in enumerate(th1_histograms.items()):
-            print(f"Producing histogram {i + 1}/{len(th1_histograms)}: {hist_name}", end="\r")
             self.histograms[hist_name] = Histogram1D(th1=th1_histograms[hist_name].GetValue())
+        self.logger.info(
+            f"Took {time.time() - t:.2G}s to produce {len(self.histograms)} histograms over {self.df.GetNRuns()} runs."
+        )
 
         self.logger.info(f"Producted {len(self.histograms)} histograms.")
 

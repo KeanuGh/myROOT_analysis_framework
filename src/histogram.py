@@ -142,15 +142,21 @@ class Histogram1D(bh.Histogram, family=None):
                     f"Weight and value arrays are of different lengths! {len(weight)}, {len(var)}"  # type: ignore
                 )
 
+            if hasattr(var, "dtype") and var.dtype.name == "object":
+                # try and turn numerical
+                var = var.astype("float64")
+
             # check for invalid entries (nan or inf in weights or values)
             if weight is not None:
-                inv_bool = np.logical_xor(
-                    np.logical_xor(np.isnan(var), np.isnan(weight), casting="same_kind"),
-                    np.logical_xor(np.isinf(var), np.isinf(weight), casting="same_kind"),
-                    casting="same_kind",
-                )
-                if n_inv := inv_bool.sum():
-                    self.logger.error(f"{n_inv} invalid entries in histogram!")
+                try:
+                    inv_bool = np.logical_xor(
+                        np.logical_xor(np.isnan(var), np.isnan(weight)),
+                        np.logical_xor(np.isinf(var), np.isinf(weight)),
+                    )
+                    if n_inv := inv_bool.sum():
+                        self.logger.error(f"{n_inv} invalid entries in histogram!")
+                except TypeError:
+                    self.logger.debug("Skipped invalid event count due to type error")
 
             self.logger.debug(f"Initialising histogram {name}...")
 
@@ -175,6 +181,8 @@ class Histogram1D(bh.Histogram, family=None):
             if isinstance(weight, (int, float)):
                 weight = np.full(len(var), weight)  # type: ignore
             rdf_dict["w"] = weight.values if isinstance(weight, pd.Series) else weight
+
+        # catch weird type errors
         rdf = ROOT.RDF.MakeNumpyDataFrame(rdf_dict)
         self.TH1 = rdf.Fill(self.TH1, list(rdf_dict.keys())).GetPtr()
 
