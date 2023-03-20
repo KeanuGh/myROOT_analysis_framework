@@ -151,9 +151,9 @@ def convert_pkl_to_root(filename: str, histname: str | None = None) -> None:
 
 
 @contextmanager
-def ROOT_TFile_mgr(filename: str | Path, TFile_arg="RECREATE"):
+def ROOT_TFile_mgr(filename: str | Path, TFile_arg="UPDATE"):
     """Context manager for opening root files"""
-    file = ROOT.TFile(filename, TFile_arg)
+    file = ROOT.TFile(str(filename), TFile_arg)
     try:
         yield file
     finally:
@@ -239,3 +239,8 @@ def init_rdataframe(name: str, filepaths: Path | str | Iterable[str], trees: Ite
             getattr(ROOT, chain_name).Add(f"{path}?#{tree}")
 
     return ROOT.RDataFrame(getattr(ROOT, chain_name))
+
+
+# def read_root_hist_file(file: str | Path) -> Dict[str, Histogram1D]:
+#     with ROOT_TFile_mgr(file, "READ"):
+#

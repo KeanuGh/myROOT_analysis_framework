@@ -146,6 +146,7 @@ class Dataset(ABC):
         yerr: ArrayLike | bool = False,
         normalise: float | bool = False,
         logbins: bool = False,
+        cut: bool = True,
         name: str = "",
         title: str = "",
         **kwargs,
@@ -153,15 +154,43 @@ class Dataset(ABC):
         ...
 
     @abstractmethod
-    def gen_histograms(self, cut: bool = True, to_file: bool = True) -> Dict[str, Histogram1D]:
+    def gen_histograms(
+        self, cut: bool = True, to_file: bool | str | Path = True
+    ) -> Dict[str, Histogram1D]:
         ...
 
-    def save_hists_to_file(self):
-        filename = self.name + "_histograms.root"
-        with ROOT_utils.ROOT_TFile_mgr(filename) as file:
+    def save_hists_to_file(
+        self,
+        filepath: str | Path | None = None,
+        tfile_option: str = "Recreate",
+        write_option: str = "Overwrite",
+    ) -> None:
+        """Save histograms in histogram dictionary to ROOT file containing TH1 objects"""
+        if filepath is None:
+            filepath = self.name + "_histograms.root"
+        with ROOT_utils.ROOT_TFile_mgr(filepath, tfile_option) as file:
             for name, hist in self.histograms.items():
-                file.WriteObject(hist.TH1, name)
-        self.logger.info(f"Written {len(self.histograms)} histograms to {filename}")
+                file.WriteObject(hist.TH1, name, write_option)
+        self.logger.info(f"Written {len(self.histograms)} histograms to {filepath}")
+
+    def import_histograms(self, in_file: Path | str, inplace=True) -> None | Dict[str, Histogram1D]:
+        """Import histograms from root file into histogram dictionary"""
+        histograms: OrderedDict[str, Histogram1D] = OrderedDict()
+
+        with ROOT_utils.ROOT_TFile_mgr(in_file, "read") as file:
+            for obj in file.GetListOfKeys():
+                if "TH1" not in (obj_class := obj.GetClassName()):
+                    self.logger.warning(f"Non-TH1 Object {obj_class} found in file")
+                    continue
+
+                th1 = obj.ReadObj()
+                histograms[th1.GetName()] = Histogram1D(th1=th1)
+
+        if inplace:
+            self.histograms = histograms
+            return None
+        else:
+            return histograms
 
 
 @dataclass(slots=True)
@@ -473,19 +502,21 @@ class PDataset(Dataset):
     # ===========================================
     def plot_hist(
         self,
-        var: str | List[str],
+        var: str,
         bins: Tuple[int, float, float] | List[float],
         weight: str | float = 1.0,
         ax: plt.Axes = None,
         yerr: ArrayLike | bool = False,
         normalise: float | bool = False,
         logbins: bool = False,
+        cut: bool = True,
         name: str = "",
         title: str = "",
         **kwargs,
     ) -> Histogram1D:
         """
         Generate 1D plots of given variables in dataframe. Returns figure object of list of figure objects.
+        Checks to see if histogram already exists in histogram dictionary
 
         :param var: variable name to be plotted. must exist in all datasets
         :param bins: tuple of bins in x (n_bins, start, stop) or list of bin edges.
@@ -503,20 +534,29 @@ class PDataset(Dataset):
                           - True for normalisation of unity
                           - False (default) for no normalisation
         :param logbins: whether logarithmic binnings
+        :param cut: use cuts for histogramming
         :param name: histogram name
         :param title: histogram title
         :param kwargs: keyword arguments to pass to mplhep.histplot()
         :return: Histgoram
         """
-        self.logger.debug(f"Generating {var} histogram in {self.name}...")
+        if cut:
+            histname = "cut_" + var
+        else:
+            histname = var
 
-        if not ax:
-            _, ax = plt.subplots()
+        if var in self.histograms:
+            hist = self.histograms[histname]
+        else:
+            self.logger.debug(f"Generating {histname} histogram in {self.name}...")
 
-        weights = self.df[weight] if isinstance(weight, str) else weight
-        hist = Histogram1D(
-            self.df[var], bins, weights, logbins, name=name, title=title, logger=self.logger
-        )  # type: ignore
+            if not ax:
+                _, ax = plt.subplots()
+
+            weights = self.df[weight] if isinstance(weight, str) else weight
+            hist = Histogram1D(
+                self.df[var], bins, weights, logbins, name=name, title=title, logger=self.logger
+            )
         hist = hist.plot(ax=ax, yerr=yerr, normalise=normalise, **kwargs)
         return hist
 
@@ -723,7 +763,9 @@ class PDataset(Dataset):
 
         return ax
 
-    def gen_histograms(self, cut: bool = True, to_file: bool = True) -> Dict[str, Histogram1D]:
+    def gen_histograms(
+        self, cut: bool = True, to_file: bool | str | Path = True
+    ) -> Dict[str, Histogram1D]:
         """Generate histograms for all variables mentioned in cutfile. Optionally with cuts applied as well"""
 
         output_histogram_variables = self.cutfile.all_vars
@@ -773,7 +815,7 @@ class PDataset(Dataset):
         self.logger.info(f"Producted {n_hists} histograms.")
 
         if to_file:
-            self.save_hists_to_file()
+            self.save_hists_to_file(filepath=to_file if isinstance(to_file, (str, Path)) else None)
 
         return self.histograms
 
@@ -939,6 +981,7 @@ class RDataset(Dataset):
         yerr: ArrayLike | bool = False,
         normalise: float | bool = False,
         logbins: bool = False,
+        cut: bool = False,
         name: str = "",
         title: str = "",
         **kwargs,
@@ -962,37 +1005,56 @@ class RDataset(Dataset):
                           - True for normalisation of unity
                           - False (default) for no normalisation
         :param logbins: whether logarithmic binnings
+        :param cut: use cuts for histogramming
         :param name: histogram name
         :param title: histgoram title
         :param kwargs: keyword arguments to pass to mplhep.histplot()
-        :return: Histgoram
+        :return: Histogram
         """
-
-        if var not in self.columns:
-            raise ValueError(f"No column named {var} in RDataFrame.")
-
-        self.logger.debug(f"Generating {var} histogram in {self.name}...")
-
-        if not ax:
-            _, ax = plt.subplots()
-
-        # handle weight
-        if weight:
-            fill_args = [var, weight]
+        if cut:
+            histname = "cut_" + var
         else:
-            fill_args = [var]
+            histname = var
 
-        th1 = ROOT.TH1F(name, title, *plotting_tools.get_TH1_bins(bins, logbins=logbins))
-        th1 = self.df.Fill(th1, fill_args).GetPtr()
+        # if histogram already exists
+        if var in self.histograms:
+            hist = self.histograms[histname]
 
-        # convert to boost
-        hist = Histogram1D(th1=th1)
+        else:
+            if var not in self.columns:
+                raise ValueError(f"No column named {var} in RDataFrame.")
+
+            self.logger.debug(f"Generating {var} histogram in {self.name}...")
+
+            if not ax:
+                _, ax = plt.subplots()
+
+            # handle weight
+            if weight:
+                fill_args = [var, weight]
+            else:
+                fill_args = [var]
+
+            th1 = ROOT.TH1F(name, title, *plotting_tools.get_TH1_bins(bins, logbins=logbins))
+            th1 = self.df.Fill(th1, fill_args).GetPtr()
+
+            # convert to boost
+            hist = Histogram1D(th1=th1)
+
         hist = hist.plot(ax=ax, yerr=yerr, normalise=normalise, **kwargs)
 
         return hist
 
-    def gen_histograms(self, cut: bool = True, to_file: bool = True) -> Dict[str, Histogram1D]:
+    def gen_histograms(
+        self, cut: bool = True, to_file: bool | str | Path = True
+    ) -> Dict[str, Histogram1D]:
         """Generate histograms for all variables mentioned in cutfile. Optionally with cuts applied as well"""
+
+        output_histogram_variables = self.cutfile.all_vars
+        n_hists = len(output_histogram_variables)
+        if cut:
+            n_hists *= 2
+        self.logger.info(f"Generating {n_hists} histograms...")
 
         output_histogram_variables = self.cutfile.all_vars
 
@@ -1018,6 +1080,7 @@ class RDataset(Dataset):
                     return "truth_weight"
 
         for variable_name in output_histogram_variables:
+            print(f"Producing histogram {variable_name}...")
             # which binning?
             bin_args = match_bin_args(variable_name)
             weight = match_weight(variable_name)
@@ -1048,7 +1111,9 @@ class RDataset(Dataset):
         self.logger.info(f"Producted {len(self.histograms)} histograms.")
 
         if to_file:
-            self.save_hists_to_file()
+            if to_file is True:
+                to_file = Path(self.name + "_hisograms.root")
+            self.save_hists_to_file(filepath=to_file)
 
         return self.histograms
 

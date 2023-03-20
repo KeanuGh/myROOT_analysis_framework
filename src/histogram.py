@@ -145,8 +145,9 @@ class Histogram1D(bh.Histogram, family=None):
             # check for invalid entries (nan or inf in weights or values)
             if weight is not None:
                 inv_bool = np.logical_xor(
-                    np.logical_xor(np.isnan(var), np.isnan(weight)),  # type: ignore
-                    np.logical_xor(np.isinf(var), np.isinf(weight)),  # type: ignore
+                    np.logical_xor(np.isnan(var), np.isnan(weight), casting="same_kind"),
+                    np.logical_xor(np.isinf(var), np.isinf(weight), casting="same_kind"),
+                    casting="same_kind",
                 )
                 if n_inv := inv_bool.sum():
                     self.logger.error(f"{n_inv} invalid entries in histogram!")

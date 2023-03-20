@@ -272,12 +272,12 @@ variable_data: Dict[str, Branch] = {
         "units": "GeV",
         "tag": VarTag.RECO,
     },
-    "e_d0sig": {
+    "el_d0sig": {
         "name": r"Electron $d_0$ significance",
         "units": "",
         "tag": VarTag.RECO,
     },
-    "e_delta_z0_sintheta": {
+    "el_delta_z0_sintheta": {
         "name": r"Electron $\Delta z_0\sin\theta$",
         "units": "",
         "tag": VarTag.RECO,

@@ -112,6 +112,9 @@ def get_axis_labels(
         new_varname = ""
         # pick first one that appears in variable data dictionary
         for var in var_name:
+            if var[:4] == "cut_":  # cut out prefix if it exists
+                var = var[4:]
+
             if var in variable_data:
                 new_varname = var
                 break
@@ -121,6 +124,8 @@ def get_axis_labels(
         else:
             var_name = var_name[0]
 
+    if var_name[:4] == "cut_":  # cut out prefix if it exists
+        var_name = var_name[4:]
     # get name and units from data dictionary
     try:
         name = variable_data[var_name]["name"]

@@ -57,6 +57,7 @@ class Analysis:
         log_out: str = "both",
         timedatelog: bool = True,
         separate_loggers: bool = False,
+        regen_histograms: bool = True,
         **kwargs,
     ):
         """
@@ -165,6 +166,13 @@ class Analysis:
                 # set new logger to append to analysis logger
                 dataset.logger = self.logger
                 dataset.logger.debug(f"{name} log handler returned to analysis.")  # test
+
+            # histogramming
+            histogram_file = self._output_dir / f"{name}_histograms.root"
+            # if not regen_histograms:
+            #     if histogram_file.exists():
+            #         dataset.histograms =
+            dataset.gen_histograms(to_file=histogram_file)
 
             try:
                 dataset.dsid_metadata_printout()
@@ -405,7 +413,7 @@ class Analysis:
         ratio_axlim: float | None = None,
         ratio_label: str = "Ratio",
         filename: str | Path | None = None,
-        apply_cuts: bool = False,
+        cut: bool = False,
         suffix: str = "",
         prefix: str = "",
         **kwargs,
@@ -434,8 +442,6 @@ class Analysis:
                           - True for normalisation of unity
                           - 'lumi' (default) for normalisation to global_uni variable in analysis
                           - False for no normalisation
-        :param apply_cuts: True to apply all cuts to dataset before plotting or False for no cuts
-                           pass a string or list of strings of the cut label(s) to apply just those cuts
         :param logbins: whether logarithmic binnings
         :param logx: whether log scale x-axis
         :param logy: whether log scale y-axis
@@ -450,7 +456,7 @@ class Analysis:
         :param ratio_axlim: pass to yax_lim in rato plotter
         :param ratio_label: y-axis label for ratio plot
         :param filename: name of output
-        :param apply_cuts: applies cuts before plotting
+        :param cut: applies cuts before plotting
         :param suffix: suffix to add at end of histogram/file name
         :param prefix: prefix to add at start of histogram/file
         :param kwargs: keyword arguments to pass to mplhep.histplot()
@@ -517,6 +523,7 @@ class Analysis:
                 w2=w2,
                 stats_box=stats_box,
                 scale_by_bin_width=scale_by_bin_width,
+                cut=cut,
                 **kwargs,
             )
 

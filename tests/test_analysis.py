@@ -9,8 +9,8 @@ from analysis import Analysis
 
 class TestSimpleAnalysisTop:
     @pytest.fixture(scope="class")
-    def analysis(self) -> Analysis:
-        output_dir = "framework_test_outputs"
+    def analysis(self, tmp_directory) -> Analysis:
+        output_dir = tmp_directory / "framework_test_outputs"
         datasets = {
             "wmintaunu": {
                 "data_path": "resources/test_analysistop_mcwmintaunu.root",
@@ -52,23 +52,36 @@ class TestSimpleAnalysisTop:
         assert cutflow.cutflow_n_events[2] == 153558
         assert cutflow.cutflow_n_events[3] == 130104
 
-    def test_pickle(self, analysis):
+    def test_pickle(self, analysis, tmp_directory):
         pkl_output = pd.read_pickle(
-            "framework_test_outputs/outputs/test_analysis/pickles/wmintaunu_df.pkl"
+            tmp_directory / "framework_test_outputs/outputs/test_analysis/pickles/wmintaunu_df.pkl"
         )
         assert pkl_output.equals(analysis["wmintaunu"].df)
 
-    def test_histograms(self, analysis):
-        histograms = analysis["wmintaunu"].gen_histograms(cut=True)
+    def test_histograms(self, analysis, tmp_directory):
+        histograms = analysis["wmintaunu"].histograms
 
         assert histograms["MC_WZmu_el_eta_born"].n_bins == 30
         assert round(histograms["mu_pt"].bin_values()[0], 5) == 283.18032
 
+        # save histograms to file
+        path = tmp_directory / "analysistop_histograms.root"
+        analysis["wmintaunu"].save_hists_to_file(path)
+
+        # read
+        output_hists = analysis["wmintaunu"].import_histograms(path, inplace=False)
+
+        np.testing.assert_allclose(
+            output_hists["MC_WZmu_el_eta_born"].bin_values(),
+            histograms["MC_WZmu_el_eta_born"].bin_values(),
+            rtol=1e-5,
+        )
+
 
 class TestSimpleDTA:
     @pytest.fixture(scope="class")
-    def analysis(self) -> Analysis:
-        output_dir = "tests/framework_test_outputs"
+    def analysis(self, tmp_directory) -> Analysis:
+        output_dir = tmp_directory / "tests/framework_test_outputs"
         datasets = {
             "wmintaunu": {
                 "data_path": "resources/wtaunu_h_cvbv_1000.root",
@@ -103,8 +116,8 @@ class TestSimpleDTA:
         assert analysis["wmintaunu"].cutflow["tau_eta"].value == "abs(TruthTauEta) < 2.4"
         assert analysis["wmintaunu"].cutflow["tau_eta"].npass == 3577
 
-    def test_histograms(self, analysis):
-        histograms = analysis["wmintaunu"].gen_histograms(cut=True)
+    def test_histograms(self, analysis, tmp_directory):
+        histograms = analysis["wmintaunu"].histograms
 
         assert histograms["TauEta"].n_bins == 30
 
@@ -144,4 +157,15 @@ class TestSimpleDTA:
                     0.00000000e00,
                 ]
             ),
+        )
+
+        # save histograms to file
+        path = tmp_directory / "dta_histograms.root"
+        analysis["wmintaunu"].save_hists_to_file(path)
+
+        # read
+        output_hists = analysis["wmintaunu"].import_histograms(path, inplace=False)
+
+        np.testing.assert_allclose(
+            output_hists["TruthTauPt"].bin_values(), histograms["TruthTauPt"].bin_values()
         )

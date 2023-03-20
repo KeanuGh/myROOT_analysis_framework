@@ -58,6 +58,8 @@ def main():
     )
     # my_analysis.merge_datasets('wtaunu_mu_dta', 'wtaunu_e_dta', verify=True)
     my_analysis.merge_datasets("wtaunu_analysistop", "wtaunu_analysistop_peak")
+    my_analysis["wtaunu_dta"].gen_histograms()
+    my_analysis["wtaunu_analysistop"].gen_histograms()
 
     # calculate boson E
     # my_analysis["wtaunu_dta"]["CalcBosonE"] = (
@@ -167,12 +169,12 @@ def main():
         "ratio_axlim": 1.5,
     }
     cut_truth_args = {
-        "name_prefix": "cut_truth",
+        "prefix": "cut_truth",
         "title": "truth - 36.2fb$^{-1}$",
         "normalise": False,
     }
     cut_reco_args = {
-        "name_prefix": "cut_reco",
+        "prefix": "cut_reco",
         "title": "reco - 36.2fb$^{-1}$",
         "normalise": False,
     }
@@ -185,8 +187,8 @@ def main():
     tau_weighted_args = {
         "weight": ["tau_weight_reco", "reco_weight"],
     }
-    my_analysis.apply_cuts()
-    my_analysis.wtaunu_dta.cutflow_printout()
+    # my_analysis.apply_cuts()
+    # my_analysis.wtaunu_dta.cutflow_printout()
 
     # truth
     my_analysis.plot_hist(
@@ -265,7 +267,7 @@ def main():
     )
     my_analysis.plot_hist(
         ["wtaunu_L_dta", "wtaunu_analysistop_reco"],
-        ["Ele_delta_z0_sintheta", "el_delta_z0_sintheta"],
+        ["Ele_delta_z0_sintheta", "e_delta_z0_sintheta"],
         bins=(30, 0, 2 * np.pi),
         **cut_reco_args,
         **el_weighted_args,
