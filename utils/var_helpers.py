@@ -138,7 +138,7 @@ derived_vars: Dict[str, OtherVar] = {
         "func": calc_mt,
         "cfunc": "mt",
     },
-    "TruthMTW": {  # boson mt
+    "TruthMTW": {  # truth boson mt
         "var_args": [
             "TruthTauPt",
             "TruthNeutrinoPt",

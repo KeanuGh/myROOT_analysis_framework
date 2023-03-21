@@ -1125,6 +1125,11 @@ class RDataset(Dataset):
             f"Took {time.time() - t:.3f}s to produce {len(self.histograms)} histograms over {self.df.GetNRuns()} run(s)."
         )
 
+        if cut:
+            # generate cutflow
+            self.gen_cutflow()
+            self.cutflow_printout()
+
         self.logger.info(f"Producted {len(self.histograms)} histograms.")
 
         if to_file:

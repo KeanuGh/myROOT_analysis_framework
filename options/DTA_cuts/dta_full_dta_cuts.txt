@@ -2,15 +2,24 @@
 # Name	Variable	</>	Cut (in GeV if applicable) tree
 # truth
 High_mass	TruthBosonM > 130
-Truth_tau_pt	TruthTauPt > 65
+#Truth_el_pt	TruthElePt > 7
+#Truth_el_eta	abs(TruthEleEta) < 2.5
+#Truth_el_eta_crack	(abs(TruthEleEta) < 1.37) or (abs(TruthEleEta) > 1.52)
+#Truth_mu_pt	TruthMuonPt > 7
+#Truth_mu_eta	abs(TruthMuonEta) < 2.5
+Truth_tau_pt	TruthTauPt > 25
+Truth_tau_eta	abs(TruthTauEta) < 2.47
+Truth_tau_eta_crack	(abs(TruthTauEta) < 1.37) or (abs(TruthTauEta) > 1.52)
+#Truth_jet_pt	TruthJetPt > 20
+#Truth_jet_eta	abs(TruthJetEta) > 25
 
 # reco
 Muon_channel	TruthTau_decay_mode == 1
-muon_eta	abs(MuonEta) < 2.4
-met	MET_met > 65
-muon_pt	MuonPt > 65
-mtw	MTW > 55
-
+muon_pt	MuonPt > 7
+#photon_pt	PhotonPt > 20
+#photon_eta	abs(PhotonEta) < 2.47
+#jet_pt	JetPt > 25
+#jet_eta	abs(TruthJetEta) < 4.4
 
 [OUTPUTS]
 # truth
