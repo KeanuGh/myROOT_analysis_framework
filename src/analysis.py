@@ -326,7 +326,7 @@ class Analysis:
 
         try:
             self[datasets[0]].df = pd.concat(
-                [self[n].df for n in datasets[1:]],
+                [self[dataset].df for dataset in datasets],
                 verify_integrity=verify,
                 copy=False,
             )
