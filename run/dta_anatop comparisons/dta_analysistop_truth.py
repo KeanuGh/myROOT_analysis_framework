@@ -1,7 +1,6 @@
 import numpy as np
 
 from src.analysis import Analysis
-from utils.plotting_tools import default_mass_bins
 
 # DTA_PATH = '/data/keanu/ditau_output/'
 # ANALYSISTOP_PATH = '/data/atlas/HighMassDrellYan/mc16a'
@@ -30,7 +29,7 @@ if __name__ == "__main__":
             "lepton": "tau",
             "dataset_type": "analysistop",
             # "force_rebuild": True,
-            "label": r"Powheg/Pythia 8 $W\rightarrow\tau\nu$",
+            "label": r"Powheg/Pythia  8 $W\rightarrow\tau\nu$",
         },
         "wtaunu_analysistop_peak": {
             "data_path": ANALYSISTOP_PATH + "/w*taunu/*.root",
@@ -50,11 +49,11 @@ if __name__ == "__main__":
         # force_rebuild=True,
         analysis_label="dta_analysistop_compare",
         # skip_verify_pkl=True,
-        validate_duplicated_events=False,
-        # regen_histograms=True,
+        validate_duplicated_events=True,
+        regen_histograms=True,
         force_recalc_cuts=True,
         log_level=10,
-        log_out="both",
+        log_out="console",
     )
     # my_analysis.merge_datasets('wtaunu_mu_dta', 'wtaunu_e_dta', verify=True)
     my_analysis.merge_datasets("wtaunu_analysistop", "wtaunu_analysistop_peak")
@@ -163,7 +162,8 @@ if __name__ == "__main__":
     # CUTS
     # ------------------------------------------------------------------
     cut_mass_args = {
-        "bins": default_mass_bins,
+        # "bins": default_mass_bins,
+        "bins": (30, 1, 5000),
         "logx": True,
         "logy": True,
         # "ratio_axlim": 1.5,

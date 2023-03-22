@@ -62,7 +62,7 @@ class TestSimpleAnalysisTop:
         histograms = analysis["wmintaunu"].histograms
 
         assert histograms["MC_WZmu_el_eta_born"].n_bins == 30
-        assert round(histograms["mu_pt"].bin_values()[0], 5) == 283.18032
+        assert round(histograms["mu_pt"].bin_values()[14], 5) == 17323.02332
 
         # save histograms to file
         path = tmp_directory / "analysistop_histograms.root"

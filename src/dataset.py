@@ -1143,10 +1143,10 @@ class RDataset(Dataset):
 def match_bin_args(var) -> dict:
     """Match arguments for plotting bins from variable name"""
     match variable_data[var]:
-        case {"units": "GeV", "tag": VarTag.TRUTH}:
+        # case {"units": "GeV", "tag": VarTag.RECO}:
+        #     return {"bins": plotting_tools.default_mass_bins, "logbins": False}
+        case {"units": "GeV"}:
             return {"bins": (30, 1, 5000), "logbins": True}
-        case {"units": "GeV", "tag": VarTag.RECO}:
-            return {"bins": plotting_tools.default_mass_bins, "logbins": False}
         case {"units": ""}:
             if "phi" in var.lower():
                 return {"bins": (30, -np.pi, np.pi), "logbins": False}
