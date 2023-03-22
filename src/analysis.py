@@ -324,9 +324,19 @@ class Analysis:
 
         self.logger.info(f"Merging dataset(s) {datasets[1:]} into dataset {datasets[0]}...")
 
-        self[datasets[0]].df = pd.concat(
-            [self[n].df for n in datasets], verify_integrity=verify, copy=False
-        )
+        try:
+            self[datasets[0]].df = pd.concat(
+                [self[n].df for n in datasets[1:]],
+                verify_integrity=verify,
+                copy=False,
+            )
+        except pd.errors.InvalidIndexError:
+            err_str = ""
+            for dataset in datasets:
+                common_index = self[datasets[0]].df.index.intersection(self[dataset].df.index)
+                err_str += f"Index common between {datasets[0]} and {dataset}: {common_index}\n"
+            raise pd.errors.InvalidIndexError(err_str)
+
         self[datasets[0]].name = datasets[0]
 
         if sort:
