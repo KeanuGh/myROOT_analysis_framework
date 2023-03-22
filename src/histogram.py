@@ -421,10 +421,10 @@ class Histogram1D(bh.Histogram, family=None):
 
     # Conversion
     # ===================
-    def to_TH1(self, name: str = "name", title: str = "title") -> ROOT.TH1F:
+    def to_TH1(self) -> ROOT.TH1F:
         """Convert Histogram to ROOT TH1F"""
         if self.TH1 is None:
-            h_root = ROOT.TH1F(name, title, self.n_bins, self.bin_edges)
+            h_root = ROOT.TH1F(self.name, self.TH1.title, self.n_bins, self.bin_edges)
         else:
             h_root = self.TH1
 
@@ -436,6 +436,25 @@ class Histogram1D(bh.Histogram, family=None):
         self.TH1 = h_root
 
         return h_root
+
+    def non_zero_range(self) -> Histogram1D:
+        """Return histogram containing non-zero range of self"""
+        first_nz_idx = 0
+        last_bz_idx = 0
+        first_found = False
+        for bin_idx, bin_val in enumerate(self.bin_values()):
+            if (bin_val != 0) and (not first_found):
+                first_nz_idx = bin_idx
+                first_found = True
+
+            if bin_val != 0:
+                last_bz_idx = bin_idx
+
+        new_hist = self[first_nz_idx:last_bz_idx]
+        new_hist.TH1 = self.TH1
+        new_hist.TH1 = new_hist.to_TH1()
+
+        return new_hist
 
     # Plotting
     # ===================
@@ -570,6 +589,7 @@ class Histogram1D(bh.Histogram, family=None):
         out_filename: str | None = None,
         yax_lim: float | None = None,
         display_stats: bool = True,
+        fit_empty: bool = False,
         color: str = "k",
         **kwargs,
     ) -> Histogram1D:
@@ -591,6 +611,7 @@ class Histogram1D(bh.Histogram, family=None):
         :param out_filename: provide filename to print. If not given, nothing is saved
         :param yax_lim: limit y-axis to 1 +/- {yax_lim}
         :param display_stats: whether to display the fit parameters on the plot
+        :param fit_empty: Whether to fit on empty bins. If false, fits on non-empty bin range
         :param color: plot colour
         :param kwargs: Args to pass to ax.errorbar()
         :return: axis object with plot
@@ -625,8 +646,13 @@ class Histogram1D(bh.Histogram, family=None):
             else:
                 self.logger.info("Performing fit on ratio..")
 
+                if not fit_empty:
+                    fit_hist = h_ratio.non_zero_range().TH1
+                else:
+                    fit_hist = h_ratio.TH1
+
                 with redirect_stdout() as fit_output:
-                    fit_results = h_ratio.TH1.Fit("pol0", "VFSN")
+                    fit_results = fit_hist.Fit("pol0", "VFSN")
 
                 self.logger.debug(
                     f"ROOT fit output:\n"

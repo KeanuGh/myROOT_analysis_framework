@@ -50,8 +50,8 @@ if __name__ == "__main__":
         analysis_label="dta_analysistop_compare",
         # skip_verify_pkl=True,
         validate_duplicated_events=True,
-        regen_histograms=True,
-        force_recalc_cuts=True,
+        # regen_histograms=True,
+        # force_recalc_cuts=True,
         log_level=10,
         log_out="console",
     )
