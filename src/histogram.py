@@ -302,22 +302,22 @@ class Histogram1D(bh.Histogram, family=None):
         return self.axes[0].extent
 
     @property
-    def bin_widths(self) -> np.typing.ArrayLike:
+    def bin_widths(self) -> np.ndarray:
         """get bin widths"""
         return self.axes[0].widths
 
     @property
-    def bin_range(self) -> np.typing.ArrayLike:
+    def bin_range(self) -> np.ndarray:
         """get histogram range"""
         return self.bin_edges[-1] - self.bin_edges[0]  # type: ignore
 
     @property
-    def bin_edges(self) -> np.typing.ArrayLike:
+    def bin_edges(self) -> np.ndarray:
         """get bin edges"""
         return self.axes[0].edges
 
     @property
-    def bin_centres(self) -> np.typing.ArrayLike:
+    def bin_centres(self) -> np.ndarray:
         """get bin centres"""
         return self.axes[0].centers
 
@@ -330,20 +330,20 @@ class Histogram1D(bh.Histogram, family=None):
         """get effective number of entries"""
         return self.bin_sum(flow) * self.bin_sum(flow) / sum(self.sumw2(flow))  # type: ignore
 
-    def sumw2(self, flow: bool = False) -> np.typing.ArrayLike:
+    def sumw2(self, flow: bool = False) -> np.ndarray:
         """get squared sum of weights"""
         return self.view(flow).variance  # type: ignore
 
-    def root_sumw2(self, flow: bool = False) -> np.typing.ArrayLike:
+    def root_sumw2(self, flow: bool = False) -> np.ndarray:
         """get squared sum of weights"""
         return np.sqrt(self.sumw2(flow))
 
-    def bin_values(self, flow: bool = False) -> np.typing.ArrayLike:
+    def bin_values(self, flow: bool = False) -> np.ndarray:
         """get bin values"""
         return self.values(flow)
 
     @property
-    def areas(self) -> np.typing.ArrayLike:
+    def areas(self) -> np.ndarray:
         """get bin areas"""
         return self.bin_values() * self.bin_widths  # type: ignore
 
@@ -424,7 +424,7 @@ class Histogram1D(bh.Histogram, family=None):
     def to_TH1(self) -> ROOT.TH1F:
         """Convert Histogram to ROOT TH1F"""
         if self.TH1 is None:
-            h_root = ROOT.TH1F(self.name, self.TH1.title, self.n_bins, self.bin_edges)
+            h_root = ROOT.TH1F(self.name, self.name, self.n_bins, self.bin_edges)
         else:
             h_root = self.TH1
 

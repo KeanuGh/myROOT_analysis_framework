@@ -1,4 +1,4 @@
-import ROOT
+import ROOT  # type: ignore
 import numpy as np
 import pytest
 
