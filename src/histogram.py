@@ -183,7 +183,7 @@ class Histogram1D(bh.Histogram, family=None):
             rdf_dict["w"] = weight.values if isinstance(weight, pd.Series) else weight
 
         # catch weird type errors
-        rdf = ROOT.RDF.MakeNumpyDataFrame(rdf_dict)
+        rdf = ROOT.RDF.FromNumpy(rdf_dict)
         self.TH1 = rdf.Fill(self.TH1, list(rdf_dict.keys())).GetPtr()
 
         return self
