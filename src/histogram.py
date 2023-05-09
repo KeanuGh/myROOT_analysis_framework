@@ -437,17 +437,18 @@ class Histogram1D(bh.Histogram, family=None):
 
         return h_root
 
-    def non_zero_range(self) -> Histogram1D:
+    def non_zero_range(self, tol=1e-5) -> Histogram1D:
         """Return histogram containing non-zero range of self"""
         first_nz_idx = 0
         last_bz_idx = 0
         first_found = False
         for bin_idx, bin_val in enumerate(self.bin_values()):
-            if (bin_val != 0) and (not first_found):
+            in_tol = abs(bin_val) > tol
+            if in_tol and (not first_found):
                 first_nz_idx = bin_idx
                 first_found = True
 
-            if bin_val != 0:
+            if in_tol:
                 last_bz_idx = bin_idx
 
         new_hist = self[first_nz_idx:last_bz_idx]
