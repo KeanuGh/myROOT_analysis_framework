@@ -12,13 +12,14 @@ import pandas as pd  # type: ignore
 from tabulate import tabulate  # type: ignore
 
 from src.cutfile import Cut
+from src.cutfile import Cutfile
 from src.logger import get_logger
 
 
 @dataclass(slots=True)
 class CutflowItem:
     value: str
-    npass: float
+    npass: int
     eff: float
     ceff: float
 
@@ -272,9 +273,9 @@ class RCutflow:
 
     @property
     def total_events(self) -> int:
-        if self.report is None:
-            raise AttributeError("Must have run one event loop in order to obtain number of events")
-        return self.report.At("Inclusive").GetAll()
+        if self._cutflow is None:
+            raise AttributeError("Must generated cutflow in order to obtain number of events")
+        return self._cutflow["Inclusive"].npass
 
     def gen_cutflow(self, cuts: List[Cut]) -> None:
         """
@@ -297,18 +298,25 @@ class RCutflow:
                 for cut in cuts
             )
         )
+        self._cutflow["Inclusive"] = CutflowItem(
+            value="-", npass=self.report.At("Inclusive").GetAll(), eff=100, ceff=100
+        )
+        self._cutflow.move_to_end("Inclusive", last=False)
         for cut_name in self._cutflow:
             self._cutflow[cut_name].ceff = (
-                100 * self._cutflow[cut_name].npass / self.report.At("Inclusive").GetAll()
+                100 * self._cutflow[cut_name].npass / self._cutflow["Inclusive"].npass
             )
+
+    def import_cutflow(self, hist: ROOT.TH1I, cutfile: Cutfile) -> None:
+        """Import cutflow from histogram and cutfile"""
+        self._cutflow = cutflow_from_hist_and_cutfile(hist, cutfile)
 
     def print(self, latex_path: Path | None = None) -> None:
         if self.report is None:
             raise AttributeError("Must first generate cutflow before being able to print")
 
         table = tabulate(
-            [["Inclusive", "-", self.report.At("Inclusive").GetAll(), "-", "-"]]
-            + [
+            [
                 [
                     cut_name,
                     cut.value,
@@ -328,3 +336,54 @@ class RCutflow:
 
         else:
             print(table)
+
+    def gen_histogram(self) -> ROOT.TH1I:
+        """return cutflow histogram"""
+        if self.report is None:
+            raise AttributeError("Cutflow uninitialised")
+
+        n_items = len(self._cutflow)
+        hist = ROOT.TH1I("cutflow", "cutflow", n_items, 0, n_items)
+
+        for i, (name, cut) in enumerate(self._cutflow.items()):
+            hist.SetBinContent(i + 1, cut.npass)
+            hist.GetXaxis().SetBinLabel(i + 1, name)
+
+        return hist
+
+
+def cutflow_from_hist_and_cutfile(
+    hist: ROOT.TH1I, cutfile: Cutfile
+) -> OrderedDict[str, CutflowItem]:
+    """Create cutflow object from cutflow histogram"""
+    if hist.GetNbinsX() - 1 != len(cutfile.cuts):
+        raise ValueError(
+            f"Number of cuts in cutfile ({len(cutfile.cuts)}) does not match number of cuts in histogram ({hist.GetNbinsX() - 1})"
+        )
+
+    cutflow = OrderedDict()
+    cutflow[hist.GetXaxis().GetBinLabel(1)] = CutflowItem(
+        value="-", npass=hist.GetBinContent(1), eff=100, ceff=100
+    )
+
+    # indexing is fucked b/c ROOT histograms are 1-indexed and 1st bin is inclusive,
+    # so the indexing goes:
+    # idx  cutfile  hist
+    # ------------------
+    # 0    cut1
+    # 1    cut2     inc.
+    # 2             cut1
+    # 3             cut2
+    for i, cut in enumerate(cutfile.cuts.values()):
+        npass = hist.GetBinContent(i + 2)
+        eff = 100 * npass / hist.GetBinContent(i + 1)
+        ceff = 100 * npass / hist.GetBinContent(1)
+
+        cutflow[hist.GetXaxis().GetBinLabel(i + 2)] = CutflowItem(
+            value=cut.cutstr,
+            npass=hist.GetBinContent(i + 2),
+            eff=eff,
+            ceff=ceff,
+        )
+
+    return cutflow

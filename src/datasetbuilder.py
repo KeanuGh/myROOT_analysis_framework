@@ -738,14 +738,14 @@ class DatasetBuilder:
         self.logger.info(f"Initiating RDataFrame from trees {ttrees} in {data_path}")
 
         # create c++ map for dataset ID metadatas
-        # TODO: what's with this tree??
         self.logger.debug("Calculating DSID metadata...")
-        dsid_metadata = ROOT_utils.get_dsid_values(data_path, "T_s1thv_NOMINAL")
+        # each tree /SHOULD/ have the same dsid here
+        dsid_metadata = ROOT_utils.get_dsid_values(data_path, list(ttrees)[0])
         ROOT.gInterpreter.Declare(
             f"""
-                std::map<int, float> dsid_sumw{{{','.join(f'{{{t.Index}, {t.sumOfWeights}}}' for t in dsid_metadata.itertuples())}}};
-                std::map<int, float> dsid_xsec{{{','.join(f'{{{t.Index}, {t.cross_section}}}' for t in dsid_metadata.itertuples())}}};
-                std::map<int, float> dsid_pmgf{{{','.join(f'{{{t.Index}, {t.PMG_factor}}}' for t in dsid_metadata.itertuples())}}};
+                std::map<int, float> {self.name}_dsid_sumw{{{','.join(f'{{{t.Index}, {t.sumOfWeights}}}' for t in dsid_metadata.itertuples())}}};
+                std::map<int, float> {self.name}_dsid_xsec{{{','.join(f'{{{t.Index}, {t.cross_section}}}' for t in dsid_metadata.itertuples())}}};
+                std::map<int, float> {self.name}_dsid_pmgf{{{','.join(f'{{{t.Index}, {t.PMG_factor}}}' for t in dsid_metadata.itertuples())}}};
             """
         )
 
@@ -760,22 +760,23 @@ class DatasetBuilder:
         Rdf = (
             Rdf.Define(
                 "truth_weight",
-                f"(mcWeight * rwCorr * {self.lumi} * prwWeight * dsid_pmgf[mcChannel]) / dsid_sumw[mcChannel]",
-            )
-            .Define(
+                f"(mcWeight * rwCorr * {self.lumi} * prwWeight * {self.name}_dsid_pmgf[mcChannel]) "
+                f"/ {self.name}_dsid_sumw[mcChannel]",
+            ).Define(
                 "reco_weight",
-                f"(weight * {self.lumi} * dsid_pmgf[mcChannel]) / dsid_sumw[mcChannel]",
+                f"(weight * {self.lumi} * {self.name}_dsid_pmgf[mcChannel]) "
+                f"/ {self.name}_dsid_sumw[mcChannel]",
             )
-            .Define(
-                "ele_weight_reco",
-                "reco_weight * Ele_recoSF * Ele_idSF * Ele_isoSF",
-            )
-            .Define(
-                "muon_weight_reco",
-                "reco_weight * Muon_recoSF * Muon_isoSF * Muon_ttvaSF",
-            )
-            .Define("tau_weight_reco", "reco_weight * TauRecoSF")
-            .Define("jet_weight_reco", "reco_weight * Jet_btSF")
+            # .Define(
+            #     "ele_weight_reco",
+            #     "reco_weight * Ele_recoSF * Ele_idSF * Ele_isoSF",
+            # )
+            # .Define(
+            #     "muon_weight_reco",
+            #     "reco_weight * Muon_recoSF * Muon_isoSF * Muon_ttvaSF",
+            # )
+            # .Define("tau_weight_reco", "reco_weight * TauRecoSF")
+            # .Define("jet_weight_reco", "reco_weight * Jet_btSF")
         )
 
         # rescale energy columns to GeV
@@ -886,8 +887,8 @@ class DatasetBuilder:
             # "rwCorr",
             "runNumber",
             "eventNumber",
-            # "passTruth",
-            # "passReco",
+            "passTruth",
+            "passReco",
         }
 
         for tree in tree_dict:

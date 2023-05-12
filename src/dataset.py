@@ -16,6 +16,7 @@ import pandas as pd  # type: ignore
 from numpy.typing import ArrayLike
 from tabulate import tabulate  # type: ignore
 
+import cutflow
 from src.cutfile import Cutfile, Cut
 from src.cutflow import PCutflow, RCutflow
 from src.histogram import Histogram1D
@@ -37,11 +38,14 @@ class Dataset(ABC):
     logger: logging.Logger = field(default_factory=get_logger)
     lepton: str = "lepton"
     file: Path = field(init=False)
-    histograms: OrderedDict[str, Histogram1D] = field(init=False, default_factory=OrderedDict)
+    histograms: OrderedDict[str, ROOT.TH1] = field(init=False, default_factory=OrderedDict)
 
     @abstractmethod
     def __len__(self):
         ...
+
+    def __repr__(self):
+        return f"{type(self)}(name={self.name}, label={self.label}, file={self.file}, ...)"
 
     @abstractmethod
     def __getattr__(self, item):
@@ -157,7 +161,7 @@ class Dataset(ABC):
     @abstractmethod
     def gen_histograms(
         self, cut: bool = True, to_file: bool | str | Path = True
-    ) -> Dict[str, Histogram1D]:
+    ) -> OrderedDict[str, ROOT.TH1]:
         ...
 
     def save_hists_to_file(
@@ -171,12 +175,14 @@ class Dataset(ABC):
             filepath = self.name + "_histograms.root"
         with ROOT_utils.ROOT_TFile_mgr(filepath, tfile_option) as file:
             for name, hist in self.histograms.items():
-                file.WriteObject(hist.TH1, name, write_option)
+                file.WriteObject(
+                    hist.TH1 if isinstance(hist, Histogram1D) else hist, name, write_option
+                )
         self.logger.info(f"Written {len(self.histograms)} histograms to {filepath}")
 
     def import_histograms(self, in_file: Path | str, inplace=True) -> None | Dict[str, Histogram1D]:
         """Import histograms from root file into histogram dictionary"""
-        histograms: OrderedDict[str, Histogram1D] = OrderedDict()
+        histograms: OrderedDict[str, ROOT.TH1] = OrderedDict()
 
         with ROOT_utils.ROOT_TFile_mgr(in_file, "read") as file:
             for obj in file.GetListOfKeys():
@@ -185,7 +191,7 @@ class Dataset(ABC):
                     continue
 
                 th1 = obj.ReadObj()
-                histograms[th1.GetName()] = Histogram1D(th1=th1)
+                histograms[th1.GetName()] = th1
 
         if inplace:
             self.histograms = histograms
@@ -547,7 +553,7 @@ class PDataset(Dataset):
             histname = var
 
         if histname in self.histograms:
-            hist = self.histograms[histname]
+            hist = Histogram1D(th1=self.histograms[histname])
         else:
             self.logger.debug(f"Generating {histname} histogram in {self.name}...")
 
@@ -766,7 +772,7 @@ class PDataset(Dataset):
 
     def gen_histograms(
         self, cut: bool = True, to_file: bool | str | Path = True
-    ) -> Dict[str, Histogram1D]:
+    ) -> OrderedDict[str, Histogram1D]:
         """Generate histograms for all variables mentioned in cutfile. Optionally with cuts applied as well"""
 
         output_histogram_variables = self.cutfile.all_vars
@@ -798,7 +804,7 @@ class PDataset(Dataset):
                 **bin_args,
                 weight=self[weight],
                 title=variable_name,
-            )
+            ).TH1
 
         if cut:
             cut_df = self.apply_cuts(inplace=False)
@@ -818,7 +824,7 @@ class PDataset(Dataset):
                     **bin_args,
                     weight=cut_df[weight],
                     title=variable_name,
-                )
+                ).TH1
 
         self.logger.info(f"Producted {n_hists} histograms.")
 
@@ -856,7 +862,11 @@ class RDataset(Dataset):
             self.filtered_df = self.filtered_df.Filter(cut.cutstr, cut.name)
 
     def __len__(self) -> int:
-        return self.cutflow.total_events
+        if (self.histograms is not None) and ("cutflow" in self.histograms):
+            return int(self.histograms["cutflow"].GetBinContent(1))
+
+        else:
+            raise ValueError("Must have run cutflow before getting len")
 
     def __getattr__(self, item):
         return getattr(self.df, item)
@@ -871,6 +881,14 @@ class RDataset(Dataset):
     def variables(self) -> Set[str]:
         """Column names that do not contain a cut label"""
         return set(self.columns)
+
+    def reset_cutflow(self) -> None:
+        """(re)set cutflow from cutflow histogram and cutfile"""
+        if len(self.histograms) == 0:
+            raise ValueError("Must generate or load histograms before resetting cutflow")
+
+        self.cutflow = cutflow.RCutflow(self.df, logger=self.logger)
+        self.cutflow.import_cutflow(self.histograms["cutflow"], self.cutfile)
 
     # ===============================
     # ========= PRINTOUTS ===========
@@ -1026,7 +1044,7 @@ class RDataset(Dataset):
 
         # if histogram already exists
         if histname in self.histograms:
-            hist = self.histograms[histname]
+            hist = Histogram1D(th1=self.histograms[histname])
 
         else:
             if var not in self.columns:
@@ -1059,7 +1077,7 @@ class RDataset(Dataset):
 
     def gen_histograms(
         self, cut: bool = True, to_file: bool | str | Path = True
-    ) -> Dict[str, Histogram1D]:
+    ) -> OrderedDict[str, ROOT.TH1]:
         """Generate histograms for all variables mentioned in cutfile. Optionally with cuts applied as well"""
 
         output_histogram_variables = self.cutfile.all_vars
@@ -1077,26 +1095,21 @@ class RDataset(Dataset):
             match variable_data[var]:
                 case {"tag": VarTag.TRUTH}:
                     return "truth_weight"
-                case {"tag": VarTag.RECO, "name": name}:
-                    if "tau" in name.lower():
-                        return "tau_weight_reco"
-                    elif "ele" in name.lower():
-                        return "ele_weight_reco"
-                    elif "mu" in name.lower():
-                        return "muon_weight_reco"
-                    elif "jet" in name.lower():
-                        return "jet_weight_reco"
-                    else:
-                        return "reco_weight"
+                case {"tag": VarTag.RECO}:
+                    return "reco_weight"
                 case _:
                     return "truth_weight"
+
+        # histogram weights
+        for weight_str in ["truth_weight", "reco_weight"]:
+            wgt_th1 = ROOT.TH1F(weight_str, weight_str, 500, -50, 50)
+            th1_histograms[weight_str] = self.df.Fill(wgt_th1, [weight_str])
 
         for variable_name in output_histogram_variables:
             # which binning?
             bin_args = match_bin_args(variable_name)
             weight = match_weight(variable_name)
 
-            self.logger.debug(f"Producing histogram {variable_name}...")
             th1 = ROOT.TH1F(
                 variable_name,
                 variable_name,
@@ -1106,7 +1119,6 @@ class RDataset(Dataset):
 
             if cut:
                 cut_hist_name = "cut_" + variable_name
-                self.logger.debug(f"Producing histogram cut_{variable_name}...")
                 cut_th1 = ROOT.TH1F(
                     cut_hist_name,
                     variable_name,
@@ -1117,10 +1129,10 @@ class RDataset(Dataset):
                 )
 
         # generate histograms
-        self.logger.info(f"Producing {len(th1_histograms)} histograms...")
         t = time.time()
         for i, (hist_name, th1_ptr) in enumerate(th1_histograms.items()):
-            self.histograms[hist_name] = Histogram1D(th1=th1_histograms[hist_name].GetValue())
+            self.logger.debug(f"Producing histogram {hist_name}...")
+            self.histograms[hist_name] = th1_histograms[hist_name].GetValue()
         self.logger.info(
             f"Took {time.time() - t:.3f}s to produce {len(self.histograms)} histograms over {self.df.GetNRuns()} run(s)."
         )
@@ -1128,6 +1140,7 @@ class RDataset(Dataset):
         if cut:
             # generate cutflow
             self.gen_cutflow()
+            self.histograms["cutflow"] = self.cutflow.gen_histogram()
             self.cutflow_printout()
 
         self.logger.info(f"Producted {len(self.histograms)} histograms.")

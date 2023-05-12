@@ -92,15 +92,20 @@ variable_data: Dict[str, Branch] = {
         "tag": VarTag.META,
     },
     # DTA-specific
+    "passTrigger": {
+        "name": "pass trigger",
+        "units": "",
+        "tag": VarTag.RECO,
+    },
     "passTruth": {
         "name": "pass truth",
         "units": "",
-        "tag": VarTag.META,
+        "tag": VarTag.TRUTH,
     },
     "passReco": {
         "name": "pass reco",
         "units": "",
-        "tag": VarTag.META,
+        "tag": VarTag.RECO,
     },
     "nVtx": {
         "name": "number of vertices",
@@ -656,7 +661,11 @@ variable_data: Dict[str, Branch] = {
         "units": "",
         "tag": VarTag.TRUTH,
     },
-    "MC_WZmu_el_phi_bare": {"name": r"bare %s $\phi$", "units": "", "tag": VarTag.TRUTH},
+    "MC_WZmu_el_phi_bare": {
+        "name": r"bare %s $\phi$",
+        "units": "",
+        "tag": VarTag.TRUTH,
+    },
     "MC_WZmu_el_phi_dres": {
         "name": r"dressed %s $\phi$",
         "units": "",

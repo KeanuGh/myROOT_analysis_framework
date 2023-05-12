@@ -1,15 +1,17 @@
 [CUTS]
 # Name	Variable	</>	Cut (in GeV if applicable) tree
 # truth
+pass_truth	passTruth
 High_mass	TruthBosonM > 130
 Truth_mtw	TruthMTW > 55
 Truth_tau_pt	TruthTauPt > 65
 
 # reco
-Muon_channel	TruthTau_decay_mode == 1
-muon_eta	abs(MuonEta) < 2.4
+pass_reco	passReco
+pass_trigger	passTrigger
+#muon_eta	abs(MuonEta) < 2.4
 met	MET_met > 65
-muon_pt	MuonPt > 65
+#muon_pt	MuonPt > 65
 
 
 [OUTPUTS]

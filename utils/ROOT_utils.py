@@ -193,8 +193,8 @@ def get_dsid_values(path: str | Path, ttree_name: str = "") -> pd.DataFrame:
         with ROOT_TFile_mgr(file, "read") as tfile:
             tree = tfile.Get(ttree_name)
             tree.GetEntry(0)  # read first DSID from branch
-            sumw = tfile.Get("sumOfWeights").GetBinContent(4)  # bin 4 is AOD sum of weights
             dsid = tree.mcChannel
+            sumw = tfile.Get("sumOfWeights").GetBinContent(4)  # bin 4 is AOD sum of weights
             if dsid not in dsid_sumw:
                 dsid_sumw[dsid] = sumw
             else:

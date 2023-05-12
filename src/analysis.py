@@ -175,6 +175,7 @@ class Analysis:
             if not indiv_regen_hists and histogram_file.exists():
                 # just read in previous histogram file if it exists
                 dataset.import_histograms(histogram_file)
+                dataset.reset_cutflow()
                 dataset.logger.info(
                     f"Imported {len(dataset.histograms)} histogram(s) from file {histogram_file}"
                 )

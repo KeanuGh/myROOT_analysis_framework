@@ -183,8 +183,17 @@ class Histogram1D(bh.Histogram, family=None):
             rdf_dict["w"] = weight.values if isinstance(weight, pd.Series) else weight
 
         # catch weird type errors
-        rdf = ROOT.RDF.FromNumpy(rdf_dict)
-        self.TH1 = rdf.Fill(self.TH1, list(rdf_dict.keys())).GetPtr()
+        try:
+            rdf = ROOT.RDF.FromNumpy(rdf_dict)
+            self.TH1 = rdf.Fill(self.TH1, list(rdf_dict.keys())).GetPtr()
+
+        except RuntimeError as e:
+            if "Object not convertible" in str(e):
+                raise RuntimeError(
+                    f"Cannot convert object of type '{type(rdf_dict['x'])}' to 'AsRVec'"
+                )
+            else:
+                raise e
 
         return self
 
@@ -450,6 +459,9 @@ class Histogram1D(bh.Histogram, family=None):
 
             if in_tol:
                 last_bz_idx = bin_idx
+
+        if first_nz_idx == last_bz_idx == 0:
+            return self
 
         new_hist = self[first_nz_idx:last_bz_idx]
         new_hist.TH1 = self.TH1

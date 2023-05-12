@@ -5,6 +5,7 @@ import pandas as pd  # type: ignore
 import pytest
 
 from analysis import Analysis
+from cutflow import cutflow_from_hist_and_cutfile
 
 
 class TestSimpleAnalysisTop:
@@ -169,3 +170,21 @@ class TestSimpleDTA:
         np.testing.assert_allclose(
             output_hists["TruthTauPt"].bin_values(), histograms["TruthTauPt"].bin_values()
         )
+
+    def test_cutflow_self_consistency(self, analysis, tmp_directory):
+        generated_cutflow = analysis["wmintaunu"].cutflow._cutflow
+
+        regenerated_cutflow = cutflow_from_hist_and_cutfile(
+            analysis["wmintaunu"].histograms["cutflow"], analysis["wmintaunu"].cutfile
+        )
+
+        assert [item.value for item in generated_cutflow.values()] == [
+            item.value for item in regenerated_cutflow.values()
+        ]
+
+        for generated_cutflow_item, regenerated_cutflow_item in zip(
+            generated_cutflow.values(), regenerated_cutflow.values()
+        ):
+            assert np.isclose(generated_cutflow_item.npass, regenerated_cutflow_item.npass)
+            assert np.isclose(generated_cutflow_item.eff, regenerated_cutflow_item.eff)
+            assert np.isclose(generated_cutflow_item.ceff, regenerated_cutflow_item.ceff)
