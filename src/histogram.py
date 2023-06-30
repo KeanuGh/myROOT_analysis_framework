@@ -69,7 +69,7 @@ class Histogram1D(bh.Histogram, family=None):
     @overload
     def __init__(
         self,
-        var: ArrayLike | None = None,
+        var: ArrayLike | None | ROOT.TH1 = None,
         bins: List[float] | np.ndarray | Tuple[int, float, float] | bh.axis.Axis = (10, 0, 10),
         weight: ArrayLike | int | None = None,
         logbins: bool = False,
@@ -82,7 +82,7 @@ class Histogram1D(bh.Histogram, family=None):
 
     def __init__(
         self,
-        var: ArrayLike | None = None,
+        var: ArrayLike | None | ROOT.TH1 = None,
         bins: List[float] | np.ndarray | Tuple[int, float, float] | bh.axis.Axis = (10, 0, 10),
         weight: ArrayLike | float | None = None,
         logbins: bool = False,
@@ -110,9 +110,15 @@ class Histogram1D(bh.Histogram, family=None):
             logger = get_logger()
         self.logger = logger
 
+        if isinstance(var, ROOT.TH1):
+            th1 = var
+
+        if name == "mt_born":
+            print(bins)
+
         if th1:
             # create from TH1
-            self.logger.info(f"Creating histogram from TH1: '{th1}'...")
+            self.logger.debug(f"Creating histogram from TH1: '{th1}'...")
             edges = [th1.GetBinLowEdge(i + 1) for i in range(th1.GetNbinsX() + 1)]
             super().__init__(bh.axis.Variable(edges), storage=bh.storage.Weight())
 
@@ -161,7 +167,7 @@ class Histogram1D(bh.Histogram, family=None):
             self.logger.debug(f"Initialising histogram {name}...")
 
             # TH1
-            self.TH1 = ROOT.TH1F(name, title, *get_TH1_bins(bins))  # type: ignore
+            self.TH1 = ROOT.TH1F(name, title, *get_TH1_bins(bins, logbins=logbins))  # type: ignore
             self.name = name
 
             # get axis

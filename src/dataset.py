@@ -16,7 +16,6 @@ import pandas as pd  # type: ignore
 from numpy.typing import ArrayLike
 from tabulate import tabulate  # type: ignore
 
-import cutflow
 from src.cutfile import Cutfile, Cut
 from src.cutflow import PCutflow, RCutflow
 from src.histogram import Histogram1D
@@ -145,7 +144,7 @@ class Dataset(ABC):
     def plot_hist(
         self,
         var: str,
-        bins: List[float] | Tuple[int, float, float],
+        bins: List[float] | Tuple[int, float, float] | None = None,
         weight: str | float = 1.0,
         ax: plt.Axes = None,
         yerr: ArrayLike | bool = False,
@@ -510,7 +509,7 @@ class PDataset(Dataset):
     def plot_hist(
         self,
         var: str,
-        bins: Tuple[int, float, float] | List[float],
+        bins: Tuple[int, float, float] | List[float] | None = None,
         weight: str | float = 1.0,
         ax: plt.Axes = None,
         yerr: ArrayLike | bool = False,
@@ -887,7 +886,7 @@ class RDataset(Dataset):
         if len(self.histograms) == 0:
             raise ValueError("Must generate or load histograms before resetting cutflow")
 
-        self.cutflow = cutflow.RCutflow(self.df, logger=self.logger)
+        self.cutflow = RCutflow(self.df, logger=self.logger)
         self.cutflow.import_cutflow(self.histograms["cutflow"], self.cutfile)
 
     # ===============================
@@ -1001,7 +1000,7 @@ class RDataset(Dataset):
     def plot_hist(
         self,
         var: str,
-        bins: List[float] | Tuple[int, float, float],
+        bins: List[float] | Tuple[int, float, float] | None = None,
         weight: str | float = 1.0,
         ax: plt.Axes = None,
         yerr: ArrayLike | bool = False,
@@ -1047,6 +1046,8 @@ class RDataset(Dataset):
             hist = Histogram1D(th1=self.histograms[histname])
 
         else:
+            if bins is None:
+                raise ValueError(f"Must pass bins if histogram not in dictionary")
             if var not in self.columns:
                 raise ValueError(f"No column named {var} in RDataFrame.")
 
@@ -1155,7 +1156,12 @@ class RDataset(Dataset):
 
 def match_bin_args(var) -> dict:
     """Match arguments for plotting bins from variable name"""
-    match variable_data[var]:
+    try:
+        var_dict = variable_data[var]
+    except KeyError:
+        raise KeyError(f"No known variable {var}")
+
+    match var_dict:
         # case {"units": "GeV", "tag": VarTag.RECO}:
         #     return {"bins": plotting_tools.default_mass_bins, "logbins": False}
         case {"units": "GeV"}:

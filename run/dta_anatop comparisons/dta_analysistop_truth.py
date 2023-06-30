@@ -5,7 +5,7 @@ from src.analysis import Analysis
 # DTA_PATH = '/data/keanu/ditau_output/'
 # ANALYSISTOP_PATH = '/data/atlas/HighMassDrellYan/mc16a'
 # DATA_OUT_DIR = '/data/keanu/framework_outputs/'
-DTA_PATH = "/data/DTA_outputs/2023-01-31/"
+DTA_PATH = "/data/DTA_outputs/2023-05-05/"
 ANALYSISTOP_PATH = "/data/analysistop_out/mc16a/"
 DATA_OUT_DIR = "/data/dataset_pkl_outputs/"
 
@@ -50,7 +50,7 @@ if __name__ == "__main__":
         analysis_label="dta_analysistop_compare",
         # skip_verify_pkl=True,
         validate_duplicated_events=True,
-        # regen_histograms=True,
+        regen_histograms=True,
         # force_recalc_cuts=True,
         log_level=10,
         log_out="console",
@@ -135,28 +135,64 @@ if __name__ == "__main__":
         **ratio_args,
     )
 
-    # vis tau
+    # neutrinos????
     my_analysis.plot_hist(
         ["wtaunu_dta", "wtaunu_analysistop"],
-        ["VisTruthTauPt", "MC_WZmu_el_pt_born"],
+        ["TruthNeutrinoPt", "MC_WZneutrino_pt_born"],
         **truth_mass_args,
         **truth_weighted_args,
         **ratio_args,
+        xlabel=r"Truth Neutrino $p_T$ [GeV]",
     )
     my_analysis.plot_hist(
         ["wtaunu_dta", "wtaunu_analysistop"],
-        ["VisTruthTauEta", "MC_WZmu_el_eta_born"],
+        ["ImplicitMetPt", "MC_WZneutrino_pt_born"],
+        **truth_mass_args,
+        **truth_weighted_args,
+        **ratio_args,
+        xlabel="Implicit MET [GeV]",
+    )
+    my_analysis.plot_hist(
+        ["wtaunu_dta", "wtaunu_analysistop"],
+        ["ImplicitMetEta", "MC_WZneutrino_eta_born"],
         bins=(30, -5, 5),
         **truth_weighted_args,
         **ratio_args,
+        xlabel=r"Implicit MET $\eta$",
     )
     my_analysis.plot_hist(
         ["wtaunu_dta", "wtaunu_analysistop"],
-        ["VisTruthTauPhi", "MC_WZmu_el_phi_born"],
+        ["ImplicitMetPhi", "MC_WZneutrino_phi_born"],
         bins=(30, -np.pi, np.pi),
         logy=False,
         **truth_weighted_args,
         **ratio_args,
+        xlabel=r"Implicit MET $\phi$",
+    )
+    my_analysis.plot_hist(
+        ["wtaunu_dta", "wtaunu_analysistop"],
+        ["TruthMetPt", "MC_WZneutrino_pt_born"],
+        **truth_mass_args,
+        **truth_weighted_args,
+        **ratio_args,
+        xlabel="Truth MET [GeV]",
+    )
+    my_analysis.plot_hist(
+        ["wtaunu_dta", "wtaunu_analysistop"],
+        ["TruthMetEta", "MC_WZneutrino_eta_born"],
+        bins=(30, -5, 5),
+        **truth_weighted_args,
+        **ratio_args,
+        xlabel=r"Implicit MET $\eta$",
+    )
+    my_analysis.plot_hist(
+        ["wtaunu_dta", "wtaunu_analysistop"],
+        ["TruthMetPhi", "MC_WZneutrino_phi_born"],
+        bins=(30, -np.pi, np.pi),
+        logy=False,
+        **truth_weighted_args,
+        **ratio_args,
+        xlabel=r"Implicit MET $\phi$",
     )
 
     # CUTS
@@ -175,15 +211,7 @@ if __name__ == "__main__":
     cut_reco_args = {
         "cut": True,
         "title": "reco - 36.2fb$^{-1}$",
-    }
-    el_weighted_args = {
         "weight": ["ele_weight_reco", "reco_weight"],
-    }
-    mu_weighted_args = {
-        "weight": ["muon_weight_reco", "reco_weight"],
-    }
-    tau_weighted_args = {
-        "weight": ["tau_weight_reco", "reco_weight"],
     }
     # my_analysis.apply_cuts()
     # my_analysis.wtaunu_dta.cutflow_printout()
@@ -235,7 +263,6 @@ if __name__ == "__main__":
         "TauPt",
         **cut_mass_args,
         **cut_reco_args,
-        **tau_weighted_args,
         **ratio_args,
     )
     my_analysis.plot_hist(
@@ -243,7 +270,6 @@ if __name__ == "__main__":
         "TauPhi",
         bins=(30, -np.pi, np.pi),
         **cut_reco_args,
-        **tau_weighted_args,
         **ratio_args,
     )
     my_analysis.plot_hist(
@@ -251,7 +277,6 @@ if __name__ == "__main__":
         "TauEta",
         bins=(30, -5, 5),
         **cut_reco_args,
-        **tau_weighted_args,
         **ratio_args,
     )
     my_analysis.plot_hist(
@@ -260,7 +285,6 @@ if __name__ == "__main__":
         xlabel="Truth Boson $M$",
         **cut_mass_args,
         **cut_reco_args,
-        **el_weighted_args,
         **ratio_args,
     )
     # my_analysis.plot_hist(
@@ -276,7 +300,6 @@ if __name__ == "__main__":
         ["ElePhi", "el_phi"],
         bins=(30, -np.pi, np.pi),
         **cut_reco_args,
-        **el_weighted_args,
         **ratio_args,
     )
     my_analysis.plot_hist(
@@ -284,7 +307,6 @@ if __name__ == "__main__":
         ["EleEta", "el_eta"],
         bins=(30, -5, 5),
         **cut_reco_args,
-        **el_weighted_args,
         **ratio_args,
     )
     my_analysis.plot_hist(
@@ -292,7 +314,6 @@ if __name__ == "__main__":
         ["MuonPt", "mu_pt"],
         **cut_mass_args,
         **cut_reco_args,
-        **mu_weighted_args,
         **ratio_args,
     )
     # my_analysis.plot_hist(
@@ -308,7 +329,6 @@ if __name__ == "__main__":
         ["MuonPhi", "mu_phi"],
         bins=(30, -np.pi, np.pi),
         **cut_reco_args,
-        **mu_weighted_args,
         **ratio_args,
     )
     my_analysis.plot_hist(
@@ -316,13 +336,11 @@ if __name__ == "__main__":
         ["MuonEta", "mu_eta"],
         bins=(30, -5, 5),
         **cut_reco_args,
-        **mu_weighted_args,
         **ratio_args,
     )
     my_analysis.plot_hist(
         ["wtaunu_dta", "wtaunu_analysistop"],
         ["MET_met", "met_met"],
-        weight="reco_weight",
         **cut_mass_args,
         **cut_reco_args,
         **ratio_args,

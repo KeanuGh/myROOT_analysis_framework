@@ -175,7 +175,8 @@ class Analysis:
             if not indiv_regen_hists and histogram_file.exists():
                 # just read in previous histogram file if it exists
                 dataset.import_histograms(histogram_file)
-                dataset.reset_cutflow()
+                if hasattr(dataset, "reset_cutflow"):
+                    dataset.reset_cutflow()
                 dataset.logger.info(
                     f"Imported {len(dataset.histograms)} histogram(s) from file {histogram_file}"
                 )
@@ -183,8 +184,9 @@ class Analysis:
                 dataset.gen_histograms(to_file=histogram_file)
 
             # integrate into own histogram dictionary
+            self.logger.info("Converting histograms...")
             for hist_name, hist in dataset.histograms.items():
-                self.histograms[dataset_name + "_" + hist_name] = hist
+                self.histograms[dataset_name + "_" + hist_name] = Histogram1D(th1=hist)
 
             try:
                 dataset.dsid_metadata_printout()

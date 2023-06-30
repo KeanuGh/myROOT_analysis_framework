@@ -44,6 +44,12 @@ TruthBosonPt
 TruthBosonM
 TruthDilepM
 TruthMTW
+ImplicitMetPt
+ImplicitMetEta
+ImplicitMetPhi
+TruthMetPt
+TruthMetPhi
+TruthMetEta
 
 # reco
 TauEta

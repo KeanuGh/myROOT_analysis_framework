@@ -762,6 +762,11 @@ variable_data: Dict[str, Branch] = {
         "units": "",
         "tag": VarTag.TRUTH,
     },
+    "TruthNeutrinoE": {
+        "name": r"Truth neutrino $E$",
+        "units": "",
+        "tag": VarTag.TRUTH,
+    },
     "TruthNeutrinoPhi": {
         "name": r"Truth neutrino $\phi$",
         "units": "",
@@ -772,9 +777,34 @@ variable_data: Dict[str, Branch] = {
         "units": "GeV",
         "tag": VarTag.TRUTH,
     },
-    "TruthNeutrinoE": {
-        "name": r"Truth neutrino $E$",
+    "TruthMetPt": {
+        "name": r"Truth MET",
         "units": "GeV",
+        "tag": VarTag.TRUTH,
+    },
+    "TruthMetPhi": {
+        "name": r"Truth MET $\phi$",
+        "units": "",
+        "tag": VarTag.TRUTH,
+    },
+    "TruthMetEta": {
+        "name": r"Truth MET $\eta$",
+        "units": "",
+        "tag": VarTag.TRUTH,
+    },
+    "ImplicitMetPt": {
+        "name": r"Implicit MET $p_T$",
+        "units": "GeV",
+        "tag": VarTag.TRUTH,
+    },
+    "ImplicitMetPhi": {
+        "name": r"Implicit MET $\phi$",
+        "units": "",
+        "tag": VarTag.TRUTH,
+    },
+    "ImplicitMetEta": {
+        "name": r"Implicit MET $\eta$",
+        "units": "",
         "tag": VarTag.TRUTH,
     },
     "TruthMuonEta": {
