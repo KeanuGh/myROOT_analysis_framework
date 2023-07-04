@@ -194,7 +194,8 @@ def get_axis(
 def set_axis_options(
     axis: plt.axes,
     var_name: Sequence[str] | str,
-    bins: Sequence[float | int],
+    strict_xax_lims: bool = True,
+    strict_yax_lims: bool = False,
     lepton: str = "",
     xlabel: str = "",
     ylabel: str = "",
@@ -209,7 +210,8 @@ def set_axis_options(
 
     :param axis: axis to change
     :param var_name: name of variable being plotted
-    :param bins: tuple of bins in y (n_bins, start, stop) or list of bin edge
+    :param strict_xax_lims: whether to force the x-axis limits to the data limits
+    :param strict_yax_lims: whether to force the y-axis limits to the data limits
     :param lepton: name of lepton for axis label
     :param xlabel: x label
     :param ylabel: y label
@@ -225,10 +227,40 @@ def set_axis_options(
     if logy:
         axis.semilogy()
 
-    if isinstance(bins, tuple) and len(bins) == 3:
-        axis.set_xlim(bins[1], bins[2])
-    else:
-        axis.set_xlim(bins[0], bins[-1])
+    # restrict axes to extent of data. if statement is there to skip blank/guide lines
+    if strict_xax_lims:
+        xmin = min(
+            [
+                min(line.get_xdata(), default=np.inf)
+                for line in axis.lines
+                if len(line.get_xdata()) > 2
+            ]
+        )
+        xmax = max(
+            [
+                max(line.get_xdata(), default=-np.inf)
+                for line in axis.lines
+                if len(line.get_xdata()) > 2
+            ]
+        )
+        axis.set_xlim(xmin, xmax)
+
+    if strict_yax_lims:
+        ymin = min(
+            [
+                min(line.get_ydata(), default=np.inf)
+                for line in axis.lines
+                if len(line.get_xdata()) > 2
+            ]
+        )
+        ymax = max(
+            [
+                max(line.get_ydata(), default=-np.inf)
+                for line in axis.lines
+                if len(line.get_xdata()) > 2
+            ]
+        )
+        axis.set_ylim(ymin, ymax)
 
     # set axis labels
     _xlabel, _ylabel = get_axis_labels(var_name, lepton, diff_xs)

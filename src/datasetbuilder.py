@@ -268,8 +268,7 @@ class DatasetBuilder:
         # ===============================
         if __build_df:
             df = self.build_dataframe(
-                data_path=data_path,
-                tree_dict=tree_dict,
+                data_path=data_path, tree_dict=tree_dict, vars_to_calc=vars_to_calc
             )
             __create_cut_cols = True
             __calculate_vars = True
@@ -312,15 +311,6 @@ class DatasetBuilder:
                 self.logger.debug("No pickle file saved.")
 
         else:
-            # calculate derived variables
-            print("calculating variables...")
-            for derived_var in vars_to_calc:
-                function = derived_vars[derived_var]["cfunc"]
-                args = derived_vars[derived_var]["var_args"]
-                func_str = f"{function}({','.join(args)})"
-
-                df = df.Define(derived_var, func_str)
-
             # BUILD DATASET
             # ===============================
             dataset = RDataset(
@@ -425,14 +415,19 @@ class DatasetBuilder:
     # ===== DATAFRAME FUNCTIONS =====
     # ===============================
     def build_dataframe(
-        self, data_path: str, tree_dict: Dict[str, Set[str]]
+        self,
+        data_path: str,
+        tree_dict: Dict[str, Set[str]],
+        vars_to_calc: Set[str] | None = None,
     ) -> pd.DataFrame | ROOT.RDataFrame:
         """send off dataframe builder to correct dataset type"""
         match self.dataset_type:
             case "analysistop":
                 return self.__build_dataframe_analysistop(data_path=data_path, tree_dict=tree_dict)
             case "dta":
-                return self.__build_dataframe_dta(data_path=data_path, tree_dict=tree_dict)
+                return self.__build_dataframe_dta(
+                    data_path=data_path, tree_dict=tree_dict, vars_to_calc=vars_to_calc
+                )
             case _:
                 raise ValueError(f"Unknown dataset {self.dataset_type}")
 
@@ -711,7 +706,11 @@ class DatasetBuilder:
         return df
 
     def __build_dataframe_dta(
-        self, data_path: str | Path, tree_dict: dict[str, Set[str]], unravel_vectors: bool = True
+        self,
+        data_path: str | Path,
+        tree_dict: dict[str, Set[str]],
+        vars_to_calc: Set[str] | None = None,
+        unravel_vectors: bool = True,
     ) -> ROOT.RDataFrame:
         """Build DataFrame from given files and TTree/branch combinations from DTA output"""
 
@@ -792,7 +791,10 @@ class DatasetBuilder:
             badcols = set()  # save old vector column names to avoid extracting them later
             hard_cut_vars = find_variables_in_string(self.hard_cut)
             self.logger.debug("Shrinking vectors:")
-            for col_name in import_cols | hard_cut_vars | set(Rdf.GetDefinedColumnNames()):
+            rdf_cols = import_cols | hard_cut_vars | set(Rdf.GetDefinedColumnNames())
+            if vars_to_calc:
+                rdf_cols -= vars_to_calc
+            for col_name in rdf_cols:
                 # unravel vector-type columns
                 col_type = Rdf.GetColumnType(col_name)
                 debug_str = f"\t- {col_name}: {col_type}"
@@ -829,6 +831,16 @@ class DatasetBuilder:
                         )
                         debug_str += f" -> {Rdf.GetColumnType(col_name)}"
                 self.logger.debug(debug_str)
+
+        # calculate derived variables
+        if vars_to_calc:
+            print("calculating variables...")
+            for derived_var in vars_to_calc:
+                function = derived_vars[derived_var]["cfunc"]
+                args = derived_vars[derived_var]["var_args"]
+                func_str = f"{function}({','.join(args)})"
+
+                Rdf = Rdf.Define(derived_var, func_str)
 
         # apply any hard cuts
         if self.hard_cut:

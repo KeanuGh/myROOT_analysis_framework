@@ -414,7 +414,7 @@ class Analysis:
         self,
         datasets: str | Sequence[str],
         var: str | Sequence[str],
-        bins: List[float | int] | Tuple[int, float, float],
+        bins: List[float | int] | Tuple[int, float, float] | None = None,
         weight: List[str | float] | str | float = 1.0,
         yerr: ArrayLike | str = True,
         labels: List[str] | None = None,
@@ -536,9 +536,19 @@ class Analysis:
                 short=name_template_short.format(dataset=dataset, variable=varname)
             )
 
+            # if passing a histogram name directly as the variable
+            if varname in self.histograms:
+                hist_name_internal = varname
+            elif varname in self[dataset].histograms:
+                hist_name_internal = dataset + "_" + varname
+            elif name_template_short in self.histograms:
+                hist_name_internal = varname
+            else:
+                hist_name_internal = None
+
             # plot
-            if name_template_short in self.histograms:
-                hist = self.histograms[name_template_short]
+            if hist_name_internal:
+                hist = self.histograms[hist_name_internal]
                 hist.plot(
                     ax=ax,
                     yerr=yerr,
@@ -550,6 +560,9 @@ class Analysis:
                     **kwargs,
                 )
             else:
+                if bins is None:
+                    raise ValueError("Must provide bins if histogram is not yet generated.")
+
                 hist = self[dataset].plot_hist(
                     var=varname,
                     bins=bins,
@@ -605,7 +618,15 @@ class Analysis:
 
         ax.legend(fontsize=10, loc="upper right")
         plotting_tools.set_axis_options(
-            ax, var, bins, lepton, xlabel, ylabel, title, logx, logy, diff_xs=scale_by_bin_width
+            axis=ax,
+            var_name=var,
+            lepton=lepton,
+            xlabel=xlabel,
+            ylabel=ylabel,
+            title=title,
+            logx=logx,
+            logy=logy,
+            diff_xs=scale_by_bin_width,
         )
         if ratio_plot:
             fig.tight_layout()
@@ -619,7 +640,6 @@ class Analysis:
             plotting_tools.set_axis_options(
                 axis=ratio_ax,
                 var_name=var,
-                bins=bins,
                 lepton=lepton,
                 diff_xs=scale_by_bin_width,
                 xlabel=xlabel,

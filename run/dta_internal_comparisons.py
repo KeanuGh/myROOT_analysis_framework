@@ -1,6 +1,10 @@
 from typing import Dict
 
+import matplotlib.pyplot as plt
+from numpy import pi
+
 from src.analysis import Analysis
+from utils import plotting_tools
 
 # DTA_PATH = '/data/keanu/ditau_output/'
 # ANALYSISTOP_PATH = '/data/atlas/HighMassDrellYan/mc16a'
@@ -116,334 +120,284 @@ if __name__ == "__main__":
         **ratio_args,
     )
 
-    # PT
+    # TRUTH
+    # -----------------------------------
+    # leptons
     my_analysis.plot_hist(
-        ["wtaunu_e_dta", "wtaunu_e_dta"],
-        ["ElePt", "cut_ElePt"],
+        lepton_ds,
+        "TruthMTW",
+        **truth_mass_args,
+        **truth_weighted_args,
+        **ratio_args,
+    )
+    my_analysis.plot_hist(
+        lepton_ds,
+        "TruthBosonM",
+        **truth_mass_args,
+        **truth_weighted_args,
+        **ratio_args,
+    )
+    # truth taus
+    my_analysis.plot_hist(
+        lepton_ds,
+        "TruthTauPt",
+        **truth_mass_args,
+        **truth_weighted_args,
+        **ratio_args,
+    )
+    my_analysis.plot_hist(
+        lepton_ds,
+        "TruthTauEta",
+        bins=(30, -5, 5),
+        **truth_weighted_args,
+        **ratio_args,
+    )
+    my_analysis.plot_hist(
+        lepton_ds,
+        "TruthTauPhi",
+        bins=(30, -pi, pi),
+        logy=False,
+        **truth_weighted_args,
+        **ratio_args,
+    )
+
+    # # incoming quark flavour
+    my_analysis.plot_hist(
+        flavour_ds,
+        "TruthTauPt",
         bins=(30, 1, 5000),
+        weight="base_weight",
+        ratio_axlim=1.5,
+        title="truth - 36.2fb$^{-1}$",
+        normalise=False,
         logx=True,
-        logy=True,
-        labels=["Electron Pt reco", "pass trigger"],
-        weight="reco_weight",
+        logbins=True,
         **ratio_args,
     )
 
     my_analysis.plot_hist(
-        ["wtaunu_h_dta", "wtaunu_h_dta"],
-        ["TauPt", "cut_TauPt"],
+        flavour_ds,
+        "TruthTauEta",
+        bins=(30, -5, 5),
+        weight="base_weight",
+        title="truth - 36.2fb$^{-1}$",
+        normalise=False,
+        **ratio_args,
+    )
+
+    my_analysis.plot_hist(
+        flavour_ds,
+        "TruthTauPhi",
+        bins=(30, -pi, pi),
+        weight="base_weight",
+        title="truth - 36.2fb$^{-1}$",
+        normalise=False,
+        **ratio_args,
+    )
+
+    my_analysis.plot_hist(
+        flavour_ds,
+        "TruthMTW",
         bins=(30, 1, 5000),
+        weight="base_weight",
+        ratio_axlim=1.5,
+        title="truth - 36.2fb$^{-1}$",
+        normalise=False,
         logx=True,
-        logy=True,
-        labels=["Tau Pt reco", "pass trigger"],
-        weight="reco_weight",
+        logbins=True,
         **ratio_args,
     )
 
     my_analysis.plot_hist(
-        ["wtaunu_mu_dta", "wtaunu_mu_dta"],
-        ["MuonEta", "cut_MuonEta"],
-        bins=(30, -4, 4),
-        labels=["Muon $\eta$ reco", "pass trigger"],
-        weight="reco_weight",
-        **ratio_args,
-    )
-    # eta
-    my_analysis.plot_hist(
-        ["wtaunu_e_dta", "wtaunu_e_dta"],
-        ["EleEta", "cut_EleEta"],
-        bins=(30, -4, 4),
-        labels=["Electron $\eta$ reco", "pass trigger"],
-        weight="reco_weight",
+        flavour_ds,
+        "TruthBosonM",
+        bins=(30, 1, 5000),
+        weight="base_weight",
+        title="truth - 36.2fb$^{-1}$",
+        normalise=False,
         **ratio_args,
     )
 
     my_analysis.plot_hist(
-        ["wtaunu_h_dta", "wtaunu_h_dta"],
-        ["TauEta", "cut_TauEta"],
-        bins=(30, -4, 4),
-        labels=["Tau $\eta$ reco", "pass trigger"],
-        weight="reco_weight",
+        flavour_ds,
+        "TruthMTW",
+        bins=(30, 1, 5000),
+        weight="base_weight",
+        ratio_axlim=1.5,
+        title="truth - 36.2fb$^{-1}$",
+        normalise=False,
+        logx=True,
+        logbins=True,
         **ratio_args,
     )
 
-    # # TRUTH
-    # # -----------------------------------
-    # # leptons
-    # my_analysis.plot_hist(
-    #     lepton_ds,
-    #     "TruthMTW",
-    #     **truth_mass_args,
-    #     **truth_weighted_args,
-    #     **ratio_args,
-    # )
-    # my_analysis.plot_hist(
-    #     lepton_ds,
-    #     "TruthBosonM",
-    #     **truth_mass_args,
-    #     **truth_weighted_args,
-    #     **ratio_args,
-    # )
-    # # truth taus
-    # my_analysis.plot_hist(
-    #     lepton_ds,
-    #     "TruthTauPt",
-    #     **truth_mass_args,
-    #     **truth_weighted_args,
-    #     **ratio_args,
-    # )
-    # my_analysis.plot_hist(
-    #     lepton_ds,
-    #     "TruthTauEta",
-    #     bins=(30, -5, 5),
-    #     **truth_weighted_args,
-    #     **ratio_args,
-    # )
-    # my_analysis.plot_hist(
-    #     lepton_ds,
-    #     "TruthTauPhi",
-    #     bins=(30, -pi, pi),
-    #     logy=False,
-    #     **truth_weighted_args,
-    #     **ratio_args,
-    # )
-    #
-    # # # incoming quark flavour
-    # my_analysis.plot_hist(
-    #     flavour_ds,
-    #     "TruthTauPt",
-    #     bins=(30, 1, 5000),
-    #     weight="base_weight",
-    #     ratio_axlim=1.5,
-    #     title="truth - 36.2fb$^{-1}$",
-    #     normalise=False,
-    #     logx=True,
-    #     logbins=True,
-    #     **ratio_args,
-    # )
-    #
-    # my_analysis.plot_hist(
-    #     flavour_ds,
-    #     "TruthTauEta",
-    #     bins=(30, -5, 5),
-    #     weight="base_weight",
-    #     title="truth - 36.2fb$^{-1}$",
-    #     normalise=False,
-    #     **ratio_args,
-    # )
-    #
-    # my_analysis.plot_hist(
-    #     flavour_ds,
-    #     "TruthTauPhi",
-    #     bins=(30, -pi, pi),
-    #     weight="base_weight",
-    #     title="truth - 36.2fb$^{-1}$",
-    #     normalise=False,
-    #     **ratio_args,
-    # )
-    #
-    # my_analysis.plot_hist(
-    #     flavour_ds,
-    #     "TruthMTW",
-    #     bins=(30, 1, 5000),
-    #     weight="base_weight",
-    #     ratio_axlim=1.5,
-    #     title="truth - 36.2fb$^{-1}$",
-    #     normalise=False,
-    #     logx=True,
-    #     logbins=True,
-    #     **ratio_args,
-    # )
-    #
-    # my_analysis.plot_hist(
-    #     flavour_ds,
-    #     "TruthBosonM",
-    #     bins=(30, 1, 5000),
-    #     weight="base_weight",
-    #     title="truth - 36.2fb$^{-1}$",
-    #     normalise=False,
-    #     **ratio_args,
-    # )
-    #
-    # my_analysis.plot_hist(
-    #     flavour_ds,
-    #     "TruthMTW",
-    #     bins=(30, 1, 5000),
-    #     weight="base_weight",
-    #     ratio_axlim=1.5,
-    #     title="truth - 36.2fb$^{-1}$",
-    #     normalise=False,
-    #     logx=True,
-    #     logbins=True,
-    #     **ratio_args,
-    # )
-    #
-    # # MET/neutrinos
-    # met_vars = ["TruthNeutrinoPt", "ImplicitMetPt", "TruthMetPt"]
-    # for dataset in lepton_ds:
-    #     fig, (ax, ratio_ax) = plt.subplots(2, 1, gridspec_kw={"height_ratios": [3, 1]})
-    #     hists = []
-    #     colours = iter(plt.rcParams["axes.prop_cycle"].by_key()["color"])
-    #
-    #     for i, var in enumerate(met_vars):
-    #         hist = my_analysis[dataset].plot_hist(var=var, ax=ax, label=var)
-    #         hists.append(hist)
-    #         colour = next(colours)
-    #
-    #         ax.legend(fontsize=10, loc="upper right")
-    #         plotting_tools.set_axis_options(ax, var, (30, 1, 5000), logx=True, logy=True)
-    #
-    #         if len(hists) > 1:
-    #             ratio_hist = hists[0].plot_ratio(
-    #                 hists[-1],
-    #                 ax=ratio_ax,
-    #                 yerr=True,
-    #                 label=f"{met_vars[0]}/{var}",
-    #                 display_stats=True,
-    #                 color=colour,
-    #             )
-    #
-    #         fig.tight_layout()
-    #         fig.subplots_adjust(hspace=0.1, wspace=0)
-    #         ax.set_xticklabels([])
-    #         ax.set_xlabel("")
-    #
-    #         ratio_ax.legend(fontsize=10, loc=1)
-    #         plotting_tools.set_axis_options(
-    #             axis=ratio_ax,
-    #             var_name=var,
-    #             bins=(30, 1, 5000),
-    #             ylabel="Ratio",
-    #             xlabel="Missing $E_T$",
-    #             title="",
-    #             logx=True,
-    #             logy=False,
-    #             label=False,
-    #         )
-    #         filename = my_analysis.paths.plot_dir / (dataset + "_" + "_".join(met_vars) + ".png")
-    #
-    #         fig.savefig(filename, bbox_inches="tight")
-    #         my_analysis.logger.info(f"Saved overlay plot of {var} to {filename}")
-    #         plt.close(fig)
-    #
-    # # RECO
-    # # -----------------------------------
-    # my_analysis.plot_hist(
-    #     lepton_ds,
-    #     "MuonPt",
-    #     bins=(30, 1, 5000),
-    #     weight="lep_reco_weight",
-    #     normalise=False,
-    #     title="reco - 36.2fb$^{-1}$",
-    #     logx=True,
-    #     logbins=True,
-    #     **ratio_args,
-    # )
-    #
-    # my_analysis.plot_hist(
-    #     flavour_ds,
-    #     "MuonEta",
-    #     bins=(30, -5, 5),
-    #     weight="lep_reco_weight",
-    #     normalise=False,
-    #     title="reco - 36.2fb$^{-1}$",
-    #     **ratio_args,
-    # )
-    #
-    # my_analysis.plot_hist(
-    #     flavour_ds,
-    #     "MuonPhi",
-    #     bins=(30, -pi, pi),
-    #     weight="lep_reco_weight",
-    #     normalise=False,
-    #     title="reco - 36.2fb$^{-1}$",
-    #     **ratio_args,
-    # )
-    #
-    # my_analysis.plot_hist(
-    #     lepton_ds,
-    #     "ElePt",
-    #     bins=(30, 1, 5000),
-    #     weight="lep_reco_weight",
-    #     normalise=False,
-    #     title="reco - 36.2fb$^{-1}$",
-    #     logx=True,
-    #     logbins=True,
-    #     **ratio_args,
-    # )
-    #
-    # my_analysis.plot_hist(
-    #     flavour_ds,
-    #     "EleEta",
-    #     bins=(30, -5, 5),
-    #     weight="lep_reco_weight",
-    #     normalise=False,
-    #     title="reco - 36.2fb$^{-1}$",
-    #     **ratio_args,
-    # )
-    #
-    # my_analysis.plot_hist(
-    #     flavour_ds,
-    #     "ElePhi",
-    #     bins=(30, -pi, pi),
-    #     weight="lep_reco_weight",
-    #     normalise=False,
-    #     title="reco - 36.2fb$^{-1}$",
-    #     **ratio_args,
-    # )
-    #
-    # my_analysis.plot_hist(
-    #     lepton_ds,
-    #     "TauPt",
-    #     bins=(30, 1, 5000),
-    #     weight="lep_reco_weight",
-    #     normalise=False,
-    #     title="reco - 36.2fb$^{-1}$",
-    #     logx=True,
-    #     logbins=True,
-    #     **ratio_args,
-    # )
-    #
-    # my_analysis.plot_hist(
-    #     flavour_ds,
-    #     "TauEta",
-    #     bins=(30, -5, 5),
-    #     weight="lep_reco_weight",
-    #     normalise=False,
-    #     title="reco - 36.2fb$^{-1}$",
-    #     **ratio_args,
-    # )
-    #
-    # my_analysis.plot_hist(
-    #     flavour_ds,
-    #     "TauPhi",
-    #     bins=(30, -pi, pi),
-    #     weight="lep_reco_weight",
-    #     normalise=False,
-    #     title="reco - 36.2fb$^{-1}$",
-    #     **ratio_args,
-    # )
-    #
-    # my_analysis.plot_hist(
-    #     flavour_ds,
-    #     "MET_met",
-    #     bins=(30, 1, 5000),
-    #     weight="reco_weight",
-    #     normalise=False,
-    #     title="reco - 36.2fb$^{-1}$",
-    #     logx=True,
-    #     logbins=True,
-    #     **ratio_args,
-    # )
-    #
-    # my_analysis.plot_hist(
-    #     flavour_ds,
-    #     "MET_phi",
-    #     bins=(30, -pi, pi),
-    #     weight="reco_weight",
-    #     normalise=False,
-    #     title="reco - 36.2fb$^{-1}$",
-    #     **ratio_args,
-    # )
+    # MET/neutrinos
+    met_vars = ["TruthNeutrinoPt", "ImplicitMetPt", "TruthMetPt"]
+    for dataset in lepton_ds:
+        fig, (ax, ratio_ax) = plt.subplots(2, 1, gridspec_kw={"height_ratios": [3, 1]})
+        hists = []
+        colours = iter(plt.rcParams["axes.prop_cycle"].by_key()["color"])
+
+        for i, var in enumerate(met_vars):
+            hist = my_analysis[dataset].plot_hist(var=var, ax=ax, label=var)
+            hists.append(hist)
+            colour = next(colours)
+
+            ax.legend(fontsize=10, loc="upper right")
+            plotting_tools.set_axis_options(ax, var, (30, 1, 5000), logx=True, logy=True)
+
+            if len(hists) > 1:
+                ratio_hist = hists[0].plot_ratio(
+                    hists[-1],
+                    ax=ratio_ax,
+                    yerr=True,
+                    label=f"{met_vars[0]}/{var}",
+                    display_stats=True,
+                    color=colour,
+                )
+
+            fig.tight_layout()
+            fig.subplots_adjust(hspace=0.1, wspace=0)
+            ax.set_xticklabels([])
+            ax.set_xlabel("")
+
+            ratio_ax.legend(fontsize=10, loc=1)
+            plotting_tools.set_axis_options(
+                axis=ratio_ax,
+                var_name=var,
+                bins=(30, 1, 5000),
+                ylabel="Ratio",
+                xlabel="Missing $E_T$",
+                title="",
+                logx=True,
+                logy=False,
+                label=False,
+            )
+            filename = my_analysis.paths.plot_dir / (dataset + "_" + "_".join(met_vars) + ".png")
+
+            fig.savefig(filename, bbox_inches="tight")
+            my_analysis.logger.info(f"Saved overlay plot of {var} to {filename}")
+            plt.close(fig)
+
+    # RECO
+    # -----------------------------------
+    my_analysis.plot_hist(
+        lepton_ds,
+        "MuonPt",
+        bins=(30, 1, 5000),
+        weight="lep_reco_weight",
+        normalise=False,
+        title="reco - 36.2fb$^{-1}$",
+        logx=True,
+        logbins=True,
+        **ratio_args,
+    )
+
+    my_analysis.plot_hist(
+        flavour_ds,
+        "MuonEta",
+        bins=(30, -5, 5),
+        weight="lep_reco_weight",
+        normalise=False,
+        title="reco - 36.2fb$^{-1}$",
+        **ratio_args,
+    )
+
+    my_analysis.plot_hist(
+        flavour_ds,
+        "MuonPhi",
+        bins=(30, -pi, pi),
+        weight="lep_reco_weight",
+        normalise=False,
+        title="reco - 36.2fb$^{-1}$",
+        **ratio_args,
+    )
+
+    my_analysis.plot_hist(
+        lepton_ds,
+        "ElePt",
+        bins=(30, 1, 5000),
+        weight="lep_reco_weight",
+        normalise=False,
+        title="reco - 36.2fb$^{-1}$",
+        logx=True,
+        logbins=True,
+        **ratio_args,
+    )
+
+    my_analysis.plot_hist(
+        flavour_ds,
+        "EleEta",
+        bins=(30, -5, 5),
+        weight="lep_reco_weight",
+        normalise=False,
+        title="reco - 36.2fb$^{-1}$",
+        **ratio_args,
+    )
+
+    my_analysis.plot_hist(
+        flavour_ds,
+        "ElePhi",
+        bins=(30, -pi, pi),
+        weight="lep_reco_weight",
+        normalise=False,
+        title="reco - 36.2fb$^{-1}$",
+        **ratio_args,
+    )
+
+    my_analysis.plot_hist(
+        lepton_ds,
+        "TauPt",
+        bins=(30, 1, 5000),
+        weight="lep_reco_weight",
+        normalise=False,
+        title="reco - 36.2fb$^{-1}$",
+        logx=True,
+        logbins=True,
+        **ratio_args,
+    )
+
+    my_analysis.plot_hist(
+        flavour_ds,
+        "TauEta",
+        bins=(30, -5, 5),
+        weight="lep_reco_weight",
+        normalise=False,
+        title="reco - 36.2fb$^{-1}$",
+        **ratio_args,
+    )
+
+    my_analysis.plot_hist(
+        flavour_ds,
+        "TauPhi",
+        bins=(30, -pi, pi),
+        weight="lep_reco_weight",
+        normalise=False,
+        title="reco - 36.2fb$^{-1}$",
+        **ratio_args,
+    )
+
+    my_analysis.plot_hist(
+        flavour_ds,
+        "MET_met",
+        bins=(30, 1, 5000),
+        weight="reco_weight",
+        normalise=False,
+        title="reco - 36.2fb$^{-1}$",
+        logx=True,
+        logbins=True,
+        **ratio_args,
+    )
+
+    my_analysis.plot_hist(
+        flavour_ds,
+        "MET_phi",
+        bins=(30, -pi, pi),
+        weight="reco_weight",
+        normalise=False,
+        title="reco - 36.2fb$^{-1}$",
+        **ratio_args,
+    )
 
     my_analysis.histogram_printout()
 
