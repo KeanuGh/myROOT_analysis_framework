@@ -77,7 +77,7 @@ class Analysis:
         self.name = analysis_label
         if self.name in data_dict:
             raise SyntaxError("Analysis must have different name to any dataset")
-        self.histograms: OrderedDict[str, Histogram1D] = OrderedDict()
+        self.histograms: OrderedDict[str, ROOT.TH1] = OrderedDict()
 
         # SET OUTPUT DIRECTORIES
         # ===========================
@@ -97,7 +97,7 @@ class Analysis:
         # ============================
         self.logger = get_logger(
             name=self.name,
-            log_dir=self.paths.log_dir,
+            log_path=self.paths.log_dir,
             log_level=log_level,
             log_out=log_out,
             timedatelog=timedatelog,
@@ -157,7 +157,7 @@ class Analysis:
                     if not separate_loggers  # use single logger
                     else get_logger(  # if seperate, make new logger for each Dataset
                         name=dataset_name,
-                        log_dir=self.paths.log_dir,
+                        log_path=self.paths.log_dir,
                         log_level=log_level,
                         log_out=log_out,
                         timedatelog=timedatelog,
@@ -184,9 +184,8 @@ class Analysis:
                 dataset.gen_histograms(to_file=histogram_file)
 
             # integrate into own histogram dictionary
-            self.logger.info("Converting histograms...")
             for hist_name, hist in dataset.histograms.items():
-                self.histograms[dataset_name + "_" + hist_name] = Histogram1D(th1=hist)
+                self.histograms[dataset_name + "_" + hist_name] = hist
 
             try:
                 dataset.dsid_metadata_printout()
@@ -235,7 +234,7 @@ class Analysis:
         yield from self.datasets.values()
 
     def __repr__(self) -> str:
-        return f'Analysis("{self.name}",Datasets:{{{", ".join([f"{name}: {len(d)}, {list(d.df.columns)}" for name, d in self.datasets.items()])}}}'
+        return f'Analysis("{self.name}", Datasets:{{{", ".join([f"{name}: {len(d)}" for name, d in self.datasets.items()])}}}'
 
     def __str__(self) -> str:
         return f'"{self.name}",Datasets:{{{", ".join([f"{name}: {len(d)}, {list(d.df.columns)}" for name, d in self.datasets.items()])}}}'
@@ -429,10 +428,14 @@ class Analysis:
         lepton: str = "lepton",
         scale_by_bin_width: bool = False,
         stats_box: bool = False,
+        x_axlim: Tuple[float, float] | None = None,
+        y_axlim: Tuple[float, float] | None = None,
+        gridopts: bool | Tuple[bool | None, str | None, str | None] = False,
         ratio_plot: bool = True,
         ratio_fit: bool = False,
-        ratio_axlim: float | None = None,
+        ratio_axlim: float | Tuple[float, float] | None = None,
         ratio_label: str = "Ratio",
+        ratio_err: str = "sumw2",
         filename: str | Path | None = None,
         cut: bool = False,
         suffix: str = "",
@@ -472,10 +475,14 @@ class Analysis:
         :param lepton: lepton to fill variable label
         :param scale_by_bin_width: divide histogram bin values by bin width
         :param stats_box: display stats box
+        :param x_axlim: x-axis limits. If None matplolib decides
+        :param y_axlim: x-axis limits. If None matplolib decides
+        :param gridopts: arguments to pass to plt.grid()
         :param ratio_plot: If True, adds ratio of the first plot with each subseqent plot below
         :param ratio_fit: If True, fits ratio plot to a 0-degree polynomial and display line, chi-square and p-value
         :param ratio_axlim: pass to yax_lim in rato plotter
         :param ratio_label: y-axis label for ratio plot
+        :param ratio_err: yerr for ratio plot. Either "sumw2", "binom", or "carry"
         :param filename: name of output
         :param cut: applies cuts before plotting
         :param suffix: suffix to add at end of histogram/file name
@@ -548,7 +555,7 @@ class Analysis:
 
             # plot
             if hist_name_internal:
-                hist = self.histograms[hist_name_internal]
+                hist = Histogram1D(th1=self.histograms[hist_name_internal], logger=self.logger)
                 hist.plot(
                     ax=ax,
                     yerr=yerr,
@@ -582,7 +589,7 @@ class Analysis:
 
             # save
             hists.append(hist)
-            self.histograms[hist_name] = hist
+            self.histograms[hist_name] = hist.TH1
 
             if ratio_plot and len(hists) > 1:
                 # ratio of first dataset to this one
@@ -605,7 +612,7 @@ class Analysis:
                 ratio_hist = hists[0].plot_ratio(
                     hists[-1],
                     ax=ratio_ax,
-                    yerr=yerr,
+                    yerr=ratio_err,
                     label=label,
                     normalise=bool(normalise),
                     color=color,
@@ -614,7 +621,7 @@ class Analysis:
                     name=ratio_hist_name,
                     display_stats=len(datasets) <= 3,  # display results if there are <2 fits
                 )
-                self.histograms[ratio_hist_name] = ratio_hist
+                self.histograms[ratio_hist_name] = ratio_hist.TH1
 
         ax.legend(fontsize=10, loc="upper right")
         plotting_tools.set_axis_options(
@@ -628,6 +635,12 @@ class Analysis:
             logy=logy,
             diff_xs=scale_by_bin_width,
         )
+        if x_axlim:
+            ax.set_xlim(*x_axlim)
+        if y_axlim:
+            ax.set_ylim(*y_axlim)
+        if gridopts:
+            ax.grid(*gridopts)
         if ratio_plot:
             fig.tight_layout()
             fig.subplots_adjust(hspace=0.1, wspace=0)
