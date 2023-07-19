@@ -110,12 +110,6 @@ class Histogram1D(bh.Histogram, family=None):
             logger = get_logger()
         self.logger = logger
 
-        if isinstance(var, ROOT.TH1):
-            th1 = var
-
-        if name == "mt_born":
-            print(bins)
-
         if th1:
             # create from TH1
             self.logger.debug(f"Creating histogram from TH1: '{th1}'...")
@@ -349,6 +343,10 @@ class Histogram1D(bh.Histogram, family=None):
         """get squared sum of weights"""
         return self.view(flow).variance  # type: ignore
 
+    def error(self, flow: bool = False) -> np.ndarray:
+        """get ROOT error"""
+        return [self.TH1.GetBinError(i) for i in range(self.TH1.GetNbinsX())]  # type: ignore
+
     def root_sumw2(self, flow: bool = False) -> np.ndarray:
         """get squared sum of weights"""
         return np.sqrt(self.sumw2(flow))
@@ -528,7 +526,9 @@ class Histogram1D(bh.Histogram, family=None):
             hist.normalise_to(normalise)
 
         # set error
-        if yerr is True:
+        if yerr is True:  # default to whatever error is saved in the TH1
+            yerr = [hist.TH1.GetBinError(i) for i in range(hist.TH1.GetNbinsX())]
+        elif yerr == "sumw":
             yerr = hist.root_sumw2()
         elif yerr and not isinstance(yerr, bool) and not hasattr(yerr, "__len__"):
             raise TypeError(f"yerr should be a bool or iterable of values. Got {yerr}")
@@ -606,7 +606,7 @@ class Histogram1D(bh.Histogram, family=None):
         fit: bool = False,
         name: str = "",
         out_filename: str | None = None,
-        yax_lim: float | None = None,
+        yax_lim: float | Tuple[float, float] | None = None,
         display_stats: bool = True,
         fit_empty: bool = False,
         color: str = "k",
@@ -652,12 +652,20 @@ class Histogram1D(bh.Histogram, family=None):
         if name:
             h_ratio.name = name
 
-        if yerr is True:
-            yerr = h_ratio.root_sumw2()
+        # set errors
+        if yerr is True or yerr == "sumw2":  # default
+            err = h_ratio.root_sumw2()
+        elif yerr == "binom":
+            h_ratio.TH1.Divide(other.TH1, self.TH1, 1, 1, "B")
+            err = [h_ratio.TH1.GetBinError(i) for i in range(h_ratio.TH1.GetNbinsX())]
         elif yerr == "carry":
-            yerr = (self.root_sumw2() / self.bin_values()) * h_ratio.bin_values()  # type: ignore
+            err = (self.root_sumw2() / self.bin_values()) * h_ratio.bin_values()  # type: ignore
             for i in range(h_ratio.TH1.GetNbinsX()):
                 h_ratio.TH1.SetBinError(i + 1, yerr[i])  # type: ignore
+        elif isinstance(yerr, str):
+            raise ValueError(f"Unknown error type {yerr}")
+        else:
+            err = [0] * self.n_bins
 
         if fit:
             if h_ratio.TH1.GetEntries() == 0:
@@ -717,7 +725,7 @@ class Histogram1D(bh.Histogram, family=None):
             h_ratio.bin_centres,
             h_ratio.bin_values(),
             xerr=h_ratio.bin_widths / 2,  # type: ignore
-            yerr=yerr,
+            yerr=err,
             linestyle="None",
             label=label,
             **kwargs,
@@ -726,11 +734,14 @@ class Histogram1D(bh.Histogram, family=None):
         ax.grid(visible=True, which="both", axis="y")
 
         if yax_lim:
-            ax.set_ylim(1 - yax_lim, 1 + yax_lim)
+            if isinstance(yax_lim, tuple):
+                ax.set_ylim(*yax_lim)
+            else:
+                ax.set_ylim(1 - yax_lim, 1 + yax_lim)
         else:
             # I don't know why the matplotlib automatic yaxis scaling doesn't work, but I've done it for them here
-            ymax = np.max(np.ma.masked_invalid(h_ratio.bin_values() + (yerr / 2)))  # type: ignore
-            ymin = np.min(np.ma.masked_invalid(h_ratio.bin_values() - (yerr / 2)))  # type: ignore
+            ymax = np.max(np.ma.masked_invalid(h_ratio.bin_values() + (err / 2)))  # type: ignore
+            ymin = np.min(np.ma.masked_invalid(h_ratio.bin_values() - (err / 2)))  # type: ignore
             vspace = (ymax - ymin) * 0.1
             ax.set_ylim(ymin - vspace, ymax + vspace)
 

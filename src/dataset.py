@@ -1162,8 +1162,8 @@ def match_bin_args(var) -> dict:
         raise KeyError(f"No known variable {var}")
 
     match var_dict:
-        case {"units": "GeV", "tag": VarTag.RECO}:
-            return {"bins": plotting_tools.default_mass_bins, "logbins": False}
+        # case {"units": "GeV", "tag": VarTag.RECO}:
+        #     return {"bins": plotting_tools.default_mass_bins, "logbins": False}
         case {"units": "GeV"}:
             return {"bins": (30, 1, 5000), "logbins": True}
         case {"units": ""}:

@@ -3,15 +3,19 @@
 # truth
 pass_truth	passTruth
 High_mass	TruthBosonM > 130
-Truth_mtw	TruthMTW > 55
-Truth_tau_pt	TruthTauPt > 65
+#Truth_mtw	TruthMTW > 120
+Truth_e_pt	(isnan(TruthElePt) || TruthElePt > 20)
+Truth_e_eta	(isnan(TruthEleEta) || (TruthEleEta < 1.37 || 1.52 < TruthEleEta < 2.47))
+Truth_mu_pt	(isnan(TruthMuonPt) || TruthMuonPt > 20)
+Truth_mu_eta	(isnan(TruthMuonEta) || (TruthMuonEta < 1.37 || 1.52 < TruthMuonEta < 2.47))
+Truth_tau_pt	TruthTauPt > 80
 
 # reco
-pass_reco	passReco
-pass_trigger	passTrigger
 #muon_eta	abs(MuonEta) < 2.4
-met	MET_met > 65
+#met	MET_met > 65
 #muon_pt	MuonPt > 65
+pass_trigger	passTrigger
+#pass_reco	passReco
 
 
 [OUTPUTS]

@@ -229,43 +229,54 @@ def set_axis_options(
 
     # restrict axes to extent of data. if statement is there to skip blank/guide lines
     if strict_xax_lims:
-        xmin = min(
-            [
-                min(line.get_xdata(), default=np.inf)
-                for line in axis.lines
-                if len(line.get_xdata()) > 2
-            ]
-        )
-        xmax = max(
-            [
-                max(line.get_xdata(), default=-np.inf)
-                for line in axis.lines
-                if len(line.get_xdata()) > 2
-            ]
-        )
-        axis.set_xlim(xmin, xmax)
+        try:
+            xmin = min(
+                [
+                    min(line.get_xdata(), default=np.inf)
+                    for line in axis.lines
+                    if len(line.get_xdata()) > 2
+                ],
+            )
+            xmax = max(
+                [
+                    max(line.get_xdata(), default=-np.inf)
+                    for line in axis.lines
+                    if len(line.get_xdata()) > 2
+                ],
+            )
+            axis.set_xlim(xmin, xmax)
+        except ValueError:
+            raise ValueError("Could not set strict axis limits. Using auto limits")
 
     if strict_yax_lims:
-        ymin = min(
-            [
-                min(line.get_ydata(), default=np.inf)
-                for line in axis.lines
-                if len(line.get_xdata()) > 2
-            ]
-        )
-        ymax = max(
-            [
-                max(line.get_ydata(), default=-np.inf)
-                for line in axis.lines
-                if len(line.get_xdata()) > 2
-            ]
-        )
-        axis.set_ylim(ymin, ymax)
+        try:
+            ymin = min(
+                [
+                    min(line.get_ydata(), default=np.inf)
+                    for line in axis.lines
+                    if len(line.get_xdata()) > 2
+                ],
+            )
+            ymax = max(
+                [
+                    max(line.get_ydata(), default=-np.inf)
+                    for line in axis.lines
+                    if len(line.get_xdata()) > 2
+                ],
+            )
+            axis.set_ylim(ymin, ymax)
+        except ValueError:
+            raise ValueError("Could not set strict axis limits. Using auto limits")
 
     # set axis labels
-    _xlabel, _ylabel = get_axis_labels(var_name, lepton, diff_xs)
-    axis.set_xlabel(xlabel if xlabel else _xlabel)
-    axis.set_ylabel(ylabel if ylabel else _ylabel)
+    if not (xlabel and ylabel):
+        _xlabel, _ylabel = get_axis_labels(var_name, lepton, diff_xs)
+        axis.set_xlabel(_xlabel)
+        axis.set_ylabel(_ylabel)
+    if xlabel:
+        axis.set_xlabel(xlabel)
+    if ylabel:
+        axis.set_ylabel(ylabel)
     if label:
         hep.atlas.label(italic=(True, True), ax=axis, loc=0, llabel="Internal", rlabel=title)
 

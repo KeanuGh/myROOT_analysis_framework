@@ -114,7 +114,7 @@ def plot(
 if __name__ == "__main__":
     # DTA data
     necessary_variables = {"weight", "mcWeight", "mcChannel", "runNumber", "eventNumber"}
-    in_path = "/data/DTA_outputs/2023-01-31/user.kghorban.Sh_2211_Wtaunu_*/*.root"
+    in_path = "/data/DTA_outputs/2023-06-29/user.kghorban.Sh_2211_Wtaunu_*/*.root"
     trees = {"T_s1thv_NOMINAL", "T_s1tev_NOMINAL", "T_s1tmv_NOMINAL"}
     cutfile_path = "../../options/DTA_cuts/dta_truth.txt"
     label = r"Sherpa 2211 $W\rightarrow\tau\nu$"

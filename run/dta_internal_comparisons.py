@@ -9,7 +9,7 @@ from utils import plotting_tools
 # DTA_PATH = '/data/keanu/ditau_output/'
 # ANALYSISTOP_PATH = '/data/atlas/HighMassDrellYan/mc16a'
 # DATA_OUT_DIR = '/data/keanu/framework_outputs/'
-DTA_PATH = "/data/DTA_outputs/2023-05-05/"
+DTA_PATH = "/data/DTA_outputs/2023-06-29/"
 ANALYSISTOP_PATH = "/mnt/D/data/analysistop_out/mc16a/"
 DATA_OUT_DIR = "/mnt/D/data/dataset_pkl_outputs/"
 
@@ -63,7 +63,7 @@ if __name__ == "__main__":
         datasets,
         data_dir=DATA_OUT_DIR,
         year="2015+2016",
-        # regen_histograms=True,
+        regen_histograms=True,
         analysis_label="dta_internal_comparisons",
         lepton="tau",
         dataset_type="dta",
