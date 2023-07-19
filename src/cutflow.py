@@ -335,7 +335,7 @@ class RCutflow:
                 f.write(table)
 
         else:
-            print(table)
+            self.logger.info(table)
 
     def gen_histogram(self) -> ROOT.TH1I:
         """return cutflow histogram"""

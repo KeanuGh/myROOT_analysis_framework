@@ -834,7 +834,7 @@ class DatasetBuilder:
 
         # calculate derived variables
         if vars_to_calc:
-            print("calculating variables...")
+            self.logger.debug(f"calculating variables: {derived_vars}...")
             for derived_var in vars_to_calc:
                 function = derived_vars[derived_var]["cfunc"]
                 args = derived_vars[derived_var]["var_args"]

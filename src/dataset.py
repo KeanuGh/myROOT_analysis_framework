@@ -984,7 +984,7 @@ class RDataset(Dataset):
             for cut in cuts:
                 filtered_df = filtered_df.Filter(cut.cutstr, cut.name)
 
-        cutflow = RCutflow(filtered_df)
+        cutflow = RCutflow(filtered_df, logger=self.logger)
         cutflow.gen_cutflow(cuts)
 
         if inplace:
