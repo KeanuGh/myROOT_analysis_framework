@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Tuple, Iterable, Callable, Any, Set, Sequence, Generator
 
+import ROOT
 import matplotlib.pyplot as plt  # type: ignore
 import pandas as pd  # type: ignore
 from numpy.typing import ArrayLike
@@ -743,7 +744,7 @@ class Analysis:
         self.logger.info(f"Saving {len(self.histograms)} histograms to file {filename}...")
         with ROOT_utils.ROOT_TFile_mgr(str(filename), tfile_option) as file:
             for name, histo in self.histograms.items():
-                file.WriteObject(histo.TH1, name, write_option)
+                file.WriteObject(histo, name, write_option)
 
         if clear_hists:
             self.histograms = OrderedDict()
@@ -753,7 +754,7 @@ class Analysis:
         rows = []
         header = ["Hist name", "Entries", "Bin sum", "Integral"]
         for name, h in self.histograms.items():
-            rows.append([name, h.n_entries, h.bin_sum(True), h.integral])
+            rows.append([name, h.GetNbinsX(), h.Integral(), h.Integral("width")])
 
         if not to_latex:
             self.logger.info(tabulate(rows, headers=header))
