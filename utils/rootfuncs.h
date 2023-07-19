@@ -1,3 +1,6 @@
+#ifndef root_funcs
+#define root_funcs
+
 #include <filesystem>
 #include <cmath>
 
@@ -85,3 +88,5 @@ double delta_z0_sintheta(double z0, double eta) {
 double dilep_m(double m1, double m2) {
 	return m1 + m2;
 }
+
+#endif
