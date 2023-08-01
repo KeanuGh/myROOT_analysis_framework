@@ -1,0 +1,82 @@
+[CUTS]
+# Name	Variable	</>	Cut (in GeV if applicable) tree
+# truth
+#pass_truth	passTruth
+#$m_{ll} > 130$	TruthBosonM > 130
+#$p_T^e > 20$	(isnan(TruthElePt) || TruthElePt > 20)
+#$|\eta^e| < 1.37 || 1.52 < |\eta^e| < 2.47$	(isnan(TruthEleEta) || (abs(TruthEleEta) < 1.37 || 1.52 < abs(TruthEleEta) < 2.47))
+#$p_T^\tau > 80$	TruthTauPt > 80
+
+# reco
+$m_T^W > 150$	MTW > 150
+$p_T^e > 20$	(isnan(ElePt) || ElePt > 20)
+$|\eta^e| < 1.37 || 1.52 < |\eta^e| < 2.47$	(isnan(EleEta) || (abs(EleEta) < 1.37 || 1.52 < abs(EleEta) < 2.47))
+$p_T^\tau > 170$	TauPt > 170
+pass trigger	passTrigger
+
+
+[OUTPUTS]
+# truth
+#TruthTauPt
+#TruthTauEta
+#TruthTauPhi
+#TruthTauE
+#VisTruthTauPt
+#VisTruthTauEta
+#VisTruthTauPhi
+#TruthNeutrinoPt
+#TruthNeutrinoEta
+#TruthNeutrinoPhi
+#TruthNeutrinoE
+#TruthJetEta
+#TruthJetPhi
+#TruthJetE
+#TruthElePt
+#TruthEleEta
+#TruthElePhi
+#TruthEleE
+#TruthMuonPt
+#TruthMuonEta
+#TruthMuonPhi
+#TruthMuonE
+#TruthBosonE
+#TruthBosonEta
+#TruthBosonPt
+#TruthBosonM
+#TruthDilepM
+#TruthMTW
+#ImplicitMetPt
+#ImplicitMetEta
+#ImplicitMetPhi
+#TruthMetPt
+#TruthMetPhi
+#TruthMetEta
+
+# reco
+TauEta
+TauPhi
+TauPt
+#TauE
+#JetEta
+#JetPhi
+#JetE
+MuonEta
+MuonPhi
+MuonPt
+#MuonE
+#Muon_d0sig
+#Muon_delta_z0
+EleEta
+ElePhi
+ElePt
+#EleE
+#Ele_d0sig
+#Muon_delta_z0
+PhotonEta
+PhotonPt
+#PhotonE
+#MET_etx
+#MET_ety
+MET_met
+MET_phi
+MTW

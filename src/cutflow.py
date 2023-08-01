@@ -281,7 +281,7 @@ class RCutflow:
         """
         Generate cutflow - forces an event loop to run if not already.
 
-        :param cuts: List of Cut objects to ov
+        :param cuts: List of Cut objects
         """
         self.report = self.rdf.Report()
         self._cutflow = OrderedDict(
@@ -312,22 +312,18 @@ class RCutflow:
         self._cutflow = cutflow_from_hist_and_cutfile(hist, cutfile)
 
     def print(self, latex_path: Path | None = None) -> None:
-        if self.report is None:
-            raise AttributeError("Must first generate cutflow before being able to print")
-
         table = tabulate(
             [
                 [
                     cut_name,
-                    cut.value,
                     cut.npass,
-                    f"{cut.eff:.3G} %",
-                    f"{cut.ceff:.3G} %",
+                    f"{cut.eff:.3G} \\%" if latex_path else f"{cut.eff:.3G} %",
+                    f"{cut.ceff:.3G} \\%" if latex_path else f"{cut.ceff:.3G} %",
                 ]
                 for cut_name, cut in self._cutflow.items()
             ],
-            headers=["name", "value", "npass", "eff", "cum. eff"],
-            tablefmt="latex" if latex_path else "simple",
+            headers=["name", "npass", "eff", "cum. eff"],
+            tablefmt="latex_raw" if latex_path else "simple",
         )
 
         if latex_path:

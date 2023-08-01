@@ -708,9 +708,11 @@ class Analysis:
     # ========= PRINTOUTS ===========
     # ===============================
     @handle_dataset_arg
-    def cutflow_printout(self, datasets: str) -> None:
+    def cutflow_printout(self, datasets: str, latex: bool = False) -> None:
         """Prints cutflow table to terminal"""
-        self[datasets].cutflow.print()
+        self[datasets].cutflow.print(
+            self.paths.latex_dir / f"{datasets}_cutflow.tex" if latex else None
+        )
 
     def kinematics_printouts(self) -> None:
         """Prints some kinematic variables to terminal"""
@@ -754,7 +756,7 @@ class Analysis:
         rows = []
         header = ["Hist name", "Entries", "Bin sum", "Integral"]
         for name, h in self.histograms.items():
-            rows.append([name, h.GetNbinsX(), h.Integral(), h.Integral("width")])
+            rows.append([name, h.GetEntries(), h.Integral(), h.Integral("width")])
 
         if not to_latex:
             self.logger.info(tabulate(rows, headers=header))

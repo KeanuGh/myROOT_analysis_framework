@@ -97,6 +97,11 @@ variable_data: Dict[str, Branch] = {
         "units": "",
         "tag": VarTag.RECO,
     },
+    "passMetTrigger": {
+        "name": "pass MET trigger",
+        "units": "",
+        "tag": VarTag.RECO,
+    },
     "passTruth": {
         "name": "pass truth",
         "units": "",

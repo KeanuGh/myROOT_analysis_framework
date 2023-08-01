@@ -14,11 +14,9 @@ from utils import PMG_tool
 
 
 # ROOT settings
-def load_ROOT_settings(
-    set_batch: bool = True, gui: bool = False, th1_dir: bool = False, optstat: int = 1111
-):
+def load_ROOT_settings(set_batch: bool = True, th1_dir: bool = False, optstat: int = 1111):
     ROOT.gROOT.SetBatch(set_batch)  # Prevents TCanvas popups
-    ROOT.PyConfig.StartGUIThread = gui  # disables polling for ROOT GUI events
+    ROOT.PyConfig.StartGUIThread = False  # disables polling for ROOT GUI events
     ROOT.TH1.AddDirectory(th1_dir)  # stops TH1s from being saved and prevents overwrite warnings
     ROOT.TH1.SetDefaultSumw2()  # Sets weighted binning in all ROOT histograms by default
     ROOT.EnableImplicitMT()  # enable multithreading

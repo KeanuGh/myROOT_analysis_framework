@@ -21,10 +21,11 @@ from utils.context import redirect_stdout
 from utils.plotting_tools import get_TH1_bins
 
 # settings
-load_ROOT_settings()
-set_atlas_style()  # set ATLAS plotting style to ROOT plots
-plt.style.use(hep.style.ATLAS)  # set atlas-style plots in matplotilb
-np.seterr(invalid="ignore")  # ignore division by zero errors
+if ROOT.PyConfig.StartGUIThread:  # prevents a ROOT crash from settings being applied multiple times
+    load_ROOT_settings()
+    set_atlas_style()  # set ATLAS plotting style to ROOT plots
+    plt.style.use(hep.style.ATLAS)  # set atlas-style plots in matplotilb
+    np.seterr(invalid="ignore")  # ignore division by zero errors
 
 
 # TODO: 2D hist
@@ -343,9 +344,15 @@ class Histogram1D(bh.Histogram, family=None):
         """get squared sum of weights"""
         return self.view(flow).variance  # type: ignore
 
+    def get_error(self, idx: int) -> float:
+        return self.TH1.GetBinError(idx + 1)
+
     def error(self, flow: bool = False) -> np.ndarray:
         """get ROOT error"""
-        return [self.TH1.GetBinError(i) for i in range(self.TH1.GetNbinsX())]  # type: ignore
+        if flow:
+            return np.array([self.TH1.GetBinError(i) for i in range(self.TH1.GetNbinsX() + 2)])
+        else:
+            return np.array([self.TH1.GetBinError(i + 1) for i in range(self.TH1.GetNbinsX())])
 
     def root_sumw2(self, flow: bool = False) -> np.ndarray:
         """get squared sum of weights"""
@@ -417,6 +424,24 @@ class Histogram1D(bh.Histogram, family=None):
         """Return rescaled histogram"""
         self.__imul__(scale_factor)
 
+    def divide_binom(self, other: Histogram1D, bayes: bool = True) -> Histogram1D:
+        """
+        Return self / other with binomial errors.
+        Set bayes to true for a bayesian approach to avoid err=0 for equal bins.
+        """
+        h = self / other
+
+        # errors
+        if bayes:
+            tgraph = ROOT.TGraphAsymmErrors(self, other, "cl=0.683 b(1,1) mode")
+            for i in range(h.n_bins):
+                h.TH1.SetBinError(tgraph.GetErrory(i))
+
+        else:
+            h.TH1 = h.TH1.Divide(self, other, 1, 1, "B")
+
+        return h
+
     # Fitting
     # ===================
     def chi_square(self, other: ROOT.TF1 | ROOT.TH1 | Histogram1D) -> Tuple[float, float]:
@@ -453,7 +478,7 @@ class Histogram1D(bh.Histogram, family=None):
     def non_zero_range(self, tol=1e-5) -> Histogram1D:
         """Return histogram containing non-zero range of self"""
         first_nz_idx = 0
-        last_bz_idx = 0
+        last_nz_idx = 0
         first_found = False
         for bin_idx, bin_val in enumerate(self.bin_values()):
             in_tol = abs(bin_val) > tol
@@ -462,12 +487,14 @@ class Histogram1D(bh.Histogram, family=None):
                 first_found = True
 
             if in_tol:
-                last_bz_idx = bin_idx
+                last_nz_idx = bin_idx
 
-        if first_nz_idx == last_bz_idx == 0:
+        if first_nz_idx == last_nz_idx:
+            return self
+        if first_nz_idx < last_nz_idx:
             return self
 
-        new_hist = self[first_nz_idx:last_bz_idx]
+        new_hist = self[first_nz_idx:last_nz_idx]
         new_hist.TH1 = self.TH1
         new_hist.TH1 = new_hist.to_TH1()
 
@@ -527,7 +554,7 @@ class Histogram1D(bh.Histogram, family=None):
 
         # set error
         if yerr is True:  # default to whatever error is saved in the TH1
-            yerr = [hist.TH1.GetBinError(i) for i in range(hist.TH1.GetNbinsX())]
+            yerr = hist.error()
         elif yerr == "sumw":
             yerr = hist.root_sumw2()
         elif yerr and not isinstance(yerr, bool) and not hasattr(yerr, "__len__"):
@@ -645,6 +672,9 @@ class Histogram1D(bh.Histogram, family=None):
         # create ratio histogram
         if normalise:
             h_ratio = other.normalised() / self.normalised()
+        elif yerr == "binom":
+            h_ratio = other.divide_binom(self)
+            yerr = True
         else:
             h_ratio = other / self
 
@@ -653,11 +683,10 @@ class Histogram1D(bh.Histogram, family=None):
             h_ratio.name = name
 
         # set errors
-        if yerr is True or yerr == "sumw2":  # default
-            err = h_ratio.root_sumw2()
-        elif yerr == "binom":
-            h_ratio.TH1.Divide(other.TH1, self.TH1, 1, 1, "B")
-            err = [h_ratio.TH1.GetBinError(i) for i in range(h_ratio.TH1.GetNbinsX())]
+        if yerr is True:  # default
+            err = h_ratio.error()
+        elif yerr == "sumw2":
+            err = h_ratio.sumw2()
         elif yerr == "carry":
             err = (self.root_sumw2() / self.bin_values()) * h_ratio.bin_values()  # type: ignore
             for i in range(h_ratio.TH1.GetNbinsX()):
@@ -665,7 +694,7 @@ class Histogram1D(bh.Histogram, family=None):
         elif isinstance(yerr, str):
             raise ValueError(f"Unknown error type {yerr}")
         else:
-            err = [0] * self.n_bins
+            err = np.zeros(self.n_bins)
 
         if fit:
             if h_ratio.TH1.GetEntries() == 0:
@@ -681,44 +710,48 @@ class Histogram1D(bh.Histogram, family=None):
                 with redirect_stdout() as fit_output:
                     fit_results = fit_hist.Fit("pol0", "VFSN")
 
-                self.logger.debug(
-                    f"ROOT fit output:\n"
-                    f"==========================================================================\n"
-                    f"{fit_output.getvalue()}"
-                    f"=========================================================================="
-                )
-                c = fit_results.Parameters()[0]
-                err = fit_results.Errors()[0]
+                if "Fit data is empty" in fit_output.getvalue():
+                    self.logger.warning("Fit result is empty. Skipping..")
 
-                # display fit line
-                col = "r" if color == "k" else color
-                ax.fill_between(
-                    [self.bin_edges[0], self.bin_edges[-1]],  # type: ignore
-                    [c - err],
-                    [c + err],
-                    color=col,
-                    alpha=0.3,
-                )
-                ax.axhline(c, color=col, linewidth=1.0)
+                else:
+                    self.logger.debug(
+                        f"ROOT fit output:\n"
+                        f"==========================================================================\n"
+                        f"{fit_output.getvalue()}"
+                        f"=========================================================================="
+                    )
+                    c = fit_results.Parameters()[0]
+                    fit_err = fit_results.Errors()[0]
 
-                if display_stats:
-                    textstr = "\n".join(
-                        (
-                            r"$\chi^2=%.3f$" % fit_results.Chi2(),
-                            r"$\mathrm{NDF}=%.3f$" % fit_results.Ndf(),
-                            r"$c=%.2f\pm%.3f$" % (c, err),
+                    # display fit line
+                    col = "r" if color == "k" else color
+                    ax.fill_between(
+                        [self.bin_edges[0], self.bin_edges[-1]],  # type: ignore
+                        [c - fit_err],
+                        [c + fit_err],
+                        color=col,
+                        alpha=0.3,
+                    )
+                    ax.axhline(c, color=col, linewidth=1.0)
+
+                    if display_stats:
+                        textstr = "\n".join(
+                            (
+                                r"$\chi^2=%.3f$" % fit_results.Chi2(),
+                                r"$\mathrm{NDF}=%.3f$" % fit_results.Ndf(),
+                                r"$c=%.2f\pm%.3f$" % (c, fit_err),
+                            )
                         )
-                    )
-                    # dumb workaround to avoid the stats boxes from overlapping eachother
-                    loc = "upper left"
-                    for artist in ax.get_children():
-                        if isinstance(artist, AnchoredText):
-                            if r"$\chi^2=" in artist.get_children()[0].get_text():
-                                loc = "lower left"
-                    stats_box = AnchoredText(
-                        textstr, loc=loc, frameon=False, prop=dict(fontsize="x-small")
-                    )
-                    ax.add_artist(stats_box)
+                        # dumb workaround to avoid the stats boxes from overlapping eachother
+                        loc = "upper left"
+                        for artist in ax.get_children():
+                            if isinstance(artist, AnchoredText):
+                                if r"$\chi^2=" in artist.get_children()[0].get_text():
+                                    loc = "lower left"
+                        stats_box = AnchoredText(
+                            textstr, loc=loc, frameon=False, prop=dict(fontsize="x-small")
+                        )
+                        ax.add_artist(stats_box)
 
         ax.axhline(1.0, linestyle="--", linewidth=1.0, c="k")
         ax.errorbar(

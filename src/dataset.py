@@ -20,7 +20,7 @@ from src.cutfile import Cutfile, Cut
 from src.cutflow import PCutflow, RCutflow
 from src.histogram import Histogram1D
 from src.logger import get_logger
-from utils import plotting_tools, PMG_tool, ROOT_utils
+from utils import plotting_tools, PMG_tool, ROOT_utils, binnings
 from utils.variable_names import variable_data, VarTag
 
 CUT_PREFIX: Final = "PASS_"
@@ -858,7 +858,10 @@ class RDataset(Dataset):
         # generate filtered dataframe for cuts
         self.filtered_df: ROOT.RDataFrame = self.df.Filter("true", "Inclusive")
         for cut in self.cutfile.cuts.values():
-            self.filtered_df = self.filtered_df.Filter(cut.cutstr, cut.name)
+            sanitised_name = cut.name.replace(
+                "\\", "\\\\"
+            )  # stop root interpreting escape for latex
+            self.filtered_df = self.filtered_df.Filter(cut.cutstr, sanitised_name)
 
     def __len__(self) -> int:
         if (self.histograms is not None) and ("cutflow" in self.histograms):
@@ -1114,7 +1117,7 @@ class RDataset(Dataset):
             th1 = ROOT.TH1F(
                 variable_name,
                 variable_name,
-                *plotting_tools.get_TH1_bins(bin_args["bins"], bin_args["logbins"]),
+                *plotting_tools.get_TH1_bins(**bin_args),
             )
             th1_histograms[variable_name] = self.df.Fill(th1, [variable_name, weight])
 
@@ -1123,7 +1126,7 @@ class RDataset(Dataset):
                 cut_th1 = ROOT.TH1F(
                     cut_hist_name,
                     variable_name,
-                    *plotting_tools.get_TH1_bins(bin_args["bins"], bin_args["logbins"]),
+                    *plotting_tools.get_TH1_bins(**bin_args),
                 )
                 th1_histograms[cut_hist_name] = self.filtered_df.Fill(
                     cut_th1, [variable_name, weight]
@@ -1161,9 +1164,10 @@ def match_bin_args(var) -> dict:
     except KeyError:
         raise KeyError(f"No known variable {var}")
 
+    if var in binnings.override_binnings:
+        return {"bins": binnings.override_binnings[var]}
+
     match var_dict:
-        # case {"units": "GeV", "tag": VarTag.RECO}:
-        #     return {"bins": plotting_tools.default_mass_bins, "logbins": False}
         case {"units": "GeV"}:
             return {"bins": (30, 1, 5000), "logbins": True}
         case {"units": ""}:
