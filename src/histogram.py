@@ -435,7 +435,7 @@ class Histogram1D(bh.Histogram, family=None):
         if bayes:
             tgraph = ROOT.TGraphAsymmErrors(self, other, "cl=0.683 b(1,1) mode")
             for i in range(h.n_bins):
-                h.TH1.SetBinError(tgraph.GetErrory(i))
+                h.TH1.SetBinError(tgraph.GetErrorY(i))
 
         else:
             h.TH1 = h.TH1.Divide(self, other, 1, 1, "B")
