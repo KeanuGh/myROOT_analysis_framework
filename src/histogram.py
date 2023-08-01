@@ -438,7 +438,7 @@ class Histogram1D(bh.Histogram, family=None):
                 h.TH1.SetBinError(tgraph.GetErrorY(i))
 
         else:
-            h.TH1 = h.TH1.Divide(self, other, 1, 1, "B")
+            h.TH1 = h.TH1.Divide(self.TH1, other.TH1, 1, 1, "B")
 
         return h
 
