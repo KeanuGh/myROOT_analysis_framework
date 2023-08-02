@@ -62,8 +62,8 @@ class TestSimpleAnalysisTop:
     def test_histograms(self, analysis, tmp_directory):
         histograms = analysis["wmintaunu"].histograms
 
-        assert histograms["MC_WZmu_el_eta_born"].n_bins == 30
-        assert round(histograms["mu_pt"].bin_values()[14], 5) == 17323.02332
+        assert histograms["MC_WZmu_el_eta_born"].GetNbinsX() == 30
+        np.testing.assert_allclose(histograms["mu_pt"].GetBinContent(15), 17323.02344, rtol=1e-6)
 
         # save histograms to file
         path = tmp_directory / "analysistop_histograms.root"
@@ -73,8 +73,14 @@ class TestSimpleAnalysisTop:
         output_hists = analysis["wmintaunu"].import_histograms(path, inplace=False)
 
         np.testing.assert_allclose(
-            output_hists["MC_WZmu_el_eta_born"].bin_values(),
-            histograms["MC_WZmu_el_eta_born"].bin_values(),
+            [
+                output_hists["MC_WZmu_el_eta_born"].GetBinContent(i + 1)
+                for i in range(output_hists["MC_WZmu_el_eta_born"].GetNbinsX())
+            ],
+            [
+                histograms["MC_WZmu_el_eta_born"].GetBinContent(i + 1)
+                for i in range(histograms["MC_WZmu_el_eta_born"].GetNbinsX())
+            ],
             rtol=1e-5,
         )
 
@@ -120,10 +126,15 @@ class TestSimpleDTA:
     def test_histograms(self, analysis, tmp_directory):
         histograms = analysis["wmintaunu"].histograms
 
-        assert histograms["TauEta"].n_bins == 30
+        assert histograms["TauEta"].GetNbinsX() == 30
 
         np.testing.assert_allclose(
-            histograms["TruthTauPt"].bin_values(),
+            np.array(
+                [
+                    histograms["TruthTauPt"].GetBinContent(i + 1)
+                    for i in range(histograms["TruthTauPt"].GetNbinsX())
+                ]
+            ),
             np.array(
                 [
                     4.02496986e01,
@@ -168,7 +179,14 @@ class TestSimpleDTA:
         output_hists = analysis["wmintaunu"].import_histograms(path, inplace=False)
 
         np.testing.assert_allclose(
-            output_hists["TruthTauPt"].bin_values(), histograms["TruthTauPt"].bin_values()
+            [
+                output_hists["TruthTauPt"].GetBinContent(i + 1)
+                for i in range(output_hists["TruthTauPt"].GetNbinsX())
+            ],
+            [
+                histograms["TruthTauPt"].GetBinContent(i + 1)
+                for i in range(histograms["TruthTauPt"].GetNbinsX())
+            ],
         )
 
     def test_cutflow_self_consistency(self, analysis, tmp_directory):

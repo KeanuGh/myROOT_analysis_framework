@@ -179,7 +179,7 @@ class Dataset(ABC):
                 )
         self.logger.info(f"Written {len(self.histograms)} histograms to {filepath}")
 
-    def import_histograms(self, in_file: Path | str, inplace=True) -> None | Dict[str, Histogram1D]:
+    def import_histograms(self, in_file: Path | str, inplace=True) -> None | Dict[str, ROOT.TH1]:
         """Import histograms from root file into histogram dictionary"""
         histograms: OrderedDict[str, ROOT.TH1] = OrderedDict()
 

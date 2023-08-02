@@ -8,10 +8,13 @@ h3 = ROOT.TH1F("test3", "test3", 1, 0, 1)
 h4 = ROOT.TH1F("test4", "test4", 1, 0, 1)
 # h5 = ROOT.TH1F("test5", "test5", 1, 0, 1)
 
-for i in range(15):
+n1 = 10
+n2 = 20
+
+for i in range(n1):
     h1.Fill(0.5)
 
-for i in range(20):
+for i in range(n2):
     h2.Fill(0.5)
 
 h3.Divide(h1, h2, 1, 1, "b")

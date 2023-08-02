@@ -223,12 +223,12 @@ class Histogram1D(bh.Histogram, family=None):
             # Scale variances based on ROOT method. See https://root.cern.ch/doc/master/TH1_8cxx_source.html#l02929
             c0 = self.view(flow=True).value  # type: ignore
             c1 = other.view(flow=True).value  # type: ignore
-            clsq = c1 * c1
+            c0sq = c0 * c0
+            c1sq = c1 * c1
             variance = (
-                (self.view(flow=True).variance * clsq)
-                + (other.view(flow=True).variance * c0 * c0)
-                # type: ignore
-            ) / (clsq * clsq)
+                (self.view(flow=True).variance * c1sq)  # type: ignore
+                + (other.view(flow=True).variance * c0sq)  # type: ignore
+            ) / (c1sq * c1sq)
 
             self.view(flow=True).value = self.view(flow=True).value / other.view(flow=True).value  # type: ignore
             self.view(flow=True).variance = variance  # type: ignore
@@ -427,15 +427,15 @@ class Histogram1D(bh.Histogram, family=None):
     def divide_binom(self, other: Histogram1D, bayes: bool = True) -> Histogram1D:
         """
         Return self / other with binomial errors.
-        Set bayes to true for a bayesian approach to avoid err=0 for equal bins.
+        Set bayes to true for a bayesian approach to avoid err=0 for equal or zero bins.
         """
         h = self / other
 
         # errors
         if bayes:
-            tgraph = ROOT.TGraphAsymmErrors(self, other, "cl=0.683 b(1,1) mode")
+            tgraph = ROOT.TGraphAsymmErrors(self.TH1, other.TH1, "cl=0.683 b(1,1) mode")
             for i in range(h.n_bins):
-                h.TH1.SetBinError(tgraph.GetErrorY(i))
+                h.TH1.SetBinError(i + 1, tgraph.GetErrorY(i))
 
         else:
             h.TH1 = h.TH1.Divide(self.TH1, other.TH1, 1, 1, "B")
