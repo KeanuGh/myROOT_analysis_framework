@@ -1,4 +1,5 @@
 import ROOT
+import numpy as np
 
 ROOT.TH1.SetDefaultSumw2()
 
@@ -36,12 +37,14 @@ print(f"bayes error: {tgraph.GetErrorY(0)}")
 # manual error
 b1 = h1.GetBinContent(1)
 b2 = h2.GetBinContent(1)
+eff = b1 / b2
 b1sq = b1**2
 b2sq = b2**2
 e1sq = h1.GetBinError(1) ** 2
 e2sq = h2.GetBinError(1) ** 2
 
-err = abs(((1.0 - 2.0 * b1 / b2) * e1sq + b1sq * e2sq / b2sq) / b2sq)
+err = np.sqrt(eff * (1 - eff) * b2) / b2
+# err = abs(((1.0 - 2.0 * b1 / b2) * e1sq + b1sq * e2sq / b2sq) / b2sq)
 print(f"manual binom. error : {err}")
 
 err = (e1sq * b2sq + e2sq * b1sq) / (b2sq * b2sq)

@@ -490,7 +490,7 @@ class Analysis:
         :param prefix: prefix to add at start of histogram/file
         :param kwargs: keyword arguments to pass to mplhep.histplot()
         """
-        self.logger.info(f"Plotting {var} in as overlay in {datasets}...")
+        self.logger.info(f"Plotting {var} in {datasets}...")
 
         # naming template for file/histogram name
         name_template = (
@@ -679,7 +679,7 @@ class Analysis:
             )
 
         fig.savefig(filename, bbox_inches="tight")
-        self.logger.info(f"Saved overlay plot of {var} to {filename}")
+        self.logger.info(f"Saved plot of {var} to {filename}")
         plt.close(fig)
         return hists
 

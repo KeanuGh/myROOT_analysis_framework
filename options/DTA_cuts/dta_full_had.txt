@@ -24,9 +24,9 @@ pass trigger	passTrigger
 TruthTauPt
 TruthTauEta
 TruthTauPhi
-#VisTruthTauPt
-#VisTruthTauEta
-#VisTruthTauPhi
+VisTruthTauPt
+VisTruthTauEta
+VisTruthTauPhi
 #TruthNeutrinoPt
 #TruthNeutrinoEta
 #TruthNeutrinoPhi
@@ -60,9 +60,9 @@ TauEta
 TauPhi
 TauPt
 #TauE
-#JetEta
-#JetPhi
-#JetE
+JetEta
+JetPhi
+JetPt
 MuonEta
 MuonPhi
 MuonPt

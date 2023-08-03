@@ -783,17 +783,17 @@ variable_data: Dict[str, Branch] = {
         "tag": VarTag.TRUTH,
     },
     "TruthMetPt": {
-        "name": r"Truth MET",
+        "name": r"Truth neutrino $p_T$",
         "units": "GeV",
         "tag": VarTag.TRUTH,
     },
     "TruthMetPhi": {
-        "name": r"Truth MET $\phi$",
+        "name": r"Truth neutrino $\phi$",
         "units": "",
         "tag": VarTag.TRUTH,
     },
     "TruthMetEta": {
-        "name": r"Truth MET $\eta$",
+        "name": r"Truth neutrino $\eta$",
         "units": "",
         "tag": VarTag.TRUTH,
     },
@@ -908,22 +908,22 @@ variable_data: Dict[str, Branch] = {
         "tag": VarTag.TRUTH,
     },
     "VisTruthTauPhi": {
-        "name": r"Visible truth tau $\phi$",
+        "name": r"Visible truth tau products $\phi$",
         "units": "",
         "tag": VarTag.TRUTH,
     },
     "VisTruthTauPt": {
-        "name": r"Visible truth tau $p_{T}$",
+        "name": r"Visible truth tau products $p_{T}$",
         "units": "GeV",
         "tag": VarTag.TRUTH,
     },
     "VisTruthTauEta": {
-        "name": r"Visible truth tau $\eta$",
+        "name": r"Visible truth tau products $\eta$",
         "units": "",
         "tag": VarTag.TRUTH,
     },
     "VisTruthTauM": {
-        "name": r"Visible truth tau $m$",
+        "name": r"Visible truth tau products $m$",
         "units": "GeV",
         "tag": VarTag.TRUTH,
     },

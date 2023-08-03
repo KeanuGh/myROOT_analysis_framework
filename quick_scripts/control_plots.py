@@ -38,13 +38,12 @@ if __name__ == "__main__":
         datasets,
         data_dir=DATA_OUT_DIR,
         year="2015+2016",
-        regen_histograms=True,
+        # regen_histograms=True,
         analysis_label="control_plots",
         lepton="tau",
         dataset_type="dta",
         # log_level=10,
         log_out="both",
-        # hard_cut=truth_cuts,
     )
     my_analysis.cutflow_printout(latex=True)
 
@@ -68,17 +67,22 @@ if __name__ == "__main__":
         my_analysis.plot_hist(**default_args, var="TruthTauEta")
 
         # phi
-        my_analysis.plot_hist(**default_args, var="TruthMuonPhi")
-        my_analysis.plot_hist(**default_args, var="TruthElePhi")
-        my_analysis.plot_hist(**default_args, var="TruthTauPhi")
+        my_analysis.plot_hist(**default_args, var="TruthMuonPhi", logy=False)
+        my_analysis.plot_hist(**default_args, var="TruthElePhi", logy=False)
+        my_analysis.plot_hist(**default_args, var="TruthTauPhi", logy=False)
 
         # MLL
         my_analysis.plot_hist(**default_args, var="TruthBosonM", logx=True, logy=True)
 
         # MET
-        my_analysis.plot_hist(**default_args, var="TruthMetPhi", logx=True, logy=True)
-        my_analysis.plot_hist(**default_args, var="TruthMetPhi")
+        my_analysis.plot_hist(**default_args, var="TruthMetPt", logx=True, logy=True)
+        my_analysis.plot_hist(**default_args, var="TruthMetPhi", logy=False)
         my_analysis.plot_hist(**default_args, var="TruthMetEta")
+
+        # tau-vis
+        my_analysis.plot_hist(**default_args, var="VisTruthTauPt", logx=True, logy=True)
+        my_analysis.plot_hist(**default_args, var="VisTruthTauEta")
+        my_analysis.plot_hist(**default_args, var="VisTruthTauPhi", logy=False)
 
     # RECO
     # -----------------------------------
@@ -98,16 +102,21 @@ if __name__ == "__main__":
         my_analysis.plot_hist(**default_args, var="TauEta")
 
         # phi
-        my_analysis.plot_hist(**default_args, var="MuonPhi")
-        my_analysis.plot_hist(**default_args, var="ElePhi")
-        my_analysis.plot_hist(**default_args, var="TauPhi")
+        my_analysis.plot_hist(**default_args, var="MuonPhi", logy=False)
+        my_analysis.plot_hist(**default_args, var="ElePhi", logy=False)
+        my_analysis.plot_hist(**default_args, var="TauPhi", logy=False)
 
         # MTW
         my_analysis.plot_hist(**default_args, var="MTW", logx=True, logy=True)
 
         # MET
         my_analysis.plot_hist(**default_args, var="MET_met", logx=True, logy=True)
-        my_analysis.plot_hist(**default_args, var="MET_phi")
+        my_analysis.plot_hist(**default_args, var="MET_phi", logy=False)
+
+        # JET
+        my_analysis.plot_hist(**default_args, var="JetPt", logx=True, logy=True)
+        my_analysis.plot_hist(**default_args, var="JetEta")
+        my_analysis.plot_hist(**default_args, var="JetPhi", logy=False)
 
     my_analysis.histogram_printout()
     my_analysis.save_histograms()

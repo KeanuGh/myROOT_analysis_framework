@@ -155,15 +155,14 @@ class Dataset(ABC):
             case {"units": "GeV"}:
                 return {"bins": (30, 1, 5000), "logbins": True}
             case {"units": ""}:
-                match var.lower():
-                    case "phi":
-                        return {"bins": (30, -np.pi, np.pi), "logbins": False}
-                    case "eta":
-                        return {"bins": (30, -5, 5), "logbins": False}
-                    case "delta_z0_sintheta":
-                        return {"bins": (30, 0, 2 * np.pi), "logbins": False}
-                    case _:
-                        return {"bins": (30, 0, 30), "logbins": False}
+                if "phi" in var.lower():
+                    return {"bins": (30, -np.pi, np.pi), "logbins": False}
+                elif "eta" in var.lower():
+                    return {"bins": (30, -5, 5), "logbins": False}
+                elif "delta_z0_sintheta" in var.lower():
+                    return {"bins": (30, 0, 2 * np.pi), "logbins": False}
+                else:
+                    return {"bins": (30, 0, 30), "logbins": False}
             case _:
                 return {"bins": (30, 0, 30), "logbins": False}
 
@@ -588,7 +587,13 @@ class PDataset(Dataset):
 
             weights = self.df[weight] if isinstance(weight, str) else weight
             hist = Histogram1D(
-                self.df[var], bins, weights, logbins, name=name, title=title, logger=self.logger
+                var=self.df[var],
+                bins=bins,
+                weight=weights,
+                logbins=logbins,
+                name=name,
+                title=title,
+                logger=self.logger,
             )
         hist = hist.plot(ax=ax, yerr=yerr, normalise=normalise, **kwargs)
         return hist
@@ -672,14 +677,29 @@ class PDataset(Dataset):
 
         # figure plot
         plotting_tools.set_axis_options(
-            fig_ax, var, bins, lepton, xlabel, ylabel, title, logx, logy
+            axis=fig_ax,
+            var_name=var,
+            lepton=lepton,
+            xlabel=xlabel,
+            ylabel=ylabel,
+            title=title,
+            logx=logx,
+            logy=logy,
         )
         fig_ax.legend()
         fig_ax.get_xaxis().set_visible(False)
 
         # ratio plot
         plotting_tools.set_axis_options(
-            accept_ax, var, bins, lepton, xlabel, ylabel, title, logx, False, label=False
+            axis=accept_ax,
+            var_name=var,
+            lepton=lepton,
+            xlabel=xlabel,
+            ylabel=ylabel,
+            title=title,
+            logx=logx,
+            logy=False,
+            label=False,
         )
         accept_ax.set_ylabel("Acceptance")
 
