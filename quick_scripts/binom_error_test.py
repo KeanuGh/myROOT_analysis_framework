@@ -18,7 +18,7 @@ for i in range(n2):
     h2.Fill(0.5)
 
 h3.Divide(h1, h2, 1, 1, "b")
-h4.Divide(h1, h2, 1, 1)
+h4.Divide(h1, h2)
 
 h = h1.Clone()
 tgraph = ROOT.TGraphAsymmErrors(h1, h2, "cl=0.683 b(1,1) mode")

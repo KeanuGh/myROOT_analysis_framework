@@ -24,7 +24,7 @@ float getVecVal(ROOT::VecOps::RVec<double>* x, int i = 0);
 
 float getVecVal(ROOT::VecOps::RVec<double>* x, int i) {
     if (x->size() > i)  return x->at(i);
-    else               return NAN;
+    else                return NAN;
 };
 
 // extract sum of weights from DTA outputs
@@ -69,12 +69,23 @@ std::map<int, float> get_sumw(std::string data_dir, std::string ttree_name) {
     return dsid_map;
 };
 
+bool isnan(ROOT::VecOps::RVec<float> var) {
+	if (var.size() == 0) return true;
+	else return false;
+}
+
 
 // Variable calculations
 double mt(double l1_pt, double l2_pt, double l1_phi, double l2_phi) {
 	double dphi = std::abs(l1_phi - l2_phi);
 	if (dphi > PI) dphi = 2 * PI - dphi;
 	return std::sqrt(2.0 * l1_pt * l2_pt * (1 - std::cos(dphi)));
+};
+
+double mt(ROOT::VecOps::RVec<float> l1_pt, float l2_pt, ROOT::VecOps::RVec<float> l1_phi, float l2_phi) {
+	double dphi = std::abs(l1_phi[0] - l2_phi);
+	if (dphi > PI) dphi = 2 * PI - dphi;
+	return std::sqrt(2.0 * l1_pt[0] * l2_pt * (1 - std::cos(dphi)));
 };
 
 double vy(double x1, double x2) {
@@ -87,6 +98,10 @@ double delta_z0_sintheta(double z0, double eta) {
 
 double dilep_m(double m1, double m2) {
 	return m1 + m2;
+}
+
+double dilep_m(vector<double> m1, vector<double> m2) {
+	return m1[0] + m2[0];
 }
 
 #endif

@@ -832,6 +832,11 @@ class DatasetBuilder:
                         debug_str += f" -> {Rdf.GetColumnType(col_name)}"
                 self.logger.debug(debug_str)
 
+        # # create tauID columns
+        # Rdf = Rdf.Define("tauID_loose", 'TauWP == "loose"')
+        # Rdf = Rdf.Define("tauID_medium", 'TauWP == "medium"')
+        # Rdf = Rdf.Define("tauID_tight", 'TauWP == "tight"')
+
         # calculate derived variables
         if vars_to_calc:
             self.logger.debug(f"calculating variables: {derived_vars}...")

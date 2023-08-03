@@ -20,7 +20,7 @@ from src.cutfile import Cutfile, Cut
 from src.cutflow import PCutflow, RCutflow
 from src.histogram import Histogram1D
 from src.logger import get_logger
-from utils import plotting_tools, PMG_tool, ROOT_utils, binnings
+from utils import plotting_tools, PMG_tool, ROOT_utils
 from utils.variable_names import variable_data, VarTag
 
 CUT_PREFIX: Final = "PASS_"
@@ -38,6 +38,7 @@ class Dataset(ABC):
     lepton: str = "lepton"
     file: Path = field(init=False)
     histograms: OrderedDict[str, ROOT.TH1] = field(init=False, default_factory=OrderedDict)
+    binnings: Dict[str, List[float]] = field(default_factory=dict)
 
     @abstractmethod
     def __len__(self):
@@ -140,6 +141,32 @@ class Dataset(ABC):
     # ===========================================
     # =========== PLOTING FUNCTIONS =============
     # ===========================================
+    def match_bin_args(self, var: str) -> dict:
+        """Match arguments for plotting bins from variable name"""
+        try:
+            var_dict = variable_data[var]
+        except KeyError:
+            raise KeyError(f"No known variable {var}")
+
+        if var in self.binnings:
+            return {"bins": self.binnings[var]}
+
+        match var_dict:
+            case {"units": "GeV"}:
+                return {"bins": (30, 1, 5000), "logbins": True}
+            case {"units": ""}:
+                match var.lower():
+                    case "phi":
+                        return {"bins": (30, -np.pi, np.pi), "logbins": False}
+                    case "eta":
+                        return {"bins": (30, -5, 5), "logbins": False}
+                    case "delta_z0_sintheta":
+                        return {"bins": (30, 0, 2 * np.pi), "logbins": False}
+                    case _:
+                        return {"bins": (30, 0, 30), "logbins": False}
+            case _:
+                return {"bins": (30, 0, 30), "logbins": False}
+
     @abstractmethod
     def plot_hist(
         self,
@@ -794,8 +821,8 @@ class PDataset(Dataset):
             i += 1
 
             # which binning?
-            bin_args = match_bin_args(variable_name)
-            weight = match_weight(variable_name)
+            bin_args = self.match_bin_args(variable_name)
+            weight = self.match_weight(variable_name)
 
             self.histograms[variable_name] = Histogram1D(
                 self[variable_name],
@@ -812,7 +839,7 @@ class PDataset(Dataset):
                 print(f"Producing histogram {i}/{n_hists}: {variable_name}", end="\r")
 
                 # which binning?
-                bin_args = match_bin_args(variable_name)
+                bin_args = self.match_bin_args(variable_name)
                 weight = match_weight(variable_name)
 
                 i += 1
@@ -847,6 +874,7 @@ class RDataset(Dataset):
     :param logger: Logger object to print to. Defaults to console output at DEBUG-level
     :param lepton: Name of charged DY lepton channel in dataset (if applicable)
     :param plot_dir: directory to save plots to. Defaults to current directory
+    :param binnings: dict of variable name : list of bin edges to use for given variables
     """
 
     cutflow: RCutflow = field(init=False)
@@ -1111,7 +1139,7 @@ class RDataset(Dataset):
 
         for variable_name in output_histogram_variables:
             # which binning?
-            bin_args = match_bin_args(variable_name)
+            bin_args = self.match_bin_args(variable_name)
             weight = match_weight(variable_name)
 
             th1 = ROOT.TH1F(
@@ -1155,29 +1183,3 @@ class RDataset(Dataset):
             self.save_hists_to_file(filepath=to_file)
 
         return self.histograms
-
-
-def match_bin_args(var) -> dict:
-    """Match arguments for plotting bins from variable name"""
-    try:
-        var_dict = variable_data[var]
-    except KeyError:
-        raise KeyError(f"No known variable {var}")
-
-    if var in binnings.override_binnings:
-        return {"bins": binnings.override_binnings[var]}
-
-    match var_dict:
-        case {"units": "GeV"}:
-            return {"bins": (30, 1, 5000), "logbins": True}
-        case {"units": ""}:
-            if "phi" in var.lower():
-                return {"bins": (30, -np.pi, np.pi), "logbins": False}
-            elif "eta" in var.lower():
-                return {"bins": (30, -5, 5), "logbins": False}
-            elif "delta_z0_sintheta" in var.lower():
-                return {"bins": (30, 0, 2 * np.pi), "logbins": False}
-            else:
-                return {"bins": (30, 0, 30), "logbins": False}
-        case _:
-            return {"bins": (30, 0, 30), "logbins": False}

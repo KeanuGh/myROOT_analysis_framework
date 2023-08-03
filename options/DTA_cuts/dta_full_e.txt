@@ -17,10 +17,9 @@ pass trigger	passTrigger
 
 [OUTPUTS]
 # truth
-#TruthTauPt
-#TruthTauEta
-#TruthTauPhi
-#TruthTauE
+TruthTauPt
+TruthTauEta
+TruthTauPhi
 #VisTruthTauPt
 #VisTruthTauEta
 #VisTruthTauPhi
@@ -31,26 +30,26 @@ pass trigger	passTrigger
 #TruthJetEta
 #TruthJetPhi
 #TruthJetE
-#TruthElePt
-#TruthEleEta
-#TruthElePhi
-#TruthEleE
-#TruthMuonPt
-#TruthMuonEta
-#TruthMuonPhi
+TruthElePt
+TruthEleEta
+TruthElePhi
+TruthEleE
+TruthMuonPt
+TruthMuonEta
+TruthMuonPhi
 #TruthMuonE
 #TruthBosonE
 #TruthBosonEta
 #TruthBosonPt
-#TruthBosonM
+TruthBosonM
 #TruthDilepM
 #TruthMTW
 #ImplicitMetPt
 #ImplicitMetEta
 #ImplicitMetPhi
-#TruthMetPt
-#TruthMetPhi
-#TruthMetEta
+TruthMetPt
+TruthMetPhi
+TruthMetEta
 
 # reco
 TauEta

@@ -1,0 +1,38 @@
+[CUTS]
+# Name	Variable	</>	Cut (in GeV if applicable) tree
+# truth
+
+# reco
+pass_trigger	passTrigger == 1
+
+[OUTPUTS]
+# Jet_btSF
+# Jet_JVT
+# TauSF_LooseWP
+# TauSF_MediumWP
+# TauSF_TightWP
+# TauLooseWP
+# TauMediumWP
+# TauTightWP
+
+# reco
+TauPt
+TauEta
+TauPhi
+# TauE
+# JetEta
+# JetPhi
+# JetE
+MET_met
+MET_phi
+MTW
+ElePt
+EleEta
+ElePhi
+MuonPt
+MuonEta
+MuonPhi
+# Ele_d0sig
+# Ele_delta_z0
+Ele_delta_z0_sintheta
+Muon_delta_z0_sintheta
