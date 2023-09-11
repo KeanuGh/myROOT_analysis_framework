@@ -6,7 +6,7 @@ from utils.ROOT_utils import init_rdataframe, ROOT_TFile_mgr
 
 ROOT.EnableImplicitMT()
 
-files = "/data/DTA_outputs/2023-01-31/**/*.root"
+files = "/data/DTA_outputs/2023-06-29/**/*.root"
 trees = {"T_s1thv_NOMINAL", "T_s1tev_NOMINAL", "T_s1tmv_NOMINAL"}
 
 rdf = init_rdataframe("test", glob.glob(files), trees)
@@ -20,7 +20,7 @@ hists = dict()
 n_bins = 10
 for col in vector_columns:
     # define new columns containing number of elements in vector columns
-    rdf = rdf.Define(f"{col}_nelements", f"(*{col})->size();")
+    rdf = rdf.Define(f"{col}_nelements", f"{col}.size();")
     hists[col] = ROOT.TH1I(col, f"number of elements in {col} vector", n_bins, 0, n_bins)
     hists[col] = rdf.Fill(hists[col], [f"{col}_nelements"])
 

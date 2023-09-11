@@ -445,6 +445,7 @@ class Analysis:
     ) -> List[Histogram1D]:
         """
         Plot same variable from different datasets.
+        If one dataset is passed but multiple variables, will plot overlays of the variable for that one dataset
         Checks to see if histogram exists in dataset histogram dictionary first, to avoid refilling histogram
 
         :param datasets: string or list of strings corresponding to datasets in the analysis
@@ -509,6 +510,8 @@ class Analysis:
             datasets = [datasets]
         if isinstance(labels, str):
             labels = [labels]
+        if isinstance(var, str):
+            var = [var]
 
         # no ratio if just one thing being plotted
         if len(datasets) == 1:
@@ -520,32 +523,59 @@ class Analysis:
             else:
                 raise ValueError("Only 'lumi' allowed for string value normalisation")
 
-        if labels:
-            assert len(labels) == len(datasets), (
-                f"Labels iterable (length: {len(labels)}) "
-                f"must be of same length as number of datasets ({len(datasets)})"
-            )
-
         if ratio_plot:
             fig, (ax, ratio_ax) = plt.subplots(2, 1, gridspec_kw={"height_ratios": [3, 1]})
         else:
             fig, ax = plt.subplots()
             ratio_ax = None  # just so IDE doesn't complain about missing variable
 
-        if len(datasets) > 2:
+        if (len(datasets) > 2) or (len(var) > 2):
             self.logger.warning("Not enough space to display stats box. Will not display")
             stats_box = False
 
+        # figure out if we should loop over datasets or variables or both
+        varloop = False
+        datasetloop = False
+        if len(datasets) > 1:
+            if (len(datasets) != len(var)) and (len(var) > 1):
+                raise ValueError(
+                    "Number of datasets and variables must match if passing multiple variables."
+                )
+            datasetloop = True
+            if len(var) > 1:
+                varloop = True
+            n_overlays = len(datasets)
+
+        elif len(var) > 1:
+            n_overlays = len(var)
+            varloop = True
+        else:
+            n_overlays = 1
+
+        if labels:
+            assert len(labels) == n_overlays, (
+                f"Labels iterable (length: {len(labels)}) "
+                f"must be of same length as number of overlaid plots ({n_overlays})"
+            )
+
+        # plotting loop
         hists = []  # add histograms to be overlaid in this list
-        for i, dataset in enumerate(datasets):
-            varname = var if isinstance(var, str) else var[i]
+        for i in range(n_overlays):
+            dataset = datasets[i] if datasetloop else datasets[0]
+            varname = var[i] if varloop else var[0]
+
             label = labels[i] if labels else self[dataset].label
             hist_name = name_template.format(
                 short=name_template_short.format(dataset=dataset, variable=varname)
             )
 
             # if passing a histogram name directly as the variable
-            if varname in self.histograms:
+            if cut and "cut_" + varname in self.histograms:
+                hist_name_internal = "cut_" + varname
+            elif cut and "cut_" + varname in self[dataset].histograms:
+                hist_name_internal = dataset + "_" + varname
+
+            elif varname in self.histograms:
                 hist_name_internal = varname
             elif varname in self[dataset].histograms:
                 hist_name_internal = dataset + "_" + varname
@@ -563,11 +593,14 @@ class Analysis:
                     normalise=normalise,
                     stats_box=stats_box,
                     scale_by_bin_width=scale_by_bin_width,
-                    label=label,
+                    label=None if n_overlays == 1 else label,
                     w2=w2,
                     **kwargs,
                 )
             else:
+                self.logger.warning(
+                    f"WARNING: Histogram '{varname}' not found. Will try to generate."
+                )
                 if bins is None:
                     raise ValueError("Must provide bins if histogram is not yet generated.")
 
@@ -580,7 +613,7 @@ class Analysis:
                     normalise=normalise,
                     logbins=logbins,
                     name=hist_name,
-                    label=label,
+                    label=None if n_overlays == 1 else label,
                     w2=w2,
                     stats_box=stats_box,
                     scale_by_bin_width=scale_by_bin_width,
@@ -624,11 +657,13 @@ class Analysis:
                 )
                 self.histograms[ratio_hist_name] = ratio_hist.TH1
 
-        ax.legend(fontsize=10, loc="upper right")
+        if n_overlays > 1:
+            ax.legend(fontsize=10, loc="upper right")
         plotting_tools.set_axis_options(
             axis=ax,
             var_name=var,
             lepton=lepton,
+            xlim=(hist.bin_edges[0], hist.bin_edges[-1]),
             xlabel=xlabel,
             ylabel=ylabel,
             title=title,
@@ -655,6 +690,7 @@ class Analysis:
                 axis=ratio_ax,
                 var_name=var,
                 lepton=lepton,
+                xlim=(ratio_hist.bin_edges[0], ratio_hist.bin_edges[-1]),
                 diff_xs=scale_by_bin_width,
                 xlabel=xlabel,
                 ylabel=ratio_label,

@@ -194,7 +194,9 @@ def get_axis(
 def set_axis_options(
     axis: plt.axes,
     var_name: Sequence[str] | str,
-    strict_xax_lims: bool = True,
+    xlim: Tuple[float, float] | None = None,
+    ylim: Tuple[float, float] | None = None,
+    strict_xax_lims: bool = False,
     strict_yax_lims: bool = False,
     lepton: str = "",
     xlabel: str = "",
@@ -210,6 +212,8 @@ def set_axis_options(
 
     :param axis: axis to change
     :param var_name: name of variable being plotted
+    :param xlim: tuple of limits
+    :param ylim: tuple of limits
     :param strict_xax_lims: whether to force the x-axis limits to the data limits
     :param strict_yax_lims: whether to force the y-axis limits to the data limits
     :param lepton: name of lepton for axis label
@@ -228,7 +232,9 @@ def set_axis_options(
         axis.semilogy()
 
     # restrict axes to extent of data. if statement is there to skip blank/guide lines
-    if strict_xax_lims:
+    if xlim:
+        axis.set_xlim(*xlim)
+    elif strict_xax_lims:
         try:
             xmin = min(
                 [
@@ -248,6 +254,8 @@ def set_axis_options(
         except ValueError:
             raise ValueError("Could not set strict axis limits. Using auto limits")
 
+    if ylim:
+        axis.set_ylim(*ylim)
     if strict_yax_lims:
         try:
             ymin = min(

@@ -153,7 +153,7 @@ class Dataset(ABC):
 
         match var_dict:
             case {"units": "GeV"}:
-                return {"bins": (30, 1, 5000), "logbins": True}
+                return {"bins": (30, 1, 10000), "logbins": True}
             case {"units": ""}:
                 if "phi" in var.lower():
                     return {"bins": (30, -np.pi, np.pi), "logbins": False}
@@ -189,7 +189,7 @@ class Dataset(ABC):
     ) -> OrderedDict[str, ROOT.TH1]:
         ...
 
-    def save_hists_to_file(
+    def export_histograms(
         self,
         filepath: str | Path | None = None,
         tfile_option: str = "Recreate",
@@ -875,7 +875,7 @@ class PDataset(Dataset):
         self.logger.info(f"Producted {n_hists} histograms.")
 
         if to_file:
-            self.save_hists_to_file(filepath=to_file if isinstance(to_file, (str, Path)) else None)
+            self.export_histograms(filepath=to_file if isinstance(to_file, (str, Path)) else None)
 
         return self.histograms
 
@@ -1200,6 +1200,6 @@ class RDataset(Dataset):
         if to_file:
             if to_file is True:
                 to_file = Path(self.name + "_hisograms.root")
-            self.save_hists_to_file(filepath=to_file)
+            self.export_histograms(filepath=to_file)
 
         return self.histograms
