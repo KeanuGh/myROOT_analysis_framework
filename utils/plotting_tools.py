@@ -232,6 +232,7 @@ def set_axis_options(
         axis.semilogy()
 
     # restrict axes to extent of data. if statement is there to skip blank/guide lines
+    # THIS ACTUALLY CUTS OF THE TWO OUTER BINS IN HALF BECAUSE AXIS LINE EXTENTS ARE AT BIN CENTERS (WHY??)
     if xlim:
         axis.set_xlim(*xlim)
     elif strict_xax_lims:
@@ -252,11 +253,11 @@ def set_axis_options(
             )
             axis.set_xlim(xmin, xmax)
         except ValueError:
-            raise ValueError("Could not set strict axis limits. Using auto limits")
+            pass
 
     if ylim:
         axis.set_ylim(*ylim)
-    if strict_yax_lims:
+    elif strict_yax_lims:
         try:
             ymin = min(
                 [
@@ -275,6 +276,8 @@ def set_axis_options(
             axis.set_ylim(ymin, ymax)
         except ValueError:
             raise ValueError("Could not set strict axis limits. Using auto limits")
+    elif not logy:
+        axis.set_ylim(bottom=0)
 
     # set axis labels
     if not (xlabel and ylabel):

@@ -573,7 +573,7 @@ class Analysis:
             if cut and "cut_" + varname in self.histograms:
                 hist_name_internal = "cut_" + varname
             elif cut and "cut_" + varname in self[dataset].histograms:
-                hist_name_internal = dataset + "_" + varname
+                hist_name_internal = dataset + "_cut_" + varname
 
             elif varname in self.histograms:
                 hist_name_internal = varname
@@ -632,9 +632,8 @@ class Analysis:
                     if labels
                     else f"{self[dataset].label}/{self[datasets[0]].label}"
                 )
-                color = (
-                    "k" if (len(datasets) == 2) else ax.get_lines()[-1].get_color()
-                )  # match ratio colour to plot
+                # match ratio colour to plot
+                color = "k" if (len(datasets) == 2) else ax.get_lines()[-1].get_color()
                 ratio_hist_name = (
                     name_template.format(
                         short=name_template_short.format(
