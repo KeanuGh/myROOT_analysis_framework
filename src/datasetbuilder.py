@@ -474,7 +474,7 @@ class DatasetBuilder:
         # Extract main tree and event weights
         # ---------------------------------------------------------------------------------
         self.logger.info(f"Extracting {tree_dict[self.TTree_name]} from {self.TTree_name} tree...")
-        df = to_pandas(
+        df = to_dataframe(
             uproot.concatenate(
                 str(data_path) + ":" + self.TTree_name,
                 tree_dict[self.TTree_name],
@@ -486,7 +486,7 @@ class DatasetBuilder:
         self.logger.debug(f"Extracted {len(df)} events.")
 
         self.logger.info(f"Extracting ['total_EventsWeighted', 'dsid'] from 'sumWeights' tree...")
-        sumw = to_pandas(
+        sumw = to_dataframe(
             uproot.concatenate(
                 str(data_path) + ":sumWeights",
                 ["totalEventsWeighted", "dsid"],
@@ -512,7 +512,7 @@ class DatasetBuilder:
                 continue
 
             self.logger.info(f"Extracting {tree_dict[tree]} from {tree} tree...")
-            alt_df = to_pandas(
+            alt_df = to_dataframe(
                 uproot.concatenate(
                     str(data_path) + ":" + tree,
                     tree_dict[tree],
