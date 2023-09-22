@@ -3,12 +3,12 @@ import re
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, OrderedDict, Set, Iterable, overload, Final
+from typing import Dict, OrderedDict, Set, Iterable, overload, Final, List
 
 import ROOT  # type: ignore
 import pandas as pd  # type: ignore
 import uproot  # type: ignore
-from awkward import to_pandas  # type: ignore
+from awkward import to_dataframe  # type: ignore
 
 from src.cutfile import Cutfile, Cut
 from src.cutflow import PCutflow
@@ -179,7 +179,7 @@ class DatasetBuilder:
             tree_dict = cutfile.tree_dict
             vars_to_calc = cutfile.vars_to_calc
             self._is_truth, self._is_reco = cutfile.truth_reco(tree_dict)
-            cuts = cutfile.cuts
+            cuts: List[cuts] = cutfile.cuts
         elif tree_dict:
             if (vars_to_calc is None) or (cuts is None):
                 raise ValueError(
@@ -396,10 +396,10 @@ class DatasetBuilder:
         return True
 
     def __check_cut_cols(
-        self, df_cols: Iterable, cuts: OrderedDict[str, Cut], raise_error: bool = False
+        self, df_cols: Iterable, cuts: List[Cut], raise_error: bool = False
     ) -> bool:
         """Check whether all necessary cut columns exist in DataFrame columns not including any hard cut"""
-        cut_cols = {CUT_PREFIX + cut_name for cut_name in cuts}
+        cut_cols = {CUT_PREFIX + cut.name for cut in cuts}
         if missing_vars := {var for var in cut_cols if var not in df_cols}:
             if raise_error:
                 raise ValueError(f"Cut column(s) {missing_vars} missing from DataFrame")
@@ -948,12 +948,12 @@ class DatasetBuilder:
             self.logger.info(f"Computing '{var}' column from {temp_cols}...")
             df[var] = func(df, *str_args)
 
-    def __create_cut_columns(self, df: pd.DataFrame, cuts: OrderedDict[str, Cut]) -> None:
+    def __create_cut_columns(self, df: pd.DataFrame, cuts: List[Cut]) -> None:
         """Creates boolean columns in dataframe corresponding to each cut"""
         label = CUT_PREFIX  # get cut label from config
         self.logger.info(f"Calculating {len(cuts)} cut columns...")
 
-        for cut in cuts.values():
+        for cut in cuts:
             try:
                 df[label + cut.name] = df.eval(cut.cutstr)
             except ValueError as e:

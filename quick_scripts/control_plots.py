@@ -38,7 +38,7 @@ if __name__ == "__main__":
         datasets,
         data_dir=DATA_OUT_DIR,
         year="2015+2016",
-        # regen_histograms=True,
+        regen_histograms=True,
         analysis_label="control_plots",
         lepton="tau",
         dataset_type="dta",

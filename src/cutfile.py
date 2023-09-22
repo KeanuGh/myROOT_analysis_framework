@@ -1,9 +1,8 @@
 import logging
 import re
-from collections import OrderedDict
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Tuple, Dict, Set
+from typing import Tuple, Dict, Set, List
 
 from src.logger import get_logger
 from utils.file_utils import get_filename
@@ -19,10 +18,10 @@ class Cut:
     """Cut class containing info for each cut"""
 
     name: str
-    cutstr: str
-    var: Set[str]
-    tree: Set[str]
-    is_reco: bool
+    cutstr: str = ""
+    var: Set[str] = field(default_factory=set)
+    tree: Set[str] = field(default_factory=set)
+    is_reco: bool = False
 
     def __str__(self) -> str:
         return f"{self.name}: {self.cutstr}"
@@ -73,7 +72,7 @@ class Cutfile:
 
         # make sure truth cuts always come first
         recoflag = False
-        for cut in self.cuts.values():
+        for cut in self.cuts:
             if recoflag and not cut.is_reco:
                 raise ValueError(f"Truth cut after reco cut!\n\t{cut.name}: {cut.cutstr}")
             elif cut.is_reco:
@@ -142,7 +141,7 @@ class Cutfile:
 
     def parse_cutfile(
         self, path: str | Path | None = None, sep="\t"
-    ) -> Tuple[OrderedDict[str, Cut], Dict[str, Set[str]]]:
+    ) -> Tuple[List[Cut], Dict[str, Set[str]]]:
         """
         | Generates pythonic outputs from input cutfile
         | Cutfile should be formatted with headers [CUTS] and [OUTPUTS]
@@ -170,14 +169,12 @@ class Cutfile:
                 raise ValueError("Missing [OUTPUTS] section!")
 
             # get cut lines
-            cuts: OrderedDict[str, Cut] = OrderedDict()
+            cuts: List[Cut] = []
             for cutline in lines[lines.index("[CUTS]") + 1 : lines.index("[OUTPUTS]")]:
                 if cutline.startswith("#") or len(cutline) < 2:
                     continue
                 cut = self.parse_cut(cutline)
-                if cut.name in cuts:
-                    raise ValueError(f"Duplicate cut name in cutfile: {cut.name}")
-                cuts[cut.name] = cut
+                cuts.append(cut)
 
             # get output variables
             output_vars: Dict[str, Set[str]] = dict()
@@ -215,7 +212,7 @@ class Cutfile:
             tree_dict[given_tree] = set()
         extracted_vars = dict()  # keep all extracted variables here
 
-        for cut in self.cuts.values():
+        for cut in self.cuts:
             trees = cut.tree
 
             cut_variables = cut.var
@@ -265,7 +262,7 @@ class Cutfile:
     def _all_vars(self) -> Set[str]:
         """Return all variables mentioned in cutfile"""
         all_vars_set = set()
-        for cut in self.cuts.values():
+        for cut in self.cuts:
             all_vars_set.update(cut.var)
         for var in self.vars_to_calc:
             all_vars_set.update(set(derived_vars[var]["var_args"]))
@@ -298,11 +295,11 @@ class Cutfile:
             return "None"
 
         # get cut dict with name cut_label
-        cut = next((c for c in self.cuts.values() if c.name == cut_label), None)
+        cut = next((c for c in self.cuts if c.name == cut_label), None)
         if cut is None:
             raise ValueError(f"No cut named '{cut_label}' in cutfile {self.name}")
 
-        name_len = max([len(cut_name) for cut_name in self.cuts]) if align else 0
+        name_len = max([len(cut.name) for cut in self.cuts]) if align else 0
 
         return (f"{cut.name:<{name_len}}: " if name else "") + cut.cutstr
 
@@ -312,8 +309,8 @@ class Cutfile:
 
     def log_cuts(self, name: bool = True, debug: bool = False) -> None:
         """send list of cuts in cutfile to logger"""
-        for cut_name in self.cuts:
+        for cut in self.cuts:
             if debug:
-                self.logger.debug(self.get_cut_string(cut_name, name=name, align=True))
+                self.logger.debug(self.get_cut_string(cut.name, name=name, align=True))
             else:
-                self.logger.info(self.get_cut_string(cut_name, name=name, align=True))
+                self.logger.info(self.get_cut_string(cut.name, name=name, align=True))

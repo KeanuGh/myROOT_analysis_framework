@@ -67,7 +67,7 @@ class Dataset(ABC):
         self.file = Path(filepath)
 
     @property
-    def cuts(self) -> OrderedDict[str, Cut]:
+    def cuts(self) -> List[Cut]:
         return self.cutfile.cuts
 
     @property
@@ -478,11 +478,11 @@ class PDataset(Dataset):
         if truth:
             self.logger.debug(f"Applying truth cuts to {self.name}...")
             cut_cols += [
-                CUT_PREFIX + cut.name for cut in self.cuts.values() if cut.is_reco is False
+                CUT_PREFIX + cut.name for cut in self.cuts if cut.is_reco is False
             ]
         if reco:
             self.logger.debug(f"Applying reco cuts to {self.name}...")
-            cut_cols += [CUT_PREFIX + cut.name for cut in self.cuts.values() if cut.is_reco is True]
+            cut_cols += [CUT_PREFIX + cut.name for cut in self.cuts if cut.is_reco is True]
 
         if isinstance(labels, list):
             self.logger.debug(f"Applying cuts: {labels} to {self.name}...")
@@ -905,7 +905,7 @@ class RDataset(Dataset):
 
         # generate filtered dataframe for cuts
         self.filtered_df: ROOT.RDataFrame = self.df.Filter("true", "Inclusive")
-        for cut in self.cutfile.cuts.values():
+        for cut in self.cutfile.cuts:
             sanitised_name = cut.name.replace(
                 "\\", "\\\\"
             )  # stop root interpreting escape for latex
@@ -963,7 +963,6 @@ class RDataset(Dataset):
     # ===============================
     def apply_cuts(
         self,
-        labels: bool | str | List[str] = True,
         reco: bool = False,
         truth: bool = False,
         inplace: bool = True,
@@ -971,7 +970,6 @@ class RDataset(Dataset):
         """
         Apply specific cut(s) to DataFrame.
 
-        :param labels: list of cut labels or single cut label. If True applies all cuts. Skips if logical false.
         :param reco: cut on reco cuts
         :param truth: cut on truth cuts
         :param inplace: If True, applies cuts in place to dataframe in self.
@@ -980,43 +978,14 @@ class RDataset(Dataset):
                  If False returns DataFrame with cuts applied.
                  Raises ValueError if cuts do not exist
         """
-        if not labels and (not reco) and (not truth):
-            raise ValueError("No cuts supplied")
-        if (reco or truth) and isinstance(labels, (str, list)):
-            raise ValueError("Supply either named cut labels, truth or reco")
-        if truth or reco:
-            labels = False
-
         # handle which cuts to apply depending on what is passed as 'labels'
         cuts_to_apply: List[Cut] = []
         if truth:
             self.logger.debug(f"Applying truth cuts to {self.name}...")
-            cuts_to_apply += [cut for cut in self.cuts.values() if cut.is_reco is False]
+            cuts_to_apply += [cut for cut in self.cuts if cut.is_reco is False]
         if reco:
             self.logger.debug(f"Applying reco cuts to {self.name}...")
-            cuts_to_apply += [cut for cut in self.cuts.values() if cut.is_reco is True]
-
-        if isinstance(labels, list):
-            self.logger.debug(f"Applying cuts: {labels} to {self.name}...")
-            for cut_name in labels:
-                try:
-                    cuts_to_apply.append(self.cuts[cut_name])
-                except KeyError:
-                    raise ValueError(f"No cut named {cut_name} in cuts ")
-
-        elif isinstance(labels, str):
-            self.logger.debug(f"Applying cut: '{labels}' to {self.name}...")
-            try:
-                cuts_to_apply.append(self.cuts[labels])
-            except KeyError:
-                raise ValueError(f"No cut named {labels} in cuts ")
-
-        elif labels is True:
-            self.logger.debug(f"Applying all cuts to {self.name}...")
-            cuts_to_apply = list(self.cuts.values())
-
-        elif labels is not False:
-            raise TypeError("'labels' must be a bool, a string or a list of strings")
+            cuts_to_apply += [cut for cut in self.cuts if cut.is_reco is True]
 
         # apply spefic cuts
         return self.gen_cutflow(cuts_to_apply, inplace=inplace)
@@ -1027,7 +996,7 @@ class RDataset(Dataset):
         """Generate cutflow, optionally with specific cuts applied"""
         if cuts is None:
             # use all cuts already in dataset
-            cuts = list(self.cuts.values())
+            cuts = self.cuts
             filtered_df = self.filtered_df
         else:
             # create new filters for dataset

@@ -11,8 +11,7 @@ import mplhep as hep  # type: ignore
 import pandas as pd  # type: ignore
 from tabulate import tabulate  # type: ignore
 
-from src.cutfile import Cut
-from src.cutfile import Cutfile
+from src.cutfile import Cut, Cutfile
 from src.logger import get_logger
 
 
@@ -22,6 +21,7 @@ class CutflowItem:
     npass: int
     eff: float
     ceff: float
+    cut: Cut
 
 
 class PCutflow:
@@ -40,7 +40,7 @@ class PCutflow:
     )
 
     def __init__(
-        self, df: pd.DataFrame, cuts: OrderedDict[str, Cut], logger: logging.Logger | None = None
+        self, df: pd.DataFrame, cuts: List[Cut], logger: logging.Logger | None = None
     ):
         """
         Generates cutflow object that keeps track of various properties and ratios of selections made on given dataset
@@ -49,7 +49,7 @@ class PCutflow:
         :param cuts: Ordered dict of cuts made.
         :param logger: logger to output to
         """
-        if missing_cuts := {cut_name for cut_name in cuts if "PASS_" + cut_name not in df.columns}:
+        if missing_cuts := {cut.name for cut in cuts if "PASS_" + cut.name not in df.columns}:
             raise ValueError(f"Missing cut(s) {missing_cuts} in DataFrame")
 
         if logger is None:
@@ -71,15 +71,15 @@ class PCutflow:
 
         # find first reco cut to separate reco and truth cuts in printout
         self.__first_reco_cut = ""
-        for cut in cuts.values():
+        for cut in cuts:
             if self.__first_reco_cut and not cut.is_reco:
                 raise ValueError("Truth cut after reco cut!")
             elif not self.__first_reco_cut and cut.is_reco:
                 self.__first_reco_cut = cut.name
 
         # list of cutflow labels (necessary for all cutflows)
-        self.cutflow_labels = ["Inclusive"] + [cut.name for cut in cuts.values()]
-        self.cutflow_str = ["Inclusive"] + [cut.cutstr for cut in cuts.values()]
+        self.cutflow_labels = ["Inclusive"] + [cut.name for cut in cuts]
+        self.cutflow_str = ["Inclusive"] + [cut.cutstr for cut in cuts]
         self.cutflow_ratio = [1.0]  # contains ratio of each separate cut to inclusive sample
         self.cutflow_n_events = [self._n_events_tot]  # contains number of events passing each cut
         self.cutflow_a_ratio = [1.0]  # contains ratio of each separate cut to inclusive sample
@@ -293,13 +293,18 @@ class RCutflow:
                         npass=self.report.At(cut.name).GetPass(),
                         eff=self.report.At(cut.name).GetEff(),
                         ceff=0.0,  # calculate this next
+                        cut=cut,
                     ),
                 )
                 for cut in cuts
             )
         )
         self._cutflow["Inclusive"] = CutflowItem(
-            value="-", npass=self.report.At("Inclusive").GetAll(), eff=100, ceff=100
+            value="-",
+            npass=self.report.At("Inclusive").GetAll(),
+            eff=100,
+            ceff=100,
+            cut=Cut("Inclusive"),
         )
         self._cutflow.move_to_end("Inclusive", last=False)
         for cut_name in self._cutflow:
@@ -312,25 +317,56 @@ class RCutflow:
         self._cutflow = cutflow_from_hist_and_cutfile(hist, cutfile)
 
     def print(self, latex_path: Path | None = None) -> None:
-        table = tabulate(
-            [
+        if latex_path:
+            cut_list_truth = [
                 [
                     cut_name,
                     cut.npass,
-                    f"{cut.eff:.3G} \\%" if latex_path else f"{cut.eff:.3G} %",
-                    f"{cut.ceff:.3G} \\%" if latex_path else f"{cut.ceff:.3G} %",
+                    f"{cut.eff:.3G} \\%",
+                    f"{cut.ceff:.3G} \\%",
                 ]
                 for cut_name, cut in self._cutflow.items()
-            ],
-            headers=["name", "npass", "eff", "cum. eff"],
-            tablefmt="latex_raw" if latex_path else "simple",
-        )
+                if (not cut.cut.is_reco and cut.cut.name.lower != "inclusive")
+            ]
+            cut_list_truth[0][0] = r"\hline " + cut_list_truth[0][0]
+            cut_list_truth.insert(0, [r"\hline Particle-Level", "", "", ""])
 
-        if latex_path:
+            cut_list_reco = [
+                [
+                    cut_name,
+                    cut.npass,
+                    f"{cut.eff:.3G} \\%",
+                    f"{cut.ceff:.3G} \\%",
+                ]
+                for cut_name, cut in self._cutflow.items()
+                if (cut.cut.is_reco and cut.name.lower != "inclusive")
+            ]
+            cut_list_reco[0][0] = r"\hline " + cut_list_reco[0][0]
+            cut_list_reco.insert(0, [r"\hline Detector-Level", "", "", ""])
+
+            table = tabulate(
+                [[]] + cut_list_truth + cut_list_reco,
+                headers=["name", "npass", "eff", "cum. eff"],
+                tablefmt="latex_raw",
+            )
+
             with open(latex_path, "w") as f:
                 f.write(table)
 
         else:
+            table = tabulate(
+                [
+                    [
+                        cut_name,
+                        cut.npass,
+                        f"{cut.eff:.3G} %",
+                        f"{cut.ceff:.3G} %",
+                    ]
+                    for cut_name, cut in self._cutflow.items()
+                ],
+                headers=["name", "npass", "eff", "cum. eff"],
+                tablefmt="simple",
+            )
             self.logger.info(table)
 
     def gen_histogram(self) -> ROOT.TH1I:
@@ -359,7 +395,7 @@ def cutflow_from_hist_and_cutfile(
 
     cutflow = OrderedDict()
     cutflow[hist.GetXaxis().GetBinLabel(1)] = CutflowItem(
-        value="-", npass=hist.GetBinContent(1), eff=100, ceff=100
+        value="-", npass=hist.GetBinContent(1), eff=100, ceff=100, cut=Cut("Inclusive", "-", set(), set(), False)
     )
 
     # indexing is fucked b/c ROOT histograms are 1-indexed and 1st bin is inclusive,
@@ -380,6 +416,7 @@ def cutflow_from_hist_and_cutfile(
             npass=hist.GetBinContent(i + 2),
             eff=eff,
             ceff=ceff,
+            cut=cut
         )
 
     return cutflow

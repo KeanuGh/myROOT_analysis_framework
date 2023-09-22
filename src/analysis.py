@@ -10,7 +10,7 @@ import pandas as pd  # type: ignore
 from numpy.typing import ArrayLike
 from tabulate import tabulate  # type: ignore
 
-from src.dataset import Dataset, CUT_PREFIX
+from src.dataset import Dataset
 from src.datasetbuilder import DatasetBuilder, lumi_year
 from src.histogram import Histogram1D
 from src.logger import get_logger
@@ -362,7 +362,6 @@ class Analysis:
     def apply_cuts(
         self,
         datasets: str | Iterable[str],
-        labels: bool | str | List[str] = True,
         reco: bool = False,
         truth: bool = False,
     ) -> None:
@@ -370,7 +369,6 @@ class Analysis:
         Apply cuts to dataset dataframes. Skip cuts that do not exist in dataset, logging in debug.
 
         :param datasets: list of datasets or single dataset name. If not given applies to all datasets.
-        :param labels: list of cut labels or single cut label. If True applies all cuts. Skips if logical false.
         :param reco: cut on reco cuts
         :param truth: cut on truth cuts
         :return: None if inplace is True.
@@ -382,20 +380,7 @@ class Analysis:
 
         for dataset in datasets:
             # skip cuts that don't exist in dataset
-            if isinstance(labels, str):
-                if CUT_PREFIX + labels not in self[dataset].df.columns:
-                    self.logger.debug(f"No cut '{labels}' in dataset '{dataset}'; skipping.")
-                    return
-
-            elif isinstance(labels, list):
-                if missing_cuts := [
-                    label for label in labels if CUT_PREFIX + label not in self[dataset].df.columns
-                ]:
-                    self.logger.debug(f"No cuts {missing_cuts} in dataset '{dataset}'; skipping.")
-                    # remove missing cuts from list
-                    labels = [label for label in labels if CUT_PREFIX + label not in missing_cuts]
-
-            self[dataset].apply_cuts(labels, reco, truth)
+            self[dataset].apply_cuts(reco, truth)
 
     @check_single_dataset
     def __delete_dataset(self, ds_name: str) -> None:
