@@ -28,10 +28,10 @@ CUT_PREFIX: Final = "PASS_"
 
 @dataclass
 class Dataset(ABC):
-    name: str
-    df: pd.DataFrame | ROOT.RDataFrame
-    cutfile: Cutfile
-    cutflow: PCutflow | RCutflow
+    name: str = ""
+    df: pd.DataFrame | ROOT.RDataFrame = None
+    cutfile: Cutfile = None
+    cutflow: PCutflow | RCutflow = None
     lumi: float = 139.0
     label: str = "data"
     logger: logging.Logger = field(default_factory=get_logger)
@@ -477,9 +477,7 @@ class PDataset(Dataset):
 
         if truth:
             self.logger.debug(f"Applying truth cuts to {self.name}...")
-            cut_cols += [
-                CUT_PREFIX + cut.name for cut in self.cuts if cut.is_reco is False
-            ]
+            cut_cols += [CUT_PREFIX + cut.name for cut in self.cuts if cut.is_reco is False]
         if reco:
             self.logger.debug(f"Applying reco cuts to {self.name}...")
             cut_cols += [CUT_PREFIX + cut.name for cut in self.cuts if cut.is_reco is True]
@@ -904,12 +902,14 @@ class RDataset(Dataset):
         self.file = Path(self.name + ".root")
 
         # generate filtered dataframe for cuts
-        self.filtered_df: ROOT.RDataFrame = self.df.Filter("true", "Inclusive")
-        for cut in self.cutfile.cuts:
-            sanitised_name = cut.name.replace(
-                "\\", "\\\\"
-            )  # stop root interpreting escape for latex
-            self.filtered_df = self.filtered_df.Filter(cut.cutstr, sanitised_name)
+        if self.df is not None:
+            self.filtered_df: ROOT.RDataFrame = self.df.Filter("true", "Inclusive")
+        if self.cutfile is not None:
+            for cut in self.cutfile.cuts:
+                sanitised_name = cut.name.replace(
+                    "\\", "\\\\"
+                )  # stop root interpreting escape for latex
+                self.filtered_df = self.filtered_df.Filter(cut.cutstr, sanitised_name)
 
     def __len__(self) -> int:
         if (self.histograms is not None) and ("cutflow" in self.histograms):
@@ -919,7 +919,10 @@ class RDataset(Dataset):
             raise ValueError("Must have run cutflow before getting len")
 
     def __getattr__(self, item):
-        return getattr(self.df, item)
+        if self.df is not None:
+            return getattr(self.df, item)
+        else:
+            return None
 
     # Variable setting/getting
     # ===================

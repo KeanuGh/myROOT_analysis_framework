@@ -39,9 +39,7 @@ class PCutflow:
         "logger",
     )
 
-    def __init__(
-        self, df: pd.DataFrame, cuts: List[Cut], logger: logging.Logger | None = None
-    ):
+    def __init__(self, df: pd.DataFrame, cuts: List[Cut], logger: logging.Logger | None = None):
         """
         Generates cutflow object that keeps track of various properties and ratios of selections made on given dataset
 
@@ -334,12 +332,12 @@ class RCutflow:
             cut_list_reco = [
                 [
                     cut_name,
-                    cut.npass,
-                    f"{cut.eff:.3G} \\%",
-                    f"{cut.ceff:.3G} \\%",
+                    cutflowitem.npass,
+                    f"{cutflowitem.eff:.3G} \\%",
+                    f"{cutflowitem.ceff:.3G} \\%",
                 ]
-                for cut_name, cut in self._cutflow.items()
-                if (cut.cut.is_reco and cut.name.lower != "inclusive")
+                for cut_name, cutflowitem in self._cutflow.items()
+                if (cutflowitem.cut.is_reco and cutflowitem.cut.name.lower != "inclusive")
             ]
             cut_list_reco[0][0] = r"\hline " + cut_list_reco[0][0]
             cut_list_reco.insert(0, [r"\hline Detector-Level", "", "", ""])
@@ -395,7 +393,11 @@ def cutflow_from_hist_and_cutfile(
 
     cutflow = OrderedDict()
     cutflow[hist.GetXaxis().GetBinLabel(1)] = CutflowItem(
-        value="-", npass=hist.GetBinContent(1), eff=100, ceff=100, cut=Cut("Inclusive", "-", set(), set(), False)
+        value="-",
+        npass=hist.GetBinContent(1),
+        eff=100,
+        ceff=100,
+        cut=Cut("Inclusive", "-", set(), set(), False),
     )
 
     # indexing is fucked b/c ROOT histograms are 1-indexed and 1st bin is inclusive,
@@ -406,17 +408,13 @@ def cutflow_from_hist_and_cutfile(
     # 1    cut2     inc.
     # 2             cut1
     # 3             cut2
-    for i, cut in enumerate(cutfile.cuts.values()):
+    for i, cut in enumerate(cutfile.cuts):
         npass = hist.GetBinContent(i + 2)
         eff = 100 * npass / hist.GetBinContent(i + 1)
         ceff = 100 * npass / hist.GetBinContent(1)
 
         cutflow[hist.GetXaxis().GetBinLabel(i + 2)] = CutflowItem(
-            value=cut.cutstr,
-            npass=hist.GetBinContent(i + 2),
-            eff=eff,
-            ceff=ceff,
-            cut=cut
+            value=cut.cutstr, npass=hist.GetBinContent(i + 2), eff=eff, ceff=ceff, cut=cut
         )
 
     return cutflow

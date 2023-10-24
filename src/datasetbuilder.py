@@ -3,7 +3,7 @@ import re
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, OrderedDict, Set, Iterable, overload, Final, List
+from typing import Dict, Set, Iterable, overload, Final, List
 
 import ROOT  # type: ignore
 import pandas as pd  # type: ignore
@@ -117,7 +117,7 @@ class DatasetBuilder:
         pkl_path: Path | None = None,
         tree_dict: Dict[str, Set[str]] | None = None,
         vars_to_calc: Set[str] | None = None,
-        cuts: OrderedDict[str, Cut] | None = None,
+        cuts: List[Cut] | None = None,
     ) -> Dataset:
         """
         Builds a dataframe from cutfile inputs.
@@ -130,7 +130,7 @@ class DatasetBuilder:
         :param tree_dict: If cutfile or cutfile_path not passed,
                           can pass dictionary of tree: variables to extract from Datapath
         :param vars_to_calc: list of variables to calculate to pass to add to DataFrame
-        :param cuts: OrderedDict of Cut objects if cuts are to be applied but no cutfile is given
+        :param cuts: List of Cut objects if cuts are to be applied but no cutfile is given
         :return: full built Dataset object
         """
         __build_df = False
@@ -179,7 +179,7 @@ class DatasetBuilder:
             tree_dict = cutfile.tree_dict
             vars_to_calc = cutfile.vars_to_calc
             self._is_truth, self._is_reco = cutfile.truth_reco(tree_dict)
-            cuts: List[cuts] = cutfile.cuts
+            cuts = cutfile.cuts
         elif tree_dict:
             if (vars_to_calc is None) or (cuts is None):
                 raise ValueError(

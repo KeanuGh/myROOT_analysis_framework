@@ -2,7 +2,7 @@ import inspect
 from collections import OrderedDict
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Tuple, Iterable, Callable, Any, Set, Sequence, Generator
+from typing import Dict, List, Tuple, Iterable, Callable, Any, Sequence, Generator
 
 import ROOT
 import matplotlib.pyplot as plt  # type: ignore
@@ -10,7 +10,7 @@ import pandas as pd  # type: ignore
 from numpy.typing import ArrayLike
 from tabulate import tabulate  # type: ignore
 
-from src.dataset import Dataset
+from src.dataset import Dataset, RDataset, PDataset
 from src.datasetbuilder import DatasetBuilder, lumi_year
 from src.histogram import Histogram1D
 from src.logger import get_logger
@@ -120,7 +120,6 @@ class Analysis:
 
         # BUILD DATASETS
         # ============================
-        merge_dict: Dict[str, Set[str]] = dict()  # if any datasets are to be merged, add here
         self.datasets: Dict[str, Dataset] = dict()
         for dataset_name, data_args in data_dict.items():
             self.logger.info("")
@@ -188,6 +187,32 @@ class Analysis:
             for hist_name, hist in dataset.histograms.items():
                 self.histograms[dataset_name + "_" + hist_name] = hist
 
+            # merge histograms if label is given
+            if "merge_into" in args:
+                merged_ds = args["merge_into"]
+
+                # create a "dummy" dataset with only the label of the first dataset
+                self.datasets[merged_ds] = (
+                    RDataset(name=merged_ds, label=dataset.label)
+                    if isinstance(dataset, RDataset)
+                    else PDataset(name=merged_ds, label=dataset.label)
+                )
+
+                for hist_name, hist in dataset.histograms.items():
+                    if (hist_name_merged := merged_ds + "_" + hist_name) not in self.histograms:
+                        self.histograms[hist_name_merged] = dataset.histograms[hist_name].Clone()
+                        self.logger.debug(
+                            f"Added {hist_name_merged} to histograms from {dataset_name}"
+                        )
+                    else:
+                        self.histograms[hist_name_merged].Add(dataset.histograms[hist_name])
+                        self.logger.debug(
+                            f"Merged {dataset_name}_{hist_name} into {hist_name_merged}"
+                        )
+
+                    # add/replace to dummy dataset
+                    self[merged_ds].histograms[hist_name] = self.histograms[hist_name_merged]
+
             try:
                 dataset.dsid_metadata_printout()
             except NotImplementedError:
@@ -238,7 +263,7 @@ class Analysis:
         return f'Analysis("{self.name}", Datasets:{{{", ".join([f"{name}: {len(d)}" for name, d in self.datasets.items()])}}}'
 
     def __str__(self) -> str:
-        return f'"{self.name}",Datasets:{{{", ".join([f"{name}: {len(d)}, {list(d.df.columns)}" for name, d in self.datasets.items()])}}}'
+        return f'"{self.name}",Datasets:{{{", ".join([f"{name}: {len(d)}" for name, d in self.datasets.items()])}}}'
 
     # ===============================
     # ====== DATASET FUNCTIONS ======
@@ -486,9 +511,9 @@ class Analysis:
             + (("_" + suffix) if suffix else "")  # suffix
         )
         name_template_short = (
-            ("cut_" if cut else "")  # cut flag
-            + "{dataset}"  # name of dataset(s)
+            "{dataset}"  # name of dataset(s)
             + "_{variable}"  # name of variable(s)
+            + ("_cut" if cut else "")  # cut flag
         )
 
         if isinstance(datasets, str):
@@ -555,10 +580,10 @@ class Analysis:
             )
 
             # if passing a histogram name directly as the variable
-            if cut and "cut_" + varname in self.histograms:
-                hist_name_internal = "cut_" + varname
-            elif cut and "cut_" + varname in self[dataset].histograms:
-                hist_name_internal = dataset + "_cut_" + varname
+            if cut and varname + "_cut" in self.histograms:
+                hist_name_internal = varname + "_cut"
+            elif cut and varname + "_cut" in self[dataset].histograms:
+                hist_name_internal = dataset + varname + "_cut"
 
             elif varname in self.histograms:
                 hist_name_internal = varname

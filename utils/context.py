@@ -56,6 +56,10 @@ def handle_dataset_arg(func: Callable) -> Callable:
         elif hasattr(datasets, "__iter__"):
             # apply to each dataset in iterable
             for dataset in datasets:
+                # skip "dummy" datasets
+                if self[dataset].df is None:
+                    continue
+
                 if not isinstance(dataset, str):
                     raise TypeError(
                         "Iterable dataset argument must be a string or iterable containing only strings"
@@ -67,6 +71,9 @@ def handle_dataset_arg(func: Callable) -> Callable:
         elif datasets is None:
             # apply to all datasets
             for dataset in self.datasets:
+                # skip "dummy" datasets
+                if self[dataset].df is None:
+                    continue
                 func(self, *args, **kwargs, datasets=dataset)
 
     return wrapper
