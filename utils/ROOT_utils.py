@@ -189,6 +189,15 @@ def get_dsid_values(path: str | Path, ttree_name: str = "") -> pd.DataFrame:
     prev_dsid = None
     for file in files_list:
         with ROOT_TFile_mgr(file, "read") as tfile:
+            if not tfile.GetListOfKeys().Contains(ttree_name):
+                raise ValueError(
+                    "Missing key '{}' from file {}\nKeys available: {}".format(
+                        ttree_name,
+                        tfile,
+                        "\n".join([key.GetName() for key in tfile.GetListOfKeys()]),
+                    )
+                )
+
             tree = tfile.Get(ttree_name)
             tree.GetEntry(0)  # read first DSID from branch
             dsid = tree.mcChannel
