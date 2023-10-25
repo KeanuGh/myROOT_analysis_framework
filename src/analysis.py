@@ -583,7 +583,7 @@ class Analysis:
             if cut and varname + "_cut" in self.histograms:
                 hist_name_internal = varname + "_cut"
             elif cut and varname + "_cut" in self[dataset].histograms:
-                hist_name_internal = dataset + varname + "_cut"
+                hist_name_internal = dataset + "_" + varname + "_cut"
 
             elif varname in self.histograms:
                 hist_name_internal = varname

@@ -571,7 +571,7 @@ class PDataset(Dataset):
         :return: Histgoram
         """
         if cut:
-            histname = "cut_" + var
+            histname = var + "_cut"
         else:
             histname = var
 
@@ -861,7 +861,7 @@ class PDataset(Dataset):
                 weight = match_weight(variable_name)
 
                 i += 1
-                cut_hist_name = "cut_" + variable_name
+                cut_hist_name = variable_name + "_cut"
                 self.histograms[cut_hist_name] = Histogram1D(
                     cut_df[variable_name],
                     name=cut_hist_name,
@@ -1060,7 +1060,7 @@ class RDataset(Dataset):
         :return: Histogram
         """
         if cut:
-            histname = "cut_" + var
+            histname = var + "_cut"
         else:
             histname = var
 
@@ -1142,7 +1142,7 @@ class RDataset(Dataset):
             th1_histograms[variable_name] = self.df.Fill(th1, [variable_name, weight])
 
             if cut:
-                cut_hist_name = "cut_" + variable_name
+                cut_hist_name = variable_name + "_cut"
                 cut_th1 = ROOT.TH1F(
                     cut_hist_name,
                     variable_name,
