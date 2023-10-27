@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt  # type: ignore
 from histogram import Histogram1D  # type: ignore
 from src.analysis import Analysis
 
-DTA_PATH = "/data/DTA_outputs/2023-10-19/"
+DTA_PATH = "/data/DTA_outputs/2023-10-25/"
 # DTA_PATH = "/data/DTA_outputs/2023-06-29/"
 DTA_PATH_H = DTA_PATH + "/user.kghorban.Sh_2211_Wtaunu_H*/*.root"
 DTA_PATH_HM = DTA_PATH + "user.kghorban.Sh_2211_Wtaunu_mW_120*/*.root"
@@ -14,22 +14,24 @@ DATA_OUT_DIR = "/data/dataset_pkl_outputs/"
 if __name__ == "__main__":
     datasets: Dict[str, Dict] = {
         # inclusive
-        # "wtaunu_inc_mu_dta": {
-        #     "data_path": DTA_PATH + "/user.kghorban.Sh_2211_Wtaunu_L*/*.root",
-        #     "TTree_name": "T_s1tmv_NOMINAL",
-        #     "cutfile": "../options/DTA_cuts/dta_full_mu.txt",
-        #     # "hard_cut": "BosonM < 120",
-        #     # "regen_histograms": False,
-        #     "label": r"Sherpa 2211 $W\rightarrow\tau\nu\rightarrow\mu\nu$",
-        # },
-        # "wtaunu_inc_e_dta": {
-        #     "data_path": DTA_PATH + "/user.kghorban.Sh_2211_Wtaunu_L*/*.root",
-        #     "TTree_name": "T_s1tev_NOMINAL",
-        #     "cutfile": "../options/DTA_cuts/dta_full_e.txt",
-        #     # "hard_cut": "BosonM < 120",
-        #     # "regen_histograms": False,
-        #     "label": r"Sherpa 2211 $W\rightarrow\tau\nu\rightarrow e\nu$",
-        # },
+        "wtaunu_inc_mu_dta": {
+            "data_path": DTA_PATH + "/user.kghorban.Sh_2211_Wtaunu_L*/*.root",
+            "TTree_name": "T_s1tmv_NOMINAL",
+            "cutfile": "../options/DTA_cuts/dta_full_mu.txt",
+            "hard_cut": "TruthBosonM < 100",
+            # "regen_histograms": False,
+            "label": r"Sherpa 2211 $W\rightarrow\tau\nu\rightarrow\mu\nu$",
+            "merge_into": "wtaunu_mu_dta",
+        },
+        "wtaunu_inc_e_dta": {
+            "data_path": DTA_PATH + "/user.kghorban.Sh_2211_Wtaunu_L*/*.root",
+            "TTree_name": "T_s1tev_NOMINAL",
+            "cutfile": "../options/DTA_cuts/dta_full_e.txt",
+            "hard_cut": "TruthBosonM < 100",
+            # "regen_histograms": False,
+            "label": r"Sherpa 2211 $W\rightarrow\tau\nu\rightarrow e\nu$",
+            "merge_into": "wtaunu_e_dta",
+        },
         "wtaunu_inc_h_dta": {
             "data_path": DTA_PATH_H,
             "TTree_name": "T_s1thv_NOMINAL",
@@ -39,23 +41,23 @@ if __name__ == "__main__":
             "label": r"Sherpa 2211 $W\rightarrow\tau\nu\rightarrow\mathrm{had}\nu$",
             "merge_into": "wtaunu_h_dta",
         },
-        # # high-mass
-        # "wtaunu_hm_e_dta": {
-        #     "data_path": DTA_PATH_HM,
-        #     "TTree_name": "T_s1tev_NOMINAL",
-        #     "cutfile": "../options/DTA_cuts/dta_full_e.txt",
-        #     # "regen_histograms": False,
-        #     "label": r"Sherpa 2211 $W\rightarrow\tau\nu\rightarrow e\nu$",
-        # },
-        # # high-mass
-        # "wtaunu_hm_m_dta": {
-        #     "data_path": DTA_PATH_HM,
-        #     "TTree_name": "T_s1tmv_NOMINAL",
-        #     "cutfile": "../options/DTA_cuts/dta_full_e.txt",
-        #     # "regen_histograms": False,
-        #     "label": r"Sherpa 2211 $W\rightarrow\tau\nu\rightarrow\mu\nu$",
-        # },
         # high-mass
+        "wtaunu_hm_m_dta": {
+            "data_path": DTA_PATH_HM,
+            "TTree_name": "T_s1tmv_NOMINAL",
+            "cutfile": "../options/DTA_cuts/dta_full_mu.txt",
+            # "regen_histograms": False,
+            "label": r"Sherpa 2211 $W\rightarrow\tau\nu\rightarrow\mu\nu$",
+            "merge_into": "wtaunu_mu_dta",
+        },
+        "wtaunu_hm_e_dta": {
+            "data_path": DTA_PATH_HM,
+            "TTree_name": "T_s1tev_NOMINAL",
+            "cutfile": "../options/DTA_cuts/dta_full_e.txt",
+            # "regen_histograms": False,
+            "label": r"Sherpa 2211 $W\rightarrow\tau\nu\rightarrow e\nu$",
+            "merge_into": "wtaunu_e_dta",
+        },
         "wtaunu_hm_h_dta": {
             "data_path": DTA_PATH_HM,
             "TTree_name": "T_s1thv_NOMINAL",
@@ -70,11 +72,11 @@ if __name__ == "__main__":
         datasets,
         data_dir=DATA_OUT_DIR,
         year="2015+2016",
-        regen_histograms=True,
+        # regen_histograms=True,
         analysis_label="control_plots",
         lepton="tau",
         dataset_type="dta",
-        # log_level=10,
+        log_level=10,
         log_out="both",
     )
     my_analysis.cutflow_printout(latex=True)

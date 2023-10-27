@@ -1,5 +1,3 @@
-from collections import OrderedDict
-
 import pytest
 
 from src.cutfile import Cut, Cutfile
@@ -17,38 +15,37 @@ class TestCutfile:
         yield Cutfile(tmp_cutfile, default_tree="truth")
 
     def test_cuts(self, cutfile):
-        expected_cuts = OrderedDict()
-        expected_cuts["tight muon"] = Cut(
-            "tight muon",
-            "testvartruth == 1",
-            {"testvartruth"},
-            {"truth"},
-            is_reco=False,
-        )
-        expected_cuts["lepton pt"] = Cut(
-            "lepton pt",
-            "MC_WZneutrino_pt_born > 25 and MC_WZmu_el_pt_born > 25",
-            {"MC_WZmu_el_pt_born", "MC_WZneutrino_pt_born"},
-            {"truth"},
-            False,
-        )
-        expected_cuts["muon eta"] = Cut(
-            "muon eta",
-            "MC_WZmu_el_eta_bare.abs() < 25",
-            {"MC_WZmu_el_eta_bare"},
-            {"truth"},
-            is_reco=False,
-        )
-        expected_cuts["exclude crack region"] = Cut(
-            "exclude crack region",
-            "MC_WZmu_el_eta_bare.abs() < 1.37 or MC_WZmu_el_eta_bare.abs() > 1.57",
-            {"MC_WZmu_el_eta_bare"},
-            {"truth"},
-            is_reco=False,
-        )
-        expected_cuts["met phi"] = Cut(
-            "met phi", "met_phi > 200", {"met_phi"}, {"reco"}, is_reco=True
-        )
+        expected_cuts = [
+            Cut(
+                "tight muon",
+                "testvartruth == 1",
+                {"testvartruth"},
+                {"truth"},
+                is_reco=False,
+            ),
+            Cut(
+                "lepton pt",
+                "MC_WZneutrino_pt_born > 25 and MC_WZmu_el_pt_born > 25",
+                {"MC_WZmu_el_pt_born", "MC_WZneutrino_pt_born"},
+                {"truth"},
+                False,
+            ),
+            Cut(
+                "muon eta",
+                "MC_WZmu_el_eta_bare.abs() < 25",
+                {"MC_WZmu_el_eta_bare"},
+                {"truth"},
+                is_reco=False,
+            ),
+            Cut(
+                "exclude crack region",
+                "MC_WZmu_el_eta_bare.abs() < 1.37 or MC_WZmu_el_eta_bare.abs() > 1.57",
+                {"MC_WZmu_el_eta_bare"},
+                {"truth"},
+                is_reco=False,
+            ),
+            Cut("met phi", "met_phi > 200", {"met_phi"}, {"reco"}, is_reco=True),
+        ]
 
         assert cutfile.cuts == expected_cuts
 

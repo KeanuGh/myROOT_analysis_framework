@@ -1,5 +1,7 @@
+from __future__ import annotations
+
 import logging
-from collections import OrderedDict
+from copy import deepcopy
 from dataclasses import dataclass, field
 from logging import Logger
 from pathlib import Path
@@ -8,6 +10,7 @@ from typing import List, Generator
 import ROOT  # type: ignore
 import matplotlib.pyplot as plt  # type: ignore
 import mplhep as hep  # type: ignore
+import numpy as np
 import pandas as pd  # type: ignore
 from tabulate import tabulate  # type: ignore
 
@@ -17,7 +20,6 @@ from src.logger import get_logger
 
 @dataclass(slots=True)
 class CutflowItem:
-    value: str
     npass: int
     eff: float
     ceff: float
@@ -252,63 +254,88 @@ class PCutflow:
 
 @dataclass(slots=True)
 class RCutflow:
-    rdf: ROOT.RDataFrame
-    _cutflow: OrderedDict[str, CutflowItem] = field(init=False, default_factory=OrderedDict)
-    report: ROOT.RDF.RCutFlowReport | None = field(init=False, default=None)
+    _cutflow: List[CutflowItem] = field(init=False, default_factory=list)
     logger: Logger = field(default_factory=get_logger)
 
-    def __getitem__(self, item) -> CutflowItem:
-        return self._cutflow[item]
-
-    def __getattr__(self, item) -> CutflowItem:
-        return self._cutflow[item]
+    def __getitem__(self, idx: int) -> CutflowItem:
+        return self._cutflow[idx]
 
     def __iter__(self) -> Generator[CutflowItem, None, None]:
-        yield from self._cutflow.values()
+        yield from self._cutflow
 
     def __len__(self) -> int:
         return len(self._cutflow)
+
+    def __add__(self, other: RCutflow):
+        return deepcopy(self).__iadd__(other)
+
+    def __iadd__(self, other: RCutflow):
+        """Sum individual cutflow values (the only important part), leave the rest alone"""
+
+        # cuts must be identical if cutflows are to be merged
+        if (self_names := [item.cut for item in self]) != (
+            other_names := [item.cut for item in other]
+        ):
+            raise ValueError(
+                "Cuts are not equivalent and cannot be summed. "
+                "Got:\n{}".format(
+                    "\n".join("{}\t{}".format(x, y) for x, y in zip(self_names, other_names))
+                )
+            )
+
+        npass_inc = self[0].npass + other[0].npass
+
+        # do inclusive separate
+        self._cutflow[0] = CutflowItem(npass=npass_inc, eff=100, ceff=100, cut=self[0].cut)
+
+        npass = npass_inc
+        for i in range(1, len(self)):
+            self_item = self[i]
+            other_item = other[i]
+
+            npass_prev = npass
+            npass = self_item.npass + other_item.npass
+            self._cutflow[i].npass = npass
+
+            # recalculate efficiencies
+            self._cutflow[i].eff = 100 * npass / npass_prev
+            self._cutflow[i].ceff = 100 * npass / npass_inc
+
+        return self
 
     @property
     def total_events(self) -> int:
         if self._cutflow is None:
             raise AttributeError("Must generated cutflow in order to obtain number of events")
-        return self._cutflow["Inclusive"].npass
+        return self._cutflow[0].npass
 
-    def gen_cutflow(self, cuts: List[Cut]) -> None:
+    def gen_cutflow(self, rdf: ROOT.RDataFrame, cuts: List[Cut]) -> None:
         """
         Generate cutflow - forces an event loop to run if not already.
 
+        :param rdf: filtered root dataframe
         :param cuts: List of Cut objects
         """
-        self.report = self.rdf.Report()
-        self._cutflow = OrderedDict(
-            (
-                (
-                    cut.name,
-                    CutflowItem(
-                        value=cut.cutstr,
-                        npass=self.report.At(cut.name).GetPass(),
-                        eff=self.report.At(cut.name).GetEff(),
-                        ceff=0.0,  # calculate this next
-                        cut=cut,
-                    ),
-                )
-                for cut in cuts
+        report = rdf.Report()
+        self._cutflow = [
+            CutflowItem(
+                npass=report.At(cut.name).GetPass(),
+                eff=report.At(cut.name).GetEff(),
+                ceff=0.0,  # calculate this next
+                cut=cut,
             )
-        )
-        self._cutflow["Inclusive"] = CutflowItem(
-            value="-",
-            npass=self.report.At("Inclusive").GetAll(),
-            eff=100,
-            ceff=100,
-            cut=Cut("Inclusive"),
-        )
-        self._cutflow.move_to_end("Inclusive", last=False)
-        for cut_name in self._cutflow:
-            self._cutflow[cut_name].ceff = (
-                100 * self._cutflow[cut_name].npass / self._cutflow["Inclusive"].npass
+            for cut in cuts
+        ]
+        self._cutflow = [
+            CutflowItem(
+                npass=report.At("Inclusive").GetAll(),
+                eff=100,
+                ceff=100,
+                cut=Cut("Inclusive"),
             )
+        ] + self._cutflow
+        for i in range(1, len(self._cutflow)):
+            self._cutflow[i].ceff = 100 * self._cutflow[i].npass / self._cutflow[0].npass
 
     def import_cutflow(self, hist: ROOT.TH1I, cutfile: Cutfile) -> None:
         """Import cutflow from histogram and cutfile"""
@@ -318,25 +345,25 @@ class RCutflow:
         if latex_path:
             cut_list_truth = [
                 [
-                    cut_name,
-                    cut.npass,
-                    f"{cut.eff:.3G} \\%",
-                    f"{cut.ceff:.3G} \\%",
+                    cutflowitem.cut.name,
+                    cutflowitem.npass,
+                    f"{cutflowitem.eff:.3G} \\%",
+                    f"{cutflowitem.ceff:.3G} \\%",
                 ]
-                for cut_name, cut in self._cutflow.items()
-                if (not cut.cut.is_reco and cut.cut.name.lower != "inclusive")
+                for cutflowitem in self._cutflow
+                if (not cutflowitem.cut.is_reco and cutflowitem.cut.name.lower != "inclusive")
             ]
             cut_list_truth[0][0] = r"\hline " + cut_list_truth[0][0]
             cut_list_truth.insert(0, [r"\hline Particle-Level", "", "", ""])
 
             cut_list_reco = [
                 [
-                    cut_name,
+                    cutflowitem.cut.name,
                     cutflowitem.npass,
                     f"{cutflowitem.eff:.3G} \\%",
                     f"{cutflowitem.ceff:.3G} \\%",
                 ]
-                for cut_name, cutflowitem in self._cutflow.items()
+                for cutflowitem in self._cutflow
                 if (cutflowitem.cut.is_reco and cutflowitem.cut.name.lower != "inclusive")
             ]
             cut_list_reco[0][0] = r"\hline " + cut_list_reco[0][0]
@@ -355,12 +382,12 @@ class RCutflow:
             table = tabulate(
                 [
                     [
-                        cut_name,
-                        cut.npass,
-                        f"{cut.eff:.3G} %",
-                        f"{cut.ceff:.3G} %",
+                        cut_item.cut.name,
+                        cut_item.npass,
+                        f"{cut_item.eff:.3G} %",
+                        f"{cut_item.ceff:.3G} %",
                     ]
-                    for cut_name, cut in self._cutflow.items()
+                    for cut_item in self._cutflow
                 ],
                 headers=["name", "npass", "eff", "cum. eff"],
                 tablefmt="simple",
@@ -369,36 +396,34 @@ class RCutflow:
 
     def gen_histogram(self) -> ROOT.TH1I:
         """return cutflow histogram"""
-        if self.report is None:
-            raise AttributeError("Cutflow uninitialised")
-
         n_items = len(self._cutflow)
+        if n_items == 0:
+            raise AttributeError("Cutflow empty or uninitialised. Try running gen_cutflow()")
+
         hist = ROOT.TH1I("cutflow", "cutflow", n_items, 0, n_items)
 
-        for i, (name, cut) in enumerate(self._cutflow.items()):
-            hist.SetBinContent(i + 1, cut.npass)
-            hist.GetXaxis().SetBinLabel(i + 1, name)
+        for i, cut_item in enumerate(self._cutflow):
+            hist.SetBinContent(i + 1, cut_item.npass)
+            hist.GetXaxis().SetBinLabel(i + 1, cut_item.cut.name)
 
         return hist
 
 
-def cutflow_from_hist_and_cutfile(
-    hist: ROOT.TH1I, cutfile: Cutfile
-) -> OrderedDict[str, CutflowItem]:
+def cutflow_from_hist_and_cutfile(hist: ROOT.TH1I, cutfile: Cutfile) -> List[CutflowItem]:
     """Create cutflow object from cutflow histogram"""
     if hist.GetNbinsX() - 1 != len(cutfile.cuts):
         raise ValueError(
             f"Number of cuts in cutfile ({len(cutfile.cuts)}) does not match number of cuts in histogram ({hist.GetNbinsX() - 1})"
         )
 
-    cutflow = OrderedDict()
-    cutflow[hist.GetXaxis().GetBinLabel(1)] = CutflowItem(
-        value="-",
-        npass=hist.GetBinContent(1),
-        eff=100,
-        ceff=100,
-        cut=Cut("Inclusive", "-", set(), set(), False),
-    )
+    cutflow = [
+        CutflowItem(
+            npass=hist.GetBinContent(1),
+            eff=100,
+            ceff=100,
+            cut=Cut("Inclusive", "-", set(), set(), False),
+        )
+    ]
 
     # indexing is fucked b/c ROOT histograms are 1-indexed and 1st bin is inclusive,
     # so the indexing goes:
@@ -410,11 +435,15 @@ def cutflow_from_hist_and_cutfile(
     # 3             cut2
     for i, cut in enumerate(cutfile.cuts):
         npass = hist.GetBinContent(i + 2)
-        eff = 100 * npass / hist.GetBinContent(i + 1)
-        ceff = 100 * npass / hist.GetBinContent(1)
+        try:
+            eff = 100 * npass / hist.GetBinContent(i + 1)
+        except ZeroDivisionError:
+            eff = np.NAN
+        try:
+            ceff = 100 * npass / hist.GetBinContent(1)
+        except ZeroDivisionError:
+            ceff = np.NAN
 
-        cutflow[hist.GetXaxis().GetBinLabel(i + 2)] = CutflowItem(
-            value=cut.cutstr, npass=hist.GetBinContent(i + 2), eff=eff, ceff=ceff, cut=cut
-        )
+        cutflow.append(CutflowItem(npass=hist.GetBinContent(i + 2), eff=eff, ceff=ceff, cut=cut))
 
     return cutflow

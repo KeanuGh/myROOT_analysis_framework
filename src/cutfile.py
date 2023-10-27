@@ -13,7 +13,7 @@ from utils.variable_names import variable_data, VarTag
 all_known_vars = set(derived_vars.keys()) | set(variable_data.keys())
 
 
-@dataclass
+@dataclass(slots=True)
 class Cut:
     """Cut class containing info for each cut"""
 

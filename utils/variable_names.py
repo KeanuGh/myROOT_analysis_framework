@@ -127,21 +127,6 @@ variable_data: Dict[str, Branch] = {
         "units": "",
         "tag": VarTag.TRUTH,
     },
-    "TauLooseWP": {
-        "name": "Tau Loose WP",
-        "units": "",
-        "tag": VarTag.TRUTH,
-    },
-    "TauMediumWP": {
-        "name": "Tau Medium WP",
-        "units": "",
-        "tag": VarTag.TRUTH,
-    },
-    "TauTightWP": {
-        "name": "Tau Tight WP",
-        "units": "",
-        "tag": VarTag.TRUTH,
-    },
     "FJVT_SF": {
         "name": "Forward Jet Vertex Tagger Scale Factor",
         "units": "",
@@ -363,6 +348,26 @@ variable_data: Dict[str, Branch] = {
         "tag": VarTag.RECO,
     },
     # from DTA
+    "TauBaselineWP": {
+        "name": r"Tau Baseline WP",
+        "units": "",
+        "tag": VarTag.RECO,
+    },
+    "TauLooseWP": {
+        "name": "Tau Loose WP",
+        "units": "",
+        "tag": VarTag.RECO,
+    },
+    "TauMediumWP": {
+        "name": "Tau Medium WP",
+        "units": "",
+        "tag": VarTag.RECO,
+    },
+    "TauTightWP": {
+        "name": "Tau Tight WP",
+        "units": "",
+        "tag": VarTag.RECO,
+    },
     "ElePt": {
         "name": r"Electron $p_{T}$",
         "units": "GeV",

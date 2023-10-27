@@ -1,5 +1,6 @@
 import inspect
 from collections import OrderedDict
+from copy import deepcopy
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Tuple, Iterable, Callable, Any, Sequence, Generator
@@ -15,7 +16,7 @@ from src.datasetbuilder import DatasetBuilder, lumi_year
 from src.histogram import Histogram1D
 from src.logger import get_logger
 from utils import plotting_tools, ROOT_utils
-from utils.context import check_single_dataset, handle_dataset_arg
+from utils.context import check_single_dataset, handle_dataset_arg, redirect_stdout
 
 
 @dataclass(slots=True)
@@ -192,26 +193,58 @@ class Analysis:
                 merged_ds = args["merge_into"]
 
                 # create a "dummy" dataset with only the label of the first dataset
-                self.datasets[merged_ds] = (
-                    RDataset(name=merged_ds, label=dataset.label)
-                    if isinstance(dataset, RDataset)
-                    else PDataset(name=merged_ds, label=dataset.label)
-                )
+                if merged_ds not in self.datasets:
+                    self[merged_ds] = (
+                        RDataset(name=merged_ds, label=dataset.label)
+                        if isinstance(dataset, RDataset)
+                        else PDataset(name=merged_ds, label=dataset.label)
+                    )
 
                 for hist_name, hist in dataset.histograms.items():
-                    if (hist_name_merged := merged_ds + "_" + hist_name) not in self.histograms:
+                    hist_name_merged = merged_ds + "_" + hist_name
+                    if hist_name_merged not in self.histograms:
                         self.histograms[hist_name_merged] = dataset.histograms[hist_name].Clone()
                         self.logger.debug(
                             f"Added {hist_name_merged} to histograms from {dataset_name}"
                         )
                     else:
-                        self.histograms[hist_name_merged].Add(dataset.histograms[hist_name])
+                        # check bin edges are the same
+                        edges_1 = [
+                            self.histograms[hist_name_merged].GetBinLowEdge(i + 1)
+                            for i in range(self.histograms[hist_name_merged].GetNbinsX())
+                        ]
+                        edges_2 = [
+                            dataset.histograms[hist_name].GetBinLowEdge(i + 1)
+                            for i in range(dataset.histograms[hist_name].GetNbinsX())
+                        ]
+                        if edges_1 != edges_2:
+                            raise ValueError(
+                                f"Histograms cannot be merged, bin edges do not match."
+                                f"Got \n{edges_1} and \n{edges_2}"
+                            )
+
+                        # merge but capture any ROOT error messages
+                        with redirect_stdout(in_stream="stderr") as root_msg:
+                            self.histograms[hist_name_merged].Add(dataset.histograms[hist_name])
+                        if "Attempt to add histograms with different labels" in root_msg.getvalue():
+                            self.logger.warning(
+                                f"Histograms {hist_name_merged} and {dataset_name}_{hist_name} have different labels."
+                                f"Cannot add directly. Attempting TH1::Merge.."
+                            )
+
                         self.logger.debug(
                             f"Merged {dataset_name}_{hist_name} into {hist_name_merged}"
                         )
 
                     # add/replace to dummy dataset
                     self[merged_ds].histograms[hist_name] = self.histograms[hist_name_merged]
+
+                # sum cutflows
+                if isinstance(dataset, RDataset):
+                    if self[merged_ds].cutflow is not None:
+                        self[merged_ds].cutflow += dataset.cutflow
+                    else:
+                        self[merged_ds].cutflow = deepcopy(dataset.cutflow)
 
             try:
                 dataset.dsid_metadata_printout()

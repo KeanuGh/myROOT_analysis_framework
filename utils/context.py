@@ -56,10 +56,6 @@ def handle_dataset_arg(func: Callable) -> Callable:
         elif hasattr(datasets, "__iter__"):
             # apply to each dataset in iterable
             for dataset in datasets:
-                # skip "dummy" datasets
-                if self[dataset].df is None:
-                    continue
-
                 if not isinstance(dataset, str):
                     raise TypeError(
                         "Iterable dataset argument must be a string or iterable containing only strings"
@@ -71,9 +67,6 @@ def handle_dataset_arg(func: Callable) -> Callable:
         elif datasets is None:
             # apply to all datasets
             for dataset in self.datasets:
-                # skip "dummy" datasets
-                if self[dataset].df is None:
-                    continue
                 func(self, *args, **kwargs, datasets=dataset)
 
     return wrapper
@@ -81,12 +74,20 @@ def handle_dataset_arg(func: Callable) -> Callable:
 
 # https://stackoverflow.com/questions/24277488/in-python-how-to-capture-the-stdout-from-a-c-shared-library-to-a-variable
 @contextmanager
-def redirect_stdout(out_stream: TextIO | None = None, in_stream: TextIO | None = None):
-    """Capture C/C++ standard output"""
-    if out_stream is None:
-        out_stream = io.StringIO()
-    if in_stream is None:
+def redirect_stdout(in_stream: str | TextIO = "stdout"):
+    """
+    Capture C/C++ standard output
+
+    :param in_stream: either "stdout", "stderr" or a TextIO object
+    :return:
+    """
+    out_stream = io.StringIO()
+    if in_stream == "stdout":
         in_stream = sys.stdout
+    elif in_stream == "stderr":
+        in_stream = sys.stderr
+    elif not isinstance(in_stream, TextIO):
+        raise ValueError(f"Unknown stream type {type(in_stream)}")
 
     og_streamfd = in_stream.fileno()
     captured_output = ""

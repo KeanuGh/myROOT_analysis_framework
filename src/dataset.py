@@ -840,7 +840,7 @@ class PDataset(Dataset):
 
             # which binning?
             bin_args = self.match_bin_args(variable_name)
-            weight = self.match_weight(variable_name)
+            weight = match_weight(variable_name)
 
             self.histograms[variable_name] = Histogram1D(
                 self[variable_name],
@@ -940,7 +940,7 @@ class RDataset(Dataset):
         if len(self.histograms) == 0:
             raise ValueError("Must generate or load histograms before resetting cutflow")
 
-        self.cutflow = RCutflow(self.df, logger=self.logger)
+        self.cutflow = RCutflow(logger=self.logger)
         self.cutflow.import_cutflow(self.histograms["cutflow"], self.cutfile)
 
     # ===============================
@@ -1007,8 +1007,8 @@ class RDataset(Dataset):
             for cut in cuts:
                 filtered_df = filtered_df.Filter(cut.cutstr, cut.name)
 
-        cutflow = RCutflow(filtered_df, logger=self.logger)
-        cutflow.gen_cutflow(cuts)
+        cutflow = RCutflow(logger=self.logger)
+        cutflow.gen_cutflow(filtered_df, cuts)
 
         if inplace:
             self.filtered_df = filtered_df

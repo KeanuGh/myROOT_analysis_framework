@@ -2,14 +2,15 @@
 # Name	Variable	</>	Cut (in GeV if applicable) tree
 # truth
 $p_T^e > 7$	(isnan(TruthElePt) || TruthElePt > 7)
-$|\eta^e| < 1.37 || 1.52 < |\eta^e| < 2.47$	(isnan(TruthEleEta) || (abs(TruthEleEta) < 1.37 || 1.52 < abs(TruthEleEta) < 2.47))
+$|\eta_\mathrm{truth}^e| < 1.37 || 1.52 < |\eta_\mathrm{truth}^e| < 2.47$	(isnan(TruthEleEta) || (abs(TruthEleEta) < 1.37 || 1.52 < abs(TruthEleEta) < 2.47))
 $p_T^\tau > 20$	(isnan(TruthTauPt) || TruthTauPt > 20)
 $|\eta^\tau| < 1.37 || 1.52 < |\eta^\tau| < 2.47$	(isnan(TruthTauEta) || (abs(TruthTauEta) < 1.37 || 1.52 < abs(TruthTauEta) < 2.47))
 
 # reco
 pass trigger	passTrigger
+pass medium	TauMediumWP
 $p_T^e > 20$	(isnan(ElePt) || ElePt > 20)
-$|\eta^e| < 1.37 || 1.52 < |\eta^e| < 2.47$	(isnan(EleEta) || (abs(EleEta) < 1.37 || 1.52 < abs(EleEta) < 2.47))
+$|\eta_\mathrm{reco}^e| < 1.37 || 1.52 < |\eta_mathrm{reco}^e| < 2.47$	(isnan(EleEta) || (abs(EleEta) < 1.37 || 1.52 < abs(EleEta) < 2.47))
 $p_T^\tau > 170$	TauPt > 170
 $m_T^W > 150$	MTW > 150
 
