@@ -346,7 +346,7 @@ class RCutflow:
             cut_list_truth = [
                 [
                     cutflowitem.cut.name,
-                    cutflowitem.npass,
+                    int(cutflowitem.npass),
                     f"{cutflowitem.eff:.3G} \\%",
                     f"{cutflowitem.ceff:.3G} \\%",
                 ]
@@ -359,7 +359,7 @@ class RCutflow:
             cut_list_reco = [
                 [
                     cutflowitem.cut.name,
-                    cutflowitem.npass,
+                    int(cutflowitem.npass),
                     f"{cutflowitem.eff:.3G} \\%",
                     f"{cutflowitem.ceff:.3G} \\%",
                 ]
@@ -383,7 +383,7 @@ class RCutflow:
                 [
                     [
                         cut_item.cut.name,
-                        cut_item.npass,
+                        int(cut_item.npass),
                         f"{cut_item.eff:.3G} %",
                         f"{cut_item.ceff:.3G} %",
                     ]
