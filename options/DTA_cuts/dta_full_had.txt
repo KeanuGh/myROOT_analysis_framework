@@ -6,7 +6,7 @@ $|\eta^\tau| < 1.37 || 1.52 < |\eta^\tau| < 2.47$	(isnan(TruthTauEta) || (abs(Tr
 
 # reco
 pass trigger	passTrigger
-pass medium	TauMediumWP
+medium tau	TauMediumWP
 $p_T^\tau > 170$	TauPt > 170
 $m_T^W > 150$	MTW > 150
 

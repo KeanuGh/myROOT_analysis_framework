@@ -8,7 +8,7 @@ $|\eta^\tau| < 1.37 || 1.52 < |\eta^\tau| < 2.47$	(isnan(TruthTauEta) || (abs(Tr
 
 # reco
 pass trigger	passTrigger
-pass medium	TauMediumWP
+medium tau	TauMediumWP
 $p_T^\mu > 20$	(isnan(MuonPt) || MuonPt > 20)
 $|\eta_\mathrm{reco}^\mu| < 2.5$	(isnan(MuonEta) || (abs(MuonEta) < 2.5))
 $p_T^\tau > 170$	TauPt > 170
