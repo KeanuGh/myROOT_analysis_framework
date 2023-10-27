@@ -343,7 +343,7 @@ class RCutflow:
             cut_list_reco.insert(0, [r"\hline Detector-Level", "", "", ""])
 
             table = tabulate(
-                [[]] + cut_list_truth + cut_list_reco,
+                cut_list_truth + cut_list_reco,
                 headers=["name", "npass", "eff", "cum. eff"],
                 tablefmt="latex_raw",
             )
