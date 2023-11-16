@@ -1,0 +1,69 @@
+[CUTS]
+# Name	Variable	</>	Cut (in GeV if applicable) tree
+# truth
+$p_T^e > 7$	(isnan(TruthElePt) || TruthElePt > 7)
+$|\eta_\mathrm{truth}^e| < 1.37 || 1.52 < |\eta_\mathrm{truth}^e| < 2.47$	(isnan(TruthEleEta) || (abs(TruthEleEta) < 1.37 || 1.52 < abs(TruthEleEta) < 2.47))
+$p_T^\mu > 7$	(isnan(TruthMuonPt) || TruthMuonPt > 7)
+$|\eta_\mathrm{truth}^\mu| < 2.5$	(isnan(TruthMuonEta) || abs(TruthMuonEta) < 2.5)
+$p_T^\tau > 20$	(isnan(TruthTauPt) || TruthTauPt > 20)
+$|\eta^\tau| < 1.37 || 1.52 < |\eta^\tau| < 2.47$	(isnan(TruthTauEta) || (abs(TruthTauEta) < 1.37 || 1.52 < abs(TruthTauEta) < 2.47))
+
+# reco
+#pass trigger	passTrigger
+#medium tau	TauMediumWP
+#$p_T^\mu > 20$	(isnan(MuonPt) || MuonPt > 20)
+#$|\eta_\mathrm{reco}^\mu| < 2.5$	(isnan(MuonEta) || (abs(MuonEta) < 2.5))
+#$p_T^\tau > 170$	TauPt > 170
+#$m_T^W > 150$	MTW > 150
+
+
+[OUTPUTS]
+mcWeight
+prwWeight
+rwCorr
+
+# truth
+TruthTauPt
+TruthTauEta
+TruthTauPhi
+VisTruthTauPt
+VisTruthTauEta
+VisTruthTauPhi
+TruthNeutrinoPt
+TruthNeutrinoEta
+TruthNeutrinoPhi
+TruthJetEta
+TruthJetPhi
+TruthElePt
+TruthEleEta
+TruthElePhi
+TruthMuonPt
+TruthMuonEta
+TruthMuonPhi
+TruthBosonM
+
+
+
+# reco
+TauEta
+TauPhi
+TauPt
+JetEta
+JetPhi
+JetPt
+MuonEta
+MuonPhi
+MuonPt
+Muon_d0sig
+Muon_delta_z0
+EleEta
+ElePhi
+ElePt
+EleE
+Ele_d0sig
+Muon_delta_z0
+PhotonEta
+PhotonPt
+MET_met
+MET_phi
+MTW
