@@ -113,15 +113,16 @@ class TestSimpleDTA:
         # delete outputs
         shutil.rmtree(output_dir)
 
+    # @pytest.fixture(scope="class")
+    # def tau_pt_histogram(self) -> ROOT.TH1F:
+    #
+
     def test_n_events(self, analysis):
-        analysis["wmintaunu"].gen_cutflow()
         assert len(analysis["wmintaunu"]) == 5000
 
     def test_cutflow(self, analysis):
-        analysis["wmintaunu"].apply_cuts()
-
-        assert analysis["wmintaunu"].cutflow["tau_eta"].value == "abs(TruthTauEta) < 2.4"
-        assert analysis["wmintaunu"].cutflow["tau_eta"].npass == 3577
+        assert analysis["wmintaunu"].cutflow[1].cut.cutstr == "abs(TruthTauEta) < 2.4"
+        assert analysis["wmintaunu"].cutflow[1].npass == 3577
 
     def test_histograms(self, analysis, tmp_directory):
         histograms = analysis["wmintaunu"].histograms
@@ -196,12 +197,12 @@ class TestSimpleDTA:
             analysis["wmintaunu"].histograms["cutflow"], analysis["wmintaunu"].cutfile
         )
 
-        assert [item.value for item in generated_cutflow.values()] == [
-            item.value for item in regenerated_cutflow.values()
+        assert [item.cut.cutstr for item in generated_cutflow] == [
+            item.cut.cutstr for item in regenerated_cutflow
         ]
 
         for generated_cutflow_item, regenerated_cutflow_item in zip(
-            generated_cutflow.values(), regenerated_cutflow.values()
+            generated_cutflow, regenerated_cutflow
         ):
             assert np.isclose(generated_cutflow_item.npass, regenerated_cutflow_item.npass)
             assert np.isclose(generated_cutflow_item.eff, regenerated_cutflow_item.eff)

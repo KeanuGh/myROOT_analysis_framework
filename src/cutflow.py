@@ -283,9 +283,8 @@ class RCutflow:
                 )
             )
 
+        # do inclusive separately
         npass_inc = self[0].npass + other[0].npass
-
-        # do inclusive separate
         self._cutflow[0] = CutflowItem(npass=npass_inc, eff=100, ceff=100, cut=self[0].cut)
 
         npass = npass_inc
@@ -331,7 +330,7 @@ class RCutflow:
                 npass=report.At("Inclusive").GetAll(),
                 eff=100,
                 ceff=100,
-                cut=Cut("Inclusive"),
+                cut=Cut("Inclusive", cutstr="-"),
             )
         ] + self._cutflow
         for i in range(1, len(self._cutflow)):

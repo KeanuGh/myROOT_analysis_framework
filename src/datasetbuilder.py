@@ -40,7 +40,7 @@ class DatasetBuilder:
     Pass dataset build options to initialise class. Use DatasetBuilder.build() with inputs to return Dataset object.
 
     :param name: dataset name
-    :param TTree_name: TTree in datapath to set as default tree, or list of trees to merge
+    :param ttree: TTree in datapath to set as default tree, or list of trees to merge
     :param lumi: data luminosity for weight calculation and normalisation
     :param year: data year for luminosty mapping
     :param lumi: data luminosity. Pass either this or year
@@ -61,14 +61,14 @@ class DatasetBuilder:
     """
 
     name: str = "data"
-    TTree_name: str | Set[str] = "truth"
+    ttree: str | Set[str] = ""
     year: str = "2015+2016"
     lumi: float = 139.0
     label: str = "data"
     lepton: str = "lepton"
     logger: logging.Logger = field(default_factory=get_logger)
     hard_cut: str = ""
-    dataset_type: str = "DTA"
+    dataset_type: str = "dta"
     force_rebuild: bool = False
     force_recalc_cuts: bool = False
     force_recalc_vars: bool = False
@@ -83,10 +83,13 @@ class DatasetBuilder:
     def __post_init__(self):
         # argument checks
         if self.dataset_type == "dta":
-            if not isinstance(self.TTree_name, str):
-                self.TTree_name = set(self.TTree_name)
+            if not self.ttree:
+                raise ValueError(f"No TTree name passed for dataset {self.name}")
+
+            if not isinstance(self.ttree, str):
+                self.ttree = set(self.ttree)
             else:
-                self.TTree_name = {self.TTree_name}
+                self.ttree = {self.ttree}
 
         if self.year:
             self.lumi = lumi_year[self.year]
@@ -161,7 +164,7 @@ class DatasetBuilder:
             self.logger.info(f"Parsting cutfile '{cutfile}'...")
 
             cutfile_path = cutfile
-            cutfile = Cutfile(cutfile, self.TTree_name, logger=self.logger)
+            cutfile = Cutfile(cutfile, self.ttree, logger=self.logger)
 
             if self.logger.level == logging.DEBUG:
                 # log contents of cutfile
@@ -201,7 +204,7 @@ class DatasetBuilder:
         self.logger.debug("----------------------------")
         self.logger.debug(f"Input ROOT file(s):  {data_path}")
         self.logger.debug(f"Input pickle file(s): {pkl_path}")
-        self.logger.debug(f"TTree: {self.TTree_name}")
+        self.logger.debug(f"TTree: {self.ttree}")
         if cutfile_path:
             self.logger.debug(f"Cutfile: {cutfile_path}")
         if cutfile:
@@ -447,7 +450,7 @@ class DatasetBuilder:
             f"Building DataFrame from {data_path} ({file_utils.n_files(data_path)} file(s))..."
         )
 
-        if isinstance(self.TTree_name, set):
+        if isinstance(self.ttree, set):
             raise ValueError("Pass only one default tree for analysistop dataset")
 
         # check hard cut variable(s) exist
@@ -464,7 +467,7 @@ class DatasetBuilder:
                 ), f"Missing variables necessary to apply hard cut '{self.hard_cut}': Missing {hard_cut_var}"
 
         # is the default tree a truth tree?
-        default_tree_truth = "truth" in self.TTree_name
+        default_tree_truth = "truth" in self.ttree
 
         # add necessary variables to tree dictionary
         tree_dict = self.__add_necessary_analysistop_variables(tree_dict)
@@ -473,11 +476,11 @@ class DatasetBuilder:
 
         # Extract main tree and event weights
         # ---------------------------------------------------------------------------------
-        self.logger.info(f"Extracting {tree_dict[self.TTree_name]} from {self.TTree_name} tree...")
+        self.logger.info(f"Extracting {tree_dict[self.ttree]} from {self.ttree} tree...")
         df = to_dataframe(
             uproot.concatenate(
-                str(data_path) + ":" + self.TTree_name,
-                tree_dict[self.TTree_name],
+                str(data_path) + ":" + self.ttree,
+                tree_dict[self.ttree],
                 num_workers=-1,
                 begin_chunk_size=self.chunksize,
             ),
@@ -508,7 +511,7 @@ class DatasetBuilder:
         # iterate over other TTrees, merge & validate
         # -----------------------------------------------------------------------------------
         for tree in tree_dict:
-            if tree == self.TTree_name:
+            if tree == self.ttree:
                 continue
 
             self.logger.info(f"Extracting {tree_dict[tree]} from {tree} tree...")
@@ -534,21 +537,17 @@ class DatasetBuilder:
                 if tree_is_truth and not default_tree_truth:
                     if n_missing := len(df.index.difference(alt_df.index)):
                         raise Exception(
-                            f"Found {n_missing} events in '{self.TTree_name}' tree not found in '{tree}' tree"
+                            f"Found {n_missing} events in '{self.ttree}' tree not found in '{tree}' tree"
                         )
                     else:
-                        self.logger.debug(
-                            f"All events in {self.TTree_name} tree found in {tree} tree"
-                        )
+                        self.logger.debug(f"All events in {self.ttree} tree found in {tree} tree")
                 elif default_tree_truth and not tree_is_truth:
                     if n_missing := len(alt_df.index.difference(df.index)):
                         raise Exception(
-                            f"Found {n_missing} events in '{tree}' tree not found in '{self.TTree_name}' tree"
+                            f"Found {n_missing} events in '{tree}' tree not found in '{self.ttree}' tree"
                         )
                     else:
-                        self.logger.debug(
-                            f"All events in {tree} tree found in {self.TTree_name} tree"
-                        )
+                        self.logger.debug(f"All events in {tree} tree found in {self.ttree} tree")
                 else:
                     self.logger.info(
                         f"Skipping missing events check. Not truth/reco tree combination"
@@ -720,10 +719,10 @@ class DatasetBuilder:
         tree_dict = self.__add_necessary_dta_variables(tree_dict)
 
         # should always be a set
-        if not isinstance(self.TTree_name, set):
-            ttrees = {self.TTree_name}
+        if not isinstance(self.ttree, set):
+            ttrees = {self.ttree}
         else:
-            ttrees = self.TTree_name
+            ttrees = self.ttree
 
         # check all branches being extracted from each tree are the same, or TChain will throw a fit
         if all(not x == next(iter(tree_dict.values())) for x in tree_dict.values()):
@@ -740,6 +739,7 @@ class DatasetBuilder:
         self.logger.debug("Calculating DSID metadata...")
         # each tree /SHOULD/ have the same dsid here
         dsid_metadata = ROOT_utils.get_dsid_values(data_path, list(ttrees)[0])
+        self.logger.info(f"Sum of weights per dsid:\n{dsid_metadata['sumOfWeights']}")
         ROOT.gInterpreter.Declare(
             f"""
                 std::map<int, float> {self.name}_dsid_sumw{{{','.join(f'{{{t.Index}, {t.sumOfWeights}}}' for t in dsid_metadata.itertuples())}}};
@@ -832,11 +832,6 @@ class DatasetBuilder:
                         debug_str += f" -> {Rdf.GetColumnType(col_name)}"
                 self.logger.debug(debug_str)
 
-        # # create tauID columns
-        # Rdf = Rdf.Define("tauID_loose", 'TauWP == "loose"')
-        # Rdf = Rdf.Define("tauID_medium", 'TauWP == "medium"')
-        # Rdf = Rdf.Define("tauID_tight", 'TauWP == "tight"')
-
         # calculate derived variables
         if vars_to_calc:
             self.logger.debug(f"calculating variables: {derived_vars}...")
@@ -864,11 +859,11 @@ class DatasetBuilder:
         self, tree_dict: Dict[str, Set[str]]
     ) -> Dict[str, Set[str]]:
         """Add variables necessary to extract for analysistop output"""
-        if isinstance(self.TTree_name, set):
+        if isinstance(self.ttree, set):
             raise ValueError("Pass only one default tree for analysistop dataset")
 
         # only add these to 'main tree' to avoid merge issues
-        tree_dict[self.TTree_name] |= {"weight_mc", "weight_pileup"}
+        tree_dict[self.ttree] |= {"weight_mc", "weight_pileup"}
 
         # check for variables in hard cut
         hard_cut_vars = find_variables_in_string(self.hard_cut)

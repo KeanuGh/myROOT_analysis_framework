@@ -92,6 +92,21 @@ variable_data: Dict[str, Branch] = {
         "tag": VarTag.META,
     },
     # DTA-specific
+    "mcWeight": {
+        "name": "mc weight",
+        "units": "",
+        "tag": VarTag.META,
+    },
+    "prwWeight": {
+        "name": "pileup weight",
+        "units": "",
+        "tag": VarTag.META,
+    },
+    "rwCorr": {
+        "name": "rwCorr",
+        "units": "",
+        "tag": VarTag.META,
+    },
     "passTrigger": {
         "name": "pass trigger",
         "units": "",

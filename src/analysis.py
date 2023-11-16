@@ -166,6 +166,10 @@ class Analysis:
                 ),
             )
             dataset = builder.build(**self.__match_params(args, DatasetBuilder.build))
+
+            if "binnings" in args:
+                dataset.binnings = args["binnings"]
+
             if separate_loggers:
                 # set new logger to append to analysis logger
                 dataset.logger = self.logger

@@ -1,6 +1,7 @@
 [CUTS]
 # Name	Variable	</>	Cut (in GeV if applicable) tree
 # truth
+tau->e	TruthTau_decay_mode == 0
 $p_T^\tau > 20$	(isnan(TruthTauPt) || TruthTauPt > 20)
 $|\eta^\tau| < 1.37 || 1.52 < |\eta^\tau| < 2.47$	(isnan(TruthTauEta) || (abs(TruthTauEta) < 1.37 || 1.52 < abs(TruthTauEta) < 2.47))
 
@@ -12,6 +13,10 @@ $m_T^W > 150$	MTW > 150
 
 
 [OUTPUTS]
+mcWeight
+prwWeight
+rwCorr
+
 # truth
 TruthTauPt
 TruthTauEta
@@ -19,59 +24,41 @@ TruthTauPhi
 VisTruthTauPt
 VisTruthTauEta
 VisTruthTauPhi
-#TruthNeutrinoPt
-#TruthNeutrinoEta
-#TruthNeutrinoPhi
-#TruthNeutrinoE
-#TruthJetEta
-#TruthJetPhi
-#TruthJetE
+TruthNeutrinoPt
+TruthNeutrinoEta
+TruthNeutrinoPhi
+TruthJetEta
+TruthJetPhi
 TruthElePt
 TruthEleEta
 TruthElePhi
-TruthEleE
 TruthMuonPt
 TruthMuonEta
 TruthMuonPhi
-#TruthMuonE
-#TruthBosonE
-#TruthBosonEta
-#TruthBosonPt
 TruthBosonM
-#TruthDilepM
-#TruthMTW
-#ImplicitMetPt
-#ImplicitMetEta
-#ImplicitMetPhi
-TruthNeutrinoPt
-TruthNeutrinoPhi
-TruthNeutrinoEta
+
+
 
 # reco
 TauEta
 TauPhi
 TauPt
-#TauE
 JetEta
 JetPhi
 JetPt
 MuonEta
 MuonPhi
 MuonPt
-#MuonE
-#Muon_d0sig
-#Muon_delta_z0
+Muon_d0sig
+Muon_delta_z0
 EleEta
 ElePhi
 ElePt
-#EleE
-#Ele_d0sig
-#Muon_delta_z0
+EleE
+Ele_d0sig
+Muon_delta_z0
 PhotonEta
 PhotonPt
-#PhotonE
-#MET_etx
-#MET_ety
 MET_met
 MET_phi
 MTW

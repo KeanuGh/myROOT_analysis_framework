@@ -112,7 +112,7 @@ def main():
 
     builder = DatasetBuilder(
         name=args.name,
-        TTree_name=args.TTree,
+        ttree=args.TTree,
         logger=logger,
         chunksize=args.chunksize,
         validate_sumofweights=not args.no_validate_sumofweights,

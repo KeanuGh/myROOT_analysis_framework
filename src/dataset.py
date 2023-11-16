@@ -1121,25 +1121,28 @@ class RDataset(Dataset):
                     return "truth_weight"
                 case {"tag": VarTag.RECO}:
                     return "reco_weight"
+                case {"tag": VarTag.META}:
+                    return ""
                 case _:
-                    return "truth_weight"
+                    raise ValueError(f"Unknown variable tag for variable {var}")
 
         # histogram weights
         for weight_str in ["truth_weight", "reco_weight"]:
-            wgt_th1 = ROOT.TH1F(weight_str, weight_str, 500, -50, 50)
+            wgt_th1 = ROOT.TH1F(weight_str, weight_str, 100, -1000, 1000)
             th1_histograms[weight_str] = self.df.Fill(wgt_th1, [weight_str])
 
         for variable_name in output_histogram_variables:
             # which binning?
             bin_args = self.match_bin_args(variable_name)
             weight = match_weight(variable_name)
+            fill_cols = [variable_name, weight] if weight else [variable_name]
 
             th1 = ROOT.TH1F(
                 variable_name,
                 variable_name,
                 *plotting_tools.get_TH1_bins(**bin_args),
             )
-            th1_histograms[variable_name] = self.df.Fill(th1, [variable_name, weight])
+            th1_histograms[variable_name] = self.df.Fill(th1, fill_cols)
 
             if cut:
                 cut_hist_name = variable_name + "_cut"
@@ -1148,9 +1151,7 @@ class RDataset(Dataset):
                     variable_name,
                     *plotting_tools.get_TH1_bins(**bin_args),
                 )
-                th1_histograms[cut_hist_name] = self.filtered_df.Fill(
-                    cut_th1, [variable_name, weight]
-                )
+                th1_histograms[cut_hist_name] = self.filtered_df.Fill(cut_th1, fill_cols)
 
         # generate histograms
         t = time.time()

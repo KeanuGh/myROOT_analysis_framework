@@ -18,27 +18,49 @@ if __name__ == "__main__":
             "data_path": DTA_PATH + "/user.kghorban.Sh_2211_Wtaunu_L*/*.root",
             "TTree_name": "T_s1tmv_NOMINAL",
             "cutfile": "../options/DTA_cuts/dta_full_mu.txt",
-            "hard_cut": "TruthBosonM < 100",
             # "regen_histograms": False,
-            "label": r"Sherpa 2211 $W\rightarrow\tau\nu\rightarrow\mu\nu$",
-            "merge_into": "wtaunu_mu_dta",
+            "label": r"Inclusive $W\rightarrow\tau\nu\rightarrow\mu\nu$",
         },
         "wtaunu_inc_e_dta": {
             "data_path": DTA_PATH + "/user.kghorban.Sh_2211_Wtaunu_L*/*.root",
             "TTree_name": "T_s1tev_NOMINAL",
             "cutfile": "../options/DTA_cuts/dta_full_e.txt",
-            "hard_cut": "TruthBosonM < 100",
             # "regen_histograms": False,
-            "label": r"Sherpa 2211 $W\rightarrow\tau\nu\rightarrow e\nu$",
-            "merge_into": "wtaunu_e_dta",
+            "label": r"Inclusive $W\rightarrow\tau\nu\rightarrow e\nu$",
         },
         "wtaunu_inc_h_dta": {
             "data_path": DTA_PATH_H,
             "TTree_name": "T_s1thv_NOMINAL",
             "cutfile": "../options/DTA_cuts/dta_full_had.txt",
-            "hard_cut": "TruthBosonM < 100",
             # "regen_histograms": True,
-            "label": r"Sherpa 2211 $W\rightarrow\tau\nu\rightarrow\mathrm{had}\nu$",
+            "label": r"Inclusive $W\rightarrow\tau\nu\rightarrow\mathrm{had}\nu$",
+        },
+        # low-mass (inclusive with mass cut)
+        "wtaunu_lm_mu_dta": {
+            "data_path": DTA_PATH + "/user.kghorban.Sh_2211_Wtaunu_L*/*.root",
+            "TTree_name": "T_s1tmv_NOMINAL",
+            "cutfile": "../options/DTA_cuts/dta_full_mu.txt",
+            "hard_cut": "TruthBosonM < 120",
+            # "regen_histograms": False,
+            "label": r"$m_W < 120$ $W\rightarrow\tau\nu\rightarrow\mu\nu$",
+            "merge_into": "wtaunu_mu_dta",
+        },
+        "wtaunu_lm_e_dta": {
+            "data_path": DTA_PATH + "/user.kghorban.Sh_2211_Wtaunu_L*/*.root",
+            "TTree_name": "T_s1tev_NOMINAL",
+            "cutfile": "../options/DTA_cuts/dta_full_e.txt",
+            "hard_cut": "TruthBosonM < 120",
+            # "regen_histograms": False,
+            "label": r"$m_W < 120$ $W\rightarrow\tau\nu\rightarrow e\nu$",
+            "merge_into": "wtaunu_e_dta",
+        },
+        "wtaunu_lm_h_dta": {
+            "data_path": DTA_PATH_H,
+            "TTree_name": "T_s1thv_NOMINAL",
+            "cutfile": "../options/DTA_cuts/dta_full_had.txt",
+            "hard_cut": "TruthBosonM < 120",
+            # "regen_histograms": True,
+            "label": r"$m_W < 120$ $W\rightarrow\tau\nu\rightarrow\mathrm{had}\nu$",
             "merge_into": "wtaunu_h_dta",
         },
         # high-mass
@@ -47,7 +69,8 @@ if __name__ == "__main__":
             "TTree_name": "T_s1tmv_NOMINAL",
             "cutfile": "../options/DTA_cuts/dta_full_mu.txt",
             # "regen_histograms": False,
-            "label": r"Sherpa 2211 $W\rightarrow\tau\nu\rightarrow\mu\nu$",
+            "label": r"$m_W > 120$ $W\rightarrow\tau\nu\rightarrow\mu\nu$",
+            "hard_cut": "TruthBosonM > 120",
             "merge_into": "wtaunu_mu_dta",
         },
         "wtaunu_hm_e_dta": {
@@ -55,7 +78,8 @@ if __name__ == "__main__":
             "TTree_name": "T_s1tev_NOMINAL",
             "cutfile": "../options/DTA_cuts/dta_full_e.txt",
             # "regen_histograms": False,
-            "label": r"Sherpa 2211 $W\rightarrow\tau\nu\rightarrow e\nu$",
+            "label": r"$m_W > 120$ $W\rightarrow\tau\nu\rightarrow e\nu$",
+            "hard_cut": "TruthBosonM > 120",
             "merge_into": "wtaunu_e_dta",
         },
         "wtaunu_hm_h_dta": {
@@ -63,7 +87,8 @@ if __name__ == "__main__":
             "TTree_name": "T_s1thv_NOMINAL",
             "cutfile": "../options/DTA_cuts/dta_full_had.txt",
             # "regen_histograms": False,
-            "label": r"Sherpa 2211 $W\rightarrow\tau\nu\rightarrow\mathrm{had}\nu$",
+            "label": r"$m_W > 120$ $W\rightarrow\tau\nu\rightarrow\mathrm{had}\nu$",
+            "hard_cut": "TruthBosonM > 120",
             "merge_into": "wtaunu_h_dta",
         },
     }
@@ -81,13 +106,49 @@ if __name__ == "__main__":
     )
     my_analysis.cutflow_printout(latex=True)
 
+    # some manual overlays
+    my_analysis.plot_hist(
+        ["wtaunu_inc_e_dta", "wtaunu_e_dta"],
+        var="TruthBosonM",
+        logx=True,
+        logy=True,
+        stats_box=True,
+    )
+    my_analysis.plot_hist(
+        ["wtaunu_inc_mu_dta", "wtaunu_mu_dta"],
+        var="TruthBosonM",
+        logx=True,
+        logy=True,
+        stats_box=True,
+    )
+    my_analysis.plot_hist(
+        ["wtaunu_inc_h_dta", "wtaunu_h_dta"],
+        var="TruthBosonM",
+        logx=True,
+        logy=True,
+        stats_box=True,
+    )
+
     # HISTORGRAMS
     # ==================================================================================================================
     # Truth
     # -----------------------------------
-    datasets["wtaunu_h_dta"] = {"label": r"Sherpa 2211 $W\rightarrow\tau\nu\rightarrow \mu\nu$"}
+    datasets["wtaunu_h_dta"] = {
+        "label": r"Full $W\rightarrow\tau\nu\rightarrow \mathrm{had}\mu\nu$"
+    }
+    datasets["wtaunu_e_dta"] = {"label": r"Full $W\rightarrow\tau\nu\rightarrow e\nu$"}
+    datasets["wtaunu_mu_dta"] = {"label": r"Full $W\rightarrow\tau\nu\rightarrow \mu\nu$"}
     for dataset_name, dataset in datasets.items():
-        default_args = dict(datasets=dataset_name, title=dataset["label"], stats_box=True)
+        default_args = dict(
+            datasets=dataset_name, title=dataset["label"], stats_box=True, ratio_axlim=1.5
+        )
+
+        my_analysis.plot_hist(
+            **default_args, var="truth_weight", logx=False, logy=True, bins=(100, -1000, 1000)
+        )
+        my_analysis.plot_hist(
+            **default_args, var="reco_weight", logx=False, logy=True, bins=(100, -1000, 1000)
+        )
 
         # out and in fiducial region
         for cut in (False, True):
