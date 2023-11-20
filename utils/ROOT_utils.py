@@ -175,60 +175,6 @@ def glob_chain(TTree: str, path: Path | str) -> ROOT.TChain:
 #         self.chain = glob_chain(tree, path)
 #         super().__init__(self.chain)
 
-
-def get_dsid_values(path: str | Path, ttree_name: str = "") -> pd.DataFrame:
-    """Return DataFrame containing sumw, xs and PMG factor per DSID"""
-    # PNG factor is cross-section * kfactor * filter eff.
-    files_list = glob.glob(str(path))
-    dsid_sumw: Dict[int, float] = dict()
-    dsid_xs: Dict[int, float] = dict()
-    dsid_pmg_factor: Dict[int, float] = dict()
-    dsid_phys_short: Dict[int, str] = dict()
-
-    # loop over files and sum sumw values per dataset ID (assuming each file only has one dataset ID value)
-    prev_dsid = None
-    for file in files_list:
-        with ROOT_TFile_mgr(file, "read") as tfile:
-            if not tfile.GetListOfKeys().Contains(ttree_name):
-                raise ValueError(
-                    "Missing key '{}' from file {}\nKeys available: {}".format(
-                        ttree_name,
-                        tfile,
-                        "\n".join([key.GetName() for key in tfile.GetListOfKeys()]),
-                    )
-                )
-
-            tree = tfile.Get(ttree_name)
-            tree.GetEntry(0)  # read first DSID from branch
-            dsid = tree.mcChannel
-            sumw = tfile.Get("sumOfWeights").GetBinContent(4)  # bin 4 is AOD sum of weights
-            if dsid not in dsid_sumw:
-                dsid_sumw[dsid] = sumw
-            else:
-                dsid_sumw[dsid] += sumw
-
-        if prev_dsid != dsid:  # do only for one dsid
-            xs = PMG_tool.get_crossSection(dsid)
-            dsid_xs[dsid] = xs
-            dsid_pmg_factor[dsid] = xs * PMG_tool.get_kFactor(dsid) * PMG_tool.get_genFiltEff(dsid)
-            dsid_phys_short[dsid] = PMG_tool.get_physics_short(dsid)
-
-        prev_dsid = dsid
-
-    df = pd.concat(
-        [
-            pd.DataFrame.from_dict(dsid_sumw, orient="index", columns=["sumOfWeights"]),
-            pd.DataFrame.from_dict(dsid_xs, orient="index", columns=["cross_section"]),
-            pd.DataFrame.from_dict(dsid_pmg_factor, orient="index", columns=["PMG_factor"]),
-        ],
-        axis=1,
-        join="inner",
-    )
-    df.index.name = "mcChannel"
-
-    return df
-
-
 def init_rdataframe(name: str, filepaths: Path | str | Iterable[str], trees: Iterable[str]):
     """
     Returns an RDataFrame for a given name

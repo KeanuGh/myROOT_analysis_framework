@@ -39,6 +39,10 @@ except FileNotFoundError:
     raise FileNotFoundError(f"Could not find PMG database file '{PMG_DB_FILE}'")
 
 
+def check_dsid(dsid: int) -> bool:
+    return dsid in PMG_df.index
+
+
 def get_crossSection(dsid: int) -> float:
     return PMG_df.loc[dsid, "crossSection"]
 

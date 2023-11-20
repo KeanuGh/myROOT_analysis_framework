@@ -42,7 +42,7 @@ class Analysis:
     """
     Analysis class acts as a container for the src.dataset.Dataset class. Contains methods to apply either to
     single datasets or across multiple datasets.
-    Access datasets in class with analysis.dataset_name or analsis['dataset_name']. Can set by key but not by attribute
+    Access datasets in class with analysis.dataset_name or analysis['dataset_name']. Can set by key but not by attribute
     When calling a method that applies to only one dataset, naming the dataset in argument ds_name is optional.
     """
 
@@ -680,7 +680,8 @@ class Analysis:
                     else f"{self[dataset].label}/{self[datasets[0]].label}"
                 )
                 # match ratio colour to plot
-                color = "k" if (len(datasets) == 2) else ax.get_lines()[-1].get_color()
+                # color = "k" if (len(datasets) == 2) else ax.get_lines()[-1].get_color()
+                color = ax.get_lines()[-1].get_color()
                 ratio_hist_name = (
                     name_template.format(
                         short=name_template_short.format(

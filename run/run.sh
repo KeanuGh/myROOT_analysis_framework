@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
-export PYTHONPATH=$PYTHONPATH:$(dirname $(pwd))
+export PYTHONPATH=$PYTHONPATH:~/framework
 
-/users/keanu/miniconda3/envs/framework_env/bin/python dta_analysistop_compare.py
+source /eos/home-k/kghorban/miniforge3/bin/activate framework_env
+/eos/home-k/kghorban/miniforge3/envs/framework_env/bin/python ~/framework/run/decay_compare.py

@@ -1,6 +1,7 @@
 import logging
 import re
 import time
+import glob
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, Set, Iterable, overload, Final, List
@@ -14,7 +15,7 @@ from src.cutfile import Cutfile, Cut
 from src.cutflow import PCutflow
 from src.dataset import Dataset, PDataset, RDataset, CUT_PREFIX
 from src.logger import get_logger
-from utils import file_utils, ROOT_utils
+from utils import file_utils, ROOT_utils, PMG_tool
 from utils.var_helpers import derived_vars
 from utils.variable_names import variable_data
 
@@ -738,7 +739,7 @@ class DatasetBuilder:
         # create c++ map for dataset ID metadatas
         self.logger.debug("Calculating DSID metadata...")
         # each tree /SHOULD/ have the same dsid here
-        dsid_metadata = ROOT_utils.get_dsid_values(data_path, list(ttrees)[0])
+        dsid_metadata = self._get_dsid_values(data_path, list(ttrees)[0])
         self.logger.info(f"Sum of weights per dsid:\n{dsid_metadata['sumOfWeights']}")
         ROOT.gInterpreter.Declare(
             f"""
@@ -851,6 +852,68 @@ class DatasetBuilder:
         )
 
         return Rdf
+
+    def _get_dsid_values(self, path: str | Path, ttree_name: str = "") -> pd.DataFrame:
+        """Return DataFrame containing sumw, xs and PMG factor per DSID"""
+        # PNG factor is cross-section * kfactor * filter eff.
+        files_list = glob.glob(str(path))
+        dsid_sumw: Dict[int, float] = dict()
+        dsid_xs: Dict[int, float] = dict()
+        dsid_pmg_factor: Dict[int, float] = dict()
+        dsid_phys_short: Dict[int, str] = dict()
+
+        # loop over files and sum sumw values per dataset ID (assuming each file only has one dataset ID value)
+        prev_dsid = None
+        for file in files_list:
+            with ROOT_utils.ROOT_TFile_mgr(file, "read") as tfile:
+                if not tfile.GetListOfKeys().Contains(ttree_name):
+                    raise ValueError(
+                        "Missing key '{}' from file {}\nKeys available: {}".format(
+                            ttree_name,
+                            tfile,
+                            "\n".join([key.GetName() for key in tfile.GetListOfKeys()]),
+                        )
+                    )
+
+                tree = tfile.Get(ttree_name)
+                tree.GetEntry(0)  # read first DSID from branch
+                dsid = tree.mcChannel
+                sumw = tfile.Get("sumOfWeights").GetBinContent(4)  # bin 4 is AOD sum of weights
+                if dsid not in dsid_sumw:
+                    dsid_sumw[dsid] = sumw
+                else:
+                    dsid_sumw[dsid] += sumw
+
+            if prev_dsid != dsid:  # do only for one dsid
+                self.logger.debug(f"{dsid}: {file}")
+
+                if dsid == 0:
+                    self.logger.warn("Passed a '0' DSID")
+                    continue                
+
+                if not PMG_tool.check_dsid(dsid):
+                    raise self.logger.error(f"Unknown dataset ID: {dsid}")
+
+                xs = PMG_tool.get_crossSection(dsid)
+                dsid_xs[dsid] = xs
+                dsid_pmg_factor[dsid] = xs * PMG_tool.get_kFactor(dsid) * PMG_tool.get_genFiltEff(dsid)
+                dsid_phys_short[dsid] = PMG_tool.get_physics_short(dsid)
+
+            prev_dsid = dsid
+
+        df = pd.concat(
+            [
+                pd.DataFrame.from_dict(dsid_sumw, orient="index", columns=["sumOfWeights"]),
+                pd.DataFrame.from_dict(dsid_xs, orient="index", columns=["cross_section"]),
+                pd.DataFrame.from_dict(dsid_pmg_factor, orient="index", columns=["PMG_factor"]),
+            ],
+            axis=1,
+            join="inner",
+        )
+        df.index.name = "mcChannel"
+
+        return df
+
 
     # ===============================
     # ========== HELPERS ============
