@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt  # type: ignore
 
 from histogram import Histogram1D  # type: ignore
 from src.analysis import Analysis
+from utils.binnings import override_binnings
 
 DTA_PATH = "/data/DTA_outputs/2023-10-25/"
 # DTA_PATH = "/data/DTA_outputs/2023-06-29/"
@@ -14,82 +15,82 @@ DATA_OUT_DIR = "/data/dataset_pkl_outputs/"
 if __name__ == "__main__":
     datasets: Dict[str, Dict] = {
         # inclusive
-        "wtaunu_inc_mu_dta": {
+        "wtaunu_inc_mu": {
             "data_path": DTA_PATH + "/user.kghorban.Sh_2211_Wtaunu_L*/*.root",
-            "TTree_name": "T_s1tmv_NOMINAL",
+            "ttree": "T_s1tmv_NOMINAL",
             "cutfile": "../options/DTA_cuts/dta_full_mu.txt",
             # "regen_histograms": False,
             "label": r"Inclusive $W\rightarrow\tau\nu\rightarrow\mu\nu$",
         },
-        "wtaunu_inc_e_dta": {
+        "wtaunu_inc_e": {
             "data_path": DTA_PATH + "/user.kghorban.Sh_2211_Wtaunu_L*/*.root",
-            "TTree_name": "T_s1tev_NOMINAL",
+            "ttree": "T_s1tev_NOMINAL",
             "cutfile": "../options/DTA_cuts/dta_full_e.txt",
             # "regen_histograms": False,
             "label": r"Inclusive $W\rightarrow\tau\nu\rightarrow e\nu$",
         },
-        "wtaunu_inc_h_dta": {
+        "wtaunu_inc_h": {
             "data_path": DTA_PATH_H,
-            "TTree_name": "T_s1thv_NOMINAL",
+            "ttree": "T_s1thv_NOMINAL",
             "cutfile": "../options/DTA_cuts/dta_full_had.txt",
             # "regen_histograms": True,
             "label": r"Inclusive $W\rightarrow\tau\nu\rightarrow\mathrm{had}\nu$",
         },
         # low-mass (inclusive with mass cut)
-        "wtaunu_lm_mu_dta": {
+        "wtaunu_lm_mu": {
             "data_path": DTA_PATH + "/user.kghorban.Sh_2211_Wtaunu_L*/*.root",
-            "TTree_name": "T_s1tmv_NOMINAL",
+            "ttree": "T_s1tmv_NOMINAL",
             "cutfile": "../options/DTA_cuts/dta_full_mu.txt",
             "hard_cut": "TruthBosonM < 120",
             # "regen_histograms": False,
             "label": r"$m_W < 120$ $W\rightarrow\tau\nu\rightarrow\mu\nu$",
-            "merge_into": "wtaunu_mu_dta",
+            "merge_into": "wtaunu_mu",
         },
-        "wtaunu_lm_e_dta": {
+        "wtaunu_lm_e": {
             "data_path": DTA_PATH + "/user.kghorban.Sh_2211_Wtaunu_L*/*.root",
-            "TTree_name": "T_s1tev_NOMINAL",
+            "ttree": "T_s1tev_NOMINAL",
             "cutfile": "../options/DTA_cuts/dta_full_e.txt",
             "hard_cut": "TruthBosonM < 120",
             # "regen_histograms": False,
             "label": r"$m_W < 120$ $W\rightarrow\tau\nu\rightarrow e\nu$",
-            "merge_into": "wtaunu_e_dta",
+            "merge_into": "wtaunu_e",
         },
-        "wtaunu_lm_h_dta": {
+        "wtaunu_lm_h": {
             "data_path": DTA_PATH_H,
-            "TTree_name": "T_s1thv_NOMINAL",
+            "ttree": "T_s1thv_NOMINAL",
             "cutfile": "../options/DTA_cuts/dta_full_had.txt",
             "hard_cut": "TruthBosonM < 120",
             # "regen_histograms": True,
             "label": r"$m_W < 120$ $W\rightarrow\tau\nu\rightarrow\mathrm{had}\nu$",
-            "merge_into": "wtaunu_h_dta",
+            "merge_into": "wtaunu_h",
         },
         # high-mass
-        "wtaunu_hm_m_dta": {
+        "wtaunu_hm_m": {
             "data_path": DTA_PATH_HM,
-            "TTree_name": "T_s1tmv_NOMINAL",
+            "ttree": "T_s1tmv_NOMINAL",
             "cutfile": "../options/DTA_cuts/dta_full_mu.txt",
             # "regen_histograms": False,
             "label": r"$m_W > 120$ $W\rightarrow\tau\nu\rightarrow\mu\nu$",
             "hard_cut": "TruthBosonM > 120",
-            "merge_into": "wtaunu_mu_dta",
+            "merge_into": "wtaunu_mu",
         },
-        "wtaunu_hm_e_dta": {
+        "wtaunu_hm_e": {
             "data_path": DTA_PATH_HM,
-            "TTree_name": "T_s1tev_NOMINAL",
+            "ttree": "T_s1tev_NOMINAL",
             "cutfile": "../options/DTA_cuts/dta_full_e.txt",
             # "regen_histograms": False,
             "label": r"$m_W > 120$ $W\rightarrow\tau\nu\rightarrow e\nu$",
             "hard_cut": "TruthBosonM > 120",
-            "merge_into": "wtaunu_e_dta",
+            "merge_into": "wtaunu_e",
         },
-        "wtaunu_hm_h_dta": {
+        "wtaunu_hm_h": {
             "data_path": DTA_PATH_HM,
-            "TTree_name": "T_s1thv_NOMINAL",
+            "ttree": "T_s1thv_NOMINAL",
             "cutfile": "../options/DTA_cuts/dta_full_had.txt",
             # "regen_histograms": False,
             "label": r"$m_W > 120$ $W\rightarrow\tau\nu\rightarrow\mathrm{had}\nu$",
             "hard_cut": "TruthBosonM > 120",
-            "merge_into": "wtaunu_h_dta",
+            "merge_into": "wtaunu_h",
         },
     }
 
@@ -97,50 +98,55 @@ if __name__ == "__main__":
         datasets,
         data_dir=DATA_OUT_DIR,
         year="2015+2016",
-        # regen_histograms=True,
+        regen_histograms=True,
         analysis_label="control_plots",
         lepton="tau",
         dataset_type="dta",
         log_level=10,
         log_out="both",
+        binnings=override_binnings,
     )
+    my_analysis["wtaunu_h"].label = r"$W\rightarrow\tau\nu\rightarrow\mathrm{had}\nu$"
+    my_analysis["wtaunu_mu"].label = r"$W\rightarrow\tau\nu\rightarrow\mu\nu$"
+    my_analysis["wtaunu_e"].label = r"$W\rightarrow\tau\nu\rightarrow e\nu$"
     my_analysis.cutflow_printout(latex=True)
 
     # some manual overlays
     my_analysis.plot_hist(
-        ["wtaunu_inc_e_dta", "wtaunu_e_dta"],
+        ["wtaunu_inc_e", "wtaunu_e"],
         var="TruthBosonM",
         logx=True,
         logy=True,
         stats_box=True,
+        ratio_axlim=1.5,
+        ratio_fit=True,
     )
     my_analysis.plot_hist(
-        ["wtaunu_inc_mu_dta", "wtaunu_mu_dta"],
+        ["wtaunu_inc_mu", "wtaunu_mu"],
         var="TruthBosonM",
         logx=True,
         logy=True,
         stats_box=True,
+        ratio_axlim=1.5,
+        ratio_fit=True,
     )
     my_analysis.plot_hist(
-        ["wtaunu_inc_h_dta", "wtaunu_h_dta"],
+        ["wtaunu_inc_h", "wtaunu_h"],
         var="TruthBosonM",
         logx=True,
         logy=True,
         stats_box=True,
+        ratio_axlim=1.5,
+        ratio_fit=True,
     )
 
     # HISTORGRAMS
     # ==================================================================================================================
     # Truth
     # -----------------------------------
-    datasets["wtaunu_h_dta"] = {
-        "label": r"Full $W\rightarrow\tau\nu\rightarrow \mathrm{had}\mu\nu$"
-    }
-    datasets["wtaunu_e_dta"] = {"label": r"Full $W\rightarrow\tau\nu\rightarrow e\nu$"}
-    datasets["wtaunu_mu_dta"] = {"label": r"Full $W\rightarrow\tau\nu\rightarrow \mu\nu$"}
-    for dataset_name, dataset in datasets.items():
+    for dataset in ["wtaunu_h", "wtaunu_mu", "wtaunu_e"]:
         default_args = dict(
-            datasets=dataset_name, title=dataset["label"], stats_box=True, ratio_axlim=1.5
+            datasets=dataset, title=my_analysis[dataset].label, stats_box=True, ratio_axlim=1.5
         )
 
         my_analysis.plot_hist(

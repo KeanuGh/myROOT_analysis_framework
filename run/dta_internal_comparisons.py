@@ -340,6 +340,14 @@ if __name__ == "__main__":
         **ratio_args,
     )
 
+    my_analysis.plot_hist(
+        flavour_ds,
+        "MTW",
+        **mass_args,
+        **reco_weighted_args,
+        **ratio_args,
+    )
+
     my_analysis.histogram_printout()
 
     my_analysis.logger.info("DONE.")
