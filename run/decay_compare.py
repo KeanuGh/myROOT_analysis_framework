@@ -11,16 +11,16 @@ if __name__ == "__main__":
         # mu
         "wmunu_hm": {
             "data_path": DTA_PATH + "user.kghorban.Sh_2211_Wmunu_mW_120*/*.root",
-            "ttree": {"T_s1tmv_NOMINAL", "T_s1tev_NOMINAL", "T_s1thv_NOMINAL"},
-            "cutfile": ROOT_DIR + "/options/DTA_cuts/dta_full.txt",
+            "ttree": {"T_s1thv_NOMINAL", "T_s1tev_NOMINAL", "T_s1tmv_NOMINAL"},
+            "cutfile": ROOT_DIR + "/options/DTA_cuts/dta_full_mu.txt",
             "hard_cut": "TruthBosonM > 120",
             "label": r"high-mass $W\rightarrow\mu\nu$",
             "merge_into": "wmunu",
         },
         "wmunu_lm": {
             "data_path": DTA_PATH + "/user.kghorban.Sh_2211_Wmunu_maxHTpTV2*/*.root",
-            "cutfile": ROOT_DIR + "/options/DTA_cuts/dta_full.txt",
-            "ttree": {"T_s1tmv_NOMINAL", "T_s1tev_NOMINAL", "T_s1thv_NOMINAL"},
+            "cutfile": ROOT_DIR + "/options/DTA_cuts/dta_full_mu.txt",
+            "ttree": {"T_s1thv_NOMINAL", "T_s1tev_NOMINAL", "T_s1tmv_NOMINAL"},
             "hard_cut": "TruthBosonM < 120",
             "label": r"inclusive $W\rightarrow\mu\nu$",
             "merge_into": "wmunu",
@@ -29,16 +29,16 @@ if __name__ == "__main__":
         # e
         "wenu_hm": {
             "data_path": DTA_PATH + "user.kghorban.Sh_2211_Wenu_mW_120*/*.root",
-            "ttree": {"T_s1tmv_NOMINAL", "T_s1tev_NOMINAL", "T_s1thv_NOMINAL"},
-            "cutfile": ROOT_DIR + "/options/DTA_cuts/dta_full.txt",
+            "ttree": {"T_s1thv_NOMINAL", "T_s1tev_NOMINAL", "T_s1tmv_NOMINAL"},
+            "cutfile": ROOT_DIR + "/options/DTA_cuts/dta_full_e.txt",
             "hard_cut": "TruthBosonM > 120",
             "label": r"high-mass $W\rightarrow e\nu$",
             "merge_into": "wenu",
         },
         "wenu_lm": {
             "data_path": DTA_PATH + "/user.kghorban.Sh_2211_Wenu_maxHTpTV2*/*.root",
-            "cutfile": ROOT_DIR + "/options/DTA_cuts/dta_full.txt",
-            "ttree": {"T_s1tmv_NOMINAL", "T_s1tev_NOMINAL", "T_s1thv_NOMINAL"},
+            "cutfile": ROOT_DIR + "/options/DTA_cuts/dta_full_e.txt",
+            "ttree": {"T_s1thv_NOMINAL", "T_s1tev_NOMINAL", "T_s1tmv_NOMINAL"},
             "hard_cut": "TruthBosonM < 120",
             "label": r"inclusive $W\rightarrow e\nu$",
             "merge_into": "wenu",
@@ -47,16 +47,16 @@ if __name__ == "__main__":
         # tau
         "wtaunu_hm": {
             "data_path": DTA_PATH + "user.kghorban.Sh_2211_Wtaunu_mW_120*/*.root",
-            "ttree": {"T_s1tmv_NOMINAL", "T_s1tev_NOMINAL", "T_s1thv_NOMINAL"},
-            "cutfile": ROOT_DIR + "/options/DTA_cuts/dta_full.txt",
+            "ttree": {"T_s1thv_NOMINAL", "T_s1tev_NOMINAL", "T_s1tmv_NOMINAL"},
+            "cutfile": ROOT_DIR + "/options/DTA_cuts/dta_full_had.txt",
             "hard_cut": "TruthBosonM > 120",
             "label": r"high-mass $W\rightarrow\tau\nu$",
             "merge_into": "wtaunu",
         },
         "wtaunu_lm": {
             "data_path": DTA_PATH + "/user.kghorban.Sh_2211_Wtaunu_*_maxHTpTV2*/*.root",
-            "cutfile": ROOT_DIR + "/options/DTA_cuts/dta_full.txt",
-            "ttree": {"T_s1tmv_NOMINAL", "T_s1tev_NOMINAL", "T_s1thv_NOMINAL"},
+            "cutfile": ROOT_DIR + "/options/DTA_cuts/dta_full_had.txt",
+            "ttree": {"T_s1thv_NOMINAL", "T_s1tev_NOMINAL", "T_s1tmv_NOMINAL"},
             "hard_cut": "TruthBosonM < 120",
             "label": r"inclusive $W\rightarrow\tau\nu$",
             "merge_into": "wtaunu",
@@ -67,11 +67,10 @@ if __name__ == "__main__":
         datasets_dict,
         data_dir=DATA_OUT_DIR,
         year="2015+2016",
-        regen_histograms=True,
+        # regen_histograms=True,
         analysis_label="decay_compare",
-        lepton="tau",
         dataset_type="dta",
-        log_level=10,
+        # log_level=10,
         log_out="both",
     )
     analysis["wtaunu"].label = r"$W\rightarrow\tau\nu$"
@@ -86,6 +85,7 @@ if __name__ == "__main__":
     # -----------------------------------
     # argument dicts
     datasets = ["wtaunu", "wmunu", "wenu"]
+    lumi_str = r"truth - 36.2fb$^{-1}$"
 
     ratio_args = {
         "ratio_axlim": 1.5,
@@ -104,26 +104,6 @@ if __name__ == "__main__":
         "weight": "reco_weight",
     }
 
-    # What's up with this one??
-    analysis.plot_hist(
-        "wmunu_hm",
-        "TruthBosonM",
-        **mass_args,
-        **truth_weighted_args,
-        **ratio_args,
-        title="wmunu_hm",
-    )
-
-    # What's up with this one??
-    analysis.plot_hist(
-        "wmunu_inc",
-        "TruthBosonM",
-        **mass_args,
-        **truth_weighted_args,
-        **ratio_args,
-        title="wmunu_inc",
-    )
-
     # TRUTH
     # -----------------------------------
     analysis.plot_hist(
@@ -132,7 +112,7 @@ if __name__ == "__main__":
         **mass_args,
         **truth_weighted_args,
         **ratio_args,
-        title="truth - 36.2fb$^{-1}$",
+        title=lumi_str,
     )
     # truth taus
     analysis.plot_hist(
@@ -141,14 +121,16 @@ if __name__ == "__main__":
         **mass_args,
         **truth_weighted_args,
         **ratio_args,
-        title="truth - 36.2fb$^{-1}$",
+        title=lumi_str,
+        xlabel=r"Lepton $p_T$ [GeV]"
     )
     analysis.plot_hist(
         datasets,
         ["TruthTauEta", "TruthMuonEta", "TruthEleEta"],
         **truth_weighted_args,
         **ratio_args,
-        title="truth - 36.2fb$^{-1}$",
+        title=lumi_str,
+        xlabel=r"Lepton $\eta$",
     )
     analysis.plot_hist(
         datasets,
@@ -156,7 +138,8 @@ if __name__ == "__main__":
         logy=False,
         **truth_weighted_args,
         **ratio_args,
-        title="truth - 36.2fb$^{-1}$",
+        title=lumi_str,
+        xlabel=r"Lepton $\phi$"
     )
 
     for d in datasets:
@@ -166,7 +149,15 @@ if __name__ == "__main__":
                 **mass_args,
                 **truth_weighted_args,
                 **ratio_args,
+                title=analysis[d].label + " | " + lumi_str,
             )
+            analysis.plot_hist(
+                d, var="truth_weight", logx=False, logy=True, bins=(100, -1000, 1000)
+            )
+            analysis.plot_hist(
+                d, var="reco_weight", logx=False, logy=True, bins=(100, -1000, 1000)
+            )
+
             for lepton in ["Tau", "Muon", "Ele"]:
                 analysis.plot_hist(
                     d,
@@ -174,14 +165,14 @@ if __name__ == "__main__":
                     **mass_args,
                     **truth_weighted_args,
                     **ratio_args,
-                    title=analysis[d].label
+                    title=analysis[d].label + " | " + lumi_str,
                 )
                 analysis.plot_hist(
                     d,
                     f"Truth{lepton}Eta",
                     **truth_weighted_args,
                     **ratio_args,
-                    title=analysis[d].label
+                    title=analysis[d].label + " | " + lumi_str,
                 )
                 analysis.plot_hist(
                     d,
@@ -189,7 +180,7 @@ if __name__ == "__main__":
                     logy=False,
                     **truth_weighted_args,
                     **ratio_args,
-                    title=analysis[d].label
+                    title=analysis[d].label + " | " + lumi_str,
                 )
 
 
@@ -202,21 +193,21 @@ if __name__ == "__main__":
     #     **reco_weighted_args,
     #     **ratio_args,
     # )
-    #
+    
     # analysis.plot_hist(
     #     flavour_ds,
     #     "MuonEta",
     #     **reco_weighted_args,
     #     **ratio_args,
     # )
-    #
+    
     # analysis.plot_hist(
     #     flavour_ds,
     #     "MuonPhi",
     #     **reco_weighted_args,
     #     **ratio_args,
     # )
-    #
+    
     # analysis.plot_hist(
     #     lepton_ds,
     #     "ElePt",
@@ -224,21 +215,21 @@ if __name__ == "__main__":
     #     **mass_args,
     #     **ratio_args,
     # )
-    #
+    
     # analysis.plot_hist(
     #     flavour_ds,
     #     "EleEta",
     #     **reco_weighted_args,
     #     **ratio_args,
     # )
-    #
+    
     # analysis.plot_hist(
     #     flavour_ds,
     #     "ElePhi",
     #     **reco_weighted_args,
     #     **ratio_args,
     # )
-    #
+    
     # analysis.plot_hist(
     #     lepton_ds,
     #     "TauPt",
@@ -246,21 +237,21 @@ if __name__ == "__main__":
     #     **reco_weighted_args,
     #     **ratio_args,
     # )
-    #
+    
     # analysis.plot_hist(
     #     flavour_ds,
     #     "TauEta",
     #     **reco_weighted_args,
     #     **ratio_args,
     # )
-    #
+    
     # analysis.plot_hist(
     #     flavour_ds,
     #     "TauPhi",
     #     **reco_weighted_args,
     #     **ratio_args,
     # )
-    #
+    
     # analysis.plot_hist(
     #     flavour_ds,
     #     "MET_met",
@@ -268,7 +259,7 @@ if __name__ == "__main__":
     #     **reco_weighted_args,
     #     **ratio_args,
     # )
-    #
+    
     # analysis.plot_hist(
     #     flavour_ds,
     #     "MET_phi",
@@ -276,6 +267,7 @@ if __name__ == "__main__":
     #     **ratio_args,
     # )
 
-    analysis.histogram_printout()
+    # analysis.histogram_printout()
+    analysis.save_histograms()
 
     analysis.logger.info("DONE.")

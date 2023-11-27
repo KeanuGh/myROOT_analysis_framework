@@ -297,8 +297,14 @@ class RCutflow:
             self._cutflow[i].npass = npass
 
             # recalculate efficiencies
-            self._cutflow[i].eff = 100 * npass / npass_prev
-            self._cutflow[i].ceff = 100 * npass / npass_inc
+            try:
+                self._cutflow[i].eff = 100 * npass / npass_prev
+            except ZeroDivisionError:
+                self._cutflow[i].eff = np.nan
+            try:
+                self._cutflow[i].ceff = 100 * npass / npass_inc
+            except ZeroDivisionError:
+                self._cutflow[i].eff = np.nan
 
         return self
 

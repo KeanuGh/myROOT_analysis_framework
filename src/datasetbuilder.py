@@ -756,16 +756,19 @@ class DatasetBuilder:
         if missing_cols := (set(import_cols) - set(Rdf.GetColumnNames())):
             raise ValueError("Missing column(s) in RDataFrame: \n\t" + "\n\t".join(missing_cols))
 
+        # workaround for broken wmunu file (zero'd out dataset IDs)
+        workaround_str = "(mcChannel == 0) ? 700446 : mcChannel"
+
         # create weights
         Rdf = (
             Rdf.Define(
                 "truth_weight",
-                f"(mcWeight * rwCorr * {self.lumi} * prwWeight * {self.name}_dsid_pmgf[mcChannel]) "
-                f"/ {self.name}_dsid_sumw[mcChannel]",
+                f"(mcWeight * rwCorr * {self.lumi} * prwWeight * {self.name}_dsid_pmgf[{workaround_str}]) "
+                f"/ {self.name}_dsid_sumw[{workaround_str}]",
             ).Define(
                 "reco_weight",
-                f"(weight * {self.lumi} * {self.name}_dsid_pmgf[mcChannel]) "
-                f"/ {self.name}_dsid_sumw[mcChannel]",
+                f"(weight * {self.lumi} * {self.name}_dsid_pmgf[{workaround_str}]) "
+                f"/ {self.name}_dsid_sumw[{workaround_str}]",
             )
             # .Define(
             #     "ele_weight_reco",
@@ -875,22 +878,28 @@ class DatasetBuilder:
                         )
                     )
 
+                # read first DSID from branch (there should only be one value)
                 tree = tfile.Get(ttree_name)
-                tree.GetEntry(0)  # read first DSID from branch
+                tree.GetEntry(0)
                 dsid = tree.mcChannel
                 sumw = tfile.Get("sumOfWeights").GetBinContent(4)  # bin 4 is AOD sum of weights
+
+                if dsid == 0:
+                    self.logger.warn("Passed a '0' DSID")
+                    # workaround for broken wmunu samples
+                    if "Sh_2211_Wmunu_mW_120_ECMS_BFilter" in str(file):
+                        self.logger.warn(f"Working around broken DSID for file {file}, setting DSID to 700446")
+                        dsid = 700446
+                    else:
+                        self.logger.error(f"Unknown DSID for file {file}, THIS WILL LEAD TO A BROKEN DATASET!!!")
+
+                self.logger.debug(f"dsid: {dsid}: sumw {sumw} for file {file}")
                 if dsid not in dsid_sumw:
                     dsid_sumw[dsid] = sumw
                 else:
                     dsid_sumw[dsid] += sumw
 
             if prev_dsid != dsid:  # do only for one dsid
-                self.logger.debug(f"{dsid}: {file}")
-
-                if dsid == 0:
-                    self.logger.warn("Passed a '0' DSID")
-                    continue                
-
                 if not PMG_tool.check_dsid(dsid):
                     raise self.logger.error(f"Unknown dataset ID: {dsid}")
 

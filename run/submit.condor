@@ -1,13 +1,13 @@
 universe = vanilla
 executable = ./run.sh
-log = ../outputs/decay_compare/condor.log
-output = ../outputs/decay_compare/condor.out
-error = ../outputs/decay_compare/condor.err
+log = condor.log
+output = condor.out
+error = condor.err
 notify_user = keanu.ghorbanian@cern.ch
 notification = Complete
 should_transfer_files = NO
 RequestMemory = 32G
 RequestCpus = 12
-+JobFlavour = "workday"
++JobFlavour = "espresso"
 
 queue
