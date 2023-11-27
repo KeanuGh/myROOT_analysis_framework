@@ -563,7 +563,14 @@ class Histogram1D(bh.Histogram, family=None):
         if not ax:
             _, ax = plt.subplots()
 
-        hep.histplot(hist, ax=ax, yerr=yerr, w2=hist.sumw2() if w2 else None, **kwargs)
+        hep.histplot(
+            H=hist.bin_values(),
+            bins=hist.bin_edges,
+            ax=ax,
+            yerr=yerr,
+            w2=hist.sumw2() if w2 else None,
+            **kwargs,
+        )
 
         if stats_box:
             # dumb workaround to avoid the stats boxes from overlapping eachother

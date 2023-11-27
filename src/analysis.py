@@ -46,7 +46,16 @@ class Analysis:
     When calling a method that applies to only one dataset, naming the dataset in argument ds_name is optional.
     """
 
-    __slots__ = "name", "paths", "histograms", "logger", "datasets", "global_lumi", "_output_dir", "cmap"
+    __slots__ = (
+        "name",
+        "paths",
+        "histograms",
+        "logger",
+        "datasets",
+        "global_lumi",
+        "_output_dir",
+        "cmap",
+    )
 
     def __init__(
         self,
@@ -60,7 +69,6 @@ class Analysis:
         timedatelog: bool = True,
         separate_loggers: bool = False,
         regen_histograms: bool = False,
-        cmap: str = "tab10",
         **kwargs,
     ):
         """
@@ -75,7 +83,6 @@ class Analysis:
                (useful to turn off for testing or you'll be flooded with log files)
         :param separate_loggers: Whether each dataset should output logs to separate log files
         :param regen_histograms: Whether to regenerate all histograms for all datasets (can be applied separately)
-        :param cmap: specify default matplotlib colormap
         :param kwargs: Options arguments to pass to all dataset builders
         """
         self.name = analysis_label
@@ -120,10 +127,6 @@ class Analysis:
         else:
             self.global_lumi = global_lumi
         self.logger.debug(f"Set global luminosity scale to {self.global_lumi} pb-1")
-        
-        self.cmap = cmap
-        plt.set_cmap(cmap)
-        self.logger.debug(f"using color map: '{cmap}'")
 
         # BUILD DATASETS
         # ============================
@@ -566,8 +569,26 @@ class Analysis:
         if isinstance(var, str):
             var = [var]
 
+        # figure out if we should loop over datasets or variables or both
+        varloop = False
+        datasetloop = False
+        if len(datasets) > 1:
+            if (len(datasets) != len(var)) and (len(var) > 1):
+                raise ValueError(
+                    "Number of datasets and variables must match if passing multiple variables."
+                )
+            datasetloop = True
+            if len(var) > 1:
+                varloop = True
+            n_overlays = len(datasets)
+        elif len(var) > 1:
+            n_overlays = len(var)
+            varloop = True
+        else:
+            n_overlays = 1
+
         # no ratio if just one thing being plotted
-        if len(datasets) == 1:
+        if n_overlays == 1:
             ratio_plot = False
 
         if isinstance(normalise, str):
@@ -582,28 +603,9 @@ class Analysis:
             fig, ax = plt.subplots()
             ratio_ax = None  # just so IDE doesn't complain about missing variable
 
-        if (len(datasets) > 2) or (len(var) > 2):
+        if n_overlays > 2:
             self.logger.warning("Not enough space to display stats box. Will not display")
             stats_box = False
-
-        # figure out if we should loop over datasets or variables or both
-        varloop = False
-        datasetloop = False
-        if len(datasets) > 1:
-            if (len(datasets) != len(var)) and (len(var) > 1):
-                raise ValueError(
-                    "Number of datasets and variables must match if passing multiple variables."
-                )
-            datasetloop = True
-            if len(var) > 1:
-                varloop = True
-            n_overlays = len(datasets)
-
-        elif len(var) > 1:
-            n_overlays = len(var)
-            varloop = True
-        else:
-            n_overlays = 1
 
         if labels:
             assert len(labels) == n_overlays, (
@@ -686,7 +688,9 @@ class Analysis:
                     else f"{self[dataset].label}/{self[datasets[0]].label}"
                 )
                 # match ratio colour to plot
+                # cmap = plt.get_cmap()
                 color = ax.get_lines()[-1].get_color() if (n_overlays > 2) else "k"
+                # color = "k"
                 ratio_hist_name = (
                     name_template.format(
                         short=name_template_short.format(
