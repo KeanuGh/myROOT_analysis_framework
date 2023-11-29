@@ -8,8 +8,10 @@ from typing import Dict, List, Tuple, Iterable, Callable, Any, Sequence, Generat
 import ROOT
 import matplotlib.pyplot as plt  # type: ignore
 import pandas as pd  # type: ignore
+import numpy as np
 from numpy.typing import ArrayLike
 from tabulate import tabulate  # type: ignore
+import mplhep as hep
 
 from src.dataset import Dataset, RDataset, PDataset
 from src.datasetbuilder import DatasetBuilder, lumi_year
@@ -688,9 +690,7 @@ class Analysis:
                     else f"{self[dataset].label}/{self[datasets[0]].label}"
                 )
                 # match ratio colour to plot
-                # cmap = plt.get_cmap()
                 color = ax.get_lines()[-1].get_color() if (n_overlays > 2) else "k"
-                # color = "k"
                 ratio_hist_name = (
                     name_template.format(
                         short=name_template_short.format(
@@ -774,6 +774,161 @@ class Analysis:
         self.logger.info(f"Saved plot of {var} to {filename}")
         plt.close(fig)
         return hists
+    
+    def stack_plot(
+        self,
+        datasets: str | Sequence[str],
+        var: str | Sequence[str],
+        yerr: ArrayLike | str = True,
+        labels: List[str] | None = None,
+        normalise: float | bool = False,
+        logx: bool = False,
+        logy: bool = True,
+        xlabel: str = "",
+        ylabel: str = "",
+        title: str = "",
+        scale_by_bin_width: bool = False,
+        x_axlim: Tuple[float, float] | None = None,
+        y_axlim: Tuple[float, float] | None = None,
+        filename: str | Path | None = None,
+        cut: bool = False,
+        suffix: str = "",
+        prefix: str = "",
+        **kwargs,
+    ) -> None:
+        self.logger.info(f"Plotting stack plot of {var} in {datasets}")
+
+        # naming template for file/histogram name
+        name_template = (
+            ((prefix + "_") if prefix else "")  # prefix
+            + "{short}"
+            + ("_NORMED" if normalise else "")  # normalisation flag
+            + ("_BIN_SCALED" if scale_by_bin_width else "")
+            + "_STACKED"
+            + (("_" + suffix) if suffix else "")  # suffix
+        )
+        name_template_short = (
+            "{dataset}"  # name of dataset(s)
+            + "_{variable}"  # name of variable(s)
+            + ("_cut" if cut else "")  # cut flag
+        )
+
+        if isinstance(datasets, str):
+            datasets = [datasets]
+        if isinstance(labels, str):
+            labels = [labels]
+        if isinstance(var, str):
+            var = [var]
+        
+        if (len(datasets) > 1) and (len(var) > 1) and (len(datasets) != len(var)):
+            raise ValueError(
+                f"If both multiple datasets and variables passed, lengths must match."
+                f"Got {len(datasets)} datasets and {len(var)} variables"
+            )
+
+        # figure out if we should loop over datasets or variables or both
+        varloop = False
+        datasetloop = False
+        if len(datasets) > 1:
+            if (len(datasets) != len(var)) and (len(var) > 1):
+                raise ValueError(
+                    "Number of datasets and variables must match if passing multiple variables."
+                )
+            datasetloop = True
+            if len(var) > 1:
+                varloop = True
+            n_stacks = len(datasets)
+        elif len(var) > 1:
+            n_stacks = len(var)
+            varloop = True
+        else:
+            n_stacks = 1
+
+        # work out histograms to stack
+        hist_list = []
+        label_list = []
+        err_list = []
+        for i in range(n_stacks):
+            dataset = datasets[i] if datasetloop else datasets[0]
+            varname = var[i] if varloop else var[0]
+
+            label = labels[i] if labels else self[dataset].label
+            label_list.append(label)
+
+            # if passing a histogram name directly as the variable
+            if cut and varname + "_cut" in self.histograms:
+                hist_name_internal = varname + "_cut"
+            elif cut and varname + "_cut" in self[dataset].histograms:
+                hist_name_internal = dataset + "_" + varname + "_cut"
+
+            elif varname in self.histograms:
+                hist_name_internal = varname
+            elif varname in self[dataset].histograms:
+                hist_name_internal = dataset + "_" + varname
+            elif name_template_short in self.histograms:
+                hist_name_internal = varname
+            else:
+                raise ValueError("No histogram for {varname} in {dataset}")
+
+            hist = Histogram1D(th1=self.histograms[hist_name_internal], logger=self.logger)
+            if scale_by_bin_width:
+                hist /= hist.bin_widths
+
+            # check bins
+            if len(hist_list) > 1:
+                assert np.allclose(hist.bin_edges, hist_list[-1].bin_edges), f"Bins {hist} and {hist_list[-1]} not equal!"
+
+            hist_list.append(hist)
+            err_list.append(hist.error())
+
+        # plot
+        fig, ax = plt.subplots()
+        hep.histplot(
+            H=[h.bin_values() for h in hist_list],
+            bins=hist_list[-1].bin_edges, # SHOULD all be the same so just use the last one
+            ax=ax,
+            yerr=err_list if yerr is True else yerr,
+            label=label_list,
+            stack=True,
+            histtype="step",
+            **kwargs,
+        )
+
+        plotting_tools.set_axis_options(
+            axis=ax,
+            var_name=var,
+            xlim=x_axlim if x_axlim else (hist.bin_edges[0], hist.bin_edges[-1]),
+            ylim=y_axlim,
+            xlabel=xlabel,
+            ylabel=ylabel,
+            title=title,
+            logx=logx,
+            logy=logy,
+            diff_xs=scale_by_bin_width,
+        )
+        if x_axlim:
+            ax.set_xlim(*x_axlim)
+        if y_axlim:
+            ax.set_ylim(*y_axlim)
+        ax.legend(fontsize=10, loc="upper right")
+
+        if filename:
+            filename = self.paths.plot_dir / filename
+        else:
+            if isinstance(var, str):
+                varname = var
+            else:
+                varname = "_".join(var)
+            filename = self.paths.plot_dir / (
+                name_template.format(
+                    short=name_template_short.format(dataset="_".join(datasets), variable=varname)
+                )
+                + ".png"
+            )
+
+        fig.savefig(filename, bbox_inches="tight")
+        self.logger.info(f"Saved plot of {var} to {filename}")
+        plt.close(fig)
 
     @check_single_dataset
     def gen_cutflow_hist(self, ds_name: str, **kwargs) -> None:

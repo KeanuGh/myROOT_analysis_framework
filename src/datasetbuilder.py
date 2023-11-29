@@ -856,6 +856,9 @@ class DatasetBuilder:
 
         return Rdf
 
+    # ===============================
+    # ========== HELPERS ============
+    # ===============================
     def _get_dsid_values(self, path: str | Path, ttree_name: str = "") -> pd.DataFrame:
         """Return DataFrame containing sumw, xs and PMG factor per DSID"""
         # PNG factor is cross-section * kfactor * filter eff.
@@ -923,10 +926,6 @@ class DatasetBuilder:
 
         return df
 
-
-    # ===============================
-    # ========== HELPERS ============
-    # ===============================
     def __add_necessary_analysistop_variables(
         self, tree_dict: Dict[str, Set[str]]
     ) -> Dict[str, Set[str]]:

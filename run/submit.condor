@@ -8,6 +8,6 @@ notification = Complete
 should_transfer_files = NO
 RequestMemory = 32G
 RequestCpus = 12
-+JobFlavour = "espresso"
++JobFlavour = "microcentury"
 
 queue
