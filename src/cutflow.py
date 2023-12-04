@@ -14,7 +14,7 @@ import numpy as np
 import pandas as pd  # type: ignore
 from tabulate import tabulate  # type: ignore
 
-from src.cutfile import Cut, Cutfile
+from src.cutfile import Cut
 from src.logger import get_logger
 
 
@@ -342,9 +342,9 @@ class RCutflow:
         for i in range(1, len(self._cutflow)):
             self._cutflow[i].ceff = 100 * self._cutflow[i].npass / self._cutflow[0].npass
 
-    def import_cutflow(self, hist: ROOT.TH1I, cutfile: Cutfile) -> None:
+    def import_cutflow(self, hist: ROOT.TH1I, cuts: List[Cut]) -> None:
         """Import cutflow from histogram and cutfile"""
-        self._cutflow = cutflow_from_hist_and_cutfile(hist, cutfile)
+        self._cutflow = cutflow_from_hist_and_cuts(hist, cuts)
 
     def print(self, latex_path: Path | None = None) -> None:
         if latex_path:
@@ -414,11 +414,11 @@ class RCutflow:
         return hist
 
 
-def cutflow_from_hist_and_cutfile(hist: ROOT.TH1I, cutfile: Cutfile) -> List[CutflowItem]:
+def cutflow_from_hist_and_cuts(hist: ROOT.TH1I, cuts: List[Cut]) -> List[CutflowItem]:
     """Create cutflow object from cutflow histogram"""
-    if hist.GetNbinsX() - 1 != len(cutfile.cuts):
+    if hist.GetNbinsX() - 1 != len(cuts):
         raise ValueError(
-            f"Number of cuts in cutfile ({len(cutfile.cuts)}) does not match number of cuts in histogram ({hist.GetNbinsX() - 1})"
+            f"Number of cuts in cutfile ({len(cuts)}) does not match number of cuts in histogram ({hist.GetNbinsX() - 1})"
         )
 
     cutflow = [
@@ -438,7 +438,7 @@ def cutflow_from_hist_and_cutfile(hist: ROOT.TH1I, cutfile: Cutfile) -> List[Cut
     # 1    cut2     inc.
     # 2             cut1
     # 3             cut2
-    for i, cut in enumerate(cutfile.cuts):
+    for i, cut in enumerate(cuts):
         npass = hist.GetBinContent(i + 2)
         try:
             eff = 100 * npass / hist.GetBinContent(i + 1)

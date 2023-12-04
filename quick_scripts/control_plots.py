@@ -3,6 +3,7 @@ from typing import Dict
 import matplotlib.pyplot as plt  # type: ignore
 
 from histogram import Histogram1D  # type: ignore
+from run import cuts
 from src.analysis import Analysis
 from utils.binnings import override_binnings
 
@@ -18,21 +19,21 @@ if __name__ == "__main__":
         "wtaunu_inc_mu": {
             "data_path": DTA_PATH + "/user.kghorban.Sh_2211_Wtaunu_L*/*.root",
             "ttree": "T_s1tmv_NOMINAL",
-            "cutfile": "../options/DTA_cuts/dta_full_mu.txt",
+            "cuts": cuts.cuts_truth_mu + cuts.cuts_reco_mu,
             # "regen_histograms": False,
             "label": r"Inclusive $W\rightarrow\tau\nu\rightarrow\mu\nu$",
         },
         "wtaunu_inc_e": {
             "data_path": DTA_PATH + "/user.kghorban.Sh_2211_Wtaunu_L*/*.root",
             "ttree": "T_s1tev_NOMINAL",
-            "cutfile": "../options/DTA_cuts/dta_full_e.txt",
+            "cuts": cuts.cuts_truth_e + cuts.cuts_reco_e,
             # "regen_histograms": False,
             "label": r"Inclusive $W\rightarrow\tau\nu\rightarrow e\nu$",
         },
         "wtaunu_inc_h": {
             "data_path": DTA_PATH_H,
             "ttree": "T_s1thv_NOMINAL",
-            "cutfile": "../options/DTA_cuts/dta_full_had.txt",
+            "cuts": cuts.cuts_truth_had + cuts.cuts_reco_had,
             # "regen_histograms": True,
             "label": r"Inclusive $W\rightarrow\tau\nu\rightarrow\mathrm{had}\nu$",
         },
@@ -40,7 +41,7 @@ if __name__ == "__main__":
         "wtaunu_lm_mu": {
             "data_path": DTA_PATH + "/user.kghorban.Sh_2211_Wtaunu_L*/*.root",
             "ttree": "T_s1tmv_NOMINAL",
-            "cutfile": "../options/DTA_cuts/dta_full_mu.txt",
+            "cuts": cuts.cuts_truth_mu + cuts.cuts_reco_mu,
             "hard_cut": "TruthBosonM < 120",
             # "regen_histograms": False,
             "label": r"$m_W < 120$ $W\rightarrow\tau\nu\rightarrow\mu\nu$",
@@ -49,7 +50,7 @@ if __name__ == "__main__":
         "wtaunu_lm_e": {
             "data_path": DTA_PATH + "/user.kghorban.Sh_2211_Wtaunu_L*/*.root",
             "ttree": "T_s1tev_NOMINAL",
-            "cutfile": "../options/DTA_cuts/dta_full_e.txt",
+            "cuts": cuts.cuts_truth_e + cuts.cuts_reco_e,
             "hard_cut": "TruthBosonM < 120",
             # "regen_histograms": False,
             "label": r"$m_W < 120$ $W\rightarrow\tau\nu\rightarrow e\nu$",
@@ -58,7 +59,7 @@ if __name__ == "__main__":
         "wtaunu_lm_h": {
             "data_path": DTA_PATH_H,
             "ttree": "T_s1thv_NOMINAL",
-            "cutfile": "../options/DTA_cuts/dta_full_had.txt",
+            "cuts": cuts.cuts_truth_had + cuts.cuts_reco_had,
             "hard_cut": "TruthBosonM < 120",
             # "regen_histograms": True,
             "label": r"$m_W < 120$ $W\rightarrow\tau\nu\rightarrow\mathrm{had}\nu$",
@@ -68,7 +69,7 @@ if __name__ == "__main__":
         "wtaunu_hm_m": {
             "data_path": DTA_PATH_HM,
             "ttree": "T_s1tmv_NOMINAL",
-            "cutfile": "../options/DTA_cuts/dta_full_mu.txt",
+            "cuts": cuts.cuts_truth_mu + cuts.cuts_reco_mu,
             # "regen_histograms": False,
             "label": r"$m_W > 120$ $W\rightarrow\tau\nu\rightarrow\mu\nu$",
             "hard_cut": "TruthBosonM > 120",
@@ -77,7 +78,7 @@ if __name__ == "__main__":
         "wtaunu_hm_e": {
             "data_path": DTA_PATH_HM,
             "ttree": "T_s1tev_NOMINAL",
-            "cutfile": "../options/DTA_cuts/dta_full_e.txt",
+            "cuts": cuts.cuts_truth_e + cuts.cuts_reco_e,
             # "regen_histograms": False,
             "label": r"$m_W > 120$ $W\rightarrow\tau\nu\rightarrow e\nu$",
             "hard_cut": "TruthBosonM > 120",
@@ -86,7 +87,7 @@ if __name__ == "__main__":
         "wtaunu_hm_h": {
             "data_path": DTA_PATH_HM,
             "ttree": "T_s1thv_NOMINAL",
-            "cutfile": "../options/DTA_cuts/dta_full_had.txt",
+            "cuts": cuts.cuts_truth_had + cuts.cuts_reco_had,
             # "regen_histograms": False,
             "label": r"$m_W > 120$ $W\rightarrow\tau\nu\rightarrow\mathrm{had}\nu$",
             "hard_cut": "TruthBosonM > 120",
@@ -98,9 +99,10 @@ if __name__ == "__main__":
         datasets,
         data_dir=DATA_OUT_DIR,
         year="2015+2016",
-        # regen_histograms=True,
+        regen_histograms=True,
         analysis_label="control_plots",
         lepton="tau",
+        extract_vars=cuts.import_vars_reco | cuts.import_vars_truth,
         dataset_type="dta",
         log_level=10,
         log_out="both",

@@ -1,7 +1,7 @@
 [CUTS]
 # Name	Variable	</>	Cut (in GeV if applicable) tree
 # truth
-tau->e	TruthTau_decay_mode == 0
+tau->had	TruthTau_decay_mode == 0
 $p_T^\tau > 20$	(isnan(TruthTauPt) || TruthTauPt > 20)
 $|\eta^\tau| < 1.37 || 1.52 < |\eta^\tau| < 2.47$	(isnan(TruthTauEta) || (abs(TruthTauEta) < 1.37 || 1.52 < abs(TruthTauEta) < 2.47))
 

@@ -23,6 +23,27 @@ class Cut:
     tree: Set[str] = field(default_factory=set)
     is_reco: bool = False
 
+    def __post_init__(self):
+        # check for variables in the cut string
+        split_string = set(re.findall(r"\w+|[.,!?;]", self.cutstr))
+        self.var = all_known_vars & split_string  # find all known variables in cutstring
+
+        if len(self.var) == 1:
+            self.is_reco = variable_data[next(iter(self.var))]["tag"] == VarTag.RECO
+
+        elif len(self.var) > 1:  # make sure all variables have the same tag (truth or reco)
+            tags = {variable_data[v]["tag"] for v in self.var}
+            if VarTag.META in tags:
+                raise Exception(f"Meta variable cut {self.name}")
+            elif len(tags) > 1:
+                raise Exception(f"Mixing reco/truth variables in cut {self.name}")
+            else:
+                self.is_reco = VarTag.RECO in tags
+
+        # not important for inclusive cut
+        elif self.cutstr != "-":
+            raise ValueError(f"No known variable in string '{self.cutstr}' for cut '{self.name}'\n")
+
     def __str__(self) -> str:
         return f"{self.name}: {self.cutstr}"
 
@@ -115,29 +136,7 @@ class Cutfile:
                 f"Check cutfile. Line {cutline} is badly formatted. Got {cutline_split}."
             )
 
-        # check for variables in the cut string
-        split_string = set(re.findall(r"\w+|[.,!?;]", cut_str))
-        cutvars = all_known_vars & split_string  # find all known variables in cutstring
-
-        if len(cutvars) == 1:
-            is_reco = variable_data[next(iter(cutvars))]["tag"] == VarTag.RECO
-
-        elif len(cutvars) > 1:  # make sure all variables have the same tag (truth or reco)
-            tags = {variable_data[v]["tag"] for v in cutvars}
-            if VarTag.META in tags:
-                raise Exception(f"Meta variable cut {cutline}")
-            elif len(tags) > 1:
-                raise Exception(f"Mixing reco/truth variables in cut {cutline}")
-            else:
-                is_reco = VarTag.RECO in tags
-
-        else:
-            raise ValueError(
-                f"No known variable in string '{cut_str}' for line '{cutline}'\n"
-                f"Read {cutline_split}"
-            )
-
-        return Cut(name=name, cutstr=cut_str, var=cutvars, tree=tree, is_reco=is_reco)
+        return Cut(name=name, cutstr=cut_str)
 
     def parse_cutfile(
         self, path: str | Path | None = None, sep="\t"

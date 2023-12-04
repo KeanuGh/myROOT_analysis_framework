@@ -7,13 +7,13 @@ from typing import Dict, List, Tuple, Iterable, Callable, Any, Sequence, Generat
 
 import ROOT
 import matplotlib.pyplot as plt  # type: ignore
-import pandas as pd  # type: ignore
+import mplhep as hep
 import numpy as np
+import pandas as pd  # type: ignore
 from numpy.typing import ArrayLike
 from tabulate import tabulate  # type: ignore
-import mplhep as hep
 
-from src.dataset import Dataset, RDataset, PDataset
+from src.dataset import Dataset, RDataset  # PDataset
 from src.datasetbuilder import DatasetBuilder, lumi_year
 from src.histogram import Histogram1D
 from src.logger import get_logger
@@ -211,8 +211,8 @@ class Analysis:
                 if merged_ds not in self.datasets:
                     self[merged_ds] = (
                         RDataset(name=merged_ds, label=dataset.label)
-                        if isinstance(dataset, RDataset)
-                        else PDataset(name=merged_ds, label=dataset.label)
+                        # if isinstance(dataset, RDataset)
+                        # else PDataset(name=merged_ds, label=dataset.label)
                     )
 
                 for hist_name, hist in dataset.histograms.items():
@@ -774,7 +774,7 @@ class Analysis:
         self.logger.info(f"Saved plot of {var} to {filename}")
         plt.close(fig)
         return hists
-    
+
     def stack_plot(
         self,
         datasets: str | Sequence[str],
@@ -819,7 +819,7 @@ class Analysis:
             labels = [labels]
         if isinstance(var, str):
             var = [var]
-        
+
         if (len(datasets) > 1) and (len(var) > 1) and (len(datasets) != len(var)):
             raise ValueError(
                 f"If both multiple datasets and variables passed, lengths must match."
@@ -876,7 +876,9 @@ class Analysis:
 
             # check bins
             if len(hist_list) > 1:
-                assert np.allclose(hist.bin_edges, hist_list[-1].bin_edges), f"Bins {hist} and {hist_list[-1]} not equal!"
+                assert np.allclose(
+                    hist.bin_edges, hist_list[-1].bin_edges
+                ), f"Bins {hist} and {hist_list[-1]} not equal!"
 
             hist_list.append(hist)
             err_list.append(hist.error())
@@ -885,7 +887,7 @@ class Analysis:
         fig, ax = plt.subplots()
         hep.histplot(
             H=[h.bin_values() for h in hist_list],
-            bins=hist_list[-1].bin_edges, # SHOULD all be the same so just use the last one
+            bins=hist_list[-1].bin_edges,  # SHOULD all be the same so just use the last one
             ax=ax,
             yerr=err_list if yerr is True else yerr,
             label=label_list,

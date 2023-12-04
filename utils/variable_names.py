@@ -92,6 +92,7 @@ variable_data: Dict[str, Branch] = {
         "tag": VarTag.META,
     },
     # DTA-specific
+    "mcChannel": {"name": "Dataset ID", "units": "", "tag": VarTag.META},
     "mcWeight": {
         "name": "mc weight",
         "units": "",

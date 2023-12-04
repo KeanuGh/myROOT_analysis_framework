@@ -1,7 +1,7 @@
 [CUTS]
 # Name	Variable	</>	Cut (in GeV if applicable) tree
 # truth
-tau->e	TruthTau_decay_mode == 1
+tau->mu	TruthTau_decay_mode == 1
 $p_T^\mu > 7$	(isnan(TruthMuonPt) || TruthMuonPt > 7)
 $|\eta_\mathrm{truth}^\mu| < 2.5$	(isnan(TruthMuonEta) || abs(TruthMuonEta) < 2.5)
 $p_T^\tau > 20$	(isnan(TruthTauPt) || TruthTauPt > 20)
