@@ -201,27 +201,27 @@ variable_data: Dict[str, Branch] = {
     # DERIVED KINEMATIC VARIABLES
     # =======================================================
     "mt_born": {  # boson pt
-        "name": r"Born $M^{W}_{T}$",
+        "name": r"Born $m^{W}_{T}$",
         "units": "GeV",
         "tag": VarTag.TRUTH,
     },
     "mt_bare": {  # boson pt
-        "name": r"Bare $M^{W}_{T}$",
+        "name": r"Bare $m^{W}_{T}$",
         "units": "GeV",
         "tag": VarTag.TRUTH,
     },
     "mt_dres": {  # boson pt
-        "name": r"Dressed $M^{W}_{T}$",
+        "name": r"Dressed $m^{W}_{T}$",
         "units": "GeV",
         "tag": VarTag.TRUTH,
     },
     "mu_mt_reco": {  # boson pt
-        "name": r"$M^{W}_{T}$",
+        "name": r"$m^{W}_{T}$",
         "units": "GeV",
         "tag": VarTag.RECO,
     },
     "e_mt_reco": {  # boson pt
-        "name": r"$M^{W}_{T}$",
+        "name": r"$m^{W}_{T}$",
         "units": "GeV",
         "tag": VarTag.RECO,
     },

@@ -1,11 +1,11 @@
-from typing import Dict, List
 from copy import deepcopy
 from pathlib import Path
+from typing import Dict
 
 import numpy as np
 
-from src.analysis import Analysis
 from run import cuts
+from src.analysis import Analysis
 
 DTA_PATH = Path("/eos/home-k/kghorban/DTA_OUT/2023-10-25/")
 DATA_OUT_DIR = Path("/eos/home-k/kghorban/framework_outputs/")
@@ -28,7 +28,6 @@ if __name__ == "__main__":
             "label": r"SH2211 high-mass $W\rightarrow\mu\nu$",
             "merge_into": "wmunu",
         },
-
         # e
         "wenu_lm": {
             "data_path": DTA_PATH / "user.kghorban.Sh_2211_Wenu_maxHTpTV2*/*.root",
@@ -42,7 +41,6 @@ if __name__ == "__main__":
             "label": r"SH2211 high-mass $W\rightarrow e\nu$",
             "merge_into": "wenu",
         },
-
         # tau
         "wtaunu_hm": {
             "data_path": DTA_PATH / "user.kghorban.Sh_2211_Wtaunu_mW_120*/*.root",
@@ -56,7 +54,6 @@ if __name__ == "__main__":
             "label": r"SH2211 inclusive $W\rightarrow\tau\nu$",
             "merge_into": "wtaunu",
         },
-
         # ttbar
         "ttbar": {
             "data_path": DTA_PATH / "user.kghorban.PP8_ttbar_hdamp258p75*/*.root",
@@ -69,9 +66,9 @@ if __name__ == "__main__":
     datasets_dict_sep = dict()
     for name, dataset in datasets_dict_full.items():
         if "merge_into" in dataset:
-             mergable = True
+            mergable = True
         else:
-             mergable = False
+            mergable = False
 
         # muon channel
         dataset_mu = deepcopy(dataset)
@@ -128,18 +125,18 @@ if __name__ == "__main__":
     # analysis["wtaunu"].label = r"SH2211 $W\rightarrow\tau\nu$"
     # analysis["wmunu"].label  = r"$W\rightarrow\mu\nu$"
     # analysis["wenu"].label   = r"$W\rightarrow e\nu$"
-    
+
     analysis["wtaunu_mu"].label = r"SH2211 $W\rightarrow\tau\nu$ (mu chan.)"
-    analysis["wmunu_mu"].label  = r"SH2211 $W\rightarrow\mu\nu$ (mu chan.)"
-    analysis["wenu_mu"].label   = r"SH2211 $W\rightarrow e\nu$ (mu chan.)"
+    analysis["wmunu_mu"].label = r"SH2211 $W\rightarrow\mu\nu$ (mu chan.)"
+    analysis["wenu_mu"].label = r"SH2211 $W\rightarrow e\nu$ (mu chan.)"
 
     analysis["wtaunu_e"].label = r"SH2211 $W\rightarrow\tau\nu$ (e chan.)"
-    analysis["wmunu_e"].label  = r"SH2211 $W\rightarrow\mu\nu$ (e chan.)"
-    analysis["wenu_e"].label   = r"SH2211 $W\rightarrow e\nu$ (e chan.)"
+    analysis["wmunu_e"].label = r"SH2211 $W\rightarrow\mu\nu$ (e chan.)"
+    analysis["wenu_e"].label = r"SH2211 $W\rightarrow e\nu$ (e chan.)"
 
     analysis["wtaunu_had"].label = r"SH2211 $W\rightarrow\tau\nu$ (had chan.)"
-    analysis["wmunu_had"].label  = r"SH2211 $W\rightarrow\mu\nu$ (had chan.)"
-    analysis["wenu_had"].label   = r"SH2211 $W\rightarrow e\nu$ (had chan.)"
+    analysis["wmunu_had"].label = r"SH2211 $W\rightarrow\mu\nu$ (had chan.)"
+    analysis["wenu_had"].label = r"SH2211 $W\rightarrow e\nu$ (had chan.)"
 
     # HISTORGRAMS
     # ==================================================================================================================
@@ -154,9 +151,7 @@ if __name__ == "__main__":
         "ylabel": "Entries / bin width",
         "logx": True,
     }
-    reco_weighted_args = {
-        "title": f"reco | mc16d | {analysis.global_lumi/1000:.3g}" + r"fb$^{-1}$"
-    }
+    reco_weighted_args = {"title": f"reco | mc16d | {analysis.global_lumi/1000:.3g}" + r"fb$^{-1}$"}
 
     # RECO
     # -----------------------------------
@@ -174,19 +169,19 @@ if __name__ == "__main__":
                 **mass_args,
                 **reco_weighted_args,
             )
-            
+
             analysis.stack_plot(
                 dataset_list,
                 "TauEta",
                 **reco_weighted_args,
             )
-            
+
             analysis.stack_plot(
                 dataset_list,
                 "TauPhi",
                 **reco_weighted_args,
             )
-            
+
             analysis.stack_plot(
                 dataset_list,
                 "MET_met",

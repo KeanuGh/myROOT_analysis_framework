@@ -1100,9 +1100,13 @@ class RDataset(Dataset):
 
         output_histogram_variables = self.all_vars
         n_hists = len(output_histogram_variables)
+        self.logger.info(f"Generating {n_hists} histograms...")
         if cut:
             n_hists *= 2
-        self.logger.info(f"Generating {n_hists} histograms...")
+            self.logger.info(f"Cuts applied: ")
+            filternames = list(self.filtered_df.GetFilterNames())
+            for name in filternames:
+                self.logger.info(f"\t{name}")
 
         # to contain smart pointers to TH1s
         th1_histograms: Dict[str, ROOT.RResultsPtr] = dict()

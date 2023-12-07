@@ -8,13 +8,13 @@ from typing import Dict, Set, Iterable, overload, Final, List
 
 import ROOT  # type: ignore
 import pandas as pd  # type: ignore
-#import uproot  # type: ignore
+# import uproot  # type: ignore
 from awkward import to_dataframe  # type: ignore
 
 from src.cutfile import Cutfile, Cut
 from src.dataset import Dataset, RDataset, CUT_PREFIX  # PDataset
 from src.logger import get_logger
-from utils import file_utils, ROOT_utils, PMG_tool
+from utils import ROOT_utils, PMG_tool
 from utils.var_helpers import derived_vars
 from utils.variable_names import variable_data
 
@@ -215,10 +215,10 @@ class DatasetBuilder:
             raise ValueError(
                 "Must provide cutfile, tree dict, or cuts and extract_vars to build DataFrame"
             )
-        
+
         # remove calculated vars from tree
         for tree in tree_dict:
-            tree_dict[tree] -= vars_to_calc 
+            tree_dict[tree] -= vars_to_calc
 
         # check if vars are contained in label dictionary
         self.__check_axis_labels(tree_dict, vars_to_calc)
@@ -876,11 +876,16 @@ class DatasetBuilder:
 
         # apply any hard cuts
         if self.hard_cut:
-            Rdf = Rdf.Filter(self.hard_cut)
+            Rdf = Rdf.Filter(self.hard_cut, "Hard cut: " + self.hard_cut)
 
         self.logger.info(
             f"time to build dataframe: {time.strftime('%H:%M:%S', time.gmtime(time.time() - t1))}"
         )
+
+        filternames = list(Rdf.GetFilterNames())
+        self.logger.debug("Filter names:")
+        for name in filternames:
+            self.logger.debug(f"\t{name}")
 
         return Rdf
 
