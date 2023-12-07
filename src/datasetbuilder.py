@@ -8,7 +8,7 @@ from typing import Dict, Set, Iterable, overload, Final, List
 
 import ROOT  # type: ignore
 import pandas as pd  # type: ignore
-import uproot  # type: ignore
+#import uproot  # type: ignore
 from awkward import to_dataframe  # type: ignore
 
 from src.cutfile import Cutfile, Cut
@@ -171,8 +171,10 @@ class DatasetBuilder:
         if self.dataset_type.lower() == "dta":
             self.force_rebuild = True  # TODO: rework this
 
-        if data_path and not file_utils.file_exists(data_path):
-            raise FileExistsError(f"File {data_path} not found.")
+        if len(glob.glob(str(data_path))) == 0:
+            raise FileExistsError(f"No files found in {str(data_path)}!")
+        else:
+            self.logger.info(f"{len(glob.glob(str(data_path)))} files found in {str(data_path)}")
 
         # Parsing cutfile
         if isinstance(cutfile, (str, Path)):
@@ -196,7 +198,6 @@ class DatasetBuilder:
             # separate variables to calculate and those to extract
             all_vars = {var for cut in cuts for var in cut.var} | extract_vars
             vars_to_calc = {var for var in all_vars if var in derived_vars}
-            all_vars -= vars_to_calc
             # add all variables to all ttrees
             tree_dict = {tree: all_vars for tree in self.ttree}
         elif cutfile:
@@ -214,6 +215,10 @@ class DatasetBuilder:
             raise ValueError(
                 "Must provide cutfile, tree dict, or cuts and extract_vars to build DataFrame"
             )
+        
+        # remove calculated vars from tree
+        for tree in tree_dict:
+            tree_dict[tree] -= vars_to_calc 
 
         # check if vars are contained in label dictionary
         self.__check_axis_labels(tree_dict, vars_to_calc)
@@ -341,7 +346,7 @@ class DatasetBuilder:
                 name=self.name,
                 df=df,
                 cuts=cuts,
-                all_vars=all_vars,
+                all_vars=all_vars | vars_to_calc,
                 logger=self.logger,
                 lumi=self.lumi,
                 label=self.label,
@@ -369,9 +374,9 @@ class DatasetBuilder:
     # ===============================
     def __check_axis_labels(self, tree_dict: Dict[str, Set[str]], calc_vars: Set[str]) -> None:
         """Check whether variables exist in"""
-        all_vars = {var for var_set in tree_dict.values() for var in var_set} | calc_vars
+        vars = {var for var_set in tree_dict.values() for var in var_set} | calc_vars
         if unexpected_vars := [
-            unexpected_var for unexpected_var in all_vars if unexpected_var not in variable_data
+            unexpected_var for unexpected_var in vars if unexpected_var not in variable_data
         ]:
             self.logger.warning(
                 f"Variable(s) {unexpected_vars} not contained in labels dictionary. "
@@ -773,7 +778,7 @@ class DatasetBuilder:
         )
 
         # make rdataframe
-        Rdf = ROOT_utils.init_rdataframe(self.name, data_path, ttrees)
+        Rdf = ROOT_utils.init_rdataframe(self.name, str(data_path), ttrees)
 
         # check columns exist in dataframe
         if missing_cols := (set(import_cols) - set(Rdf.GetColumnNames())):
@@ -857,12 +862,12 @@ class DatasetBuilder:
                             f"((&{col_name})->size() > 0) ? (&{col_name})->at(0) : NAN;",
                         )
                         debug_str += f" -> {Rdf.GetColumnType(col_name)}"
-                self.logger.debug(debug_str)
+                    self.logger.debug(debug_str)
 
         # calculate derived variables
         if vars_to_calc:
-            self.logger.debug(f"calculating variables: {derived_vars}...")
             for derived_var in vars_to_calc:
+                self.logger.debug(f"calculating variable: {derived_var}")
                 function = derived_vars[derived_var]["cfunc"]
                 args = derived_vars[derived_var]["var_args"]
                 func_str = f"{function}({','.join(args)})"

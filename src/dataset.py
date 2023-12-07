@@ -48,10 +48,6 @@ class Dataset(ABC):
     def __repr__(self):
         return f"{type(self)}(name={self.name}, label={self.label}, file={self.file}, ...)"
 
-    @abstractmethod
-    def __getattr__(self, item):
-        ...
-
     # Variable setting/getting
     # ===================
     @property

@@ -1,5 +1,82 @@
 from src.cutfile import Cut
 
+cuts_truth_full = [
+    Cut(
+        r"$p_T^e > 7$",
+        r"(isnan(TruthElePt) || TruthElePt > 7)",
+    ),
+    Cut(
+        r"$|\eta_\mathrm{truth}^e| < 1.37 || 1.52 < |\eta_\mathrm{truth}^e| < 2.47$",
+        r"(isnan(TruthEleEta) || (abs(TruthEleEta) < 1.37 || 1.52 < abs(TruthEleEta) < 2.47))",
+    ),
+    Cut(
+        r"$p_T^e > 7$",
+        r"(isnan(TruthMuonPt) || TruthMuonPt > 7)",
+    ),
+    Cut(
+        r"$|\eta_\mathrm{truth}^\mu| < 2.5$",
+        r"(isnan(TruthMuonEta) || abs(TruthMuonEta) < 2.5)",
+    ),
+    Cut(
+        r"$p_T^\tau > 20$",
+        r"(isnan(TruthTauPt) || TruthTauPt > 20)",
+    ),
+    Cut(
+        r"$|\eta^\tau| < 1.37 || 1.52 < |\eta^\tau| < 2.47$",
+        r"(isnan(TruthTauEta) || (abs(TruthTauEta) < 1.37 || 1.52 < abs(TruthTauEta) < 2.47))",
+    ),
+    Cut(
+        r"\mathrm{pass trigger}",
+        r"passTrigger",
+    ),
+    Cut(
+        r"\mathrm{medium tau}",
+        r"TauMediumWP",
+    ),
+    Cut(
+        r"$p_T^\tau > 170$",
+        r"TauPt > 170",
+    ),
+    Cut(
+        r"$m_T^W > 150$",
+        r"MTW > 150",
+    ),
+]
+cuts_reco_full = [
+    Cut(
+        r"\mathrm{pass trigger}",
+        r"passTrigger",
+    ),
+    Cut(
+        r"\mathrm{medium tau}",
+        r"TauMediumWP",
+    ),
+    Cut(
+        r"$p_T^e > 20$",
+        r"(isnan(ElePt) || ElePt > 20)",
+    ),
+    Cut(
+        r"$|\eta_\mathrm{reco}^e| < 1.37 || 1.52 < |\eta_\mathrm{reco}^e| < 2.47$",
+        r"(isnan(EleEta) || (abs(EleEta) < 1.37 || 1.52 < abs(EleEta) < 2.47))",
+    ),
+    Cut(
+        r"$p_T^\mu > 20$",
+        r"(isnan(MuonPt) || MuonPt > 20)",
+    ),
+    Cut(
+        r"$|\eta_\mathrm{reco}^\mu| < 2.5$",
+        r"(isnan(MuonEta) || (abs(MuonEta) < 2.5))",
+    ),
+    Cut(
+        r"$p_T^\tau > 170$",
+        r"TauPt > 170",
+    ),
+    Cut(
+        r"$m_T^W > 150$",
+        r"MTW > 150",
+    ),
+]
+
 # HAD
 # ===========================
 cuts_truth_had = [

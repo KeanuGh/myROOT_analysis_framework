@@ -340,7 +340,10 @@ class RCutflow:
             )
         ] + self._cutflow
         for i in range(1, len(self._cutflow)):
-            self._cutflow[i].ceff = 100 * self._cutflow[i].npass / self._cutflow[0].npass
+            try:
+                self._cutflow[i].ceff = 100 * self._cutflow[i].npass / self._cutflow[0].npass
+            except ZeroDivisionError:
+                self._cutflow[i].ceff = np.nan
 
     def import_cutflow(self, hist: ROOT.TH1I, cuts: List[Cut]) -> None:
         """Import cutflow from histogram and cutfile"""
@@ -358,8 +361,9 @@ class RCutflow:
                 for cutflowitem in self._cutflow
                 if (not cutflowitem.cut.is_reco and cutflowitem.cut.name.lower != "inclusive")
             ]
-            cut_list_truth[0][0] = r"\hline " + cut_list_truth[0][0]
-            cut_list_truth.insert(0, [r"\hline Particle-Level", "", "", ""])
+            if cut_list_truth:
+                cut_list_truth[0][0] = r"\hline " + cut_list_truth[0][0]
+                cut_list_truth.insert(0, [r"\hline Particle-Level", "", "", ""])
 
             cut_list_reco = [
                 [
@@ -371,8 +375,9 @@ class RCutflow:
                 for cutflowitem in self._cutflow
                 if (cutflowitem.cut.is_reco and cutflowitem.cut.name.lower != "inclusive")
             ]
-            cut_list_reco[0][0] = r"\hline " + cut_list_reco[0][0]
-            cut_list_reco.insert(0, [r"\hline Detector-Level", "", "", ""])
+            if cut_list_reco:
+                cut_list_reco[0][0] = r"\hline " + cut_list_reco[0][0]
+                cut_list_reco.insert(0, [r"\hline Detector-Level", "", "", ""])
 
             table = tabulate(
                 cut_list_truth + cut_list_reco,

@@ -1,0 +1,31 @@
+[CUTS]
+# reco
+pass trigger	passTrigger
+medium tau	TauMediumWP
+$p_T^\mu > 20$	(isnan(MuonPt) || MuonPt > 20)
+$|\eta_\mathrm{reco}^\mu| < 2.5$	(isnan(MuonEta) || (abs(MuonEta) < 2.5))
+$p_T^\tau > 170$	TauPt > 170
+$m_T^W > 150$	MTW > 150
+
+[OUTPUTS]
+# reco
+TauEta
+TauPhi
+TauPt
+#JetEta
+#JetPhi
+#JetPt
+MuonEta
+MuonPhi
+MuonPt
+Muon_d0sig
+Muon_delta_z0
+EleEta
+ElePhi
+ElePt
+EleE
+Ele_d0sig
+Muon_delta_z0
+MET_met
+MET_phi
+MTW

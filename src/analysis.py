@@ -868,7 +868,7 @@ class Analysis:
             elif name_template_short in self.histograms:
                 hist_name_internal = varname
             else:
-                raise ValueError("No histogram for {varname} in {dataset}")
+                raise ValueError(f"No histogram for {varname} in {dataset}")
 
             hist = Histogram1D(th1=self.histograms[hist_name_internal], logger=self.logger)
             if scale_by_bin_width:
@@ -1023,6 +1023,4 @@ class Analysis:
         :param datasets: list of datasets or single dataset name. If not given applies to all datasets.
         :return: None
         """
-        self[datasets].print_latex_table(
-            self.paths.latex_dir / f"{self[datasets].name}_cutflow.tex"
-        )
+        self[datasets].cutflow_printout(latex=True)
