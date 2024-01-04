@@ -104,4 +104,8 @@ double dilep_m(vector<double> m1, vector<double> m2) {
 	return m1[0] + m2[0];
 }
 
+double delta_r(double eta1, double eta2, double phi1, double phi2) {
+    return std::sqrt( ((eta1 - eta2) ** 2) + ((phi1 - phi2) ** 2) );
+}
+
 #endif

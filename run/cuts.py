@@ -47,6 +47,10 @@ cuts_reco_full = [
         r"\mathrm{pass trigger}",
         r"passTrigger",
     ),
+        Cut(
+        r"\mathrm{}",
+        r"TauMediumWP",
+    ),
     Cut(
         r"\mathrm{medium tau}",
         r"TauMediumWP",
@@ -161,6 +165,10 @@ cuts_reco_e = [
         r"$m_T^W > 150$",
         r"MTW > 150",
     ),
+    Cut(
+        r"$\Delta R_{\tau---e}  0.5$",
+        r"DeltaR_tau_e < 0.5",
+    )
 ]
 
 # MU
@@ -212,6 +220,10 @@ cuts_reco_mu = [
         r"$m_T^W > 150$",
         r"MTW > 150",
     ),
+    Cut(
+        r"$\Delta R_{\tau---\mu} < 0.5$",
+        r"DeltaR_tau_mu < 0.5",
+    )
 ]
 
 # Variables

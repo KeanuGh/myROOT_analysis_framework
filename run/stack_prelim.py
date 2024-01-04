@@ -6,12 +6,12 @@ import numpy as np
 
 from run import cuts
 from src.analysis import Analysis
+from src.cutfile import Cut
 
 DTA_PATH = Path("/eos/home-k/kghorban/DTA_OUT/2023-10-25/")
 DATA_OUT_DIR = Path("/eos/home-k/kghorban/framework_outputs/")
 CUTFILE_DIR = Path("/afs/cern.ch/user/k/kghorban/framework/options/DTA_cuts/reco")
-cuts_full = cuts.cuts_reco_full
-extract_vars = cuts.import_vars_reco
+extract_vars = cuts.import_vars_reco | cuts.import_vars_truth
 
 if __name__ == "__main__":
     datasets_dict_full: Dict[str, Dict] = {
@@ -28,6 +28,7 @@ if __name__ == "__main__":
             "label": r"SH2211 high-mass $W\rightarrow\mu\nu$",
             "merge_into": "wmunu",
         },
+
         # e
         "wenu_lm": {
             "data_path": DTA_PATH / "user.kghorban.Sh_2211_Wenu_maxHTpTV2*/*.root",
@@ -41,6 +42,7 @@ if __name__ == "__main__":
             "label": r"SH2211 high-mass $W\rightarrow e\nu$",
             "merge_into": "wenu",
         },
+
         # tau
         "wtaunu_hm": {
             "data_path": DTA_PATH / "user.kghorban.Sh_2211_Wtaunu_mW_120*/*.root",
@@ -54,10 +56,10 @@ if __name__ == "__main__":
             "label": r"SH2211 inclusive $W\rightarrow\tau\nu$",
             "merge_into": "wtaunu",
         },
+
         # ttbar
         "ttbar": {
             "data_path": DTA_PATH / "user.kghorban.PP8_ttbar_hdamp258p75*/*.root",
-            "hard_cut": "TruthBosonM > 120",
             "label": r"PP8 ttbar",
         },
     }
@@ -104,7 +106,7 @@ if __name__ == "__main__":
         datasets_dict_sep,
         data_dir=DATA_OUT_DIR,
         year="2017",
-        # regen_histograms=True,
+        regen_histograms=True,
         analysis_label="stack_prelim",
         dataset_type="dta",
         log_level=10,
@@ -126,17 +128,17 @@ if __name__ == "__main__":
     # analysis["wmunu"].label  = r"$W\rightarrow\mu\nu$"
     # analysis["wenu"].label   = r"$W\rightarrow e\nu$"
 
-    analysis["wtaunu_mu"].label = r"SH2211 $W\rightarrow\tau\nu$ (mu chan.)"
-    analysis["wmunu_mu"].label = r"SH2211 $W\rightarrow\mu\nu$ (mu chan.)"
-    analysis["wenu_mu"].label = r"SH2211 $W\rightarrow e\nu$ (mu chan.)"
+    analysis["wtaunu_mu"].label  = r"SH2211 $W\rightarrow\tau\nu$ (mu chan.)"
+    analysis["wmunu_mu"].label   = r"SH2211 $W\rightarrow\mu\nu$ (mu chan.)"
+    analysis["wenu_mu"].label    = r"SH2211 $W\rightarrow e\nu$ (mu chan.)"
 
-    analysis["wtaunu_e"].label = r"SH2211 $W\rightarrow\tau\nu$ (e chan.)"
-    analysis["wmunu_e"].label = r"SH2211 $W\rightarrow\mu\nu$ (e chan.)"
-    analysis["wenu_e"].label = r"SH2211 $W\rightarrow e\nu$ (e chan.)"
+    analysis["wtaunu_e"].label   = r"SH2211 $W\rightarrow\tau\nu$ (e chan.)"
+    analysis["wmunu_e"].label    = r"SH2211 $W\rightarrow\mu\nu$ (e chan.)"
+    analysis["wenu_e"].label     = r"SH2211 $W\rightarrow e\nu$ (e chan.)"
 
     analysis["wtaunu_had"].label = r"SH2211 $W\rightarrow\tau\nu$ (had chan.)"
-    analysis["wmunu_had"].label = r"SH2211 $W\rightarrow\mu\nu$ (had chan.)"
-    analysis["wenu_had"].label = r"SH2211 $W\rightarrow e\nu$ (had chan.)"
+    analysis["wmunu_had"].label  = r"SH2211 $W\rightarrow\mu\nu$ (had chan.)"
+    analysis["wenu_had"].label   = r"SH2211 $W\rightarrow e\nu$ (had chan.)"
 
     # HISTORGRAMS
     # ==================================================================================================================
@@ -151,9 +153,8 @@ if __name__ == "__main__":
         "ylabel": "Entries / bin width",
         "logx": True,
     }
-    reco_weighted_args = {"title": f"reco | mc16d | {analysis.global_lumi/1000:.3g}" + r"fb$^{-1}$"}
 
-    # RECO
+    # RECO PLOT LOOP
     # -----------------------------------
     for dataset_list in [
         datasets_mu,
@@ -161,40 +162,29 @@ if __name__ == "__main__":
         datasets_had,
     ]:
         for cut in (True, False):
-            reco_weighted_args["cut"] = cut
+            default_args = {
+                "datasets": dataset_list,
+                "title": f"reco | mc16d | {analysis.global_lumi/1000:.3g}" + r"fb$^{-1}$",
+                "cut": cut,
+                "suffix": "DeltaR05" if dataset_list != datasets_had else "",  # only leptonic channels need a DeltaR cut
+            }
 
-            analysis.stack_plot(
-                dataset_list,
+            # mass-like variables
+            for var in [
                 "TauPt",
-                **mass_args,
-                **reco_weighted_args,
-            )
-
-            analysis.stack_plot(
-                dataset_list,
-                "TauEta",
-                **reco_weighted_args,
-            )
-
-            analysis.stack_plot(
-                dataset_list,
-                "TauPhi",
-                **reco_weighted_args,
-            )
-
-            analysis.stack_plot(
-                dataset_list,
                 "MET_met",
-                **mass_args,
-                **reco_weighted_args,
-            )
-
-            analysis.stack_plot(
-                dataset_list,
                 "MTW",
-                **mass_args,
-                **reco_weighted_args,
-            )
+            ]:
+                analysis.stack_plot(var=var, **default_args, **mass_args)
+                analysis.plot_hist(var=var, **default_args, **mass_args, ratio_plot=False)
+
+            # unitless variables
+            for var in [
+                "TauEta",
+                "TauPhi",
+            ]:
+                analysis.stack_plot(var=var, **default_args)
+                analysis.plot_hist(var=var, **default_args, ratio_plot=False)
 
     analysis.histogram_printout()
     analysis.save_histograms()
