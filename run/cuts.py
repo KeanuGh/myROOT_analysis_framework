@@ -271,4 +271,6 @@ import_vars_reco = {
     "MET_met",
     "MET_phi",
     "MTW",
+    "DeltaR_tau_e",
+    "DeltaR_tau_mu",
 }

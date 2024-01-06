@@ -1151,8 +1151,8 @@ class RDataset(Dataset):
 
         # generate histograms
         t = time.time()
-        for i, (hist_name, th1_ptr) in enumerate(th1_histograms.items()):
-            self.logger.debug(f"Producing histogram {hist_name}...")
+        self.logger.info(f"Producing {len(th1_histograms)} histograms...")
+        for hist_name in th1_histograms:
             self.histograms[hist_name] = th1_histograms[hist_name].GetValue()
         self.logger.info(
             f"Took {time.time() - t:.3f}s to produce {len(self.histograms)} histograms over {self.df.GetNRuns()} run(s)."

@@ -6,7 +6,6 @@ import numpy as np
 
 from run import cuts
 from src.analysis import Analysis
-from src.cutfile import Cut
 
 DTA_PATH = Path("/eos/home-k/kghorban/DTA_OUT/2023-10-25/")
 DATA_OUT_DIR = Path("/eos/home-k/kghorban/framework_outputs/")
@@ -166,7 +165,7 @@ if __name__ == "__main__":
                 "datasets": dataset_list,
                 "title": f"reco | mc16d | {analysis.global_lumi/1000:.3g}" + r"fb$^{-1}$",
                 "cut": cut,
-                "suffix": "DeltaR05" if dataset_list != datasets_had else "",  # only leptonic channels need a DeltaR cut
+                "suffix": "DeltaR05" if (dataset_list != datasets_had and cut) else "",  # only leptonic channels need a DeltaR cut
             }
 
             # mass-like variables
@@ -182,6 +181,8 @@ if __name__ == "__main__":
             for var in [
                 "TauEta",
                 "TauPhi",
+                "DeltaR_tau_mu",
+                "DeltaR_tau_e",
             ]:
                 analysis.stack_plot(var=var, **default_args)
                 analysis.plot_hist(var=var, **default_args, ratio_plot=False)
