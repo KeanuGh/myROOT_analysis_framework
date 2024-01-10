@@ -260,6 +260,21 @@ variable_data: Dict[str, Branch] = {
         "units": "GeV",
         "tag": VarTag.TRUTH,
     },
+    "DeltaR_tau_mu": {
+        "name": r"$\Delta R_{\tau—\mu}$",
+        "units": "",
+        "tag": VarTag.RECO,
+    },
+    "DeltaR_tau_e": {
+        "name": r"$\Delta R_{\tau— e}$",
+        "units": "",
+        "tag": VarTag.RECO,
+    },
+    "DeltaR_e_mu": {
+        "name": r"$\Delta R_{e—\mu}$",
+        "units": "",
+        "tag": VarTag.RECO,
+    },
     # RECO-LEVEL KINEMATIC VARIABLES
     # =======================================================
     # analysistop

@@ -1,5 +1,7 @@
 from typing import Dict
 
+import numpy as np
+
 from src.analysis import Analysis
 import cuts
 
@@ -62,14 +64,18 @@ if __name__ == "__main__":
     analysis = Analysis(
         datasets_dict,
         data_dir=DATA_OUT_DIR,
-        year="2015+2016",
-        regen_histograms=True,
+        year="2017",
+        # regen_histograms=True,
         analysis_label="decay_compare",
         dataset_type="dta",
         # log_level=10,
         log_out="both",
         cuts=cuts.cuts_reco_had,
-        extract_vars=cuts.import_vars_reco | cuts.import_vars_truth
+        extract_vars=cuts.import_vars_reco | cuts.import_vars_truth,
+        binnings={
+             "DeltaR_tau_mu": np.linspace(0, 15, 20),
+             "DeltaR_tau_e": np.linspace(0, 15, 20),
+        },
     )
     analysis["wtaunu"].label = r"$W\rightarrow\tau\nu$"
     analysis["wmunu"].label  = r"$W\rightarrow\mu\nu$"
@@ -83,7 +89,7 @@ if __name__ == "__main__":
     # -----------------------------------
     # argument dicts
     datasets = ["wtaunu", "wmunu", "wenu"]
-    lumi_str = r"truth - 36.2fb$^{-1}$"
+    lumi_str = f"truth - {analysis.global_lumi / 1000 :.3g}" + r"fb$^{-1}$"
 
     ratio_args = {
         "ratio_axlim": 1.5,
@@ -112,14 +118,14 @@ if __name__ == "__main__":
         **mass_args,
         **ratio_args,
         title=lumi_str,
-        xlabel=r"Truth decay Lepton $p_T$ [GeV]"
+        xlabel=r"Truth decay lepton $p_T$ [GeV]"
     )
     analysis.plot_hist(
         datasets,
         ["TruthTauEta", "TruthMuonEta", "TruthEleEta"],
         **ratio_args,
         title=lumi_str,
-        xlabel=r"Truth decau Lepton $\eta$",
+        xlabel=r"Truth decau lepton $\eta$",
     )
     analysis.plot_hist(
         datasets,
@@ -127,7 +133,7 @@ if __name__ == "__main__":
         logy=False,
         **ratio_args,
         title=lumi_str,
-        xlabel=r"Truth decay Lepton $\phi$"
+        xlabel=r"Truth decay lepton $\phi$"
     )
     analysis.plot_hist(
         datasets,
@@ -135,6 +141,36 @@ if __name__ == "__main__":
         **mass_args,
         **ratio_args,
         title=lumi_str,
+    )
+
+    # RECO
+    # ----------------------------------
+    lumi_str = f"reco - {analysis.global_lumi / 1000:.3g}" + r"fb$^{-1}$"
+    analysis.plot_hist(
+        datasets,
+        ["TauPt", "MuonPt", "ElePt"],
+        **mass_args,
+        **ratio_args,
+        title=lumi_str,
+        xlabel=r"Truth decay lepton $p_T$ [GeV]",
+        cut=True,
+    )
+    analysis.plot_hist(
+        datasets,
+        ["TauEta", "MuonEta", "EleEta"],
+        **ratio_args,
+        title=lumi_str,
+        xlabel=r"Reco decay lepton $\eta$",
+        cut=True,
+    )
+    analysis.plot_hist(
+        datasets,
+        ["TauPhi", "MuonPhi", "ElePhi"],
+        logy=False,
+        **ratio_args,
+        title=lumi_str,
+        xlabel=r"Reco decay lepton $\phi$",
+        cut=True,
     )
 
     analysis.plot_hist(
@@ -146,7 +182,36 @@ if __name__ == "__main__":
     )
     analysis.plot_hist(
         datasets,
+        "DeltaR_tau_mu",
+        **ratio_args,
+        title=lumi_str,
+    )
+    analysis.plot_hist(
+        datasets,
+        "DeltaR_tau_e",
+        **ratio_args,
+        title=lumi_str,
+    )
+
+    analysis.plot_hist(
+        datasets,
         "TauPt",
+        **mass_args,
+        **ratio_args,
+        title=lumi_str,
+        cut=True,
+    )
+    analysis.plot_hist(
+        datasets,
+        "MuonPt",
+        **mass_args,
+        **ratio_args,
+        title=lumi_str,
+        cut=True,
+    )
+    analysis.plot_hist(
+        datasets,
+        "ElePt",
         **mass_args,
         **ratio_args,
         title=lumi_str,
