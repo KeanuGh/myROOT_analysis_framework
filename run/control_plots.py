@@ -108,7 +108,7 @@ if __name__ == "__main__":
         lepton="tau",
         extract_vars=cuts.import_vars_reco | cuts.import_vars_truth,
         dataset_type="dta",
-        # log_level=10,
+        log_level=10,
         log_out="both",
         # binnings=override_binnings,
     )
@@ -119,7 +119,7 @@ if __name__ == "__main__":
 
     for datasets in [["wtaunu_h", "wtaunu_mu", "wtaunu_e"]]:
         for cut in (True, False):
-            title = f"reco | mc16d | {my_analysis.global_lumi/1000:.3g}" + r"fb$^{-1}$"
+            title = f"reco | mc16d | {my_analysis.global_lumi / 1000:.3g}" + r"fb$^{-1}$"
             if cut:
                 title += " | CUT"
             default_args = {

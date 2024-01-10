@@ -209,11 +209,7 @@ class Analysis:
 
                 # create a "dummy" dataset with only the label of the first dataset
                 if merged_ds not in self.datasets:
-                    self[merged_ds] = (
-                        RDataset(name=merged_ds, label=dataset.label)
-                        # if isinstance(dataset, RDataset)
-                        # else PDataset(name=merged_ds, label=dataset.label)
-                    )
+                    self[merged_ds] = RDataset(name=merged_ds, label=dataset.label)
 
                 for hist_name, hist in dataset.histograms.items():
                     hist_name_merged = merged_ds + "_" + hist_name
@@ -312,39 +308,6 @@ class Analysis:
 
     def __str__(self) -> str:
         return f'"{self.name}",Datasets:{{{", ".join([f"{name}: {len(d)}" for name, d in self.datasets.items()])}}}'
-
-    # ===============================
-    # ====== DATASET FUNCTIONS ======
-    # ===============================
-    def create_subdataset(self, dataset: str, name: str, args) -> None:
-        """
-        Create new dataset from subset of other dataset
-
-        :param dataset: Dataset to subset
-        :param name: Name of new dataset
-        :param args: argument to pass to pd.DataFrame.loc[]
-        """
-        self[name] = self[dataset].subset(args)
-
-    def create_dsid_subdataset(self, dataset: str, name: str, dsid: str | int) -> None:
-        """
-        Create new dataset from DSID of other dataset
-
-        :param dataset: Dataset to subset
-        :param name: Name of new dataset
-        :param dsid: Dataset ID
-        """
-        self[name] = self[dataset].subset_dsid(dsid)
-
-    def create_cut_subdataset(self, dataset: str, name: str, cut: str) -> None:
-        """
-        Create new dataset from cut in other dataset
-
-        :param dataset: Dataset to subset
-        :param name: Name of new dataset
-        :param cut: name of cut
-        """
-        self[name] = self[dataset].subset_cut(cut)
 
     def merge_datasets(
         self,
@@ -932,27 +895,6 @@ class Analysis:
         self.logger.info(f"Saved plot of {var} to {filename}")
         plt.close(fig)
 
-    @check_single_dataset
-    def gen_cutflow_hist(self, ds_name: str, **kwargs) -> None:
-        """
-        Generates and saves cutflow histograms. Choose which cutflow histogram option to print. Default: only by-event.
-
-        :param ds_name: Name of dataset to plot
-        :return: None
-        """
-        self[ds_name].gen_cutflow_hist(**kwargs)
-
-    @handle_dataset_arg
-    def plot_mass_slices(self, datasets: str, xvar: str, **kwargs) -> None:
-        """
-        Plots mass slices for input variable xvar if dataset is_slices
-
-        :param datasets: name(s) of dataset to plot
-        :param xvar: variable in dataframe to plot
-        :param kwargs: keyword args to pass to Dataset.plot_mass_slices()
-        """
-        self[datasets].plot_dsid(var=xvar, **kwargs)
-
     # ===============================
     # ========= PRINTOUTS ===========
     # ===============================
@@ -962,15 +904,6 @@ class Analysis:
         self[datasets].cutflow.print(
             self.paths.latex_dir / f"{datasets}_cutflow.tex" if latex else None
         )
-
-    def kinematics_printouts(self) -> None:
-        """Prints some kinematic variables to terminal"""
-        self.logger.info(f"========== KINEMATICS ===========")
-        for name in self.datasets:
-            self.logger.info(name + ":")
-            self.logger.info("---------------------------------")
-            self.logger.info(f"cross-section: {self[name].cross_section:.2f} fb")
-            self.logger.info(f"luminosity   : {self[name].luminosity:.2f} fb-1")
 
     def save_histograms(
         self,
@@ -1014,13 +947,3 @@ class Analysis:
             with open(filepath, "w") as f:
                 f.write(tabulate(rows, headers=header, tablefmt="latex_raw"))
                 self.logger.info(f"Saved LaTeX histogram table to {filepath}")
-
-    @handle_dataset_arg
-    def print_latex_table(self, datasets: str) -> None:
-        """
-        Prints a latex table(s) of cutflow.
-
-        :param datasets: list of datasets or single dataset name. If not given applies to all datasets.
-        :return: None
-        """
-        self[datasets].cutflow_printout(latex=True)
