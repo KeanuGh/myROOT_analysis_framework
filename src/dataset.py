@@ -199,8 +199,6 @@ class Dataset(ABC):
                     continue
 
                 th1 = obj.ReadObj()
-                if "cutflow" in th1.GetName():
-                    print(th1.GetName())
                 histograms[th1.GetName()] = th1
 
         self.histograms = histograms
@@ -246,15 +244,12 @@ class RDataset(Dataset):
                     if not all(cuts[i] == first_element for cuts in self.cuts.values()):
                         n_shared_cuts = i
 
-            # base filter
-            base_filter = self.df.Filter(
-                "true", "Inclusive"
-            )  # "Filter" that passes everything for inclusive label
+            # Base "Filter" that passes everything for inclusive label
+            base_filter = self.df.Filter("true", "Inclusive")
             if n_shared_cuts > 0:
                 # take the first n shared cuts from the first list of cuts as the base filter
                 shared_cuts = self.cuts[list(self.cuts.keys())[0]][:n_shared_cuts]
                 for cut in shared_cuts:
-                    # stop root interpreting escape for latex
                     base_filter = base_filter.Filter(cut.cutstr, __sanitise_str(cut.name))
 
             for cuts_name, cuts in self.cuts.items():

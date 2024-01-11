@@ -3,7 +3,7 @@ from collections import OrderedDict
 from copy import deepcopy
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Tuple, Callable, Any, Sequence, Generator
+from typing import Callable, Any, Sequence, Generator
 
 import ROOT
 import matplotlib.pyplot as plt  # type: ignore
@@ -61,7 +61,7 @@ class Analysis:
 
     def __init__(
         self,
-        data_dict: Dict[str, Dict],
+        data_dict: dict[str, dict],
         analysis_label: str,
         global_lumi: float | None = 139.0,
         output_dir: Path | str | None = None,
@@ -132,7 +132,7 @@ class Analysis:
 
         # BUILD DATASETS
         # ============================
-        self.datasets: Dict[str, Dataset] = dict()
+        self.datasets: dict[str, Dataset] = dict()
         for dataset_name, data_args in data_dict.items():
             self.logger.info("")
             self.logger.info("=" * (42 + len(dataset_name)))
@@ -283,7 +283,7 @@ class Analysis:
         self.logger.info(f"ANALYSIS '{analysis_label}' INITIALISED")
 
     @staticmethod
-    def __match_params(params: Dict[str, Any], func: Callable) -> Dict[str, Any]:
+    def __match_params(params: dict[str, Any], func: Callable) -> dict[str, Any]:
         """Return parameters matching passed function signature"""
         args = dict()
         for arg in inspect.signature(func).parameters:
@@ -322,7 +322,7 @@ class Analysis:
     def merge_datasets(
         self,
         *datasets: str,
-        apply_cuts: bool | str | List[str] = False,
+        apply_cuts: bool | str | list[str] = False,
         new_name: str | None = None,
         delete: bool = True,
         to_pkl: bool = False,
@@ -421,10 +421,10 @@ class Analysis:
         self,
         datasets: str | Sequence[str],
         var: str | Sequence[str],
-        bins: List[float | int] | Tuple[int, float, float] | None = None,
-        weight: List[str | float] | str | float = 1.0,
+        bins: list[float | int] | tuple[int, float, float] | None = None,
+        weight: list[str | float] | str | float = 1.0,
         yerr: ArrayLike | str = True,
-        labels: List[str] | None = None,
+        labels: list[str] | None = None,
         w2: bool = False,
         normalise: float | bool = False,
         logbins: bool = False,
@@ -436,12 +436,12 @@ class Analysis:
         lepton: str = "lepton",
         scale_by_bin_width: bool = False,
         stats_box: bool = False,
-        x_axlim: Tuple[float, float] | None = None,
-        y_axlim: Tuple[float, float] | None = None,
-        gridopts: bool | Tuple[bool | None, str | None, str | None] = False,
+        x_axlim: tuple[float, float] | None = None,
+        y_axlim: tuple[float, float] | None = None,
+        gridopts: bool | tuple[bool | None, str | None, str | None] = False,
         ratio_plot: bool = True,
         ratio_fit: bool = False,
-        ratio_axlim: float | Tuple[float, float] | None = None,
+        ratio_axlim: float | tuple[float, float] | None = None,
         ratio_label: str = "Ratio",
         ratio_err: str = "sumw2",
         filename: str | Path | None = None,
@@ -751,7 +751,7 @@ class Analysis:
         datasets: str | Sequence[str],
         var: str | Sequence[str],
         yerr: ArrayLike | str = True,
-        labels: List[str] | None = None,
+        labels: list[str] | None = None,
         normalise: float | bool = False,
         logx: bool = False,
         logy: bool = True,
@@ -759,8 +759,8 @@ class Analysis:
         ylabel: str = "",
         title: str = "",
         scale_by_bin_width: bool = False,
-        x_axlim: Tuple[float, float] | None = None,
-        y_axlim: Tuple[float, float] | None = None,
+        x_axlim: tuple[float, float] | None = None,
+        y_axlim: tuple[float, float] | None = None,
         filename: str | Path | None = None,
         cut: bool = False,
         suffix: str = "",
