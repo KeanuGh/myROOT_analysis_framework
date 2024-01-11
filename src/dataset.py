@@ -6,7 +6,6 @@ from abc import ABC, abstractmethod
 from collections import OrderedDict
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import List, Tuple, Final, Set, Dict
 
 import ROOT  # type: ignore
 import matplotlib.pyplot as plt  # type: ignore
@@ -23,23 +22,21 @@ from src.logger import get_logger
 from utils import plotting_tools, ROOT_utils
 from utils.variable_names import variable_data, VarTag
 
-CUT_PREFIX: Final = "PASS_"
-
 
 @dataclass
 class Dataset(ABC):
     name: str = ""
     df: pd.DataFrame | ROOT.RDataFrame = None
-    cuts: List[Cut] = field(default_factory=list)
-    all_vars: Set[str] = field(default_factory=set)
-    cutflow: RCutflow = None
+    cuts: dict[str, list[Cut]] = field(default_factory=list)
+    all_vars: set[str] = field(default_factory=set)
+    cutflows: dict[str, RCutflow] = None
     lumi: float = 139.0
     label: str = "data"
     logger: logging.Logger = field(default_factory=get_logger)
     lepton: str = "lepton"
     file: Path = field(init=False)
     histograms: OrderedDict[str, ROOT.TH1] = field(init=False, default_factory=OrderedDict)
-    binnings: Dict[str, List[float]] = field(default_factory=dict)
+    binnings: dict[str, list[float]] = field(default_factory=dict)
 
     @abstractmethod
     def __len__(self):
@@ -52,12 +49,12 @@ class Dataset(ABC):
     # ===================
     @property
     @abstractmethod
-    def columns(self) -> List[str]:
+    def columns(self) -> list[str]:
         ...
 
     @property
     @abstractmethod
-    def variables(self) -> Set[str]:
+    def variables(self) -> set[str]:
         ...
 
     def set_filepath(self, filepath: Path | str) -> None:
@@ -108,27 +105,20 @@ class Dataset(ABC):
     def save_file(self, path: str | Path | None = None) -> None:
         ...
 
-    def cutflow_printout(self, latex_path: Path | None = None) -> None:
+    def cutflow_printout(self, path: Path | None = None) -> None:
         """Prints cutflow table. Pass path to .tex file if you want to print to latex"""
-        if self.cutflow is not None:
-            self.cutflow.print(latex_path=latex_path)
+        if self.cutflows is not None:
+            for cutflow_name, cutflow in self.cutflows.items():
+                if path is not None:
+                    tex_path = path / f"{self.name}_{cutflow_name}_cutflow.tex"
+                else:
+                    tex_path = f"{self.name}_{cutflow_name}_cutflow.tex"
+                cutflow.print(latex_path=tex_path)
         else:
             raise AttributeError("Must have applied cuts to obtain cutflow")
 
     @abstractmethod
     def dsid_metadata_printout(self, truth: bool = True, reco: bool = False) -> None:
-        ...
-
-    # ===============================
-    # ========== CUTTING ============
-    # ===============================
-    @abstractmethod
-    def apply_cuts(
-        self,
-        labels: bool | str | List[str] = True,
-        reco: bool = False,
-        truth: bool = False,
-    ) -> None:
         ...
 
     # ===========================================
@@ -163,7 +153,7 @@ class Dataset(ABC):
     def plot_hist(
         self,
         var: str,
-        bins: List[float] | Tuple[int, float, float] | None = None,
+        bins: list[float] | tuple[int, float, float] | None = None,
         weight: str | float = 1.0,
         ax: plt.Axes = None,
         yerr: ArrayLike | bool = False,
@@ -198,7 +188,7 @@ class Dataset(ABC):
                 )
         self.logger.info(f"Written {len(self.histograms)} histograms to {filepath}")
 
-    def import_histograms(self, in_file: Path | str, inplace=True) -> None | Dict[str, ROOT.TH1]:
+    def import_histograms(self, in_file: Path | str) -> None:
         """Import histograms from root file into histogram dictionary"""
         histograms: OrderedDict[str, ROOT.TH1] = OrderedDict()
 
@@ -209,13 +199,11 @@ class Dataset(ABC):
                     continue
 
                 th1 = obj.ReadObj()
+                if "cutflow" in th1.GetName():
+                    print(th1.GetName())
                 histograms[th1.GetName()] = th1
 
-        if inplace:
-            self.histograms = histograms
-            return None
-        else:
-            return histograms
+        self.histograms = histograms
 
 
 @dataclass(slots=True)
@@ -227,7 +215,6 @@ class RDataset(Dataset):
     :param df: pandas DataFrame containing data
     :param cuts: list of cuts
     :param all_vars: set of all variables
-    :param filtered_df: view of dataframe with cuts applied. Must be generated with gen_cutflow() or apply_cuts() first
     :param lumi: Dataset Luminosity
     :param label: Label to put on plots
     :param logger: Logger object to print to. Defaults to console output at DEBUG-level
@@ -236,28 +223,63 @@ class RDataset(Dataset):
     :param binnings: dict of variable name : list of bin edges to use for given variables
     """
 
-    cutflow: RCutflow = field(init=False)
-    filtered_df: ROOT.RDataFrame = field(init=False)
+    cutflows: dict[str, RCutflow] = field(init=False, default_factory=dict)
+    filtered_df: dict[str, ROOT.RDataFrame] = field(init=False, default_factory=dict)
 
     def __post_init__(self) -> None:
         self.file = Path(self.name + ".root")
 
-        # generate filtered dataframe for cuts
-        if self.df is not None:
-            self.filtered_df: ROOT.RDataFrame = self.df.Filter("true", "Inclusive")
-        if self.cuts:
-            for cut in self.cuts:
-                sanitised_name = cut.name.replace(
-                    "\\", "\\\\"
-                )  # stop root interpreting escape for latex
-                self.filtered_df = self.filtered_df.Filter(cut.cutstr, sanitised_name)
+        # generate filtered dataframe(s) for cuts if an RDataframe and cuts are passed
+        if (self.df is not None) and (self.cuts is not None):
+
+            def __sanitise_str(string: str) -> str:
+                """sanitise latex-like string to stop ROOT from interpreting them as escape sequences"""
+                return string.replace("\\", "\\\\")
+
+            # find the minimum shared cuts between each cutflow in order to avoid having to repeat computations
+            if len(self.cuts) == 1:
+                n_shared_cuts = 0
+            else:
+                n_shared_cuts = min(len(cuts) for cuts in self.cuts.values())
+                for i in range(n_shared_cuts):
+                    first_element = self.cuts[list(self.cuts.keys())[0]][i]
+                    if not all(cuts[i] == first_element for cuts in self.cuts.values()):
+                        n_shared_cuts = i
+
+            # base filter
+            base_filter = self.df.Filter(
+                "true", "Inclusive"
+            )  # "Filter" that passes everything for inclusive label
+            if n_shared_cuts > 0:
+                # take the first n shared cuts from the first list of cuts as the base filter
+                shared_cuts = self.cuts[list(self.cuts.keys())[0]][:n_shared_cuts]
+                for cut in shared_cuts:
+                    # stop root interpreting escape for latex
+                    base_filter = base_filter.Filter(cut.cutstr, __sanitise_str(cut.name))
+
+            for cuts_name, cuts in self.cuts.items():
+                # add all cuts
+                # take the base filter for the first cut to make sure all filters share a base dataframe
+                try:
+                    self.filtered_df[cuts_name] = base_filter.Filter(
+                        cuts[n_shared_cuts].cutstr, __sanitise_str(cuts[n_shared_cuts].name)
+                    )
+                except IndexError:
+                    raise IndexError(
+                        f"Two or more identical cutflows were found in dataset {self.name}. Check passed cuts"
+                    )
+
+                for cut in cuts[n_shared_cuts + 1 :]:
+                    self.filtered_df[cuts_name] = self.filtered_df[cuts_name].Filter(
+                        cut.cutstr, __sanitise_str(cut.name)
+                    )
 
     def __len__(self) -> int:
         if (self.histograms is not None) and ("cutflow" in self.histograms):
             return int(self.histograms["cutflow"].GetBinContent(1))
 
         else:
-            raise ValueError("Must have run cutflow before getting len")
+            raise ValueError("Must have run cutflow before getting number of events")
 
     def __getattr__(self, item):
         if self.df is not None:
@@ -268,21 +290,25 @@ class RDataset(Dataset):
     # Variable setting/getting
     # ===================
     @property
-    def columns(self) -> List[str]:
+    def columns(self) -> list[str]:
         return list(self.df.GetColumnNames())
 
     @property
-    def variables(self) -> Set[str]:
+    def variables(self) -> set[str]:
         """Column names that do not contain a cut label"""
         return set(self.columns)
 
-    def reset_cutflow(self) -> None:
-        """(re)set cutflow from cutflow histogram and cuts"""
+    def reset_cutflows(self) -> None:
+        """(re)set cutflows from cutflow histograms and cuts"""
         if len(self.histograms) == 0:
             raise ValueError("Must generate or load histograms before resetting cutflow")
 
-        self.cutflow = RCutflow(logger=self.logger)
-        self.cutflow.import_cutflow(self.histograms["cutflow"], self.cuts)
+        for cutset_name in self.cuts:
+            self.cutflows[cutset_name] = RCutflow(logger=self.logger)
+            self.cutflows[cutset_name].import_cutflow(
+                self.histograms["cutflow" + (("_" + cutset_name) if cutset_name else "")],
+                self.cuts[cutset_name],
+            )
 
     # ===============================
     # ========= PRINTOUTS ===========
@@ -305,58 +331,14 @@ class RDataset(Dataset):
     # ===============================
     # ========== CUTTING ============
     # ===============================
-    def apply_cuts(
-        self,
-        reco: bool = False,
-        truth: bool = False,
-        inplace: bool = True,
-    ) -> ROOT.RDataFrame | None:
-        """
-        Apply specific cut(s) to DataFrame.
-
-        :param reco: cut on reco cuts
-        :param truth: cut on truth cuts
-        :param inplace: If True, applies cuts in place to dataframe in self.
-                        If False returns DataFrame object
-        :return: None if inplace is True.
-                 If False returns DataFrame with cuts applied.
-                 Raises ValueError if cuts do not exist
-        """
-        # handle which cuts to apply depending on what is passed as 'labels'
-        cuts_to_apply: List[Cut] = []
-        if truth:
-            self.logger.debug(f"Applying truth cuts to {self.name}...")
-            cuts_to_apply += [cut for cut in self.cuts if cut.is_reco is False]
-        if reco:
-            self.logger.debug(f"Applying reco cuts to {self.name}...")
-            cuts_to_apply += [cut for cut in self.cuts if cut.is_reco is True]
-
-        # apply spefic cuts
-        return self.gen_cutflow(cuts_to_apply, inplace=inplace)
-
-    def gen_cutflow(
-        self, cuts: List[Cut] | None = None, inplace: bool = True
-    ) -> None | Tuple[ROOT.RDataFrame, RCutflow]:
+    def gen_cutflows(self) -> None:
         """Generate cutflow, optionally with specific cuts applied"""
-        if cuts is None:
-            # use all cuts already in dataset
-            cuts = self.cuts
-            filtered_df = self.filtered_df
-        else:
-            # create new filters for dataset
-            filtered_df = self.df.Filter("true", "Inclusive")
-            for cut in cuts:
-                filtered_df = filtered_df.Filter(cut.cutstr, cut.name)
+        for cuts_name, cuts in self.cuts.items():
+            self.logger.info(f"Generating cutflow {cuts_name}...")
+            cutflow = RCutflow(logger=self.logger)
+            cutflow.gen_cutflow(self.filtered_df[cuts_name], cuts)
 
-        cutflow = RCutflow(logger=self.logger)
-        cutflow.gen_cutflow(filtered_df, cuts)
-
-        if inplace:
-            self.filtered_df = filtered_df
-            self.cutflow = cutflow
-            return None
-        else:
-            return filtered_df, cutflow
+            self.cutflows[cuts_name] = cutflow
 
     # ===========================================
     # =========== PLOTING FUNCTIONS =============
@@ -364,13 +346,13 @@ class RDataset(Dataset):
     def plot_hist(
         self,
         var: str,
-        bins: List[float] | Tuple[int, float, float] | None = None,
+        bins: list[float] | tuple[int, float, float] | None = None,
         weight: str | float = 1.0,
         ax: plt.Axes = None,
         yerr: ArrayLike | bool = False,
         normalise: float | bool = False,
         logbins: bool = False,
-        cut: bool = False,
+        cut: bool | str = False,
         name: str = "",
         title: str = "",
         **kwargs,
@@ -394,14 +376,22 @@ class RDataset(Dataset):
                           - True for normalisation of unity
                           - False (default) for no normalisation
         :param logbins: whether logarithmic binnings
-        :param cut: use cuts for histogramming
+        :param cut: use cuts for histogramming.
+                    Pass either name of a cutflow or True for when there is only one cutflow
         :param name: histogram name
         :param title: histgoram title
         :param kwargs: keyword arguments to pass to mplhep.histplot()
         :return: Histogram
         """
-        if cut:
-            histname = var + "_cut"
+        if cut is True:
+            if len(self.filtered_df) > 1:
+                raise ValueError("More than one cutflow is present. Must specify.")
+            cut = self.cuts[list(self.cuts.keys())[0]]
+        if isinstance(cut, str):
+            if cut in self.cutflows.keys():
+                histname = var + "_" + cut
+            else:
+                raise ValueError(f"Unknown cutflow '{cut}'")
         else:
             histname = var
 
@@ -429,7 +419,7 @@ class RDataset(Dataset):
             th1 = ROOT.TH1F(name, title, *plotting_tools.get_TH1_bins(bins, logbins=logbins))
 
             if cut:
-                th1 = self.filtered_df.Fill(th1, fill_args).GetPtr()
+                th1 = self.filtered_df[cut].Fill(th1, fill_args).GetPtr()
             else:
                 th1 = self.df.Fill(th1, fill_args).GetPtr()
 
@@ -443,20 +433,21 @@ class RDataset(Dataset):
     def gen_histograms(
         self, cut: bool = True, to_file: bool | str | Path = True
     ) -> OrderedDict[str, ROOT.TH1]:
-        """Generate histograms for all variables mentioned in cuts. Optionally with cuts applied as well"""
+        """Generate histograms for all variables and cuts."""
 
         output_histogram_variables = self.all_vars
-        n_hists = len(output_histogram_variables)
-        self.logger.info(f"Generating {n_hists} histograms...")
         if cut:
-            n_hists *= 2
-            self.logger.info(f"Cuts applied: ")
-            filternames = list(self.filtered_df.GetFilterNames())
-            for name in filternames:
-                self.logger.info(f"\t{name}")
+            n_cutflows = len(self.cuts)
+            for cutflow_name, filtered_df in self.filtered_df.items():
+                if n_cutflows > 1:
+                    self.logger.debug(f"Cutflow {cutflow_name}:")
+                self.logger.debug(f"Cuts applied: ")
+                filternames = list(filtered_df.GetFilterNames())
+                for name in filternames:
+                    self.logger.debug(f"\t{name}")
 
         # to contain smart pointers to TH1s
-        th1_histograms: Dict[str, ROOT.RResultsPtr] = dict()
+        th1_histograms: dict[str, ROOT.RResultsPtr] = dict()
 
         def match_weight(var) -> str:
             match variable_data[var]:
@@ -488,13 +479,16 @@ class RDataset(Dataset):
             th1_histograms[variable_name] = self.df.Fill(th1, fill_cols)
 
             if cut:
-                cut_hist_name = variable_name + "_cut"
-                cut_th1 = ROOT.TH1F(
-                    cut_hist_name,
-                    variable_name,
-                    *plotting_tools.get_TH1_bins(**bin_args),
-                )
-                th1_histograms[cut_hist_name] = self.filtered_df.Fill(cut_th1, fill_cols)
+                for cutflow_name, filtered_df in self.filtered_df.items():
+                    cut_hist_name = (
+                        variable_name + (("_" + cutflow_name) if cutflow_name else "") + "_cut"
+                    )
+                    cut_th1 = ROOT.TH1F(
+                        cut_hist_name,
+                        variable_name,
+                        *plotting_tools.get_TH1_bins(**bin_args),
+                    )
+                    th1_histograms[cut_hist_name] = filtered_df.Fill(cut_th1, fill_cols)
 
         # generate histograms
         t = time.time()
@@ -507,8 +501,11 @@ class RDataset(Dataset):
 
         if cut:
             # generate cutflow
-            self.gen_cutflow()
-            self.histograms["cutflow"] = self.cutflow.gen_histogram()
+            self.gen_cutflows()
+            for cutflow_name, cutflow in self.cutflows.items():
+                self.histograms[
+                    "cutflow" + (("_" + cutflow_name) if cutflow_name else "")
+                ] = cutflow.gen_histogram(name=cutflow_name)
             self.cutflow_printout()
 
         self.logger.info(f"Producted {len(self.histograms)} histograms.")

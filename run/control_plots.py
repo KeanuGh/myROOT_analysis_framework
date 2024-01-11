@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt  # type: ignore
 from histogram import Histogram1D  # type: ignore
 from run import cuts
 from src.analysis import Analysis
+from src.cutflow import Cut
 
 DTA_PATH = "/data/DTA_outputs/2023-10-25/"
 # DTA_PATH = "/data/DTA_outputs/2023-06-29/"
@@ -17,6 +18,42 @@ cuts_e = cuts.cuts_reco_e
 cuts_had = cuts.cuts_reco_had
 
 if __name__ == "__main__":
+    # some separate cuts
+    def add_deltaRtaumu_cut(cut_list: list[Cut], deltaR: float) -> list[Cut]:
+        for i, cut in enumerate(cut_list):
+            if "TauPt" in cut.name:
+                break
+        deltar_cut = Cut(
+            r"$\Delta R_{\tau---\mu} < " + f"{deltaR}$", r"DeltaR_tau_mu < " + str(deltaR)
+        )
+        return cut_list[: i - 1] + [deltar_cut] + cut_list[i - 1 :]
+
+    # some separate cuts
+    def add_deltaRtaue_cut(cut_list: list[Cut], deltaR: float) -> list[Cut]:
+        for i, cut in enumerate(cut_list):
+            if "TauPt" in cut.name:
+                break
+        deltar_cut = Cut(
+            r"$\Delta R_{\tau---\e} < " + f"{deltaR}$", r"DeltaR_tau_e < " + str(deltaR)
+        )
+        return cut_list[: i - 1] + [deltar_cut] + cut_list[i - 1 :]
+
+    cuts_mu = {
+        "R1": add_deltaRtaumu_cut(cuts_mu, 1.0),
+        "R05": add_deltaRtaumu_cut(cuts_mu, 0.5),
+        "R01": add_deltaRtaumu_cut(cuts_mu, 0.1),
+    }
+    cuts_e = {
+        "R1": add_deltaRtaue_cut(cuts_e, 1.0),
+        "R05": add_deltaRtaue_cut(cuts_e, 0.5),
+        "R01": add_deltaRtaue_cut(cuts_e, 0.1),
+    }
+    cuts_had = {
+        "R1": add_deltaRtaumu_cut(cuts_had, 1.0),
+        "R05": add_deltaRtaumu_cut(cuts_had, 0.5),
+        "R01": add_deltaRtaumu_cut(cuts_had, 0.1),
+    }
+
     datasets: Dict[str, Dict] = {
         # inclusive
         # "wtaunu_inc_mu": {
@@ -103,7 +140,7 @@ if __name__ == "__main__":
         data_dir=DATA_OUT_DIR,
         year="2017",
         ttree={"T_s1thv_NOMINAL", "T_s1tmv_NOMINAL", "T_s1tev_NOMINAL"},
-        regen_histograms=True,
+        # regen_histograms=True,
         analysis_label="control_plots",
         lepton="tau",
         extract_vars=cuts.import_vars_reco | cuts.import_vars_truth,

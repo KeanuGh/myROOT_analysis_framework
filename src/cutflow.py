@@ -177,13 +177,14 @@ class RCutflow:
             )
             self.logger.info(table)
 
-    def gen_histogram(self) -> ROOT.TH1I:
+    def gen_histogram(self, name: str = "") -> ROOT.TH1I:
         """return cutflow histogram"""
         n_items = len(self._cutflow)
         if n_items == 0:
             raise AttributeError("Cutflow empty or uninitialised. Try running gen_cutflow()")
 
-        hist = ROOT.TH1I("cutflow", "cutflow", n_items, 0, n_items)
+        name = ("cutflow_" + name) if name else "cutflow"
+        hist = ROOT.TH1I(name, name, n_items, 0, n_items)
 
         for i, cut_item in enumerate(self._cutflow):
             hist.SetBinContent(i + 1, cut_item.npass)

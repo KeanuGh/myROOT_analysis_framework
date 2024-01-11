@@ -3,7 +3,7 @@ from collections import OrderedDict
 from copy import deepcopy
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Tuple, Iterable, Callable, Any, Sequence, Generator
+from typing import Dict, List, Tuple, Callable, Any, Sequence, Generator
 
 import ROOT
 import matplotlib.pyplot as plt  # type: ignore
@@ -101,7 +101,7 @@ class Analysis:
         self.paths = AnalysisPath(
             plot_dir=Path(self._output_dir) / "plots",
             pkl_dir=Path(data_dir if data_dir else (self._output_dir / "pickles")),
-            latex_dir=Path(self._output_dir) / "LaTeX",  # where to print latex cutflow table
+            latex_dir=Path(self._output_dir) / "LaTeX",  # where to print latex cutflow table(s)
             log_dir=Path(self._output_dir) / "logs",
         )
         self.paths.create_paths()
@@ -191,8 +191,7 @@ class Analysis:
             if not indiv_regen_hists and histogram_file.exists():
                 # just read in previous histogram file if it exists
                 dataset.import_histograms(histogram_file)
-                if hasattr(dataset, "reset_cutflow"):
-                    dataset.reset_cutflow()
+                dataset.reset_cutflows()
                 dataset.logger.info(
                     f"Imported {len(dataset.histograms)} histogram(s) from file {histogram_file}"
                 )
@@ -207,9 +206,20 @@ class Analysis:
             if "merge_into" in args:
                 merged_ds = args["merge_into"]
 
-                # create a "dummy" dataset with only the label of the first dataset
+                # create a "dummy" dataset with only the label and cuts of the first dataset
                 if merged_ds not in self.datasets:
-                    self[merged_ds] = RDataset(name=merged_ds, label=dataset.label)
+                    self[merged_ds] = RDataset(
+                        name=merged_ds, label=dataset.label, cuts=dataset.cuts
+                    )
+                else:
+                    # verify cuts are the same
+                    if self[merged_ds].cuts != dataset.cuts:
+                        raise ValueError(
+                            f"Cuts in merged dataset are not the same. Got:"
+                            f"\nMerged: {self[merged_ds].cuts}"
+                            f"\nand"
+                            f"\nOriginal: {dataset.cuts}"
+                        )
 
                 for hist_name, hist in dataset.histograms.items():
                     hist_name_merged = merged_ds + "_" + hist_name
@@ -251,11 +261,11 @@ class Analysis:
                     self[merged_ds].histograms[hist_name] = self.histograms[hist_name_merged]
 
                 # sum cutflows
-                if isinstance(dataset, RDataset):
-                    if self[merged_ds].cutflow is not None:
-                        self[merged_ds].cutflow += dataset.cutflow
-                    else:
-                        self[merged_ds].cutflow = deepcopy(dataset.cutflow)
+                if self[merged_ds].cutflows is not None:
+                    for cutflow in self[merged_ds].cutflows:
+                        self[merged_ds].cutflows[cutflow] += dataset.cutflow
+                else:
+                    self[merged_ds].cutflows = deepcopy(dataset.cutflows)
 
             try:
                 dataset.dsid_metadata_printout()
@@ -394,30 +404,6 @@ class Analysis:
             pd.to_pickle(self[datasets[0]].df, self[datasets[0]].file)
             self.logger.info(f"Saved merged dataset to file {self[datasets[0]].file}")
 
-    @handle_dataset_arg
-    def apply_cuts(
-        self,
-        datasets: str | Iterable[str],
-        reco: bool = False,
-        truth: bool = False,
-    ) -> None:
-        """
-        Apply cuts to dataset dataframes. Skip cuts that do not exist in dataset, logging in debug.
-
-        :param datasets: list of datasets or single dataset name. If not given applies to all datasets.
-        :param reco: cut on reco cuts
-        :param truth: cut on truth cuts
-        :return: None if inplace is True.
-                 If False returns DataFrame with cuts applied and associated cut columns removed.
-                 Raises ValueError if cuts do not exist in dataframe
-        """
-        if isinstance(datasets, str):
-            datasets = [datasets]
-
-        for dataset in datasets:
-            # skip cuts that don't exist in dataset
-            self[dataset].apply_cuts(reco, truth)
-
     @check_single_dataset
     def __delete_dataset(self, ds_name: str) -> None:
         self.logger.info(f"Deleting dataset {ds_name} from analysis {self.name}")
@@ -463,7 +449,7 @@ class Analysis:
         suffix: str = "",
         prefix: str = "",
         **kwargs,
-    ) -> List[Histogram1D]:
+    ) -> None:
         """
         Plot same variable from different datasets.
         If one dataset is passed but multiple variables, will plot overlays of the variable for that one dataset
@@ -522,9 +508,7 @@ class Analysis:
             + (("_" + suffix) if suffix else "")  # suffix
         )
         name_template_short = (
-            "{dataset}"  # name of dataset(s)
-            + "_{variable}"  # name of variable(s)
-            + ("_cut" if cut else "")  # cut flag
+            "{dataset}" + "_{variable}"  # name of dataset(s)  # name of variable(s)
         )
 
         if isinstance(datasets, str):
@@ -533,6 +517,24 @@ class Analysis:
             labels = [labels]
         if isinstance(var, str):
             var = [var]
+
+        # handle how cuts are going to be done
+        if cut is False or cut is None:
+            cutsets_to_loop = [False]
+        elif cut is True:
+            # separate plot for EACH set of cuts
+            if len(datasets) > 1:
+                # check that all datasets to be plot have the same sets of cuts
+                first_cutflow = self[datasets[0]].cuts.keys()
+                if not all(ds.cuts.keys() == first_cutflow for ds in self.datasets.values()):
+                    raise ValueError("Datasets do not have the same cuts")
+            cutsets_to_loop = self[datasets[0]].cuts
+        elif isinstance(cut, str):
+            cutsets_to_loop = [cut]
+        elif isinstance(cut, list):
+            cutsets_to_loop = cut
+        else:
+            raise ValueError(f"Unknown cut {cut}")
 
         # figure out if we should loop over datasets or variables or both
         varloop = False
@@ -562,12 +564,6 @@ class Analysis:
             else:
                 raise ValueError("Only 'lumi' allowed for string value normalisation")
 
-        if ratio_plot:
-            fig, (ax, ratio_ax) = plt.subplots(2, 1, gridspec_kw={"height_ratios": [3, 1]})
-        else:
-            fig, ax = plt.subplots()
-            ratio_ax = None  # just so IDE doesn't complain about missing variable
-
         if n_overlays > 2:
             self.logger.warning("Not enough space to display stats box. Will not display")
             stats_box = False
@@ -578,165 +574,177 @@ class Analysis:
                 f"must be of same length as number of overlaid plots ({n_overlays})"
             )
 
-        # plotting loop
-        hists = []  # add histograms to be overlaid in this list
-        for i in range(n_overlays):
-            dataset = datasets[i] if datasetloop else datasets[0]
-            varname = var[i] if varloop else var[0]
-
-            label = labels[i] if labels else self[dataset].label
-            hist_name = name_template.format(
-                short=name_template_short.format(dataset=dataset, variable=varname)
-            )
-
-            # if passing a histogram name directly as the variable
-            if cut and varname + "_cut" in self.histograms:
-                hist_name_internal = varname + "_cut"
-            elif cut and varname + "_cut" in self[dataset].histograms:
-                hist_name_internal = dataset + "_" + varname + "_cut"
-
-            elif varname in self.histograms:
-                hist_name_internal = varname
-            elif varname in self[dataset].histograms:
-                hist_name_internal = dataset + "_" + varname
-            elif name_template_short in self.histograms:
-                hist_name_internal = varname
+        # plot for each cut
+        for cut in cutsets_to_loop:
+            if ratio_plot:
+                fig, (ax, ratio_ax) = plt.subplots(2, 1, gridspec_kw={"height_ratios": [3, 1]})
             else:
-                hist_name_internal = None
+                fig, ax = plt.subplots()
+                ratio_ax = None  # just so IDE doesn't complain about missing variable
 
-            # plot
-            if hist_name_internal:
-                hist = Histogram1D(th1=self.histograms[hist_name_internal], logger=self.logger)
-                hist.plot(
-                    ax=ax,
-                    yerr=yerr,
-                    normalise=normalise,
-                    stats_box=stats_box,
-                    scale_by_bin_width=scale_by_bin_width,
-                    label=None if n_overlays == 1 else label,
-                    w2=w2,
-                    **kwargs,
-                )
-            else:
-                self.logger.warning(
-                    f"WARNING: Histogram '{varname}' not found. Will try to generate."
-                )
-                if bins is None:
-                    raise ValueError("Must provide bins if histogram is not yet generated.")
+            # plotting loop
+            hists = []  # add histograms to be overlaid in this list
+            for i in range(n_overlays):
+                dataset = datasets[i] if datasetloop else datasets[0]
+                varname = var[i] if varloop else var[0]
 
-                hist = self[dataset].plot_hist(
-                    var=varname,
-                    bins=bins,
-                    weight=weight[i] if isinstance(weight, list) else weight,
-                    ax=ax,
-                    yerr=yerr,
-                    normalise=normalise,
-                    logbins=logbins,
-                    name=hist_name,
-                    label=None if n_overlays == 1 else label,
-                    w2=w2,
-                    stats_box=stats_box,
-                    scale_by_bin_width=scale_by_bin_width,
-                    cut=cut,
-                    **kwargs,
+                label = labels[i] if labels else self[dataset].label
+                hist_name = name_template.format(
+                    short=name_template_short.format(dataset=dataset, variable=varname)
                 )
 
-            # save
-            hists.append(hist)
-            self.histograms[hist_name] = hist.TH1
+                # if passing a histogram name directly as the variable
+                if cut and f"{varname}_{cut}_cut" in self.histograms:
+                    hist_name_internal = f"{varname}_{cut}_cut"
+                elif cut and f"{varname}_{cut}_cut" in self[dataset].histograms:
+                    hist_name_internal = f"{dataset}_{varname}_{cut}_cut"
+                elif cut:
+                    raise ValueError(f"No cut {cut} found for {varname} in {dataset}")
 
-            if ratio_plot and len(hists) > 1:
-                # ratio of first dataset to this one
-                label = (
-                    f"{labels[-1]}/{labels[0]}"
-                    if labels
-                    else f"{self[dataset].label}/{self[datasets[0]].label}"
-                )
-                # match ratio colour to plot
-                color = ax.get_lines()[-1].get_color() if (n_overlays > 2) else "k"
-                ratio_hist_name = (
-                    name_template.format(
-                        short=name_template_short.format(
-                            dataset=f"{dataset}_{datasets[0]}", variable=varname
-                        )
+                elif varname in self.histograms:
+                    hist_name_internal = varname
+                elif varname in self[dataset].histograms:
+                    hist_name_internal = dataset + "_" + varname
+                elif name_template_short in self.histograms:
+                    hist_name_internal = varname
+                else:
+                    hist_name_internal = None
+
+                # plot
+                if hist_name_internal:
+                    hist = Histogram1D(th1=self.histograms[hist_name_internal], logger=self.logger)
+                    hist.plot(
+                        ax=ax,
+                        yerr=yerr,
+                        normalise=normalise,
+                        stats_box=stats_box,
+                        scale_by_bin_width=scale_by_bin_width,
+                        label=None if n_overlays == 1 else label,
+                        w2=w2,
+                        **kwargs,
                     )
-                    + "_ratio"
-                )
-                ratio_hist = hists[0].plot_ratio(
-                    hists[-1],
-                    ax=ratio_ax,
-                    yerr=ratio_err,
-                    label=label,
-                    normalise=bool(normalise),
-                    color=color,
-                    fit=ratio_fit,
-                    yax_lim=ratio_axlim,
-                    name=ratio_hist_name,
-                    display_stats=n_overlays <= 3,  # display results if there are <2 fits
-                )
-                self.histograms[ratio_hist_name] = ratio_hist.TH1
+                else:
+                    self.logger.warning(
+                        f"WARNING: Histogram '{varname}' not found. Will try to generate."
+                    )
+                    if bins is None:
+                        raise ValueError("Must provide bins if histogram is not yet generated.")
 
-        if n_overlays > 1:
-            ax.legend(fontsize=10, loc="upper right")
-        plotting_tools.set_axis_options(
-            axis=ax,
-            var_name=var,
-            lepton=lepton,
-            xlim=(hist.bin_edges[0], hist.bin_edges[-1]),
-            xlabel=xlabel,
-            ylabel=ylabel,
-            title=title,
-            logx=logx,
-            logy=logy,
-            diff_xs=scale_by_bin_width,
-        )
-        if x_axlim:
-            ax.set_xlim(*x_axlim)
-        if y_axlim:
-            ax.set_ylim(*y_axlim)
-        if gridopts:
-            ax.grid(*gridopts)
-        if ratio_plot:
-            fig.tight_layout()
-            fig.subplots_adjust(hspace=0.1, wspace=0)
-            ax.set_xticklabels([])
-            ax.set_xlabel("")
+                    hist = self[dataset].plot_hist(
+                        var=varname,
+                        bins=bins,
+                        weight=weight[i] if isinstance(weight, list) else weight,
+                        ax=ax,
+                        yerr=yerr,
+                        normalise=normalise,
+                        logbins=logbins,
+                        name=hist_name,
+                        label=None if n_overlays == 1 else label,
+                        w2=w2,
+                        stats_box=stats_box,
+                        scale_by_bin_width=scale_by_bin_width,
+                        cut=cut,
+                        **kwargs,
+                    )
 
-            if len(datasets) > 2:  # don't show legend if there's only two datasets
-                ratio_ax.legend(fontsize=10, loc=1)
+                # save
+                hists.append(hist)
+                self.histograms[hist_name] = hist.TH1
 
+                if ratio_plot and len(hists) > 1:
+                    # ratio of first dataset to this one
+                    label = (
+                        f"{labels[-1]}/{labels[0]}"
+                        if labels
+                        else f"{self[dataset].label}/{self[datasets[0]].label}"
+                    )
+                    # match ratio colour to plot
+                    color = ax.get_lines()[-1].get_color() if (n_overlays > 2) else "k"
+                    ratio_hist_name = (
+                        name_template.format(
+                            short=name_template_short.format(
+                                dataset=f"{dataset}_{datasets[0]}", variable=varname
+                            )
+                        )
+                        + "_ratio"
+                    )
+                    ratio_hist = hists[0].plot_ratio(
+                        hists[-1],
+                        ax=ratio_ax,
+                        yerr=ratio_err,
+                        label=label,
+                        normalise=bool(normalise),
+                        color=color,
+                        fit=ratio_fit,
+                        yax_lim=ratio_axlim,
+                        name=ratio_hist_name,
+                        display_stats=n_overlays <= 3,  # display results if there are <2 fits
+                    )
+                    self.histograms[ratio_hist_name] = ratio_hist.TH1
+
+            if n_overlays > 1:
+                ax.legend(fontsize=10, loc="upper right")
             plotting_tools.set_axis_options(
-                axis=ratio_ax,
+                axis=ax,
                 var_name=var,
                 lepton=lepton,
-                xlim=(ratio_hist.bin_edges[0], ratio_hist.bin_edges[-1]),
-                diff_xs=scale_by_bin_width,
+                xlim=(hist.bin_edges[0], hist.bin_edges[-1]),
                 xlabel=xlabel,
-                ylabel=ratio_label,
-                title="",
+                ylabel=ylabel,
+                title=title,
                 logx=logx,
-                logy=False,
-                label=False,
+                logy=logy,
+                diff_xs=scale_by_bin_width,
             )
+            if x_axlim:
+                ax.set_xlim(*x_axlim)
+            if y_axlim:
+                ax.set_ylim(*y_axlim)
+            if gridopts:
+                ax.grid(*gridopts)
+            if ratio_plot:
+                fig.tight_layout()
+                fig.subplots_adjust(hspace=0.1, wspace=0)
+                ax.set_xticklabels([])
+                ax.set_xlabel("")
 
-        if filename:
-            filename = self.paths.plot_dir / filename
-        else:
-            if isinstance(var, str):
-                varname = var
-            else:
-                varname = "_".join(var)
-            filename = self.paths.plot_dir / (
-                name_template.format(
-                    short=name_template_short.format(dataset="_".join(datasets), variable=varname)
+                if len(datasets) > 2:  # don't show legend if there's only two datasets
+                    ratio_ax.legend(fontsize=10, loc=1)
+
+                plotting_tools.set_axis_options(
+                    axis=ratio_ax,
+                    var_name=var,
+                    lepton=lepton,
+                    xlim=(ratio_hist.bin_edges[0], ratio_hist.bin_edges[-1]),
+                    diff_xs=scale_by_bin_width,
+                    xlabel=xlabel,
+                    ylabel=ratio_label,
+                    title="",
+                    logx=logx,
+                    logy=False,
+                    label=False,
                 )
-                + ".png"
-            )
 
-        fig.savefig(filename, bbox_inches="tight")
-        self.logger.info(f"Saved plot of {var} to {filename}")
-        plt.close(fig)
-        return hists
+            if filename:
+                filepath = self.paths.plot_dir / filename
+            else:
+                if isinstance(var, str):
+                    varname = var
+                else:
+                    varname = "_".join(var)
+                filepath = self.paths.plot_dir / (
+                    name_template.format(
+                        short=name_template_short.format(
+                            dataset="_".join(datasets), variable=varname
+                        )
+                    )
+                    + (f"_{cut}_cut" if cut else "")
+                    + ".png"
+                )
+
+            fig.savefig(filepath, bbox_inches="tight")
+            self.logger.info(f"Saved plot of {var} to {filepath}")
+            plt.close(fig)
 
     def stack_plot(
         self,
@@ -789,6 +797,24 @@ class Analysis:
                 f"Got {len(datasets)} datasets and {len(var)} variables"
             )
 
+        # handle how cuts are going to be done
+        if cut is False or cut is None:
+            cutsets_to_loop = [False]
+        elif cut is True:
+            # separate plot for EACH set of cuts
+            if len(datasets) > 1:
+                # check that all datasets to be plot have the same sets of cuts
+                first_cutflow = self[datasets[0]].cuts
+                if not all(ds.cuts == first_cutflow for ds in self.datasets.values()[1:]):
+                    raise ValueError("Datasets do not have the same cuts")
+            cutsets_to_loop = self[datasets[0]].cuts
+        elif isinstance(cut, str):
+            cutsets_to_loop = [cut]
+        elif isinstance(cut, list):
+            cutsets_to_loop = cut
+        else:
+            raise ValueError(f"Unknown cut {cut}")
+
         # figure out if we should loop over datasets or variables or both
         varloop = False
         datasetloop = False
@@ -807,93 +833,100 @@ class Analysis:
         else:
             n_stacks = 1
 
-        # work out histograms to stack
-        hist_list = []
-        label_list = []
-        err_list = []
-        for i in range(n_stacks):
-            dataset = datasets[i] if datasetloop else datasets[0]
-            varname = var[i] if varloop else var[0]
+        # plot for each cut
+        for cut in cutsets_to_loop:
+            # work out histograms to stack
+            hist_list = []
+            label_list = []
+            err_list = []
+            for i in range(n_stacks):
+                dataset = datasets[i] if datasetloop else datasets[0]
+                varname = var[i] if varloop else var[0]
 
-            label = labels[i] if labels else self[dataset].label
-            label_list.append(label)
+                label = labels[i] if labels else self[dataset].label
+                label_list.append(label)
 
-            # if passing a histogram name directly as the variable
-            if cut and varname + "_cut" in self.histograms:
-                hist_name_internal = varname + "_cut"
-            elif cut and varname + "_cut" in self[dataset].histograms:
-                hist_name_internal = dataset + "_" + varname + "_cut"
+                # if passing a histogram name directly as the variable
+                if cut and f"{varname}_{cut}_cut" in self.histograms:
+                    hist_name_internal = f"{varname}_{cut}_cut"
+                elif cut and f"{varname}_{cut}_cut" in self[dataset].histograms:
+                    hist_name_internal = f"{dataset}_{varname}_{cut}_cut"
+                elif cut:
+                    raise ValueError(f"No cut {cut} found for {varname} in {dataset}")
 
-            elif varname in self.histograms:
-                hist_name_internal = varname
-            elif varname in self[dataset].histograms:
-                hist_name_internal = dataset + "_" + varname
-            elif name_template_short in self.histograms:
-                hist_name_internal = varname
-            else:
-                raise ValueError(f"No histogram for {varname} in {dataset}")
+                elif varname in self.histograms:
+                    hist_name_internal = varname
+                elif varname in self[dataset].histograms:
+                    hist_name_internal = dataset + "_" + varname
+                elif name_template_short in self.histograms:
+                    hist_name_internal = varname
+                else:
+                    raise ValueError(f"No histogram for {varname} in {dataset}")
 
-            hist = Histogram1D(th1=self.histograms[hist_name_internal], logger=self.logger)
-            if scale_by_bin_width:
-                hist /= hist.bin_widths
+                hist = Histogram1D(th1=self.histograms[hist_name_internal], logger=self.logger)
+                if scale_by_bin_width:
+                    hist /= hist.bin_widths
 
-            # check bins
-            if len(hist_list) > 1:
-                assert np.allclose(
-                    hist.bin_edges, hist_list[-1].bin_edges
-                ), f"Bins {hist} and {hist_list[-1]} not equal!"
+                # check bins
+                if len(hist_list) > 1:
+                    assert np.allclose(
+                        hist.bin_edges, hist_list[-1].bin_edges
+                    ), f"Bins {hist} and {hist_list[-1]} not equal!"
 
-            hist_list.append(hist)
-            err_list.append(hist.error())
+                hist_list.append(hist)
+                err_list.append(hist.error())
 
-        # plot
-        fig, ax = plt.subplots()
-        hep.histplot(
-            H=[h.bin_values() for h in hist_list],
-            bins=hist_list[-1].bin_edges,  # SHOULD all be the same so just use the last one
-            ax=ax,
-            yerr=err_list if yerr is True else yerr,
-            label=label_list,
-            stack=True,
-            histtype="step",
-            **kwargs,
-        )
-
-        plotting_tools.set_axis_options(
-            axis=ax,
-            var_name=var,
-            xlim=x_axlim if x_axlim else (hist.bin_edges[0], hist.bin_edges[-1]),
-            ylim=y_axlim,
-            xlabel=xlabel,
-            ylabel=ylabel,
-            title=title,
-            logx=logx,
-            logy=logy,
-            diff_xs=scale_by_bin_width,
-        )
-        if x_axlim:
-            ax.set_xlim(*x_axlim)
-        if y_axlim:
-            ax.set_ylim(*y_axlim)
-        ax.legend(fontsize=10, loc="upper right")
-
-        if filename:
-            filename = self.paths.plot_dir / filename
-        else:
-            if isinstance(var, str):
-                varname = var
-            else:
-                varname = "_".join(var)
-            filename = self.paths.plot_dir / (
-                name_template.format(
-                    short=name_template_short.format(dataset="_".join(datasets), variable=varname)
+                # plot
+                fig, ax = plt.subplots()
+                hep.histplot(
+                    H=[h.bin_values() for h in hist_list],
+                    bins=hist_list[-1].bin_edges,  # SHOULD all be the same so just use the last one
+                    ax=ax,
+                    yerr=err_list if yerr is True else yerr,
+                    label=label_list,
+                    stack=True,
+                    histtype="step",
+                    **kwargs,
                 )
-                + ".png"
-            )
 
-        fig.savefig(filename, bbox_inches="tight")
-        self.logger.info(f"Saved plot of {var} to {filename}")
-        plt.close(fig)
+                plotting_tools.set_axis_options(
+                    axis=ax,
+                    var_name=var,
+                    xlim=x_axlim if x_axlim else (hist.bin_edges[0], hist.bin_edges[-1]),
+                    ylim=y_axlim,
+                    xlabel=xlabel,
+                    ylabel=ylabel,
+                    title=title,
+                    logx=logx,
+                    logy=logy,
+                    diff_xs=scale_by_bin_width,
+                )
+                if x_axlim:
+                    ax.set_xlim(*x_axlim)
+                if y_axlim:
+                    ax.set_ylim(*y_axlim)
+                ax.legend(fontsize=10, loc="upper right")
+
+                if filename:
+                    filepath = self.paths.plot_dir / filename
+                else:
+                    if isinstance(var, str):
+                        varname = var
+                    else:
+                        varname = "_".join(var)
+                    filepath = self.paths.plot_dir / (
+                        name_template.format(
+                            short=name_template_short.format(
+                                dataset="_".join(datasets), variable=varname
+                            )
+                        )
+                        + (f"{cut}_cut" if cut else "")
+                        + ".png"
+                    )
+
+                fig.savefig(filepath, bbox_inches="tight")
+                self.logger.info(f"Saved plot of {var} to {filepath}")
+                plt.close(fig)
 
     # ===============================
     # ========= PRINTOUTS ===========
@@ -901,9 +934,7 @@ class Analysis:
     @handle_dataset_arg
     def cutflow_printout(self, datasets: str, latex: bool = False) -> None:
         """Prints cutflow table to terminal"""
-        self[datasets].cutflow.print(
-            self.paths.latex_dir / f"{datasets}_cutflow.tex" if latex else None
-        )
+        self[datasets].cutflow_printout(self.paths.latex_dir if latex else None)
 
     def save_histograms(
         self,

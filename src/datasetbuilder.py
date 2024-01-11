@@ -11,7 +11,7 @@ import pandas as pd  # type: ignore
 from awkward import to_dataframe  # type: ignore
 
 from src.cutfile import Cut
-from src.dataset import Dataset, RDataset
+from src.dataset import RDataset
 from src.logger import get_logger
 from utils import ROOT_utils, PMG_tool
 from utils.var_helpers import derived_vars
@@ -102,7 +102,7 @@ class DatasetBuilder:
         data_path: str,
         cuts: list[Cut] | dict[str, list[Cut]] | None = None,
         extract_vars: set[str] | None = None,
-    ) -> Dataset:
+    ) -> RDataset:
         """
         Builds a dataframe from cut inputs.
 
@@ -119,9 +119,17 @@ class DatasetBuilder:
         else:
             self.logger.info(f"{len(glob.glob(str(data_path)))} files found in {str(data_path)}")
 
+        # sanitise input
+        if isinstance(cuts, list):
+            cuts = {"": cuts}
+
         # Parsing cuts
-        # separate variables to calculate and those to extract
-        all_vars = {var for cut in cuts for var in cut.var} | extract_vars
+        # extract all variables in all cuts in all cut sets passed to builder and which to extract
+        all_vars = set()
+        for cut_list in cuts.values():
+            for cut in cut_list:
+                all_vars |= cut.var
+        all_vars |= extract_vars
         vars_to_calc = {var for var in all_vars if var in derived_vars}
         # add all variables to all ttrees
         tree_dict = {tree: all_vars for tree in self.ttree}
