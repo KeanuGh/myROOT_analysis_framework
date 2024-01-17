@@ -511,6 +511,7 @@ class Histogram1D(bh.Histogram, family=None):
         scale_by_bin_width: bool = False,
         stats_box: bool = False,
         out_filename: str | None = None,
+        histtype: str = "step",
         show: bool = False,
         **kwargs,
     ) -> Histogram1D:
@@ -569,6 +570,7 @@ class Histogram1D(bh.Histogram, family=None):
             ax=ax,
             yerr=yerr,
             w2=hist.sumw2() if w2 else None,
+            histtype=histtype,
             **kwargs,
         )
 

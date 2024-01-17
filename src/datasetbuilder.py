@@ -68,6 +68,7 @@ class DatasetBuilder:
     logger: logging.Logger = field(default_factory=get_logger)
     hard_cut: str = ""
     dataset_type: str = "dta"
+    isMC: bool = True
 
     # force_rebuild: bool = False
     # force_recalc_cuts: bool = False
@@ -89,6 +90,9 @@ class DatasetBuilder:
                 self.ttree = {self.ttree}
         else:
             NotImplementedError("Only allow DTA outputs from now on")
+        
+        if self.name == "data":
+            self.isMC = False
 
         if self.year:
             self.lumi = lumi_year[self.year]
@@ -243,17 +247,18 @@ class DatasetBuilder:
         self.logger.info(f"Initiating RDataFrame from trees {ttrees} in {data_path}")
 
         # create c++ map for dataset ID metadatas
-        self.logger.debug("Calculating DSID metadata...")
-        # each tree /SHOULD/ have the same dsid here
-        dsid_metadata = self._get_dsid_values(data_path, list(ttrees)[0])
-        self.logger.info(f"Sum of weights per dsid:\n{dsid_metadata['sumOfWeights']}")
-        ROOT.gInterpreter.Declare(
-            f"""
-                std::map<int, float> {self.name}_dsid_sumw{{{','.join(f'{{{t.Index}, {t.sumOfWeights}}}' for t in dsid_metadata.itertuples())}}};
-                std::map<int, float> {self.name}_dsid_xsec{{{','.join(f'{{{t.Index}, {t.cross_section}}}' for t in dsid_metadata.itertuples())}}};
-                std::map<int, float> {self.name}_dsid_pmgf{{{','.join(f'{{{t.Index}, {t.PMG_factor}}}' for t in dsid_metadata.itertuples())}}};
-            """
-        )
+        if self.isMC:
+            self.logger.debug("Calculating DSID metadata...")
+            # each tree /SHOULD/ have the same dsid here
+            dsid_metadata = self._get_dsid_values(data_path, list(ttrees)[0])
+            self.logger.info(f"Sum of weights per dsid:\n{dsid_metadata['sumOfWeights']}")
+            ROOT.gInterpreter.Declare(
+                f"""
+                    std::map<int, float> {self.name}_dsid_sumw{{{','.join(f'{{{t.Index}, {t.sumOfWeights}}}' for t in dsid_metadata.itertuples())}}};
+                    std::map<int, float> {self.name}_dsid_xsec{{{','.join(f'{{{t.Index}, {t.cross_section}}}' for t in dsid_metadata.itertuples())}}};
+                    std::map<int, float> {self.name}_dsid_pmgf{{{','.join(f'{{{t.Index}, {t.PMG_factor}}}' for t in dsid_metadata.itertuples())}}};
+                """
+            )
 
         # make rdataframe
         Rdf = ROOT_utils.init_rdataframe(self.name, str(data_path), ttrees)
@@ -266,27 +271,21 @@ class DatasetBuilder:
         workaround_str = "(mcChannel == 0) ? 700446 : mcChannel"
 
         # create weights
-        Rdf = (
-            Rdf.Define(
-                "truth_weight",
-                f"(mcWeight * rwCorr * {self.lumi} * prwWeight * {self.name}_dsid_pmgf[{workaround_str}]) "
-                f"/ {self.name}_dsid_sumw[{workaround_str}]",
-            ).Define(
-                "reco_weight",
-                f"(weight * {self.lumi} * {self.name}_dsid_pmgf[{workaround_str}]) "
-                f"/ {self.name}_dsid_sumw[{workaround_str}]",
+        if self.isMC:
+            Rdf = (
+                Rdf.Define(
+                    "truth_weight",
+                    f"(mcWeight * rwCorr * {self.lumi} * prwWeight * {self.name}_dsid_pmgf[{workaround_str}]) "
+                    f"/ {self.name}_dsid_sumw[{workaround_str}]",
+                ).Define(
+                    "reco_weight",
+                    f"(weight * {self.lumi} * {self.name}_dsid_pmgf[{workaround_str}]) "
+                    f"/ {self.name}_dsid_sumw[{workaround_str}]",
+                )
             )
-            # .Define(
-            #     "ele_weight_reco",
-            #     "reco_weight * Ele_recoSF * Ele_idSF * Ele_isoSF",
-            # )
-            # .Define(
-            #     "muon_weight_reco",
-            #     "reco_weight * Muon_recoSF * Muon_isoSF * Muon_ttvaSF",
-            # )
-            # .Define("tau_weight_reco", "reco_weight * TauRecoSF")
-            # .Define("jet_weight_reco", "reco_weight * Jet_btSF")
-        )
+        else:
+            # for consistency's sake
+            Rdf = Rdf.Define("reco_weight", "1").Define("truth_weight", "1")
 
         # rescale energy columns to GeV
         for gev_column in [

@@ -37,6 +37,8 @@ class Dataset(ABC):
     file: Path = field(init=False)
     histograms: OrderedDict[str, ROOT.TH1] = field(init=False, default_factory=OrderedDict)
     binnings: dict[str, list[float]] = field(default_factory=dict)
+    colour: str | tuple = field(default_factory=str)
+    is_merged: bool = False
 
     @abstractmethod
     def __len__(self):
@@ -111,9 +113,9 @@ class Dataset(ABC):
             for cutflow_name, cutflow in self.cutflows.items():
                 if path is not None:
                     tex_path = path / f"{self.name}_{cutflow_name}_cutflow.tex"
+                    cutflow.print(latex_path=tex_path)
                 else:
-                    tex_path = f"{self.name}_{cutflow_name}_cutflow.tex"
-                cutflow.print(latex_path=tex_path)
+                    cutflow.print()
         else:
             raise AttributeError("Must have applied cuts to obtain cutflow")
 
@@ -455,10 +457,10 @@ class RDataset(Dataset):
                 case _:
                     raise ValueError(f"Unknown variable tag for variable {var}")
 
-        # histogram weights
-        for weight_str in ["truth_weight", "reco_weight"]:
-            wgt_th1 = ROOT.TH1F(weight_str, weight_str, 100, -1000, 1000)
-            th1_histograms[weight_str] = self.df.Fill(wgt_th1, [weight_str])
+        # # histogram weights
+        # for weight_str in ["truth_weight", "reco_weight"]:
+        #     wgt_th1 = ROOT.TH1F(weight_str, weight_str, 100, -1000, 1000)
+        #     th1_histograms[weight_str] = self.df.Fill(wgt_th1, [weight_str])
 
         for variable_name in output_histogram_variables:
             # which binning?

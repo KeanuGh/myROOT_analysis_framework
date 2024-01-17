@@ -209,7 +209,7 @@ class Analysis:
                 # create a "dummy" dataset with only the label and cuts of the first dataset
                 if merged_ds not in self.datasets:
                     self[merged_ds] = RDataset(
-                        name=merged_ds, label=dataset.label, cuts=dataset.cuts
+                        name=merged_ds, label=dataset.label, cuts=dataset.cuts, is_merged=True
                     )
                 else:
                     # verify cuts are the same
@@ -281,6 +281,7 @@ class Analysis:
 
         self.logger.info("=" * (len(analysis_label) + 23))
         self.logger.info(f"ANALYSIS '{analysis_label}' INITIALISED")
+
 
     @staticmethod
     def __match_params(params: dict[str, Any], func: Callable) -> dict[str, Any]:
@@ -750,6 +751,7 @@ class Analysis:
         self,
         datasets: str | Sequence[str],
         var: str | Sequence[str],
+        data: bool = False,
         yerr: ArrayLike | str = True,
         labels: list[str] | None = None,
         normalise: float | bool = False,
@@ -763,11 +765,16 @@ class Analysis:
         y_axlim: tuple[float, float] | None = None,
         filename: str | Path | None = None,
         cut: bool = False,
+        histtype="fill",
+        sort: bool = True,
         suffix: str = "",
         prefix: str = "",
         **kwargs,
     ) -> None:
         self.logger.info(f"Plotting stack plot of {var} in {datasets}")
+
+        if data and "data" not in self.datasets:
+            raise ValueError("No 'data' dataset found in analysis")
 
         # naming template for file/histogram name
         name_template = (
@@ -805,7 +812,7 @@ class Analysis:
             if len(datasets) > 1:
                 # check that all datasets to be plot have the same sets of cuts
                 first_cutflow = self[datasets[0]].cuts
-                if not all(ds.cuts == first_cutflow for ds in self.datasets.values()[1:]):
+                if not all(ds.cuts == first_cutflow for ds in list(self.datasets.values())[1:]):
                     raise ValueError("Datasets do not have the same cuts")
             cutsets_to_loop = self[datasets[0]].cuts
         elif isinstance(cut, str):
@@ -833,12 +840,19 @@ class Analysis:
         else:
             n_stacks = 1
 
+        # do the datasets have defined colours?
+        is_colours = all(self[ds].colour != "" for ds in datasets)
+        if not is_colours:
+            self.logger.debug("Colours aren't specified for all datasets, will generate.")
+
         # plot for each cut
         for cut in cutsets_to_loop:
             # work out histograms to stack
             hist_list = []
             label_list = []
             err_list = []
+            colours_list = []
+
             for i in range(n_stacks):
                 dataset = datasets[i] if datasetloop else datasets[0]
                 varname = var[i] if varloop else var[0]
@@ -846,24 +860,10 @@ class Analysis:
                 label = labels[i] if labels else self[dataset].label
                 label_list.append(label)
 
-                # if passing a histogram name directly as the variable
-                if cut and f"{varname}_{cut}_cut" in self.histograms:
-                    hist_name_internal = f"{varname}_{cut}_cut"
-                elif cut and f"{varname}_{cut}_cut" in self[dataset].histograms:
-                    hist_name_internal = f"{dataset}_{varname}_{cut}_cut"
-                elif cut:
-                    raise ValueError(f"No cut {cut} found for {varname} in {dataset}")
+                if is_colours:
+                    colours_list.append(self[dataset].colour)
 
-                elif varname in self.histograms:
-                    hist_name_internal = varname
-                elif varname in self[dataset].histograms:
-                    hist_name_internal = dataset + "_" + varname
-                elif name_template_short in self.histograms:
-                    hist_name_internal = varname
-                else:
-                    raise ValueError(f"No histogram for {varname} in {dataset}")
-
-                hist = Histogram1D(th1=self.histograms[hist_name_internal], logger=self.logger)
+                hist = self.get_hist(varname, dataset, cut)
                 if scale_by_bin_width:
                     hist /= hist.bin_widths
 
@@ -876,57 +876,106 @@ class Analysis:
                 hist_list.append(hist)
                 err_list.append(hist.error())
 
-                # plot
-                fig, ax = plt.subplots()
-                hep.histplot(
-                    H=[h.bin_values() for h in hist_list],
-                    bins=hist_list[-1].bin_edges,  # SHOULD all be the same so just use the last one
-                    ax=ax,
-                    yerr=err_list if yerr is True else yerr,
-                    label=label_list,
-                    stack=True,
-                    histtype="step",
-                    **kwargs,
+            if sort:
+                # Sort lists based on integral of histograms so smallest histograms sit at bottom
+                all_lists = zip(hist_list, err_list, label_list, colours_list)
+                sorted_lists = sorted(all_lists, key=lambda l: l[0].integral)
+                hist_list, err_list, label_list, colours_list = zip(*sorted_lists)
+
+            # plot
+            fig, ax = plt.subplots()
+            hep.histplot(
+                H=[h.bin_values() for h in hist_list],
+                bins=hist_list[-1].bin_edges,
+                ax=ax,
+                yerr=err_list if yerr is True else yerr,
+                color=colours_list if colours_list else None,
+                label=label_list,
+                stack=True,
+                histtype=histtype,
+                **kwargs,
+            )
+
+            if data:
+                hist = self.get_hist(varname, "data", cut)
+                if scale_by_bin_width:
+                    hist /= hist.bin_widths
+                ax.errorbar(
+                    hist.bin_centres,
+                    hist.bin_values(),
+                    xerr=hist.bin_widths / 2,
+                    yerr=hist.error(),
+                    linestyle="None",
+                    color="black",
+                    marker=".",
+                    label=self["data"].label
                 )
 
-                plotting_tools.set_axis_options(
-                    axis=ax,
-                    var_name=var,
-                    xlim=x_axlim if x_axlim else (hist.bin_edges[0], hist.bin_edges[-1]),
-                    ylim=y_axlim,
-                    xlabel=xlabel,
-                    ylabel=ylabel,
-                    title=title,
-                    logx=logx,
-                    logy=logy,
-                    diff_xs=scale_by_bin_width,
-                )
-                if x_axlim:
-                    ax.set_xlim(*x_axlim)
-                if y_axlim:
-                    ax.set_ylim(*y_axlim)
-                ax.legend(fontsize=10, loc="upper right")
+            plotting_tools.set_axis_options(
+                axis=ax,
+                var_name=var,
+                xlim=(
+                    x_axlim
+                    if x_axlim
+                    else (hist.bin_edges[0], hist.bin_edges[-1])
+                ),
+                ylim=y_axlim,
+                xlabel=xlabel,
+                ylabel=ylabel,
+                title=title,
+                logx=logx,
+                logy=logy,
+                diff_xs=scale_by_bin_width,
+            )
+            if x_axlim:
+                ax.set_xlim(*x_axlim)
+            if y_axlim:
+                ax.set_ylim(*y_axlim)
+            ax.legend(fontsize=10, loc="upper right")
 
-                if filename:
-                    filepath = self.paths.plot_dir / filename
+            if filename:
+                filepath = self.paths.plot_dir / filename
+            else:
+                if isinstance(var, str):
+                    varname = var
                 else:
-                    if isinstance(var, str):
-                        varname = var
-                    else:
-                        varname = "_".join(var)
-                    filepath = self.paths.plot_dir / (
-                        name_template.format(
-                            short=name_template_short.format(
-                                dataset="_".join(datasets), variable=varname
-                            )
+                    varname = "_".join(var)
+                filepath = self.paths.plot_dir / (
+                    name_template.format(
+                        short=name_template_short.format(
+                            dataset="_".join(datasets), variable=varname
                         )
-                        + (f"{cut}_cut" if cut else "")
-                        + ".png"
                     )
+                    + (f"{cut}_cut" if cut else "")
+                    + ".png"
+                )
 
-                fig.savefig(filepath, bbox_inches="tight")
-                self.logger.info(f"Saved plot of {var} to {filepath}")
-                plt.close(fig)
+            fig.savefig(filepath, bbox_inches="tight")
+            self.logger.info(f"Saved plot of {var} to {filepath}")
+            plt.close(fig)
+
+
+    def get_hist(self, variable: str, dataset: str, cut: str) -> Histogram1D:
+        # if passing a histogram name directly as the variable
+        if cut and f"{variable}_{cut}_cut" in self.histograms:
+            hist_name_internal = f"{variable}_{cut}_cut"
+        elif cut and f"{variable}_{cut}_cut" in self[dataset].histograms:
+            hist_name_internal = f"{dataset}_{variable}_{cut}_cut"
+        elif cut:
+            raise ValueError(f"No cut {cut} found for {variable} in {dataset}")
+
+        elif variable in self.histograms:
+            hist_name_internal = variable
+        elif variable in self[dataset].histograms:
+            hist_name_internal = dataset + "_" + variable
+        else:
+            raise ValueError(
+                f"No histogram for {variable} in {dataset}."
+                "\nHistograms in analysis:" + '\n'.join(self.histograms.keys())
+                + "\n Histograms in dataset: " + '\n'.join(self[dataset].histograms.keys())
+                )
+        
+        return Histogram1D(th1=self.histograms[hist_name_internal], logger=self.logger)
 
     # ===============================
     # ========= PRINTOUTS ===========
