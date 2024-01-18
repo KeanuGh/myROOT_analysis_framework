@@ -1,9 +1,8 @@
-from copy import deepcopy
 from pathlib import Path
 from typing import Dict
 
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 
 from run import cuts
 from src.analysis import Analysis
@@ -131,7 +130,7 @@ if __name__ == "__main__":
         "ttbar",
     ]
     # set colours for merged datasets only
-    c_iter = iter(plt.rcParams["axes.prop_cycle"].by_key()['color'])
+    c_iter = iter(plt.rcParams["axes.prop_cycle"].by_key()["color"])
     for ds in datasets_merged:
         c = next(c_iter)
         analysis[ds].colour = c
@@ -158,8 +157,12 @@ if __name__ == "__main__":
         "MET_met",
         "MTW",
     ]:
-        analysis.stack_plot(var=var, **default_args, **mass_args, data=True, filename=var + "_stack.png")
-        analysis.plot_hist(var=var, **default_args, **mass_args, ratio_plot=False, filename=var + ".png")
+        analysis.stack_plot(
+            var=var, **default_args, **mass_args, data=True, filename=var + "_stack.png"
+        )
+        analysis.plot_hist(
+            var=var, **default_args, **mass_args, ratio_plot=False, filename=var + ".png"
+        )
 
     # unitless variables
     for var in [
