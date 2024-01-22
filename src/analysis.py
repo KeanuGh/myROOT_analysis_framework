@@ -281,7 +281,6 @@ class Analysis:
         self.logger.info("=" * (len(analysis_label) + 23))
         self.logger.info(f"ANALYSIS '{analysis_label}' INITIALISED")
 
-
     @staticmethod
     def __match_params(params: dict[str, Any], func: Callable) -> dict[str, Any]:
         """Return parameters matching passed function signature"""
@@ -322,7 +321,6 @@ class Analysis:
     def merge_datasets(
         self,
         *datasets: str,
-        apply_cuts: bool | str | list[str] = False,
         new_name: str | None = None,
         delete: bool = True,
         to_pkl: bool = False,
@@ -367,9 +365,6 @@ class Analysis:
         for d in datasets:
             if self[d].df.index.duplicated().sum() > 0:
                 self.logger.warning(f"Duplicate indexes in dataset {d}!")
-
-        if apply_cuts:
-            self.apply_cuts(list(datasets), labels=apply_cuts)
 
         self.logger.info(f"Merging dataset(s) {datasets[1:]} into dataset {datasets[0]}...")
 
@@ -907,17 +902,13 @@ class Analysis:
                     linestyle="None",
                     color="black",
                     marker=".",
-                    label=self["data"].label
+                    label=self["data"].label,
                 )
 
             plotting_tools.set_axis_options(
                 axis=ax,
                 var_name=var,
-                xlim=(
-                    x_axlim
-                    if x_axlim
-                    else (hist.bin_edges[0], hist.bin_edges[-1])
-                ),
+                xlim=(x_axlim if x_axlim else (hist.bin_edges[0], hist.bin_edges[-1])),
                 ylim=y_axlim,
                 xlabel=xlabel,
                 ylabel=ylabel,
@@ -953,7 +944,6 @@ class Analysis:
             self.logger.info(f"Saved plot of {var} to {filepath}")
             plt.close(fig)
 
-
     def get_hist(self, variable: str, dataset: str, cut: str) -> Histogram1D:
         # if passing a histogram name directly as the variable
         if cut and f"{variable}_{cut}_cut" in self.histograms:
@@ -970,10 +960,12 @@ class Analysis:
         else:
             raise ValueError(
                 f"No histogram for {variable} in {dataset}."
-                "\nHistograms in analysis:" + '\n'.join(self.histograms.keys())
-                + "\n Histograms in dataset: " + '\n'.join(self[dataset].histograms.keys())
-                )
-        
+                "\nHistograms in analysis:"
+                + "\n".join(self.histograms.keys())
+                + "\n Histograms in dataset: "
+                + "\n".join(self[dataset].histograms.keys())
+            )
+
         return Histogram1D(th1=self.histograms[hist_name_internal], logger=self.logger)
 
     # ===============================
