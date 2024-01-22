@@ -780,8 +780,8 @@ class Analysis:
             + (("_" + suffix) if suffix else "")  # suffix
         )
         name_template_short = (
-            "{dataset}"  # name of dataset(s)
-            + "_{variable}"  # name of variable(s)
+            # "{dataset}"  # name of dataset(s)
+            "{variable}"  # name of variable(s)
             + ("_cut" if cut else "")  # cut flag
         )
 
@@ -932,11 +932,9 @@ class Analysis:
                     varname = "_".join(var)
                 filepath = self.paths.plot_dir / (
                     name_template.format(
-                        short=name_template_short.format(
-                            dataset="_".join(datasets), variable=varname
-                        )
+                        short=name_template_short.format(variable=varname)
                     )
-                    + (f"{cut}_cut" if cut else "")
+                    + (f"_{cut}_cut" if cut else "")
                     + ".png"
                 )
 
@@ -1011,6 +1009,7 @@ class Analysis:
         """Printout of histogram metadata"""
         rows = []
         header = ["Hist name", "Entries", "Bin sum", "Integral"]
+
         for name, h in self.histograms.items():
             rows.append([name, h.GetEntries(), h.Integral(), h.Integral("width")])
 

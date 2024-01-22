@@ -132,7 +132,7 @@ class DatasetBuilder:
         for cut_list in cuts.values():
             for cut in cut_list:
                 all_vars |= cut.var
-        all_vars |= extract_vars
+        all_vars |= extract_vars | find_variables_in_string(self.hard_cut)
         vars_to_calc = {var for var in all_vars if var in derived_vars}
         # add all variables to all ttrees
         tree_dict = {tree: all_vars for tree in self.ttree}

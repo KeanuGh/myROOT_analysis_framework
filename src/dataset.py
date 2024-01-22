@@ -21,6 +21,7 @@ from src.histogram import Histogram1D
 from src.logger import get_logger
 from utils import plotting_tools, ROOT_utils
 from utils.variable_names import variable_data, VarTag
+from utils.context import redirect_stdout
 
 
 @dataclass
@@ -489,7 +490,7 @@ class RDataset(Dataset):
     
         # generate histograms
         t = time.time()
-        self.logger.info(f"Producing {len(th1_histograms)} histograms...")
+        self.logger.info(f"Producing {len(th1_histograms)} histograms for {self.name}...")
         for hist_name in th1_histograms:
             self.histograms[hist_name] = th1_histograms[hist_name].GetValue()
         self.logger.info(
@@ -509,7 +510,7 @@ class RDataset(Dataset):
 
         if to_file:
             if to_file is True:
-                to_file = Path(self.name + "_hisograms.root")
+                to_file = Path(self.name + "_histograms.root")
             self.export_histograms(filepath=to_file)
 
         return self.histograms

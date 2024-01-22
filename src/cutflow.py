@@ -95,6 +95,10 @@ class RCutflow:
         :param cuts: List of Cut objects
         """
         report = rdf.Report()
+
+        full_cuts = [f"{cutname}: {report.At(cutname).GetPass()}" for cutname in list(rdf.GetFilterNames())]
+        self.logger.debug("Full report (internal):\n{}".format("\n".join(full_cuts)))
+
         self._cutflow = [
             CutflowItem(
                 npass=report.At(cut.name).GetPass(),
