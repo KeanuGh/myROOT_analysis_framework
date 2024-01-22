@@ -104,7 +104,7 @@ if __name__ == "__main__":
         datasets,
         data_dir=DATA_OUT_DIR,
         year="2017",
-        # regen_histograms=True,
+        regen_histograms=True,
         ttree="T_s1thv_NOMINAL",
         cuts=cuts.cuts_reco_had,
         analysis_label="stack_full",
@@ -169,7 +169,7 @@ if __name__ == "__main__":
         analysis.stack_plot(var=var, **default_args, data=True, filename=var + "_stack.png")
         analysis.plot_hist(var=var, **default_args, ratio_plot=False, filename=var + ".png")
 
-    # analysis.histogram_printout()
+    analysis.histogram_printout()
     analysis.save_histograms()
 
     analysis.logger.info("DONE.")

@@ -8,7 +8,6 @@ from typing import Final
 
 import ROOT  # type: ignore
 import pandas as pd  # type: ignore
-from awkward import to_dataframe  # type: ignore
 
 from src.cutfile import Cut
 from src.dataset import RDataset
@@ -262,6 +261,7 @@ class DatasetBuilder:
 
         # make rdataframe
         Rdf = ROOT_utils.init_rdataframe(self.name, str(data_path), ttrees)
+        ROOT.RDF.Experimental.AddProgressBar(Rdf)
 
         # check columns exist in dataframe
         if missing_cols := (set(import_cols) - set(Rdf.GetColumnNames())):

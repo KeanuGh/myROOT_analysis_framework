@@ -486,7 +486,7 @@ class RDataset(Dataset):
                         *plotting_tools.get_TH1_bins(**bin_args),
                     )
                     th1_histograms[cut_hist_name] = filtered_df.Fill(cut_th1, fill_cols)
-
+    
         # generate histograms
         t = time.time()
         self.logger.info(f"Producing {len(th1_histograms)} histograms...")

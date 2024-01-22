@@ -1,5 +1,4 @@
 import inspect
-from collections import OrderedDict
 from copy import deepcopy
 from dataclasses import dataclass
 from pathlib import Path
@@ -90,7 +89,7 @@ class Analysis:
         self.name = analysis_label
         if self.name in data_dict:
             raise SyntaxError("Analysis must have different name to any dataset")
-        self.histograms: OrderedDict[str, ROOT.TH1] = OrderedDict()
+        self.histograms: dict[str, ROOT.TH1] = dict()
 
         # SET OUTPUT DIRECTORIES
         # ===========================
@@ -984,6 +983,9 @@ class Analysis:
     def cutflow_printout(self, datasets: str, latex: bool = False) -> None:
         """Prints cutflow table to terminal"""
         self[datasets].cutflow_printout(self.paths.latex_dir if latex else None)
+    
+    def full_printout(self) -> None:
+        """Prints full"""
 
     def save_histograms(
         self,
@@ -1011,7 +1013,7 @@ class Analysis:
                 file.WriteObject(histo, name, write_option)
 
         if clear_hists:
-            self.histograms = OrderedDict()
+            self.histograms = dict()
 
     def histogram_printout(self, to_latex: bool = False) -> None:
         """Printout of histogram metadata"""
