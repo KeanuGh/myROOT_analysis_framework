@@ -67,7 +67,8 @@ class DatasetBuilder:
     logger: logging.Logger = field(default_factory=get_logger)
     hard_cut: str = ""
     dataset_type: str = "dta"
-    isMC: bool = True
+    is_MC: bool = True
+    is_signal: bool = False
 
     # force_rebuild: bool = False
     # force_recalc_cuts: bool = False
@@ -91,7 +92,7 @@ class DatasetBuilder:
             NotImplementedError("Only allow DTA outputs from now on")
         
         if self.name == "data":
-            self.isMC = False
+            self.is_MC = False
 
         if self.year:
             self.lumi = lumi_year[self.year]
@@ -178,6 +179,7 @@ class DatasetBuilder:
             lumi=self.lumi,
             label=self.label,
             lepton=self.lepton,
+            is_signal=self.is_signal,
         )
 
         return dataset
@@ -246,7 +248,7 @@ class DatasetBuilder:
         self.logger.info(f"Initiating RDataFrame from trees {ttrees} in {data_path}")
 
         # create c++ map for dataset ID metadatas
-        if self.isMC:
+        if self.is_MC:
             self.logger.debug("Calculating DSID metadata...")
             # each tree /SHOULD/ have the same dsid here
             dsid_metadata = self._get_dsid_values(data_path, list(ttrees)[0])
@@ -271,7 +273,7 @@ class DatasetBuilder:
         workaround_str = "(mcChannel == 0) ? 700446 : mcChannel"
 
         # create weights
-        if self.isMC:
+        if self.is_MC:
             Rdf = (
                 Rdf.Define(
                     "truth_weight",

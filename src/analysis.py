@@ -773,16 +773,10 @@ class Analysis:
         # naming template for file/histogram name
         name_template = (
             ((prefix + "_") if prefix else "")  # prefix
-            + "{short}"
+            + "{variable}"
             + ("_NORMED" if normalise else "")  # normalisation flag
             + ("_BIN_SCALED" if scale_by_bin_width else "")
             + "_STACKED"
-            + (("_" + suffix) if suffix else "")  # suffix
-        )
-        name_template_short = (
-            # "{dataset}"  # name of dataset(s)
-            "{variable}"  # name of variable(s)
-            + ("_cut" if cut else "")  # cut flag
         )
 
         if isinstance(datasets, str):
@@ -847,7 +841,15 @@ class Analysis:
             err_list = []
             colours_list = []
 
+            signal_ds = ""
+            signal_idx = None
             for i in range(n_stacks):
+                # save signal for the end if only plotting one variable buy many datasets
+                if self[datasets[i]].is_signal and not varloop:
+                    signal_ds = datasets[i]
+                    signal_idx = i
+                    continue
+
                 dataset = datasets[i] if datasetloop else datasets[0]
                 varname = var[i] if varloop else var[0]
 
@@ -874,7 +876,23 @@ class Analysis:
                 # Sort lists based on integral of histograms so smallest histograms sit at bottom
                 all_lists = zip(hist_list, err_list, label_list, colours_list)
                 sorted_lists = sorted(all_lists, key=lambda l: l[0].integral)
-                hist_list, err_list, label_list, colours_list = zip(*sorted_lists)
+                hist_list, err_list, label_list, colours_list = [list(l) for l in zip(*sorted_lists)]
+
+            # handle signal seperately
+            alpha_list = []
+            edgecolour_list = []
+            if signal_ds:
+                sig_hist = self.get_hist(var[0], signal_ds, cut)
+                if scale_by_bin_width:
+                    sig_hist /= hist.bin_widths
+                
+                # alpha_list = [0.5] * len(hist_list) + [1]
+                edgecolour_list = ["k"] * len(hist_list) + ["r"]
+
+                hist_list.append(sig_hist)
+                err_list.append(sig_hist.error())
+                label_list.append(labels[signal_idx] if labels else self[signal_ds].label)
+                colours_list.append("w")
 
             # plot
             fig, ax = plt.subplots()
@@ -884,6 +902,9 @@ class Analysis:
                 ax=ax,
                 yerr=err_list if yerr is True else yerr,
                 color=colours_list if colours_list else None,
+                alpha=alpha_list if alpha_list else None,
+                edgecolor=edgecolour_list if edgecolour_list else None,
+                linewidth=1 if edgecolour_list else 0,
                 label=label_list,
                 stack=True,
                 histtype=histtype,
@@ -931,10 +952,9 @@ class Analysis:
                 else:
                     varname = "_".join(var)
                 filepath = self.paths.plot_dir / (
-                    name_template.format(
-                        short=name_template_short.format(variable=varname)
-                    )
+                    name_template.format(variable=varname)
                     + (f"_{cut}_cut" if cut else "")
+                    + (f"_{suffix}" if suffix else "")
                     + ".png"
                 )
 

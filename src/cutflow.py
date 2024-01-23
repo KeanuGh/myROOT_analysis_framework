@@ -201,7 +201,8 @@ def cutflow_from_hist_and_cuts(hist: ROOT.TH1I, cuts: List[Cut]) -> List[Cutflow
     """Create cutflow object from cutflow histogram"""
     if hist.GetNbinsX() - 1 != len(cuts):
         raise ValueError(
-            f"Number of cuts in cutfile ({len(cuts)}) does not match number of cuts in histogram ({hist.GetNbinsX() - 1})"
+            f"Number of cuts passed to cutflow ({len(cuts)}) "
+            f"does not match number of cuts in histogram ({hist.GetNbinsX() - 1})"
         )
 
     cutflow = [

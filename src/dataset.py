@@ -40,6 +40,7 @@ class Dataset(ABC):
     binnings: dict[str, list[float]] = field(default_factory=dict)
     colour: str | tuple = field(default_factory=str)
     is_merged: bool = False
+    is_signal: bool = False
 
     @abstractmethod
     def __len__(self):
