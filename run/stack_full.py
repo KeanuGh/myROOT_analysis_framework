@@ -113,6 +113,10 @@ if __name__ == "__main__":
                 r"TauPt > 170",
             ),
             Cut(
+                r"$E_T^{\mathrm{miss}} > 85",
+                r"MET_met > 85",
+            ),
+            Cut(
                 r"$m_T^W > 150$",
                 r"MTW > 150",
             ),
@@ -131,6 +135,10 @@ if __name__ == "__main__":
                 r"TauPt > 170",
             ),
             Cut(
+                r"$E_T^{\mathrm{miss}} > 85",
+                r"MET_met > 85",
+            ),
+            Cut(
                 r"$m_T^W > 150$",
                 r"MTW > 150",
             ),
@@ -141,17 +149,6 @@ if __name__ == "__main__":
         "TauEta",
         "TauPhi",
         "TauPt",
-        "MuonEta",
-        "MuonPhi",
-        "MuonPt",
-        "Muon_d0sig",
-        "Muon_delta_z0",
-        "EleEta",
-        "ElePhi",
-        "ElePt",
-        "EleE",
-        "Ele_d0sig",
-        "Muon_delta_z0",
         "MET_met",
         "MET_phi",
         "MTW",
@@ -161,7 +158,7 @@ if __name__ == "__main__":
         datasets,
         data_dir=DATA_OUT_DIR,
         year="2017",
-        regen_histograms=True,
+        # regen_histograms=True,
         ttree="T_s1thv_NOMINAL",
         cuts=cuts,
         analysis_label="stack_full",
@@ -170,15 +167,16 @@ if __name__ == "__main__":
         log_out="both",
         extract_vars=wanted_branches,
         binnings={
-            "MTW": np.geomspace(150, 3000, 20),
-            "TauPt": np.geomspace(170, 3000, 20),
+            "MTW": np.geomspace(150, 2000, 20),
+            "TauPt": np.geomspace(170, 2000, 20),
             "TauEta": np.linspace(-2.47, 2.47, 20),
             "EleEta": np.linspace(-2.47, 2.47, 20),
             "MuonEta": np.linspace(-2.5, 2.5, 20),
-            "MET_met": np.geomspace(1, 3000, 20),
+            "MET_met": np.geomspace(85, 2000, 20),
         },
     )
     analysis.cutflow_printout(latex=True)
+    analysis["wtaunu"].is_signal = True
 
     datasets_merged = [
         "wtaunu",
@@ -197,12 +195,6 @@ if __name__ == "__main__":
     # HISTORGRAMS
     # ========================================================================
     # argument dicts
-    mass_args = {
-        # "scale_by_bin_width": True,
-        # "ylabel": "Entries / bin width",
-        "ylabel": "Entries",
-        "logx": True,
-    }
     default_args = {
         "datasets": datasets_merged,
         "title": f"mc16d | {analysis.global_lumi/1000:.3g}" + r"fb$^{-1}$",
@@ -215,8 +207,10 @@ if __name__ == "__main__":
         "MET_met",
         "MTW",
     ]:
-        analysis.stack_plot(var=var, **default_args, **mass_args, data=True)
-        analysis.plot_hist(var=var, **default_args, **mass_args, ratio_plot=False)
+        analysis.stack_plot(var=var, **default_args, logx=True, data=True)
+        analysis.stack_plot(var=var, **default_args, logy=False, data=True, suffix="liny")
+        analysis.stack_plot(var=var, **default_args, logx=True, data=True, scale_by_bin_width=True, ylabel="Entries / bin width")
+        analysis.plot_hist(var=var, **default_args, logx=True, ratio_plot=False)
 
     # unitless variables
     for var in [
