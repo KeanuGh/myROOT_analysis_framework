@@ -280,12 +280,6 @@ class RDataset(Dataset):
         else:
             raise ValueError("Must have run cutflow before getting number of events")
 
-    def __getattr__(self, item):
-        if self.df is not None:
-            return getattr(self.df, item)
-        else:
-            return None
-
     # Variable setting/getting
     # ===================
     @property

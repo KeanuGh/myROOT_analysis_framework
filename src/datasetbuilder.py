@@ -412,7 +412,7 @@ class DatasetBuilder:
                             f"Unknown DSID for file {file}, THIS WILL LEAD TO A BROKEN DATASET!!!"
                         )
 
-                self.logger.debug(f"dsid: {dsid}: sumw {sumw} for file {file}")
+                # self.logger.debug(f"dsid: {dsid}: sumw {sumw} for file {file}")
                 if dsid not in dsid_sumw:
                     dsid_sumw[dsid] = sumw
                 else:

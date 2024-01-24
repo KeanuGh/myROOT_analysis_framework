@@ -113,8 +113,8 @@ if __name__ == "__main__":
                 r"TauPt > 170",
             ),
             Cut(
-                r"$E_T^{\mathrm{miss}} > 85",
-                r"MET_met > 85",
+                r"$E_T^{\mathrm{miss}} > 100",
+                r"MET_met > 100",
             ),
             Cut(
                 r"$m_T^W > 150$",
@@ -135,8 +135,8 @@ if __name__ == "__main__":
                 r"TauPt > 170",
             ),
             Cut(
-                r"$E_T^{\mathrm{miss}} > 85",
-                r"MET_met > 85",
+                r"$E_T^{\mathrm{miss}} > 100",
+                r"MET_met > 100",
             ),
             Cut(
                 r"$m_T^W > 150$",
@@ -154,6 +154,14 @@ if __name__ == "__main__":
         "MTW",
     }
 
+    datasets_merged = [
+        "data",
+        "wtaunu",
+        "wmunu",
+        "wenu",
+        "zll",
+        "ttbar",
+    ]
     analysis = Analysis(
         datasets,
         data_dir=DATA_OUT_DIR,
@@ -175,16 +183,10 @@ if __name__ == "__main__":
             "MET_met": np.geomspace(85, 2000, 20),
         },
     )
-    analysis.cutflow_printout(latex=True)
+    analysis.cutflow_printout(datasets=datasets_merged, latex=True)
+    analysis.full_cutflow_printout(datasets=datasets_merged)
     analysis["wtaunu"].is_signal = True
 
-    datasets_merged = [
-        "wtaunu",
-        "wmunu",
-        "wenu",
-        "zll",
-        "ttbar",
-    ]
     # set colours for merged datasets only
     c_iter = iter(plt.rcParams["axes.prop_cycle"].by_key()["color"])
     for ds in datasets_merged:

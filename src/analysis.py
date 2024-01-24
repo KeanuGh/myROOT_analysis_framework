@@ -260,9 +260,9 @@ class Analysis:
                     self[merged_ds].histograms[hist_name] = self.histograms[hist_name_merged]
 
                 # sum cutflows
-                if self[merged_ds].cutflows is not None:
-                    for cutflow in self[merged_ds].cutflows:
-                        self[merged_ds].cutflows[cutflow] += dataset.cutflow
+                if self[merged_ds].cutflows:
+                    for cutflow_name, cutflow in self[merged_ds].cutflows.items():
+                        self[merged_ds].cutflows[cutflow_name] += cutflow
                 else:
                     self[merged_ds].cutflows = deepcopy(dataset.cutflows)
 
@@ -798,10 +798,7 @@ class Analysis:
         elif cut is True:
             # separate plot for EACH set of cuts
             if len(datasets) > 1:
-                # check that all datasets to be plot have the same sets of cuts
-                first_cutflow = self[datasets[0]].cuts
-                if not all(ds.cuts == first_cutflow for ds in list(self.datasets.values())[1:]):
-                    raise ValueError("Datasets do not have the same cuts")
+                self.__verify_same_cuts(datasets)
             cutsets_to_loop = self[datasets[0]].cuts
         elif isinstance(cut, str):
             cutsets_to_loop = [cut]
@@ -985,6 +982,15 @@ class Analysis:
             )
 
         return Histogram1D(th1=self.histograms[hist_name_internal], logger=self.logger)
+    
+    def __verify_same_cuts(self, datasets: list[str]):
+        """check that all datasets to be plot have the same sets of cuts"""
+        first_cutflow = self[datasets[0]].cuts
+        if not all(ds.cuts == first_cutflow for ds in list(self.datasets.values())[1:]):
+            raise ValueError("Datasets do not have the same cuts")
+        return True
+
+
 
     # ===============================
     # ========= PRINTOUTS ===========
@@ -993,9 +999,46 @@ class Analysis:
     def cutflow_printout(self, datasets: str, latex: bool = False) -> None:
         """Prints cutflow table to terminal"""
         self[datasets].cutflow_printout(self.paths.latex_dir if latex else None)
-    
-    def full_printout(self) -> None:
-        """Prints full"""
+
+    def full_cutflow_printout(
+        self, 
+        datasets: list[str], 
+        cutsets: list[str] | str | None = None, 
+        filename: str | None = None
+    ) -> None:
+        """Prints full cutflows for all passed datasets"""
+
+        self.__verify_same_cuts(datasets)
+
+        # for each cut set, create new set of rows in table
+        if isinstance(cutsets, str):
+            cutsets = [cutsets]
+        elif cutsets is None:
+            cutsets = list(self[datasets[0]].cuts)
+
+        # table build loop
+        latex_str = r"\begin{tabular}{" + "l"*(len(datasets) + 1) + "}\n"
+
+        for cutset in cutsets:
+            # header
+            latex_str += r"\hline" + "\n"
+            latex_str += " & ".join([f"Cut ({cutset})"] + [self[dataset].label for dataset in datasets]) + r"\\" + "\n"
+            latex_str += r"\hline" + "\n"
+
+            cut_names = [cutflow_item.cut.name for cutflow_item in self[datasets[0]].cutflows[cutset]]
+            for i, cut_name in enumerate(cut_names):
+                passes_list = [str(int(self[dataset].cutflows[cutset][i].npass)) for dataset in datasets]
+                latex_str += cut_name + " & " + " & ".join(passes_list) + r"\\" + "\n"
+        
+        latex_str += r"\hline" + "\n" + r"\end{tabular}"
+
+        # print to file
+        if not filename:
+            filename = self.paths.latex_dir / f"{self.name}_full_cutflows.tex"
+        
+        with open(filename, "w") as f:
+            f.write(latex_str)
+        
 
     def save_histograms(
         self,
