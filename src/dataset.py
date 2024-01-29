@@ -239,11 +239,13 @@ class RDataset(Dataset):
             if len(self.cuts) == 1:
                 n_shared_cuts = 0
             else:
-                n_shared_cuts = min(len(cuts) for cuts in self.cuts.values())
-                for i in range(n_shared_cuts):
+                max_shared_cuts = min(len(cuts) for cuts in self.cuts.values())
+                for i in range(max_shared_cuts):
                     first_element = self.cuts[list(self.cuts.keys())[0]][i]
+
                     if not all(cuts[i] == first_element for cuts in self.cuts.values()):
                         n_shared_cuts = i
+                        break
 
             # Base "Filter" that passes everything for inclusive label
             base_filter = self.df.Filter("true", "Inclusive")
