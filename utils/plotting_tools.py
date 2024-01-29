@@ -2,13 +2,13 @@ from dataclasses import dataclass
 from typing import Tuple, Sequence, List, Dict
 from warnings import warn
 
-import ROOT  # type: ignore
 import boost_histogram as bh
 import matplotlib.pyplot as plt  # type: ignore
 import mplhep as hep  # type: ignore
 import numpy as np
 import pandas as pd  # type: ignore
 from matplotlib.colors import LogNorm  # type: ignore
+from matplotlib import ticker
 from numpy.typing import ArrayLike
 
 from utils.variable_names import variable_data
@@ -228,6 +228,9 @@ def set_axis_options(
     """
     if logx:
         axis.semilogx()
+        axis.xaxis.set_minor_formatter(ticker.LogFormatter())
+        axis.xaxis.set_major_formatter(ticker.LogFormatter())
+
     if logy:
         axis.semilogy()
 
@@ -274,8 +277,8 @@ def set_axis_options(
                 ],
             )
             axis.set_ylim(ymin, ymax)
-        except ValueError:
-            raise ValueError("Could not set strict axis limits. Using auto limits")
+        except ValueError as e:
+            raise ValueError("Could not set strict axis limits") from e
     elif not logy:
         axis.set_ylim(bottom=0)
 

@@ -121,10 +121,10 @@ class Analysis:
         if "year" in kwargs:
             try:
                 self.global_lumi = lumi_year[kwargs["year"]]
-            except KeyError:
+            except KeyError as e:
                 raise KeyError(
                     f"Unknown data-year: {kwargs['year']}. Known data-years: {lumi_year.keys()}"
-                )
+                ) from e
         else:
             self.global_lumi = global_lumi
         self.logger.debug(f"Set global luminosity scale to {self.global_lumi} pb-1")
@@ -374,12 +374,12 @@ class Analysis:
                 verify_integrity=verify,
                 copy=False,
             )
-        except pd.errors.InvalidIndexError:
+        except pd.errors.InvalidIndexError as e:
             err_str = ""
             for dataset in datasets:
                 common_index = self[datasets[0]].df.index.intersection(self[dataset].df.index)
                 err_str += f"Index common between {datasets[0]} and {dataset}: {common_index}\n"
-            raise pd.errors.InvalidIndexError(err_str)
+            raise pd.errors.InvalidIndexError(err_str) from e
 
         self[datasets[0]].name = datasets[0]
 
@@ -833,15 +833,14 @@ class Analysis:
         # plot for each cut
         for cut in cutsets_to_loop:
             # work out histograms to stack
-            hist_list = []
-            label_list = []
-            err_list = []
-            colours_list = []
+            hist_list: list[Histogram1D] = []
+            label_list: list[str] = []
+            colours_list: list[str] = []
 
             signal_ds = ""
             signal_idx = None
             for i in range(n_stacks):
-                # save signal for the end if only plotting one variable buy many datasets
+                # save signal for the end if only plotting one variable and many datasets
                 if self[datasets[i]].is_signal and not varloop:
                     signal_ds = datasets[i]
                     signal_idx = i
@@ -867,13 +866,12 @@ class Analysis:
                     ), f"Bins {hist} and {hist_list[-1]} not equal!"
 
                 hist_list.append(hist)
-                err_list.append(hist.error())
 
             if sort:
                 # Sort lists based on integral of histograms so smallest histograms sit at bottom
-                all_lists = zip(hist_list, err_list, label_list, colours_list)
+                all_lists = zip(hist_list, label_list, colours_list)
                 sorted_lists = sorted(all_lists, key=lambda l: l[0].integral)
-                hist_list, err_list, label_list, colours_list = [list(l) for l in zip(*sorted_lists)]
+                hist_list, label_list, colours_list = [list(l) for l in zip(*sorted_lists)]
 
             # handle signal seperately
             alpha_list = []
@@ -887,7 +885,6 @@ class Analysis:
                 edgecolour_list = ["k"] * len(hist_list) + ["r"]
 
                 hist_list.append(sig_hist)
-                err_list.append(sig_hist.error())
                 label_list.append(labels[signal_idx] if labels else self[signal_ds].label)
                 colours_list.append("w")
 
@@ -897,7 +894,6 @@ class Analysis:
                 H=[h.bin_values() for h in hist_list],
                 bins=hist_list[-1].bin_edges,
                 ax=ax,
-                yerr=err_list if yerr is True else yerr,
                 color=colours_list if colours_list else None,
                 alpha=alpha_list if alpha_list else None,
                 edgecolor=edgecolour_list if edgecolour_list else None,
@@ -907,6 +903,31 @@ class Analysis:
                 histtype=histtype,
                 **kwargs,
             )
+
+            if yerr:
+                # MC error propagation
+                errs = np.array([hist.error() for hist in hist_list])
+                errs = np.sum(errs, axis=0)
+
+                # top of histogram stack
+                stack = np.array([hist.bin_values() for hist in hist_list])
+                stack = np.sum(stack, axis=0)
+                err_top = stack + (errs/2)
+                err_bottom = stack - (errs/2)
+
+                edges = hist_list[0].bin_edges
+
+                # add error as clear hatch
+                ax.fill_between(
+                    x=edges,
+                    y1=np.append(err_top, err_top[-1]),
+                    y2=np.append(err_bottom, err_bottom[-1]),
+                    alpha=0.3,
+                    color="grey",
+                    hatch="/",
+                    label="MC error",
+                    step="post"
+                )
 
             if data:
                 hist = self.get_hist(varname, "data", cut)
@@ -960,6 +981,7 @@ class Analysis:
             plt.close(fig)
 
     def get_hist(self, variable: str, dataset: str, cut: str) -> Histogram1D:
+        """Get TH1 histogram from histogram dict or internal dataset"""
         # if passing a histogram name directly as the variable
         if cut and f"{variable}_{cut}_cut" in self.histograms:
             hist_name_internal = f"{variable}_{cut}_cut"

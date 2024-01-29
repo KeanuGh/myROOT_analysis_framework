@@ -9,11 +9,9 @@ from pathlib import Path
 
 import ROOT  # type: ignore
 import matplotlib.pyplot as plt  # type: ignore
-import mplhep as hep  # type: ignore
 import numpy as np
 import pandas as pd  # type: ignore
 from numpy.typing import ArrayLike
-from tabulate import tabulate  # type: ignore
 
 from src.cutfile import Cut
 from src.cutflow import RCutflow
@@ -21,7 +19,6 @@ from src.histogram import Histogram1D
 from src.logger import get_logger
 from utils import plotting_tools, ROOT_utils
 from utils.variable_names import variable_data, VarTag
-from utils.context import redirect_stdout
 
 
 @dataclass
@@ -482,12 +479,12 @@ class RDataset(Dataset):
                         *plotting_tools.get_TH1_bins(**bin_args),
                     )
                     th1_histograms[cut_hist_name] = filtered_df.Fill(cut_th1, fill_cols)
-    
+
         # generate histograms
         t = time.time()
         self.logger.info(f"Producing {len(th1_histograms)} histograms for {self.name}...")
-        for hist_name in th1_histograms:
-            self.histograms[hist_name] = th1_histograms[hist_name].GetValue()
+        for hist_name, hist in th1_histograms.items():
+            self.histograms[hist_name] = hist.GetValue()
         self.logger.info(
             f"Took {time.time() - t:.3f}s to produce {len(self.histograms)} histograms over {self.df.GetNRuns()} run(s)."
         )
