@@ -748,7 +748,6 @@ class Analysis:
         data: bool = False,
         yerr: ArrayLike | str = True,
         labels: list[str] | None = None,
-        normalise: float | bool = False,
         logx: bool = False,
         logy: bool = True,
         xlabel: str = "",
@@ -765,6 +764,41 @@ class Analysis:
         prefix: str = "",
         **kwargs,
     ) -> None:
+        """
+        Plot stacked histograms for datasets/variables.
+        If one dataset is passed but multiple variables, will plot overlays of the variable for that one dataset
+
+        :param datasets: string or list of strings corresponding to datasets in the analysis
+        :param var: variable name to be plotted. Either a string that exists in all datasets
+                    or a list one for each dataset
+        :param data: whether or not to plot "data" dataset. Will check for a dataset in analysis named "data".
+        :param yerr: Histogram uncertainties. Following modes are supported:
+                - True: will calculate sum of histogram stack errors
+                - shape(N) array of for one-sided errors or list thereof
+                - shape(Nx2) array of for two-sided errors or list thereof
+        :param bins: tuple of bins in x (n_bins, start, stop) or list of bin edges.
+                     In the first case returns an axis of type Regular(), otherwise of type Variable().
+                     Raises error if not formatted in one of these ways.
+        :param weight: variable name in dataset to weight by or numeric value to weight all
+                       can pass list for separate weights to
+        :param labels: list of labels for plot legend corresponding to each dataset
+        :param logbins: whether logarithmic binnings
+        :param logx: whether log scale x-axis
+        :param logy: whether log scale y-axis
+        :param xlabel: x label
+        :param ylabel: y label
+        :param title: plot title
+        :param scale_by_bin_width: divide histogram bin values by bin width
+        :param x_axlim: x-axis limits. If None matplolib decides
+        :param y_axlim: x-axis limits. If None matplolib decides
+        :param filename: name of output
+        :param cut: applies cuts before plotting
+        :param histtype: type of stack plot to be passed to mplhep
+        :param sort: whether to sort histograms from lowest to highest integral before plotting.
+        :param suffix: suffix to add at end of histogram/file name
+        :param prefix: prefix to add at start of histogram/file
+        :param kwargs: keyword arguments to pass to mplhep.histplot()
+        """
         self.logger.info(f"Plotting stack plot of {var} in {datasets}")
 
         if data and "data" not in self.datasets:
@@ -774,7 +808,6 @@ class Analysis:
         name_template = (
             ((prefix + "_") if prefix else "")  # prefix
             + "{variable}"
-            + ("_NORMED" if normalise else "")  # normalisation flag
             + ("_BIN_SCALED" if scale_by_bin_width else "")
             + "_STACKED"
         )
@@ -881,7 +914,7 @@ class Analysis:
                 if scale_by_bin_width:
                     sig_hist /= hist.bin_widths
                 
-                # alpha_list = [0.5] * len(hist_list) + [1]
+                alpha_list = [0.8] * len(hist_list) + [1]
                 edgecolour_list = ["k"] * len(hist_list) + ["r"]
 
                 hist_list.append(sig_hist)
@@ -901,6 +934,7 @@ class Analysis:
                 label=label_list,
                 stack=True,
                 histtype=histtype,
+                zorder=reversed(range(len(hist_list))),  # mplhep plots in wrong order
                 **kwargs,
             )
 
@@ -980,7 +1014,7 @@ class Analysis:
             self.logger.info(f"Saved plot of {var} to {filepath}")
             plt.close(fig)
 
-    def get_hist(self, variable: str, dataset: str, cut: str) -> Histogram1D:
+    def get_hist(self, variable: str, dataset: str, cut: str | None = None) -> Histogram1D:
         """Get TH1 histogram from histogram dict or internal dataset"""
         # if passing a histogram name directly as the variable
         if cut and f"{variable}_{cut}_cut" in self.histograms:
