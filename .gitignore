@@ -1,0 +1,39 @@
+# python
+**/__pycache__/
+.pyc
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+.vscode/
+PMGCrossSectionTool/
+
+# tired of pushing images, text, etc
+*.tex
+*.log
+*.png
+*.directory
+
+# don't push pycharm stuff
+.idea/
+
+# nor jupyter checkpoints
+.ipynb_checkpoints/
+
+# don't upload the data to gitlab you dingus
+*.root
+*.pkl
+/data/mc16a_wmintaunu_SLICES/prelim_mc16a_highmass_wmintaunu.txt
+outputs/
+*_email.txt
+
+# pytest
+.pytest_cache/
+
+# don't upload environment files
+*.yml
