@@ -192,8 +192,3 @@ def init_rdataframe(name: str, filepaths: Path | str | Iterable[str], trees: Ite
             getattr(ROOT, chain_name).Add(f"{path}?#{tree}")
 
     return ROOT.RDataFrame(getattr(ROOT, chain_name))
-
-
-# def read_root_hist_file(file: str | Path) -> Dict[str, Histogram1D]:
-#     with ROOT_TFile_mgr(file, "READ"):
-#

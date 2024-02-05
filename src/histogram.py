@@ -273,6 +273,27 @@ class Histogram1D(bh.Histogram, family=None):
             else:
                 self.TH1.Scale(other)
             return self._compute_inplace_op("__imul__", other)
+    
+    def __add__(self, other: bh.Histogram | "np.typing.NDArray[Any]" | float) -> Histogram1D:
+        """Need to handle adding together TH1s"""
+        result = self.copy()
+        return result.__iadd__(other)
+    
+    def __iadd__(self, other:  bh.Histogram | "np.typing.NDArray[Any]" | float) -> Histogram1D:
+        """Handle adding TH1s"""
+        if isinstance(other, Histogram1D):
+            self.TH1.Add(other.TH1)
+        else:
+            # scale TH1 properly
+            if hasattr(other, "__iter__"):
+                for i, val in enumerate(other):
+                    self.TH1.SetBinContent(i + 1, self.TH1.GetBinContent(i + 1) + val)
+                    self.TH1.SetBinError(i + 1, self.TH1.GetBinError(i + 1) + val)
+            else:
+                self.TH1.Add(other)
+
+        return self._compute_inplace_op("__iadd__", other)
+
 
     @staticmethod
     @overload
@@ -645,6 +666,7 @@ class Histogram1D(bh.Histogram, family=None):
         yax_lim: float | Tuple[float, float] | None = None,
         display_stats: bool = True,
         fit_empty: bool = False,
+        display_unity: bool = True,
         color: str = "k",
         **kwargs,
     ) -> Histogram1D:
@@ -654,11 +676,11 @@ class Histogram1D(bh.Histogram, family=None):
         :param other: Other histogram
         :param ax: Axis to plot on. will create new if not given
         :param yerr: Histogram uncertainties. Following modes are supported:
-                     - 'rsumw2', sqrt(SumW2) errors
-                     - 'sqrtN', sqrt(N) errors or poissonian interval when w2 is specified
-                     - 'carry', carries fractional error from original histogram
-                     - shape(N) array of for one-sided errors or list thereof
-                     - shape(Nx2) array of for two-sided errors or list thereof
+                     - 'rsumw2': sqrt(SumW2) errors
+                     - 'binom': binomial error
+                     - 'carry': carries fractional error from original histogram
+                     - shape(N): array of for one-sided errors or list thereof
+                     - shape(Nx2): array of for two-sided errors or list thereof
         :param normalise: Whether histograms are normalised before taking ratio
         :param label: Legend label
         :param fit: whether to fit to a 0-degree polynomial and display line, chi-square and p-value
@@ -667,6 +689,7 @@ class Histogram1D(bh.Histogram, family=None):
         :param yax_lim: limit y-axis to 1 +/- {yax_lim}
         :param display_stats: whether to display the fit parameters on the plot
         :param fit_empty: Whether to fit on empty bins. If false, fits on non-empty bin range
+        :param display_unity: Whether to add in a line at 1
         :param color: plot colour
         :param kwargs: Args to pass to ax.errorbar()
         :return: axis object with plot
@@ -762,7 +785,8 @@ class Histogram1D(bh.Histogram, family=None):
                         )
                         ax.add_artist(stats_box)
 
-        ax.axhline(1.0, linestyle="--", linewidth=1.0, c="k")
+        if display_unity:
+            ax.axhline(1.0, linestyle="--", linewidth=1.0, c="k")
         ax.errorbar(
             h_ratio.bin_centres,
             h_ratio.bin_values(),
@@ -770,8 +794,9 @@ class Histogram1D(bh.Histogram, family=None):
             yerr=err,
             linestyle="None",
             label=label,
-            **kwargs,
+            marker=".",
             c=color,
+            **kwargs,
         )
         ax.grid(visible=True, which="both", axis="y")
 

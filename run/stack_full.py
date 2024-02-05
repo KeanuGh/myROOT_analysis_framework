@@ -7,7 +7,8 @@ import numpy as np
 from src.cutfile import Cut
 from src.analysis import Analysis
 
-DTA_PATH = Path("/eos/home-k/kghorban/DTA_OUT/2023-10-25/")
+# DTA_PATH = Path("/eos/home-k/kghorban/DTA_OUT/2023-10-25/")
+DTA_PATH = Path("/eos/home-k/kghorban/DTA_OUT/2024-02-01/")
 DATA_OUT_DIR = Path("/eos/home-k/kghorban/framework_outputs/")
 CUTFILE_DIR = Path("/afs/cern.ch/user/k/kghorban/framework/options/DTA_cuts/reco")
 
@@ -20,89 +21,90 @@ if __name__ == "__main__":
         },
         # signal
         "wtaunu_lm": {
-            "data_path": DTA_PATH / "user.kghorban.Sh_2211_Wtaunu_*_maxHTpTV2*/*.root",
+            "data_path": DTA_PATH / "user.kghorban*Sh_2211_Wtaunu_*_maxHTpTV2*/*.root",
             "hard_cut": "TruthBosonM < 120",
             "label": r"$W\rightarrow\tau\nu$",
             "merge_into": "wtaunu",
         },
         "wtaunu_hm": {
-            "data_path": DTA_PATH / "user.kghorban.Sh_2211_Wtaunu_mW_120*/*.root",
+            "data_path": DTA_PATH / "user.kghorban*Sh_2211_Wtaunu_mW_120*/*.root",
             "hard_cut": "TruthBosonM >= 120",
             "label": r"$W\rightarrow\tau\nu$",
             "merge_into": "wtaunu",
         },
         # backgrounds
-        "wmunu_lm": {
-            "data_path": DTA_PATH / "user.kghorban.Sh_2211_Wmunu_maxHTpTV2*/*.root",
+        "wlv_lm": {
+            "data_path": [
+                DTA_PATH / "user.kghorban*Sh_2211_Wmunu_maxHTpTV2*/*.root",
+                DTA_PATH / "user.kghorban*Sh_2211_Wenu_maxHTpTV2*/*.root",
+            ],
             "hard_cut": "TruthBosonM < 120",
-            "label": r"$W\rightarrow\mu\nu$",
-            "merge_into": "wmunu",
+            "label": r"$W\rightarrow l\nu$",
+            "merge_into": "wlnu",
         },
-        "wmunu_hm": {
-            "data_path": DTA_PATH / "user.kghorban.Sh_2211_Wmunu_mW_120*/*.root",
+        "wlv_hm": {
+            "data_path": [
+                DTA_PATH / "user.kghorban*Sh_2211_Wmunu_mW_120*/*.root",
+                DTA_PATH / "user.kghorban*Sh_2211_Wenu_mW_120*/*.root",
+            ],
             "hard_cut": "TruthBosonM >= 120",
-            "label": r"$W\rightarrow\mu\nu$",
-            "merge_into": "wmunu",
+            "label": r"$W\rightarrow l\nu$",
+            "merge_into": "wlnu",
         },
-        "wenu_lm": {
-            "data_path": DTA_PATH / "user.kghorban.Sh_2211_Wenu_maxHTpTV2*/*.root",
-            "hard_cut": "TruthBosonM < 120",
-            "label": r"$W\rightarrow e\nu$",
-            "merge_into": "wenu",
-        },
-        "wenu_hm": {
-            "data_path": DTA_PATH / "user.kghorban.Sh_2211_Wenu_mW_120*/*.root",
-            "hard_cut": "TruthBosonM >= 120",
-            "label": r"$W\rightarrow e\nu$",
-            "merge_into": "wenu",
-        },
-        "ztautau_lm": {
-            "data_path": DTA_PATH / "user.kghorban.Sh_2211_Ztautau_*_maxHTpTV2*/*.root",
+        "zll_lm": {
+            "data_path": [
+                DTA_PATH / "user.kghorban*Sh_2211_Ztautau_*_maxHTpTV2*/*.root",
+                DTA_PATH / "user.kghorban*Sh_2211_Zee_maxHTpTV2*/*.root",
+                DTA_PATH / "user.kghorban*Sh_2211_Zmumu_maxHTpTV2*/*.root",
+            ],
             "hard_cut": "TruthBosonM < 120",
             "label": r"$Z\rightarrow ll$",
             "merge_into": "zll",
         },
-        "ztautau_hm": {
-            "data_path": DTA_PATH / "user.kghorban.Sh_2211_Ztautau_mZ_120*/*.root",
-            "hard_cut": "TruthBosonM >= 120",
-            "label": r"$Z\rightarrow ll$",
-            "merge_into": "zll",
-        },
-        "zmumu_lm": {
-            "data_path": DTA_PATH / "user.kghorban.Sh_2211_Zmumu_maxHTpTV2*/*.root",
-            "hard_cut": "TruthBosonM < 120",
-            "label": r"$Z\rightarrow ll$",
-            "merge_into": "zll",
-        },
-        "zmumu_hm": {
-            "data_path": DTA_PATH / "user.kghorban.Sh_2211_Zmumu_mZ_120*/*.root",
-            "hard_cut": "TruthBosonM >= 120",
-            "label": r"$Z\rightarrow ll$",
-            "merge_into": "zll",
-        },
-        "zee_lm": {
-            "data_path": DTA_PATH / "user.kghorban.Sh_2211_Zee_maxHTpTV2*/*.root",
-            "hard_cut": "TruthBosonM < 120",
-            "label": r"$Z\rightarrow ll$",
-            "merge_into": "zll",
-        },
-        "zee_hm": {
-            "data_path": DTA_PATH / "user.kghorban.Sh_2211_Zee_mZ_120*/*.root",
+        "zll_hm": {
+            "data_path": [
+                DTA_PATH / "user.kghorban*Sh_2211_Ztautau_mZ_120*/*.root",
+                DTA_PATH / "user.kghorban*Sh_2211_Zmumu_mZ_120*/*.root",
+                DTA_PATH / "user.kghorban*Sh_2211_Zee_mZ_120*/*.root",
+            ],
             "hard_cut": "TruthBosonM >= 120",
             "label": r"$Z\rightarrow ll$",
             "merge_into": "zll",
         },
         "ttbar": {
-            "data_path": DTA_PATH / "user.kghorban.PP8_ttbar_hdamp258p75*/*.root",
+            "data_path": DTA_PATH / "user.kghorban*PP8_ttbar_hdamp258p75*/*.root",
             "label": r"$t\bar{t}$",
+        },
+        "other_top": {
+            "data_path": [
+                DTA_PATH / "user.kghorban.PP8_singletop*/*.root",
+                DTA_PATH / "user.kghorban.PP8_tchan*/*.root",
+                DTA_PATH / "user.kghorban.PP8_Wt_DR_dilepton*/*.root",
+            ],
+            "label": "Other top",
+        },
+        "diboson": {
+            "data_path": [
+                DTA_PATH / "user.kghorban.Sh_2212_llll*/*.root",
+                DTA_PATH / "user.kghorban.Sh_2212_lllv*/*.root",
+                DTA_PATH / "user.kghorban.Sh_2212_llvv*/*.root",
+                DTA_PATH / "user.kghorban.Sh_2212_lvvv*/*.root",
+                DTA_PATH / "user.kghorban.Sh_2211_ZqqZll*/*.root",
+                DTA_PATH / "user.kghorban.Sh_2211_ZbbZll*/*.root",
+                DTA_PATH / "user.kghorban.Sh_2211_WqqZll*/*.root",
+                DTA_PATH / "user.kghorban.Sh_2211_WlvWqq*/*.root",
+                DTA_PATH / "user.kghorban.Sh_2211_WlvZqq*/*.root",
+                DTA_PATH / "user.kghorban.Sh_2211_WlvZbb*/*.root",
+            ],
+            "label": "Diboson",
         },
     }
 
     cuts: dict[str, list[Cut]] = {
         "tightTau" : [
             Cut(
-                r"\mathrm{pass trigger}",
-                r"passTrigger",
+                r"Pass preselection",
+                r"passReco",
             ),
             Cut(
                 r"\mathrm{tight tau}",
@@ -123,8 +125,8 @@ if __name__ == "__main__":
         ],
         "medTau": [
             Cut(
-                r"\mathrm{pass trigger}",
-                r"passTrigger",
+                r"Pass preselection",
+                r"passReco",
             ),
             Cut(
                 r"\mathrm{medium tau}",
@@ -145,8 +147,8 @@ if __name__ == "__main__":
         ],
         "looseTau" : [
             Cut(
-                r"\mathrm{pass trigger}",
-                r"passTrigger",
+                r"Pass preselection",
+                r"passReco",
             ),
             Cut(
                 r"\mathrm{loose tau}",
@@ -165,11 +167,43 @@ if __name__ == "__main__":
                 r"MTW > 150",
             ),
         ],
-        "passPreselection" : [
+        "veryLooseTau" : [
             Cut(
                 r"Pass preselection",
                 r"passReco",
             ),
+            Cut(
+                r"$p_T^\tau > 170$",
+                r"TauPt > 170",
+            ),
+            Cut(
+                r"$E_T^{\mathrm{miss}} > 100",
+                r"MET_met > 100",
+            ),
+            Cut(
+                r"$m_T^W > 150$",
+                r"MTW > 150",
+            ),
+        ],
+        "Preselection" : [
+            Cut(
+                r"Pass preselection",
+                r"passReco",
+            ),
+            Cut(
+                r"$p_T^\tau > 170$",
+                r"TauPt > 170",
+            ),
+            Cut(
+                r"$E_T^{\mathrm{miss}} > 100",
+                r"MET_met > 100",
+            ),
+            Cut(
+                r"$m_T^W > 150$",
+                r"MTW > 150",
+            ),
+        ],
+        "NoPreselection" : [
             Cut(
                 r"$p_T^\tau > 170$",
                 r"TauPt > 170",
@@ -194,19 +228,20 @@ if __name__ == "__main__":
         "MTW",
     }
 
-    MC = [
+    mc_samples = [
         "wtaunu",
-        "wmunu",
-        "wenu",
+        "wlnu",
         "zll",
         "ttbar",
+        "other_top",
+        "diboson",
     ]
-    datasets_merged = ["data"] + MC
+    all_samples = ["data"] + mc_samples
     analysis = Analysis(
         datasets,
         data_dir=DATA_OUT_DIR,
         year="2017",
-        regen_histograms=True,
+        # regen_histograms=True,
         ttree="T_s1thv_NOMINAL",
         cuts=cuts,
         analysis_label="stack_full",
@@ -223,13 +258,13 @@ if __name__ == "__main__":
             "MET_met": np.geomspace(100, 1000, 20),
         },
     )
-    analysis.cutflow_printout(datasets=datasets_merged, latex=True)
-    analysis.full_cutflow_printout(datasets=datasets_merged)
+    analysis.cutflow_printout(datasets=all_samples, latex=True)
+    analysis.full_cutflow_printout(datasets=all_samples)
     analysis["wtaunu"].is_signal = True
 
-    # set colours for merged datasets only
+    # set colours for samples
     c_iter = iter(plt.rcParams["axes.prop_cycle"].by_key()["color"])
-    for ds in MC:
+    for ds in mc_samples:
         c = next(c_iter)
         analysis[ds].colour = c
 
@@ -237,7 +272,7 @@ if __name__ == "__main__":
     # ========================================================================
     # argument dicts
     default_args = {
-        "datasets": MC,
+        "datasets": mc_samples,
         "title": f"mc16d | {analysis.global_lumi/1000:.3g}" + r"fb$^{-1}$",
         "cut": True,
         "yerr": True,
@@ -252,7 +287,7 @@ if __name__ == "__main__":
         analysis.stack_plot(var=var, **default_args, logx=True, data=True)
         analysis.stack_plot(var=var, **default_args, logy=False, data=True, suffix="liny")
         analysis.stack_plot(var=var, **default_args, logx=True, data=True, scale_by_bin_width=True, ylabel="Entries / bin width")
-        analysis.plot_hist(var=var, **default_args, logx=True, ratio_plot=False)
+        # analysis.plot_hist(var=var, **default_args, logx=True, )
 
     # unitless variables
     for var in [
@@ -261,7 +296,13 @@ if __name__ == "__main__":
     ]:
         analysis.stack_plot(var=var, **default_args, data=True)
         analysis.stack_plot(var=var, **default_args, logy=False, data=True, suffix="liny")
-        analysis.plot_hist(var=var, **default_args, ratio_plot=False)
+        # analysis.plot_hist(var=var, **default_args)
+
+    # # some broken bins?
+    # cut = "looseTau"
+    # hist = analysis.get_hist("TauPt", "wtaunu", cut)
+    # for bin in hist.bin_values(flow=True):
+    #     print(bin)
 
     analysis.histogram_printout()
     analysis.save_histograms()

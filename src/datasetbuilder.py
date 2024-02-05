@@ -103,7 +103,7 @@ class DatasetBuilder:
 
     def build(
         self,
-        data_path: str,
+        data_path: Path | list[Path],
         cuts: list[Cut] | dict[str, list[Cut]] | None = None,
         extract_vars: set[str] | None = None,
     ) -> RDataset:
@@ -118,10 +118,11 @@ class DatasetBuilder:
 
         # PRE-PROCESSING
         # ===============================
-        if len(glob.glob(str(data_path))) == 0:
+        files = self._multi_glob(data_path)
+        if len(files) == 0:
             raise FileExistsError(f"No files found in {str(data_path)}!")
         else:
-            self.logger.info(f"{len(glob.glob(str(data_path)))} files found in {str(data_path)}")
+            self.logger.info(f"{len(files)} files found in {str(data_path)}")
 
         # sanitise input
         if isinstance(cuts, list):
@@ -165,7 +166,9 @@ class DatasetBuilder:
         # BUILD
         # ===============================
         df = self.__build_dataframe_dta(
-            data_path=data_path, tree_dict=tree_dict, vars_to_calc=vars_to_calc
+            files=files, 
+            tree_dict=tree_dict, 
+            vars_to_calc=vars_to_calc,
         )
 
         # BUILD DATASET
@@ -183,20 +186,6 @@ class DatasetBuilder:
         )
 
         return dataset
-
-    def __read_pkl_df(self, pkl_path: str | Path) -> pd.DataFrame:
-        """Read in a dataset pickle file and check its type and index"""
-        self.logger.info(f"Reading data from {pkl_path}...")
-        df: pd.DataFrame = pd.read_pickle(pkl_path)
-        if not isinstance(df, pd.DataFrame):
-            raise ValueError(
-                f"Pickle file does not contain a pandas DataFrame. Found type {type(df)}"
-            )
-        assert df.index.names == (
-            "DSID",
-            "eventNumber",
-        ), f"Pickled DataFrame index incorrect: {df.index.names}"
-        return df
 
     # ===============================
     # =========== CHECKS ============
@@ -218,7 +207,7 @@ class DatasetBuilder:
 
     def __build_dataframe_dta(
         self,
-        data_path: str | Path,
+        files: list[str] | list[Path],
         tree_dict: dict[str, set[str]],
         vars_to_calc: set[str] | None = None,
         unravel_vectors: bool = True,
@@ -245,13 +234,13 @@ class DatasetBuilder:
             )
         import_cols = tree_dict[next(iter(tree_dict))]
 
-        self.logger.info(f"Initiating RDataFrame from trees {ttrees} in {data_path}")
+        self.logger.info(f"Initiating RDataFrame from trees {ttrees}")
 
         # create c++ map for dataset ID metadatas
         if self.is_MC:
             self.logger.debug("Calculating DSID metadata...")
             # each tree /SHOULD/ have the same dsid here
-            dsid_metadata = self._get_dsid_values(data_path, list(ttrees)[0])
+            dsid_metadata = self._get_dsid_values(files, list(ttrees)[0])
             self.logger.info(f"Sum of weights per dsid:\n{dsid_metadata['sumOfWeights']}")
             ROOT.gInterpreter.Declare(
                 f"""
@@ -262,7 +251,7 @@ class DatasetBuilder:
             )
 
         # make rdataframe
-        Rdf = ROOT_utils.init_rdataframe(self.name, str(data_path), ttrees)
+        Rdf = ROOT_utils.init_rdataframe(self.name, files, ttrees)
         ROOT.RDF.Experimental.AddProgressBar(Rdf)
 
         # check columns exist in dataframe
@@ -371,10 +360,9 @@ class DatasetBuilder:
     # ===============================
     # ========== HELPERS ============
     # ===============================
-    def _get_dsid_values(self, path: str | Path, ttree_name: str = "") -> pd.DataFrame:
+    def _get_dsid_values(self, files: list[str], ttree_name: str = "") -> pd.DataFrame:
         """Return DataFrame containing sumw, xs and PMG factor per DSID"""
         # PNG factor is cross-section * kfactor * filter eff.
-        files_list = glob.glob(str(path))
         dsid_sumw: dict[int, float] = dict()
         dsid_xs: dict[int, float] = dict()
         dsid_pmg_factor: dict[int, float] = dict()
@@ -382,7 +370,7 @@ class DatasetBuilder:
 
         # loop over files and sum sumw values per dataset ID (assuming each file only has one dataset ID value)
         prev_dsid = None
-        for file in files_list:
+        for file in files:
             with ROOT_utils.ROOT_TFile_mgr(file, "read") as tfile:
                 if not tfile.GetListOfKeys().Contains(ttree_name):
                     raise ValueError(
@@ -446,14 +434,14 @@ class DatasetBuilder:
 
     def __add_necessary_dta_variables(self, tree_dict: dict[str, set[str]]) -> dict[str, set[str]]:
         necc_vars = {
-            "weight",
-            "mcWeight",
-            "mcChannel",
+            # "weight",
+            # "mcWeight",
+            # "mcChannel",
             # "prwWeight",
             # "rwCorr",
-            "runNumber",
-            "eventNumber",
-            "passTruth",
+            # "runNumber",
+            # "eventNumber",
+            # "passTruth",
             "passReco",
         }
 
@@ -461,3 +449,18 @@ class DatasetBuilder:
             tree_dict[tree] |= necc_vars
         self.logger.debug(f"Added {necc_vars} to DTA import")
         return tree_dict
+    
+    def _multi_glob(self, paths: Path | list[Path] | str | list[str]) -> list[str]:
+        """Return list of files from list of paths"""
+        if isinstance(paths, (str, Path)):
+            paths = [paths]
+        
+        files = []
+        for path in paths:
+            f = glob.glob(str(path))
+            if not f:
+                self.logger.warning("Path passed with no files: %s", path)
+
+            files += glob.glob(str(path))
+        
+        return files

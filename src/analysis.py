@@ -3,6 +3,7 @@ from copy import deepcopy
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Any, Sequence, Generator
+from functools import reduce
 
 import ROOT
 import matplotlib.pyplot as plt  # type: ignore
@@ -711,7 +712,6 @@ class Analysis:
                     var_name=var,
                     lepton=lepton,
                     xlim=(ratio_hist.bin_edges[0], ratio_hist.bin_edges[-1]),
-                    diff_xs=scale_by_bin_width,
                     xlabel=xlabel,
                     ylabel=ratio_label,
                     title="",
@@ -760,6 +760,8 @@ class Analysis:
         cut: bool = False,
         histtype="fill",
         sort: bool = True,
+        ratio_plot: bool = False,
+        ratio_axlim: float | tuple[float, float] | None = (0.5, 1.5),
         suffix: str = "",
         prefix: str = "",
         **kwargs,
@@ -795,6 +797,8 @@ class Analysis:
         :param cut: applies cuts before plotting
         :param histtype: type of stack plot to be passed to mplhep
         :param sort: whether to sort histograms from lowest to highest integral before plotting.
+        :param ratio_plot: add data/mc ratio plot to the bottom of figure
+        :param ratio_axlim: pass to yax_lim in rato plotter
         :param suffix: suffix to add at end of histogram/file name
         :param prefix: prefix to add at start of histogram/file
         :param kwargs: keyword arguments to pass to mplhep.histplot()
@@ -871,12 +875,10 @@ class Analysis:
             colours_list: list[str] = []
 
             signal_ds = ""
-            signal_idx = None
             for i in range(n_stacks):
                 # save signal for the end if only plotting one variable and many datasets
                 if self[datasets[i]].is_signal and not varloop:
                     signal_ds = datasets[i]
-                    signal_idx = i
                     continue
 
                 dataset = datasets[i] if datasetloop else datasets[0]
@@ -906,23 +908,15 @@ class Analysis:
                 sorted_lists = sorted(all_lists, key=lambda l: l[0].integral)
                 hist_list, label_list, colours_list = [list(l) for l in zip(*sorted_lists)]
 
-            # handle signal seperately
-            alpha_list = []
-            edgecolour_list = []
-            if signal_ds:
-                sig_hist = self.get_hist(var[0], signal_ds, cut)
-                if scale_by_bin_width:
-                    sig_hist /= hist.bin_widths
-                
-                alpha_list = [0.8] * len(hist_list) + [1]
-                edgecolour_list = ["k"] * len(hist_list) + ["r"]
-
-                hist_list.append(sig_hist)
-                label_list.append(labels[signal_idx] if labels else self[signal_ds].label)
-                colours_list.append("w")
-
             # plot
-            fig, ax = plt.subplots()
+            if ratio_plot:
+                fig, (ax, ratio_ax) = plt.subplots(2, 1, gridspec_kw={"height_ratios": [3, 1]})
+            else:
+                fig, ax = plt.subplots()
+                ratio_ax = None  # just so IDE doesn't complain about missing variable
+
+            alpha_list = [0.8] * len(hist_list)
+            edgecolour_list = ["k"] * len(hist_list)
             hep.histplot(
                 H=[h.bin_values() for h in hist_list],
                 bins=hist_list[-1].bin_edges,
@@ -937,6 +931,23 @@ class Analysis:
                 zorder=reversed(range(len(hist_list))),  # mplhep plots in wrong order
                 **kwargs,
             )
+
+            # handle signal seperately
+            if signal_ds:
+                bkg_sum = reduce((lambda x, y: x.__add__(y)), hist_list)
+                sig_hist = self.get_hist(var[0], signal_ds, cut)
+                if scale_by_bin_width:
+                    sig_hist /= sig_hist.bin_widths
+                hist_list.append(sig_hist)
+
+                sig_stack = sig_hist + bkg_sum
+                
+                sig_stack.plot(
+                    ax=ax,
+                    yerr=None,
+                    color="r",
+                    label=self[signal_ds].label
+                )
 
             if yerr:
                 # MC error propagation
@@ -964,19 +975,74 @@ class Analysis:
                 )
 
             if data:
-                hist = self.get_hist(varname, "data", cut)
+                data_hist = self.get_hist(varname, "data", cut)
                 if scale_by_bin_width:
-                    hist /= hist.bin_widths
+                    data_hist /= data_hist.bin_widths
                 ax.errorbar(
-                    hist.bin_centres,
-                    hist.bin_values(),
-                    xerr=hist.bin_widths / 2,
-                    yerr=hist.error(),
+                    data_hist.bin_centres,
+                    data_hist.bin_values(),
+                    xerr=data_hist.bin_widths / 2,
+                    yerr=data_hist.error(),
                     linestyle="None",
                     color="black",
                     marker=".",
                     label=self["data"].label,
                 )
+
+                if ratio_plot:
+                    fig.tight_layout()
+                    fig.subplots_adjust(hspace=0.1, wspace=0)
+                    ax.set_xticklabels([])
+                    ax.set_xlabel("")
+
+                    # MC errors
+                    if yerr:
+                        err_bottom = 1 - errs
+                        err_top = 1 + errs
+                        ratio_ax.fill_between(
+                            x=edges,
+                            y1=np.append(err_top, err_top[-1]),
+                            y2=np.append(err_bottom, err_bottom[-1]),
+                            alpha=0.3,
+                            color="grey",
+                            hatch="/",
+                            label="MC error",
+                            step="post"
+                        )  
+
+                    # add line for MC
+                    ratio_ax.hlines(
+                        y=1,
+                        xmin=edges[0],
+                        xmax=edges[-1],
+                        colors="r",
+                    )
+
+                    # plot data/mc ratio
+                    all_mc_hist = reduce((lambda x, y: x.__add__(y)), hist_list)
+
+                    ratio_hist = data_hist.plot_ratio(
+                        all_mc_hist,
+                        ax=ratio_ax,
+                        yerr='binom',
+                        label=label,
+                        color="k",
+                        yax_lim=ratio_axlim,
+                        display_unity=False
+                    )
+
+                    plotting_tools.set_axis_options(
+                        axis=ratio_ax,
+                        var_name=var,
+                        xlim=(ratio_hist.bin_edges[0], ratio_hist.bin_edges[-1]),
+                        ylim=ratio_axlim,
+                        xlabel=xlabel,
+                        ylabel="Data / Simulation",
+                        title="",
+                        logx=logx,
+                        logy=False,
+                        label=False,
+                    )
 
             plotting_tools.set_axis_options(
                 axis=ax,
@@ -994,7 +1060,10 @@ class Analysis:
                 ax.set_xlim(*x_axlim)
             if y_axlim:
                 ax.set_ylim(*y_axlim)
-            ax.legend(fontsize=10, loc="upper right")
+
+            ncols = len(hist_list) + bool(data) + bool(yerr)
+            ncols //= 4
+            ax.legend(fontsize=10, loc="upper right", ncols=ncols)
 
             if filename:
                 filepath = self.paths.plot_dir / filename
