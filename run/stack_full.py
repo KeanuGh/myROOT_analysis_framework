@@ -8,35 +8,40 @@ from src.cutfile import Cut
 from src.analysis import Analysis
 
 # DTA_PATH = Path("/eos/home-k/kghorban/DTA_OUT/2023-10-25/")
-DTA_PATH = Path("/eos/home-k/kghorban/DTA_OUT/2024-02-01/")
+DTA_PATH = Path("/eos/home-k/kghorban/DTA_OUT/2024-02-05/")
 DATA_OUT_DIR = Path("/eos/home-k/kghorban/framework_outputs/")
 CUTFILE_DIR = Path("/afs/cern.ch/user/k/kghorban/framework/options/DTA_cuts/reco")
 
 if __name__ == "__main__":
     datasets: Dict[str, Dict] = {
-        # data
+        # DATA
+        # ====================================================================
         "data": {
-            "data_path": DTA_PATH / "user.kghorban.data17*/*.root",
+            "data_path": DTA_PATH / "*data17*/*.root",
             "label": "data17",
         },
-        # signal
+        # SIGNAL
+        # ====================================================================
         "wtaunu_lm": {
-            "data_path": DTA_PATH / "user.kghorban*Sh_2211_Wtaunu_*_maxHTpTV2*/*.root",
+            "data_path": DTA_PATH / "*Sh_2211_Wtaunu_*_maxHTpTV2*/*.root",
             "hard_cut": "TruthBosonM < 120",
             "label": r"$W\rightarrow\tau\nu$",
             "merge_into": "wtaunu",
         },
         "wtaunu_hm": {
-            "data_path": DTA_PATH / "user.kghorban*Sh_2211_Wtaunu_mW_120*/*.root",
+            "data_path": DTA_PATH / "*Sh_2211_Wtaunu_mW_120*/*.root",
             "hard_cut": "TruthBosonM >= 120",
             "label": r"$W\rightarrow\tau\nu$",
             "merge_into": "wtaunu",
         },
-        # backgrounds
+        # BACKGROUNDS
+        # ====================================================================
+
+        # W -> light lepton
         "wlv_lm": {
             "data_path": [
-                DTA_PATH / "user.kghorban*Sh_2211_Wmunu_maxHTpTV2*/*.root",
-                DTA_PATH / "user.kghorban*Sh_2211_Wenu_maxHTpTV2*/*.root",
+                DTA_PATH / "*Sh_2211_Wmunu_maxHTpTV2*/*.root",
+                DTA_PATH / "*Sh_2211_Wenu_maxHTpTV2*/*.root",
             ],
             "hard_cut": "TruthBosonM < 120",
             "label": r"$W\rightarrow (e/\mu)\nu$",
@@ -44,118 +49,90 @@ if __name__ == "__main__":
         },
         "wlv_hm": {
             "data_path": [
-                DTA_PATH / "user.kghorban*Sh_2211_Wmunu_mW_120*/*.root",
-                DTA_PATH / "user.kghorban*Sh_2211_Wenu_mW_120*/*.root",
+                DTA_PATH / "*Sh_2211_Wmunu_mW_120*/*.root",
+                DTA_PATH / "*Sh_2211_Wenu_mW_120*/*.root",
             ],
             "hard_cut": "TruthBosonM >= 120",
             "label": r"$W\rightarrow (e/\mu)\nu$",
             "merge_into": "wlnu",
         },
+
+        # Z -> TauTau
         "ztautau_lm": {
-            "data_path": DTA_PATH / "user.kghorban*Sh_2211_Ztautau_*_maxHTpTV2*/*.root",
+            "data_path": DTA_PATH / "*Sh_2211_Ztautau_*_maxHTpTV2*/*.root",
             "hard_cut": "TruthBosonM < 120",
-            "label": r"$Z\rightarrow \tau\tau$",
+            "label": r"$Z\rightarrow (l/\nu)(l/\nu)$",
             "merge_into": "zll",
         },
         "ztautau_hm": {
-            "data_path": DTA_PATH / "user.kghorban*Sh_2211_Ztautau_mZ_120*/*.root",
+            "data_path": DTA_PATH / "*Sh_2211_Ztautau_mZ_120*/*.root",
             "hard_cut": "TruthBosonM >= 120",
-            "label": r"$Z\rightarrow \tau\tau$",
+            "label": r"$Z\rightarrow (l/\nu)(l/\nu)$",
             "merge_into": "zll",
         },
+
+        # Z -> Light Lepton
         "zll_lm": {
             "data_path": [
-                DTA_PATH / "user.kghorban*Sh_2211_Zee_maxHTpTV2*/*.root",
-                DTA_PATH / "user.kghorban*Sh_2211_Zmumu_maxHTpTV2*/*.root",
+                DTA_PATH / "*Sh_2211_Zee_maxHTpTV2*/*.root",
+                DTA_PATH / "*Sh_2211_Zmumu_maxHTpTV2*/*.root",
             ],
             "hard_cut": "TruthBosonM < 120",
-            "label": r"$Z\rightarrow (e/\mu)(e/\mu)$",
+            "label": r"$Z\rightarrow (l/\nu)(l/\nu)$",
             "merge_into": "zll",
         },
         "zll_hm": {
             "data_path": [
-                DTA_PATH / "user.kghorban*Sh_2211_Zmumu_mZ_120*/*.root",
-                DTA_PATH / "user.kghorban*Sh_2211_Zee_mZ_120*/*.root",
+                DTA_PATH / "*Sh_2211_Zmumu_mZ_120*/*.root",
+                DTA_PATH / "*Sh_2211_Zee_mZ_120*/*.root",
             ],
             "hard_cut": "TruthBosonM >= 120",
-            "label": r"$Z\rightarrow (e/\mu)(e/\mu)$",
+            "label": r"$Z\rightarrow (l/\nu)(l/\nu)$",
             "merge_into": "zll",
         },
+
+        # Z -> Neutrinos
+        "znunu": {
+            "data_path": DTA_PATH / "*Sh_2211_Znunu_pTV2*/*.root",
+            "label": r"$Z\rightarrow (l/\nu)(l/\nu)$",
+            "merge_into": "zll",
+        },
+
+        # TTBAR/TOP
         "ttbar": {
-            "data_path": DTA_PATH / "user.kghorban*PP8_ttbar_hdamp258p75*/*.root",
+            "data_path": DTA_PATH / "*PP8_ttbar_hdamp258p75*/*.root",
             "label": r"$t\bar{t}$",
         },
         "other_top": {
             "data_path": [
-                DTA_PATH / "user.kghorban.PP8_singletop*/*.root",
-                DTA_PATH / "user.kghorban.PP8_tchan*/*.root",
-                DTA_PATH / "user.kghorban.PP8_Wt_DR_dilepton*/*.root",
+                DTA_PATH / "*PP8_singletop*/*.root",
+                DTA_PATH / "*PP8_tchan*/*.root",
+                DTA_PATH / "*PP8_Wt_DR_dilepton*/*.root",
             ],
-            "label": "Other top",
+            "label": "Other Top",
         },
+
+        # DIBOSON
         "diboson": {
             "data_path": [
-                DTA_PATH / "user.kghorban.Sh_2212_llll*/*.root",
-                DTA_PATH / "user.kghorban.Sh_2212_lllv*/*.root",
-                DTA_PATH / "user.kghorban.Sh_2212_llvv*/*.root",
-                DTA_PATH / "user.kghorban.Sh_2212_lvvv*/*.root",
-                DTA_PATH / "user.kghorban.Sh_2211_ZqqZll*/*.root",
-                DTA_PATH / "user.kghorban.Sh_2211_ZbbZll*/*.root",
-                DTA_PATH / "user.kghorban.Sh_2211_WqqZll*/*.root",
-                DTA_PATH / "user.kghorban.Sh_2211_WlvWqq*/*.root",
-                DTA_PATH / "user.kghorban.Sh_2211_WlvZqq*/*.root",
-                DTA_PATH / "user.kghorban.Sh_2211_WlvZbb*/*.root",
+                DTA_PATH / "*Sh_2212_llll*/*.root",
+                DTA_PATH / "*Sh_2212_lllv*/*.root",
+                DTA_PATH / "*Sh_2212_llvv*/*.root",
+                DTA_PATH / "*Sh_2212_lvvv*/*.root",
+                DTA_PATH / "*Sh_2212_vvvv*/*.root",
+                DTA_PATH / "*Sh_2211_ZqqZll*/*.root",
+                DTA_PATH / "*Sh_2211_ZbbZll*/*.root",
+                DTA_PATH / "*.Sh_2211_WqqZll*/*.root",
+                DTA_PATH / "*.Sh_2211_WlvWqq*/*.root",
+                DTA_PATH / "*.Sh_2211_WlvZqq*/*.root",
+                DTA_PATH / "*.Sh_2211_WlvZbb*/*.root",
             ],
             "label": "Diboson",
         },
     }
 
     cuts: dict[str, list[Cut]] = {
-        # "tightTau" : [
-        #     Cut(
-        #         r"Pass preselection",
-        #         r"passReco",
-        #     ),
-        #     Cut(
-        #         r"\mathrm{tight tau}",
-        #         r"TauTightWP",
-        #     ),
-        #     Cut(
-        #         r"$p_T^\tau > 170$",
-        #         r"TauPt > 170",
-        #     ),
-        #     Cut(
-        #         r"$E_T^{\mathrm{miss}} > 150",
-        #         r"MET_met > 150",
-        #     ),
-        #     Cut(
-        #         r"$m_T^W > 150$",
-        #         r"MTW > 150",
-        #     ),
-        # ],
-        # "medTau": [
-        #     Cut(
-        #         r"Pass preselection",
-        #         r"passReco",
-        #     ),
-        #     Cut(
-        #         r"\mathrm{medium tau}",
-        #         r"TauMediumWP",
-        #     ),
-        #     Cut(
-        #         r"$p_T^\tau > 170$",
-        #         r"TauPt > 170",
-        #     ),
-        #     Cut(
-        #         r"$E_T^{\mathrm{miss}} > 150",
-        #         r"MET_met > 150",
-        #     ),
-        #     Cut(
-        #         r"$m_T^W > 150$",
-        #         r"MTW > 150",
-        #     ),
-        # ],
-        "looseTau" : [
+        "Loose Tau" : [
             Cut(
                 r"Pass preselection",
                 r"passReco",
@@ -177,7 +154,7 @@ if __name__ == "__main__":
                 r"MTW > 150",
             ),
         ],
-        "veryLooseTau" : [
+        "Very Loose Tau" : [
             Cut(
                 r"Pass preselection",
                 r"passReco",
@@ -195,38 +172,24 @@ if __name__ == "__main__":
                 r"MTW > 150",
             ),
         ],
-        "preselection_only" : [
+        "Preselection Only" : [
             Cut(
                 r"Pass preselection",
                 r"passReco",
             ),
         ],
-        "no_preselection" : [
-            Cut(
-                r"$p_T^\tau > 170$",
-                r"TauPt > 170",
-            ),
-            Cut(
-                r"$E_T^{\mathrm{miss}} > 150",
-                r"MET_met > 150",
-            ),
-            Cut(
-                r"$m_T^W > 150$",
-                r"MTW > 150",
-            ),
-        ],
-        "fakes_CR": [
+        "Fakes CR": [
             Cut(
                 r"Pass preselection",
                 r"passReco",
-            ),
-            Cut(
-                r"$p_T^\tau > 170$",
-                r"TauPt > 170",
             ),
             Cut(
                 r"$E_T^{\mathrm{miss}} < 100",
                 r"MET_met > 150",
+            ),
+            Cut(
+                r"$p_T^\tau > 170$",
+                r"TauPt > 170",
             ),
             Cut(
                 r"$m_T^W > 150$",
@@ -279,11 +242,6 @@ if __name__ == "__main__":
             "TauPt_div_MET": np.linspace(0, 3.5, 20),
             },
             "preselection_only": {
-                "MTW": np.geomspace(1, 1000, 20),
-                "TauPt": np.geomspace(1, 1000, 20),
-                "MET_met": np.geomspace(1, 1000, 20),
-            },
-            "no_preselection": {
                 "MTW": np.geomspace(1, 1000, 20),
                 "TauPt": np.geomspace(1, 1000, 20),
                 "MET_met": np.geomspace(1, 1000, 20),
