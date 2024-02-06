@@ -275,6 +275,16 @@ variable_data: Dict[str, Branch] = {
         "units": "",
         "tag": VarTag.RECO,
     },
+    "TauPt_div_MET": {
+        "name": r"Tau $p_T/E_T^\mathrm{miss}$",
+        "units": "",
+        "tag": VarTag.RECO,
+    },
+    "DeltaPhi_tau_met": {
+        "name": r"$\Delta\phi(p^\tau_T,E_T^\mathrm{miss})",
+        "units": "",
+        "tag": VarTag.RECO,
+    },
     # RECO-LEVEL KINEMATIC VARIABLES
     # =======================================================
     # analysistop

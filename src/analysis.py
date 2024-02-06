@@ -934,7 +934,7 @@ class Analysis:
 
             # handle signal seperately
             if signal_ds:
-                bkg_sum = reduce((lambda x, y: x.__add__(y)), hist_list)
+                bkg_sum = reduce((lambda x, y: x + y), hist_list)
                 sig_hist = self.get_hist(var[0], signal_ds, cut)
                 if scale_by_bin_width:
                     sig_hist /= sig_hist.bin_widths

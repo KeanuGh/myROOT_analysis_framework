@@ -108,4 +108,12 @@ double delta_r(double eta1, double eta2, double phi1, double phi2) {
     return std::sqrt( std::pow(eta1 - eta2, 2) + std::pow(phi1 - phi2, 2) );
 }
 
+double calc_div(double x1, double x2) {
+    return x1 / x2;
+}
+
+double calc_diff(double x1, double x2) {
+    return std::abs(x1 - x2);
+}
+
 #endif

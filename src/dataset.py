@@ -34,7 +34,8 @@ class Dataset(ABC):
     lepton: str = "lepton"
     file: Path = field(init=False)
     histograms: OrderedDict[str, ROOT.TH1] = field(init=False, default_factory=OrderedDict)
-    binnings: dict[str, list[float]] = field(default_factory=dict)
+    do_fakes: bool = False
+    binnings: dict[dict[str, list[float]]] = field(default_factory=dict)
     colour: str | tuple = field(default_factory=str)
     is_merged: bool = False
     is_signal: bool = False
@@ -129,11 +130,8 @@ class Dataset(ABC):
         """Match arguments for plotting bins from variable name"""
         try:
             var_dict = variable_data[var]
-        except KeyError:
-            raise KeyError(f"No known variable {var}")
-
-        if var in self.binnings:
-            return {"bins": self.binnings[var]}
+        except KeyError as e:
+            raise KeyError(f"No known variable {var}") from e
 
         match var_dict:
             case {"units": "GeV"}:
@@ -262,10 +260,10 @@ class RDataset(Dataset):
                     self.filtered_df[cuts_name] = base_filter.Filter(
                         cuts[n_shared_cuts].cutstr, __sanitise_str(cuts[n_shared_cuts].name)
                     )
-                except IndexError:
+                except IndexError as e:
                     raise IndexError(
                         f"Two or more identical cutflows were found in dataset {self.name}. Check passed cuts"
-                    )
+                    ) from e
 
                 for cut in cuts[n_shared_cuts + 1 :]:
                     self.filtered_df[cuts_name] = self.filtered_df[cuts_name].Filter(
@@ -311,7 +309,7 @@ class RDataset(Dataset):
         """Saves pickle"""
         if not path:
             path = Path(self.file)
-        self.logger.info(f"Saving to ROOT file...")
+        self.logger.info("Saving to ROOT file...")
         with ROOT_utils.ROOT_TFile_mgr(path, tfile_option):
             self.df.Snapshot(ttree, path, tfile_option)
         self.logger.info(f"Saved to {path}")
@@ -433,7 +431,8 @@ class RDataset(Dataset):
             for cutflow_name, filtered_df in self.filtered_df.items():
                 if n_cutflows > 1:
                     self.logger.debug(f"Cutflow {cutflow_name}:")
-                self.logger.debug(f"Cuts applied: ")
+                else:
+                    self.logger.debug(f"Cuts applied: ")
                 filternames = list(filtered_df.GetFilterNames())
                 for name in filternames:
                     self.logger.debug(f"\t{name}")
@@ -459,7 +458,10 @@ class RDataset(Dataset):
 
         for variable_name in output_histogram_variables:
             # which binning?
-            bin_args = self.match_bin_args(variable_name)
+            if variable_name in self.binnings[""]:
+                bin_args = {"bins": self.binnings[""][variable_name]}
+            else:
+                bin_args = self.match_bin_args(variable_name)
             weight = match_weight(variable_name)
             fill_cols = [variable_name, weight] if weight else [variable_name]
 
@@ -470,7 +472,18 @@ class RDataset(Dataset):
             )
             th1_histograms[variable_name] = self.df.Fill(th1, fill_cols)
 
+            if self.do_fakes:
+                pass
+
             if cut:
+                # which binning?
+                if cut in self.binnings and variable_name in self.binnings[cut]:
+                    bin_args = {"bins": self.binnings[cut][variable_name]}
+                elif variable_name in self.binnings[""]:
+                    bin_args = {"bins": self.binnings[""][variable_name]}
+                else:
+                    bin_args = self.match_bin_args(variable_name)
+            
                 for cutflow_name, filtered_df in self.filtered_df.items():
                     cut_hist_name = (
                         variable_name + (("_" + cutflow_name) if cutflow_name else "") + "_cut"
