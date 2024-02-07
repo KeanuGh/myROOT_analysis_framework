@@ -1,9 +1,9 @@
 import inspect
 from copy import deepcopy
 from dataclasses import dataclass
+from functools import reduce
 from pathlib import Path
 from typing import Callable, Any, Sequence, Generator
-from functools import reduce
 
 import ROOT
 import matplotlib.pyplot as plt  # type: ignore
@@ -18,7 +18,7 @@ from src.datasetbuilder import DatasetBuilder, lumi_year
 from src.histogram import Histogram1D
 from src.logger import get_logger
 from utils import plotting_tools, ROOT_utils
-from utils.context import check_single_dataset, handle_dataset_arg, redirect_stdout
+from utils.context import handle_dataset_arg, redirect_stdout
 
 
 @dataclass(slots=True)
@@ -26,14 +26,12 @@ class AnalysisPath:
     """Container class for paths needed by analyses"""
 
     plot_dir: Path
-    pkl_dir: Path
     latex_dir: Path
     log_dir: Path
 
     def create_paths(self):
         for p in (
             self.plot_dir,
-            self.pkl_dir,
             self.latex_dir,
             self.log_dir,
         ):
@@ -65,7 +63,6 @@ class Analysis:
         analysis_label: str,
         global_lumi: float | None = 139.0,
         output_dir: Path | str | None = None,
-        data_dir: Path | str | None = None,
         log_level: int = 20,
         log_out: str = "both",
         timedatelog: bool = True,
@@ -78,7 +75,6 @@ class Analysis:
                The key to the top-level dictionary is the label assigned to the dataset.
         :param global_lumi: All data will be scaled to this luminosity (fb-1)
         :param output_dir: Root directory for outputs
-        :param data_dir: Root directory for pickle data in/out
         :param log_level: Logging level. Default INFO. See https://docs.python.org/3/library/logging.html#logging-levels
         :param log_out: Where to set log output: 'FILE', 'CONSOLE' or 'BOTH'. (case-insensitive)
         :param timedatelog: Whether to output log filename with timedate
@@ -100,7 +96,6 @@ class Analysis:
         self._output_dir = Path(output_dir) / "outputs" / analysis_label  # where outputs go
         self.paths = AnalysisPath(
             plot_dir=Path(self._output_dir) / "plots",
-            pkl_dir=Path(data_dir if data_dir else (self._output_dir / "pickles")),
             latex_dir=Path(self._output_dir) / "LaTeX",  # where to print latex cutflow table(s)
             log_dir=Path(self._output_dir) / "logs",
         )
@@ -156,10 +151,6 @@ class Analysis:
             else:
                 indiv_regen_hists = regen_histograms
 
-            # set correct pickle path if not passed as a build argument
-            if "pkl_path" not in args:
-                args["pkl_path"] = self.paths.pkl_dir / (dataset_name + "_df.pkl")
-
             # make dataset
             builder = DatasetBuilder(
                 name=dataset_name,
@@ -178,8 +169,13 @@ class Analysis:
             )
             dataset = builder.build(**self.__match_params(args, DatasetBuilder.build))
 
+            # apply some manual settings
             if "binnings" in args:
                 dataset.binnings = args["binnings"]
+            if "is_data" in args:
+                dataset.is_data = args["is_data"]
+            if "is_signal" in args:
+                dataset.is_signal = args["is_signal"]
 
             if separate_loggers:
                 # set new logger to append to analysis logger
@@ -326,13 +322,10 @@ class Analysis:
         self,
         var: str | Sequence[str],
         datasets: str | Sequence[str] | None = None,
-        bins: list[float | int] | tuple[int, float, float] | None = None,
-        weight: list[str | float] | str | float = 1.0,
         yerr: ArrayLike | str = True,
         labels: list[str] | None = None,
         w2: bool = False,
         normalise: float | bool = False,
-        logbins: bool = False,
         logx: bool = False,
         logy: bool = True,
         xlabel: str = "",
@@ -363,11 +356,6 @@ class Analysis:
         :param datasets: string or list of strings corresponding to datasets in the analysis
         :param var: variable name to be plotted. Either a string that exists in all datasets
                     or a list one for each dataset
-        :param bins: tuple of bins in x (n_bins, start, stop) or list of bin edges.
-                     In the first case returns an axis of type Regular(), otherwise of type Variable().
-                     Raises error if not formatted in one of these ways.
-        :param weight: variable name in dataset to weight by or numeric value to weight all
-                       can pass list for separate weights to
         :param yerr: Histogram uncertainties. Following modes are supported:
                      - 'rsumw2', sqrt(SumW2) errors
                      - 'sqrtN', sqrt(N) errors or poissonian interval when w2 is specified
@@ -380,7 +368,6 @@ class Analysis:
                           - True for normalisation of unity
                           - 'lumi' (default) for normalisation to global_uni variable in analysis
                           - False for no normalisation
-        :param logbins: whether logarithmic binnings
         :param logx: whether log scale x-axis
         :param logy: whether log scale y-axis
         :param xlabel: x label
@@ -403,7 +390,9 @@ class Analysis:
         :param prefix: prefix to add at start of histogram/file
         :param kwargs: keyword arguments to pass to mplhep.histplot()
         """
-        self.logger.info(f"Plotting %s%s...", var, f"in {datasets}" in datasets if datasets else None)
+        self.logger.info(
+            f"Plotting %s%s...", var, f"in {datasets}" in datasets if datasets else None
+        )
 
         # naming template for file/histogram name
         name_template = (
@@ -445,7 +434,7 @@ class Analysis:
         varloop = False
         datasetloop = False
         if datasets is None:
-            varloop = True,
+            varloop = (True,)
             n_overlays = len(var)
         elif len(datasets) > 1:
             if (len(datasets) != len(var)) and (len(var) > 1):
@@ -539,7 +528,8 @@ class Analysis:
                     ratio_hist_name = (
                         name_template.format(
                             short=name_template_short.format(
-                                dataset=f"{dataset}_{datasets[0]}" if dataset else None, variable=varname
+                                dataset=f"{dataset}_{datasets[0]}" if dataset else None,
+                                variable=varname,
                             )
                         )
                         + "_ratio"
@@ -625,7 +615,6 @@ class Analysis:
         self,
         datasets: str | Sequence[str],
         var: str | Sequence[str],
-        data: bool = False,
         yerr: ArrayLike | str = True,
         labels: list[str] | None = None,
         logx: bool = False,
@@ -653,18 +642,11 @@ class Analysis:
         :param datasets: string or list of strings corresponding to datasets in the analysis
         :param var: variable name to be plotted. Either a string that exists in all datasets
                     or a list one for each dataset
-        :param data: whether or not to plot "data" dataset. Will check for a dataset in analysis named "data".
         :param yerr: Histogram uncertainties. Following modes are supported:
                 - True: will calculate sum of histogram stack errors
                 - shape(N) array of for one-sided errors or list thereof
                 - shape(Nx2) array of for two-sided errors or list thereof
-        :param bins: tuple of bins in x (n_bins, start, stop) or list of bin edges.
-                     In the first case returns an axis of type Regular(), otherwise of type Variable().
-                     Raises error if not formatted in one of these ways.
-        :param weight: variable name in dataset to weight by or numeric value to weight all
-                       can pass list for separate weights to
         :param labels: list of labels for plot legend corresponding to each dataset
-        :param logbins: whether logarithmic binnings
         :param logx: whether log scale x-axis
         :param logy: whether log scale y-axis
         :param xlabel: x label
@@ -684,9 +666,6 @@ class Analysis:
         :param kwargs: keyword arguments to pass to mplhep.histplot()
         """
         self.logger.info(f"Plotting stack plot of {var} in {datasets}")
-
-        if data and "data" not in self.datasets:
-            raise ValueError("No 'data' dataset found in analysis")
 
         # naming template for file/histogram name
         name_template = (
@@ -742,23 +721,24 @@ class Analysis:
         else:
             n_stacks = 1
 
-        # do the datasets have defined colours?
-        is_colours = all(self[ds].colour != "" for ds in datasets)
-        if not is_colours:
-            self.logger.debug("Colours aren't specified for all datasets, will generate.")
+        if n_stacks < 1:
+            raise ValueError("Nothing to plot!")
 
         # plot for each cut
         for cut in cutsets_to_loop:
             # work out histograms to stack
             hist_list: list[Histogram1D] = []
-            label_list: list[str] = []
-            colours_list: list[str] = []
+            label_list: list[str | None] = []
+            colours_list: list[str | None] = []
 
-            signal_ds = ""
+            signal_ds = data_ds = ""
             for i in range(n_stacks):
                 # save signal for the end if only plotting one variable and many datasets
-                if self[datasets[i]].is_signal and not varloop:
+                if self[datasets[i]].is_signal and datasetloop:
                     signal_ds = datasets[i]
+                    continue
+                elif self[datasets[i]].is_data and datasetloop:
+                    data_ds = datasets[i]
                     continue
 
                 dataset = datasets[i] if datasetloop else datasets[0]
@@ -767,10 +747,7 @@ class Analysis:
                 label = labels[i] if labels else self[dataset].label
                 label_list.append(label)
 
-                if is_colours:
-                    colours_list.append(self[dataset].colour)
-                else:
-                    colours_list.append(None)
+                colours_list.append(self[dataset].colour)
 
                 hist = self.get_hist(varname, dataset, cut)
                 if scale_by_bin_width:
@@ -823,14 +800,10 @@ class Analysis:
                 hist_list.append(sig_hist)
 
                 sig_stack = sig_hist + bkg_sum
-                
-                sig_stack.plot(
-                    ax=ax,
-                    yerr=None,
-                    color="r",
-                    label=self[signal_ds].label
-                )
 
+                sig_stack.plot(ax=ax, yerr=None, color="r", label=self[signal_ds].label)
+
+            edges = hist_list[0].bin_edges
             if yerr:
                 # MC error propagation
                 errs = np.array([hist.error() for hist in hist_list])
@@ -839,10 +812,8 @@ class Analysis:
                 # top of histogram stack
                 stack = np.array([hist.bin_values() for hist in hist_list])
                 stack = np.sum(stack, axis=0)
-                err_top = stack + (errs/2)
-                err_bottom = stack - (errs/2)
-
-                edges = hist_list[0].bin_edges
+                err_top = stack + (errs / 2)
+                err_bottom = stack - (errs / 2)
 
                 # add error as clear hatch
                 ax.fill_between(
@@ -853,11 +824,21 @@ class Analysis:
                     color="grey",
                     hatch="/",
                     label="MC error",
-                    step="post"
+                    step="post",
                 )
 
-            if data:
-                data_hist = self.get_hist(varname, "data", cut)
+            # handle data separately
+            if data_ds:
+                # figure out which variable we're meant to plot
+                if len(var) < 2:
+                    varname = var[0]
+                else:
+                    varname = var[datasets.index(data_ds)]
+
+                # get histogram and plot
+                data_hist = self.get_hist(varname, data_ds, cut)
+                hist_list.append(data_hist)
+
                 if scale_by_bin_width:
                     data_hist /= data_hist.bin_widths
                 ax.errorbar(
@@ -871,6 +852,7 @@ class Analysis:
                     label=self["data"].label,
                 )
 
+                # TODO: fix
                 if ratio_plot:
                     fig.tight_layout()
                     fig.subplots_adjust(hspace=0.1, wspace=0)
@@ -889,8 +871,8 @@ class Analysis:
                             color="grey",
                             hatch="/",
                             label="MC error",
-                            step="post"
-                        )  
+                            step="post",
+                        )
 
                     # add line for MC
                     ratio_ax.hlines(
@@ -906,11 +888,11 @@ class Analysis:
                     ratio_hist = data_hist.plot_ratio(
                         all_mc_hist,
                         ax=ratio_ax,
-                        yerr='binom',
+                        yerr="binom",
                         label=label,
                         color="k",
                         yax_lim=ratio_axlim,
-                        display_unity=False
+                        display_unity=False,
                     )
 
                     plotting_tools.set_axis_options(
@@ -944,15 +926,11 @@ class Analysis:
                 ax.set_ylim(*y_axlim)
 
             # limit to 4 rows and reverse order (so more important samples go in front)
-            ncols = len(hist_list) + bool(data) + bool(yerr)
+            ncols = len(hist_list) + bool(yerr)
             ncols //= 4
-            handles, labels = ax.get_legend_handles_labels()
+            handles, labels_ = ax.get_legend_handles_labels()
             ax.legend(
-                reversed(handles), 
-                reversed(labels),
-                fontsize=10,
-                loc="upper right",
-                ncols=ncols
+                reversed(handles), reversed(labels_), fontsize=10, loc="upper right", ncols=ncols
             )
 
             if filename:
@@ -974,12 +952,12 @@ class Analysis:
             plt.close(fig)
 
     def get_hist(
-            self, 
-            variable: str, 
-            dataset: str | None = None, 
-            cut: str | None = None,
-            TH1: bool = False,
-        ) -> Histogram1D:
+        self,
+        variable: str,
+        dataset: str | None = None,
+        cut: str | None = None,
+        TH1: bool = False,
+    ) -> Histogram1D:
         """Get TH1 histogram from histogram dict or internal dataset"""
         # if passing a histogram name directly as the variable
         if variable in self.histograms:
@@ -989,7 +967,9 @@ class Analysis:
             hist_name_internal = f"{variable}_{cut}_cut"
 
         elif dataset is None:
-            raise ValueError(f"No variable '{variable}' for cut '{cut}' found in analysis: {self.name}")
+            raise ValueError(
+                f"No variable '{variable}' for cut '{cut}' found in analysis: {self.name}"
+            )
 
         elif cut and f"{variable}_{cut}_cut" in self[dataset].histograms:
             hist_name_internal = f"{dataset}_{variable}_{cut}_cut"
@@ -1013,15 +993,13 @@ class Analysis:
             return self.histograms[hist_name_internal]
         else:
             return Histogram1D(th1=self.histograms[hist_name_internal], logger=self.logger)
-    
+
     def __verify_same_cuts(self, datasets: list[str]):
         """check that all datasets to be plot have the same sets of cuts"""
         first_cutflow = self[datasets[0]].cuts
         if not all(ds.cuts == first_cutflow for ds in list(self.datasets.values())[1:]):
             raise ValueError("Datasets do not have the same cuts")
         return True
-
-
 
     # ===============================
     # ========= PRINTOUTS ===========
@@ -1032,10 +1010,10 @@ class Analysis:
         self[datasets].cutflow_printout(self.paths.latex_dir if latex else None)
 
     def full_cutflow_printout(
-        self, 
-        datasets: list[str], 
-        cutsets: list[str] | str | None = None, 
-        filename: str | None = None
+        self,
+        datasets: list[str],
+        cutsets: list[str] | str | None = None,
+        filename: str | None = None,
     ) -> None:
         """Prints full cutflows for all passed datasets"""
 
@@ -1048,28 +1026,37 @@ class Analysis:
             cutsets = list(self[datasets[0]].cuts)
 
         # table build loop
-        latex_str = r"\begin{tabular}{" + "l"*(len(datasets) + 1) + "}\n"
+        latex_str = r"\begin{tabular}{" + "l" * (len(datasets) + 1) + "}\n"
 
         for cutset in cutsets:
             # header
             latex_str += r"\hline" + "\n"
-            latex_str += " & ".join([f"Cut (\mathrm{{{cutset}}})"] + [self[dataset].label for dataset in datasets]) + r"\\" + "\n"
+            latex_str += (
+                " & ".join(
+                    [f"Cut (\\mathrm{{{cutset}}})"] + [self[dataset].label for dataset in datasets]
+                )
+                + r"\\"
+                + "\n"
+            )
             latex_str += r"\hline" + "\n"
 
-            cut_names = [cutflow_item.cut.name for cutflow_item in self[datasets[0]].cutflows[cutset]]
+            cut_names = [
+                cutflow_item.cut.name for cutflow_item in self[datasets[0]].cutflows[cutset]
+            ]
             for i, cut_name in enumerate(cut_names):
-                passes_list = [str(int(self[dataset].cutflows[cutset][i].npass)) for dataset in datasets]
+                passes_list = [
+                    str(int(self[dataset].cutflows[cutset][i].npass)) for dataset in datasets
+                ]
                 latex_str += cut_name + " & " + " & ".join(passes_list) + r"\\" + "\n"
-        
+
         latex_str += r"\hline" + "\n" + r"\end{tabular}"
 
         # print to file
         if not filename:
             filename = self.paths.latex_dir / f"{self.name}_full_cutflows.tex"
-        
+
         with open(filename, "w") as f:
             f.write(latex_str)
-        
 
     def save_histograms(
         self,

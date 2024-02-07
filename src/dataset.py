@@ -39,6 +39,7 @@ class Dataset(ABC):
     colour: str | tuple = field(default_factory=str)
     is_merged: bool = False
     is_signal: bool = False
+    is_data: bool = False
 
     @abstractmethod
     def __len__(self):
@@ -307,7 +308,7 @@ class RDataset(Dataset):
     def save_file(
         self, path: str | Path | None = None, ttree: str = "default", tfile_option: str = "recreate"
     ) -> None:
-        """Saves pickle"""
+        """Save dataset to ROOT file"""
         if not path:
             path = Path(self.file)
         self.logger.info("Saving to ROOT file...")
@@ -422,7 +423,8 @@ class RDataset(Dataset):
         return hist
 
     def gen_histograms(
-        self, to_file: bool | str | Path = True,
+        self,
+        to_file: bool | str | Path = True,
     ) -> OrderedDict[str, ROOT.TH1]:
         """Generate histograms for all variables and cuts."""
 

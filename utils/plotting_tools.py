@@ -7,8 +7,8 @@ import matplotlib.pyplot as plt  # type: ignore
 import mplhep as hep  # type: ignore
 import numpy as np
 import pandas as pd  # type: ignore
-from matplotlib.colors import LogNorm  # type: ignore
 from matplotlib import ticker
+from matplotlib.colors import LogNorm  # type: ignore
 from numpy.typing import ArrayLike
 
 from utils.variable_names import variable_data
@@ -131,11 +131,6 @@ def get_axis_labels(
         name = variable_data[var_name]["name"]
         units = variable_data[var_name]["units"]
     except KeyError:
-        warn(
-            f"Axis labels for {var_name} not found in label lookup dictionary. "
-            f"Falling back to default",
-            UserWarning,
-        )
         return var_name, "Entries"
 
     # just the symbol(s) in latex math format if it exists

@@ -1,16 +1,15 @@
+from functools import reduce
 from pathlib import Path
 from typing import Dict
-from functools import reduce
 
 import matplotlib.pyplot as plt
 import numpy as np
 
-from src.cutfile import Cut
 from src.analysis import Analysis
+from src.cutfile import Cut
 
-# DTA_PATH = Path("/eos/home-k/kghorban/DTA_OUT/2023-10-25/")
-DTA_PATH = Path("/eos/home-k/kghorban/DTA_OUT/2024-02-05/")
-DATA_OUT_DIR = Path("/eos/home-k/kghorban/framework_outputs/")
+DTA_PATH = Path("/data/DTA_outputs/2024-02-05/")
+# DTA_PATH = Path("/eos/home-k/kghorban/DTA_OUT/2024-02-05/")
 CUTFILE_DIR = Path("/afs/cern.ch/user/k/kghorban/framework/options/DTA_cuts/reco")
 
 if __name__ == "__main__":
@@ -20,8 +19,8 @@ if __name__ == "__main__":
         "data": {
             "data_path": DTA_PATH / "*data17*/*.root",
             "label": "data",
+            "is_data": True,
         },
-
         # SIGNAL
         # ====================================================================
         "wtaunu_lm": {
@@ -36,10 +35,8 @@ if __name__ == "__main__":
             "label": r"$W\rightarrow\tau\nu$",
             "merge_into": "wtaunu",
         },
-
         # BACKGROUNDS
         # ====================================================================
-
         # W -> light lepton
         "wlv_lm": {
             "data_path": [
@@ -59,7 +56,6 @@ if __name__ == "__main__":
             "label": r"$W\rightarrow (e/\mu)\nu$",
             "merge_into": "wlnu",
         },
-
         # Z -> TauTau
         "ztautau_lm": {
             "data_path": DTA_PATH / "*Sh_2211_Ztautau_*_maxHTpTV2*/*.root",
@@ -73,7 +69,6 @@ if __name__ == "__main__":
             "label": r"$Z\rightarrow (l/\nu)(l/\nu)$",
             "merge_into": "zll",
         },
-
         # Z -> Light Lepton
         "zll_lm": {
             "data_path": [
@@ -93,14 +88,12 @@ if __name__ == "__main__":
             "label": r"$Z\rightarrow (l/\nu)(l/\nu)$",
             "merge_into": "zll",
         },
-
         # Z -> Neutrinos
         "znunu": {
             "data_path": DTA_PATH / "*Sh_2211_Znunu_pTV2*/*.root",
             "label": r"$Z\rightarrow (l/\nu)(l/\nu)$",
             "merge_into": "zll",
         },
-
         # TTBAR/TOP
         "ttbar": {
             "data_path": DTA_PATH / "*PP8_ttbar_hdamp258p75*/*.root",
@@ -114,7 +107,6 @@ if __name__ == "__main__":
             ],
             "label": "Other Top",
         },
-
         # DIBOSON
         "diboson": {
             "data_path": [
@@ -135,7 +127,7 @@ if __name__ == "__main__":
     }
 
     cuts: dict[str, list[Cut]] = {
-        "SR_passID" : [
+        "SR_passID": [
             Cut(
                 r"Pass preselection",
                 r"passReco",
@@ -156,9 +148,8 @@ if __name__ == "__main__":
                 r"$E_T^{\mathrm{miss}} > 150",
                 r"MET_met > 150",
             ),
-
         ],
-        "SR_failID" : [
+        "SR_failID": [
             Cut(
                 r"Pass preselection",
                 r"passReco",
@@ -180,7 +171,7 @@ if __name__ == "__main__":
                 r"MTW > 150",
             ),
         ],
-        "CR_passID" : [
+        "CR_passID": [
             Cut(
                 r"Pass preselection",
                 r"passReco",
@@ -224,9 +215,8 @@ if __name__ == "__main__":
                 r"MET_met < 100",
             ),
         ],
-
         # for MC
-        "SR_passID_trueTau" : [
+        "SR_passID_trueTau": [
             Cut(
                 r"Pass preselection",
                 r"passReco",
@@ -252,7 +242,7 @@ if __name__ == "__main__":
                 r"!isnan(TruthTauPt)",
             ),
         ],
-        "SR_failID_trueTau" : [
+        "SR_failID_trueTau": [
             Cut(
                 r"Pass preselection",
                 r"passReco",
@@ -278,7 +268,7 @@ if __name__ == "__main__":
                 r"!isnan(TruthTauPt)",
             ),
         ],
-        "CR_passID_trueTau" : [
+        "CR_passID_trueTau": [
             Cut(
                 r"Pass preselection",
                 r"passReco",
@@ -301,7 +291,7 @@ if __name__ == "__main__":
             ),
             Cut(
                 r"True Tau",
-                r"!isnan(TruthTauPt)",
+                r"(TruthTauPt != 0) & !isnan(TruthTauPt)",
             ),
         ],
         "CR_failID_trueTau": [
@@ -327,9 +317,9 @@ if __name__ == "__main__":
             ),
             Cut(
                 r"True Tau",
-                r"!isnan(TruthTauPt)",
+                r"(TruthTauPt != 0) & !isnan(TruthTauPt)",
             ),
-        ]
+        ],
     }
 
     wanted_branches = {
@@ -355,7 +345,6 @@ if __name__ == "__main__":
     all_samples = ["data"] + mc_samples
     analysis = Analysis(
         datasets,
-        data_dir=DATA_OUT_DIR,
         year="2017",
         # regen_histograms=True,
         ttree="T_s1thv_NOMINAL",
@@ -367,16 +356,16 @@ if __name__ == "__main__":
         extract_vars=wanted_branches,
         binnings={
             "": {
-            "MTW": np.geomspace(150, 1000, 20),
-            "TauPt": np.geomspace(170, 1000, 20),
-            "TauEta": np.linspace(-2.47, 2.47, 20),
-            "EleEta": np.linspace(-2.47, 2.47, 20),
-            "MuonEta": np.linspace(-2.5, 2.5, 20),
-            "MET_met": np.geomspace(150, 1000, 20),
-            "DeltaPhi_tau_met": np.linspace(0, 3.5, 20),
-            "TauPt_div_MET": np.linspace(0, 3.5, 20),
-            "TauRNNJetScore": np.linspace(0, 1, 20),
-            "TauBDTEleScore": np.linspace(0, 1, 20),
+                "MTW": np.geomspace(150, 1000, 20),
+                "TauPt": np.geomspace(170, 1000, 20),
+                "TauEta": np.linspace(-2.47, 2.47, 20),
+                "EleEta": np.linspace(-2.47, 2.47, 20),
+                "MuonEta": np.linspace(-2.5, 2.5, 20),
+                "MET_met": np.geomspace(150, 1000, 20),
+                "DeltaPhi_tau_met": np.linspace(0, 3.5, 20),
+                "TauPt_div_MET": np.linspace(0, 3.5, 20),
+                "TauRNNJetScore": np.linspace(0, 1, 20),
+                "TauBDTEleScore": np.linspace(0, 1, 20),
             },
             "CR_failID": {
                 "MET_met": np.geomspace(1, 100, 20),
@@ -400,14 +389,14 @@ if __name__ == "__main__":
     for ds in mc_samples:
         c = next(c_iter)
         analysis[ds].colour = c
+    analysis["data"].colour = "k"
 
     # FAKES ESTIMATE
     # ========================================================================
     def sum_mc_for_region(region):
-            return reduce(
-                lambda x, y: x + y, 
-                [analysis.get_hist(var, mc_ds, region) for mc_ds in mc_samples]
-            )
+        return reduce(
+            lambda x, y: x + y, [analysis.get_hist(var, mc_ds, region) for mc_ds in mc_samples]
+        )
 
     FF_vars = [
         "TauEta",
@@ -434,16 +423,15 @@ if __name__ == "__main__":
 
         analysis.histograms[f"{var}_FF_scaled"] = ((SR_failID_data - SR_failID_mc) * FF_hist).TH1
 
-
     # HISTORGRAMS
     # ========================================================================
     # argument dicts
-        
+
     # No fakes scaling
-    # ---------------------------------------------------------------------------- 
+    # ----------------------------------------------------------------------------
     default_args = {
-        "datasets": mc_samples,
-        "title": f"data17 | mc16d | {analysis.global_lumi/1000:.3g}" + r"fb$^{-1}$",
+        "datasets": all_samples,
+        "title": f"data17 | mc16d | {analysis.global_lumi / 1000:.3g}" + r"fb$^{-1}$",
         "yerr": True,
         "cut": True,
     }
@@ -454,8 +442,8 @@ if __name__ == "__main__":
         "TauPt",
         "MTW",
     ]:
-        analysis.stack_plot(var=var, **default_args, logx=True, data=True)
-        analysis.stack_plot(var=var, **default_args, logy=False, data=True, suffix="liny")
+        analysis.stack_plot(var=var, **default_args, logx=True)
+        analysis.stack_plot(var=var, **default_args, logy=False, suffix="liny")
 
     # unitless variables
     for var in [
@@ -466,38 +454,44 @@ if __name__ == "__main__":
         "TauRNNJetScore",
         "TauBDTEleScore",
     ]:
-        analysis.stack_plot(var=var, **default_args, data=True)
-        analysis.stack_plot(var=var, **default_args, logy=False, data=True, suffix="liny")
+        analysis.stack_plot(var=var, **default_args)
+        analysis.stack_plot(var=var, **default_args, logy=False, suffix="liny")
 
     # Fake factors
     # ----------------------------------------------------------------------------
-    default_args = {
-        "yerr": False,
-        "cut": False,
-        "logy": False
-    }
+    default_args = {"yerr": False, "cut": False, "logy": False}
     analysis.plot_hist(var="TauPt_FF", logx=True, xlabel=r"$p_T^\tau$ Fake Factors", **default_args)
     analysis.plot_hist(var="MTW_FF", logx=True, xlabel=r"$M_T^W$ Fake Factors", **default_args)
-    analysis.plot_hist(var="TauEta_FF", logx=False, xlabel=r"$\eta^\tau$ Fake Factors", **default_args)
-    analysis.plot_hist(var="TauPhi_FF", logx=False, xlabel=r"$\phi^\tau$ Fake Factors", **default_args)
+    analysis.plot_hist(
+        var="TauEta_FF", logx=False, xlabel=r"$\eta^\tau$ Fake Factors", **default_args
+    )
+    analysis.plot_hist(
+        var="TauPhi_FF", logx=False, xlabel=r"$\phi^\tau$ Fake Factors", **default_args
+    )
 
     # Fake scaled stacks
     # ----------------------------------------------------------------------------
     # log axes
     default_args = {
         "datasets": all_samples,
-        "title": f"data17 | mc16d | {analysis.global_lumi/1000:.3g}" + r"fb$^{-1}$",
+        "title": f"data17 | mc16d | {analysis.global_lumi / 1000:.3g}" + r"fb$^{-1}$",
         "yerr": True,
         "logy": True,
         "cut": "SR_passID",
-        "suffix": "fake_scaled_log"
+        "suffix": "fake_scaled_log",
     }
+
     def FF_vars(s: str) -> list[str]:
         """List of variable names for each sample"""
         return [f"{s}_FF_scaled"] + [s] * len(mc_samples)
 
     analysis.stack_plot(var=FF_vars("TauPt"), logx=True, **default_args, xlabel=r"$p_T^\tau$ [GeV]")
-    analysis.stack_plot(var=FF_vars("MTW"), logx=True, **default_args, xlabel=r"$M_T^W$ [GeV]", )
+    analysis.stack_plot(
+        var=FF_vars("MTW"),
+        logx=True,
+        **default_args,
+        xlabel=r"$M_T^W$ [GeV]",
+    )
     analysis.stack_plot(var=FF_vars("TauEta"), **default_args, xlabel=r"$\eta^\tau$")
     analysis.stack_plot(var=FF_vars("TauPhi"), **default_args, xlabel=r"$\phi^\tau$")
 
@@ -514,15 +508,15 @@ if __name__ == "__main__":
     # ----------------------------------------------------------------------------
     # log axes
     default_args = {
-        "title": f"data17 | mc16d | {analysis.global_lumi/1000:.3g}" + r"fb$^{-1}$",
+        "title": f"data17 | mc16d | {analysis.global_lumi / 1000:.3g}" + r"fb$^{-1}$",
         "labels": ["SR Fake Scaling", "SR No Scaling"],
         "yerr": True,
         "logy": True,
         "cut": "SR_passID",
-        "suffix": "fake_scaled_log"
+        "suffix": "fake_scaled_log",
     }
     analysis.plot_hist(
-        var=["TauPt_FF_scaled", "data_TauPt_SR_passID_cut"], 
+        var=["TauPt_FF_scaled", "data_TauPt_SR_passID_cut"],
         logx=True,
         **default_args,
         xlabel=r"$p_T^\tau$ [GeV]",
@@ -534,7 +528,7 @@ if __name__ == "__main__":
         xlabel=r"$M_T^W$ [GeV]",
     )
     analysis.plot_hist(
-        var=["TauEta_FF_scaled", "data_TauEta_SR_passID_cut"], 
+        var=["TauEta_FF_scaled", "data_TauEta_SR_passID_cut"],
         **default_args,
         xlabel=r"$\eta^\tau$",
     )
@@ -549,7 +543,7 @@ if __name__ == "__main__":
     default_args["logx"] = False
     default_args["suffix"] = "fake_scaled_linear"
     analysis.plot_hist(
-        var=["TauPt_FF_scaled", "data_TauPt_SR_passID_cut"], 
+        var=["TauPt_FF_scaled", "data_TauPt_SR_passID_cut"],
         **default_args,
         xlabel=r"$p_T^\tau$ [GeV]",
     )
@@ -559,7 +553,7 @@ if __name__ == "__main__":
         xlabel=r"$M_T^W$ [GeV]",
     )
     analysis.plot_hist(
-        var=["TauEta_FF_scaled", "data_TauEta_SR_passID_cut"], 
+        var=["TauEta_FF_scaled", "data_TauEta_SR_passID_cut"],
         **default_args,
         xlabel=r"$\eta^\tau$",
     )

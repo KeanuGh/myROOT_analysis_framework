@@ -3,14 +3,12 @@ import logging
 import pickle as pkl
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Type, Dict, Iterable
+from typing import Type, Iterable
 
 import ROOT  # type: ignore
 import boost_histogram as bh
 import numpy as np
 import pandas as pd  # type: ignore
-
-from utils import PMG_tool
 
 
 # ROOT settings
@@ -149,7 +147,7 @@ def convert_pkl_to_root(filename: str, histname: str | None = None) -> None:
 
 
 @contextmanager
-def ROOT_TFile_mgr(filename: str | Path, TFile_arg="UPDATE"):
+def ROOT_TFile_mgr(filename: str | Path, TFile_arg: str = "UPDATE"):
     """Context manager for opening root files"""
     file = ROOT.TFile(str(filename), TFile_arg)
     try:
@@ -174,6 +172,7 @@ def glob_chain(TTree: str, path: Path | str) -> ROOT.TChain:
 #         """Allow RDataFrames to be constructed with a wildcard in the filepath"""
 #         self.chain = glob_chain(tree, path)
 #         super().__init__(self.chain)
+
 
 def init_rdataframe(name: str, filepaths: Path | str | Iterable[str], trees: Iterable[str]):
     """
