@@ -128,6 +128,21 @@ variable_data: Dict[str, Branch] = {
         "units": "",
         "tag": VarTag.RECO,
     },
+    "TauRNNJetScore": {
+        "name": "Tau JetRNN Score",
+        "units": "",
+        "tag": VarTag.RECO
+    },
+    "TauBDTJetScore": {
+        "name": "Tau JetBDT Score",
+        "units": "",
+        "tag": VarTag.RECO
+    },
+    "TauBDTEleScore": {
+        "name": "Tau eBDT Score",
+        "units": "",
+        "tag": VarTag.RECO
+    },
     "nVtx": {
         "name": "number of vertices",
         "units": "",
@@ -281,7 +296,7 @@ variable_data: Dict[str, Branch] = {
         "tag": VarTag.RECO,
     },
     "DeltaPhi_tau_met": {
-        "name": r"$\Delta\phi(p^\tau_T,E_T^\mathrm{miss})",
+        "name": r"$\Delta\phi(p^\tau_T,E_T^\mathrm{miss})$",
         "units": "",
         "tag": VarTag.RECO,
     },

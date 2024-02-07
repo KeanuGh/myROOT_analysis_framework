@@ -18,8 +18,9 @@ if __name__ == "__main__":
         # ====================================================================
         "data": {
             "data_path": DTA_PATH / "*data17*/*.root",
-            "label": "data17",
+            "label": "data",
         },
+
         # SIGNAL
         # ====================================================================
         "wtaunu_lm": {
@@ -34,6 +35,7 @@ if __name__ == "__main__":
             "label": r"$W\rightarrow\tau\nu$",
             "merge_into": "wtaunu",
         },
+
         # BACKGROUNDS
         # ====================================================================
 
@@ -122,10 +124,10 @@ if __name__ == "__main__":
                 DTA_PATH / "*Sh_2212_vvvv*/*.root",
                 DTA_PATH / "*Sh_2211_ZqqZll*/*.root",
                 DTA_PATH / "*Sh_2211_ZbbZll*/*.root",
-                DTA_PATH / "*.Sh_2211_WqqZll*/*.root",
-                DTA_PATH / "*.Sh_2211_WlvWqq*/*.root",
-                DTA_PATH / "*.Sh_2211_WlvZqq*/*.root",
-                DTA_PATH / "*.Sh_2211_WlvZbb*/*.root",
+                DTA_PATH / "*Sh_2211_WqqZll*/*.root",
+                DTA_PATH / "*Sh_2211_WlvWqq*/*.root",
+                DTA_PATH / "*Sh_2211_WlvZqq*/*.root",
+                DTA_PATH / "*Sh_2211_WlvZbb*/*.root",
             ],
             "label": "Diboson",
         },
@@ -172,12 +174,6 @@ if __name__ == "__main__":
                 r"MTW > 150",
             ),
         ],
-        "Preselection Only" : [
-            Cut(
-                r"Pass preselection",
-                r"passReco",
-            ),
-        ],
         "Fakes CR": [
             Cut(
                 r"Pass preselection",
@@ -185,15 +181,7 @@ if __name__ == "__main__":
             ),
             Cut(
                 r"$E_T^{\mathrm{miss}} < 100",
-                r"MET_met > 150",
-            ),
-            Cut(
-                r"$p_T^\tau > 170$",
-                r"TauPt > 170",
-            ),
-            Cut(
-                r"$m_T^W > 150$",
-                r"MTW > 150",
+                r"MET_met < 100",
             ),
         ]
     }
@@ -241,21 +229,11 @@ if __name__ == "__main__":
             "DeltaPhi_tau_met": np.linspace(0, 3.5, 20),
             "TauPt_div_MET": np.linspace(0, 3.5, 20),
             },
-            "preselection_only": {
-                "MTW": np.geomspace(1, 1000, 20),
-                "TauPt": np.geomspace(1, 1000, 20),
-                "MET_met": np.geomspace(1, 1000, 20),
-            },
-            "wprime_SR": {
-                "DeltaPhi_tau_met": np.linspace(2.4, 4.4, 20),
-                "TauPt_div_MET": np.linspace(0.7, 1.3, 20),                
-            },
-            "wprime_CR": {
+            "Fakes CR": {
                 "MET_met": np.geomspace(1, 100, 20),
             },
         },
     )
-    analysis.cutflow_printout(datasets=all_samples, latex=True)
     analysis.full_cutflow_printout(datasets=all_samples)
     analysis["wtaunu"].is_signal = True
 
@@ -270,7 +248,7 @@ if __name__ == "__main__":
     # argument dicts
     default_args = {
         "datasets": mc_samples,
-        "title": f"mc16d | {analysis.global_lumi/1000:.3g}" + r"fb$^{-1}$",
+        "title": f"data17 | mc16d | {analysis.global_lumi/1000:.3g}" + r"fb$^{-1}$",
         "cut": True,
         "yerr": True,
     }

@@ -70,14 +70,6 @@ class DatasetBuilder:
     is_MC: bool = True
     is_signal: bool = False
 
-    # force_rebuild: bool = False
-    # force_recalc_cuts: bool = False
-    # force_recalc_vars: bool = False
-    # skip_verify_pkl: bool = False
-    # validate_missing_events: bool = True
-    # validate_duplicated_events: bool = True
-    # validate_sumofweights: bool = True
-
     def __post_init__(self):
         # argument checks
         if self.dataset_type == "dta":

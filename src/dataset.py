@@ -115,6 +115,7 @@ class Dataset(ABC):
                     tex_path = path / f"{self.name}_{cutflow_name}_cutflow.tex"
                     cutflow.print(latex_path=tex_path)
                 else:
+                    self.logger.info("%s: ", cutflow_name)
                     cutflow.print()
         else:
             raise AttributeError("Must have applied cuts to obtain cutflow")
@@ -421,13 +422,14 @@ class RDataset(Dataset):
         return hist
 
     def gen_histograms(
-        self, cut: bool = True, to_file: bool | str | Path = True
+        self, to_file: bool | str | Path = True,
     ) -> OrderedDict[str, ROOT.TH1]:
         """Generate histograms for all variables and cuts."""
 
         output_histogram_variables = self.all_vars
-        if cut:
-            n_cutflows = len(self.cuts)
+        n_cutflows = len(self.cuts)
+        if self.logger.getEffectiveLevel() < 20:
+            # print debug information with filter names
             for cutflow_name, filtered_df in self.filtered_df.items():
                 if n_cutflows > 1:
                     self.logger.debug(f"Cutflow {cutflow_name}:")
@@ -475,25 +477,24 @@ class RDataset(Dataset):
             if self.do_fakes:
                 pass
 
-            if cut:
+            for cutflow_name, filtered_df in self.filtered_df.items():
                 # which binning?
-                if cut in self.binnings and variable_name in self.binnings[cut]:
-                    bin_args = {"bins": self.binnings[cut][variable_name]}
+                if cutflow_name in self.binnings and variable_name in self.binnings[cutflow_name]:
+                    bin_args = {"bins": self.binnings[cutflow_name][variable_name]}
                 elif variable_name in self.binnings[""]:
                     bin_args = {"bins": self.binnings[""][variable_name]}
                 else:
                     bin_args = self.match_bin_args(variable_name)
-            
-                for cutflow_name, filtered_df in self.filtered_df.items():
-                    cut_hist_name = (
-                        variable_name + (("_" + cutflow_name) if cutflow_name else "") + "_cut"
-                    )
-                    cut_th1 = ROOT.TH1F(
-                        cut_hist_name,
-                        variable_name,
-                        *plotting_tools.get_TH1_bins(**bin_args),
-                    )
-                    th1_histograms[cut_hist_name] = filtered_df.Fill(cut_th1, fill_cols)
+
+                cut_hist_name = (
+                    variable_name + (("_" + cutflow_name) if cutflow_name else "") + "_cut"
+                )
+                cut_th1 = ROOT.TH1F(
+                    cut_hist_name,
+                    variable_name,
+                    *plotting_tools.get_TH1_bins(**bin_args),
+                )
+                th1_histograms[cut_hist_name] = filtered_df.Fill(cut_th1, fill_cols)
 
         # generate histograms
         t = time.time()
@@ -504,14 +505,13 @@ class RDataset(Dataset):
             f"Took {time.time() - t:.3f}s to produce {len(self.histograms)} histograms over {self.df.GetNRuns()} run(s)."
         )
 
-        if cut:
-            # generate cutflow
-            self.gen_cutflows()
-            for cutflow_name, cutflow in self.cutflows.items():
-                self.histograms[
-                    "cutflow" + (("_" + cutflow_name) if cutflow_name else "")
-                ] = cutflow.gen_histogram(name=cutflow_name)
-            self.cutflow_printout()
+        # generate cutflow
+        self.gen_cutflows()
+        for cutflow_name, cutflow in self.cutflows.items():
+            self.histograms[
+                "cutflow" + (("_" + cutflow_name) if cutflow_name else "")
+            ] = cutflow.gen_histogram(name=cutflow_name)
+        self.cutflow_printout()
 
         self.logger.info(f"Producted {len(self.histograms)} histograms.")
 

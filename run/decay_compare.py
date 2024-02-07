@@ -5,7 +5,7 @@ import numpy as np
 from src.analysis import Analysis
 import cuts
 
-DTA_PATH = "/eos/home-k/kghorban/DTA_OUT/2023-10-25/"
+DTA_PATH = "/eos/home-k/kghorban/DTA_OUT/2024-02-05/"
 DATA_OUT_DIR = "/eos/home-k/kghorban/framework_outputs/"
 ROOT_DIR = "/afs/cern.ch/user/k/kghorban/framework/"
 
@@ -139,6 +139,18 @@ if __name__ == "__main__":
         datasets,
         "TruthTauPt",
         **mass_args,
+        **ratio_args,
+        title=lumi_str,
+    )
+    analysis.plot_hist(
+        datasets,
+        "TruthTauEta",
+        **ratio_args,
+        title=lumi_str,
+    )
+    analysis.plot_hist(
+        datasets,
+        "TruthTauPhi",
         **ratio_args,
         title=lumi_str,
     )

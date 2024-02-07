@@ -319,104 +319,13 @@ class Analysis:
     def __str__(self) -> str:
         return f'"{self.name}",Datasets:{{{", ".join([f"{name}: {len(d)}" for name, d in self.datasets.items()])}}}'
 
-    def merge_datasets(
-        self,
-        *datasets: str,
-        new_name: str | None = None,
-        delete: bool = True,
-        to_pkl: bool = False,
-        verify: bool = False,
-        delete_file: bool = False,
-        sort: bool = True,
-    ) -> None:
-        """
-        Merge datasets by concatenating one or more into the other
-
-        :param datasets: strings of datasets to merge. First dataset will be merged into.
-        :param apply_cuts: True to apply all cuts to datasets before merging or False for no cuts
-                           pass a string or list of strings of the cut label(s) to apply just those cuts
-        :param new_name: new name to given to merged dataset
-        :param delete: whether to delete datasets internally
-        :param to_pkl: whether to print new dataset to a pickle file (will replace original pickle file)
-        :param verify: whether to check for duplicated events
-        :param delete_file: whether to delete pickle files of merged datasets (not the one that is merged into)
-        :param sort: whether to sort output dataset
-        """
-        for n in datasets:
-            if n not in self.datasets:
-                raise ValueError(f"No dataset named {n} found in analysis {self.name}")
-
-        # check for columns missing from any dataset
-        first_cols = set(self[datasets[0]].df.columns)
-        for d in datasets[0:]:
-            curr_cols = set(self[d].df.columns)
-            if first_cols ^ curr_cols:
-                if cols_missing_from_first := first_cols - curr_cols:
-                    self.logger.warning(
-                        f"Missing column(s) from dataset '{d}' but are in '{datasets[0]}': "
-                        f"{cols_missing_from_first}"
-                    )
-                if cols_missing_from_curr := curr_cols - first_cols:
-                    self.logger.warning(
-                        f"Missing column(s) from dataset '{datasets[0]}' but are in '{d}': "
-                        f"{cols_missing_from_curr}"
-                    )
-
-        # check duplicate indices
-        for d in datasets:
-            if self[d].df.index.duplicated().sum() > 0:
-                self.logger.warning(f"Duplicate indexes in dataset {d}!")
-
-        self.logger.info(f"Merging dataset(s) {datasets[1:]} into dataset {datasets[0]}...")
-
-        try:
-            self[datasets[0]].df = pd.concat(
-                [self[dataset].df for dataset in datasets],
-                verify_integrity=verify,
-                copy=False,
-            )
-        except pd.errors.InvalidIndexError as e:
-            err_str = ""
-            for dataset in datasets:
-                common_index = self[datasets[0]].df.index.intersection(self[dataset].df.index)
-                err_str += f"Index common between {datasets[0]} and {dataset}: {common_index}\n"
-            raise pd.errors.InvalidIndexError(err_str) from e
-
-        self[datasets[0]].name = datasets[0]
-
-        if sort:
-            self[datasets[0]].df.sort_index(level="DSID", inplace=True)
-
-        if new_name:
-            self[new_name] = self.datasets.pop(datasets[0])
-
-        for n in datasets[1:]:
-            if delete:
-                self.__delete_dataset(n)
-            if delete_file:
-                self.__delete_dataset_file(n)
-
-        if to_pkl:
-            pd.to_pickle(self[datasets[0]].df, self[datasets[0]].file)
-            self.logger.info(f"Saved merged dataset to file {self[datasets[0]].file}")
-
-    @check_single_dataset
-    def __delete_dataset(self, ds_name: str) -> None:
-        self.logger.info(f"Deleting dataset {ds_name} from analysis {self.name}")
-        del self[ds_name]
-
-    @check_single_dataset
-    def __delete_dataset_file(self, ds_name: str) -> None:
-        self.logger.info(f"Deleting pickled dataset {ds_name}")
-        self[ds_name].file.unlink()
-
     # ===============================
     # =========== PLOTS =============
     # ===============================
     def plot_hist(
         self,
-        datasets: str | Sequence[str],
         var: str | Sequence[str],
+        datasets: str | Sequence[str] | None = None,
         bins: list[float | int] | tuple[int, float, float] | None = None,
         weight: list[str | float] | str | float = 1.0,
         yerr: ArrayLike | str = True,
@@ -494,7 +403,7 @@ class Analysis:
         :param prefix: prefix to add at start of histogram/file
         :param kwargs: keyword arguments to pass to mplhep.histplot()
         """
-        self.logger.info(f"Plotting {var} in {datasets}...")
+        self.logger.info(f"Plotting %s%s...", var, f"in {datasets}" in datasets if datasets else None)
 
         # naming template for file/histogram name
         name_template = (
@@ -507,7 +416,7 @@ class Analysis:
             "{dataset}" + "_{variable}"  # name of dataset(s)  # name of variable(s)
         )
 
-        if isinstance(datasets, str):
+        if datasets and isinstance(datasets, str):
             datasets = [datasets]
         if isinstance(labels, str):
             labels = [labels]
@@ -519,7 +428,7 @@ class Analysis:
             cutsets_to_loop = [False]
         elif cut is True:
             # separate plot for EACH set of cuts
-            if len(datasets) > 1:
+            if datasets and len(datasets) > 1:
                 # check that all datasets to be plot have the same sets of cuts
                 first_cutflow = self[datasets[0]].cuts.keys()
                 if not all(ds.cuts.keys() == first_cutflow for ds in self.datasets.values()):
@@ -535,7 +444,10 @@ class Analysis:
         # figure out if we should loop over datasets or variables or both
         varloop = False
         datasetloop = False
-        if len(datasets) > 1:
+        if datasets is None:
+            varloop = True,
+            n_overlays = len(var)
+        elif len(datasets) > 1:
             if (len(datasets) != len(var)) and (len(var) > 1):
                 raise ValueError(
                     "Number of datasets and variables must match if passing multiple variables."
@@ -581,67 +493,32 @@ class Analysis:
             # plotting loop
             hists = []  # add histograms to be overlaid in this list
             for i in range(n_overlays):
-                dataset = datasets[i] if datasetloop else datasets[0]
+                if datasets:
+                    dataset = datasets[i] if datasetloop else datasets[0]
+                else:
+                    dataset = None
                 varname = var[i] if varloop else var[0]
 
-                label = labels[i] if labels else self[dataset].label
+                try:
+                    label = labels[i] if labels else self[dataset].label
+                except KeyError:
+                    label = None
                 hist_name = name_template.format(
                     short=name_template_short.format(dataset=dataset, variable=varname)
                 )
 
-                # if passing a histogram name directly as the variable
-                if cut and f"{varname}_{cut}_cut" in self.histograms:
-                    hist_name_internal = f"{varname}_{cut}_cut"
-                elif cut and f"{varname}_{cut}_cut" in self[dataset].histograms:
-                    hist_name_internal = f"{dataset}_{varname}_{cut}_cut"
-                elif cut:
-                    raise ValueError(f"No cut {cut} found for {varname} in {dataset}")
-
-                elif varname in self.histograms:
-                    hist_name_internal = varname
-                elif varname in self[dataset].histograms:
-                    hist_name_internal = dataset + "_" + varname
-                elif name_template_short in self.histograms:
-                    hist_name_internal = varname
-                else:
-                    hist_name_internal = None
-
                 # plot
-                if hist_name_internal:
-                    hist = Histogram1D(th1=self.histograms[hist_name_internal], logger=self.logger)
-                    hist.plot(
-                        ax=ax,
-                        yerr=yerr,
-                        normalise=normalise,
-                        stats_box=stats_box,
-                        scale_by_bin_width=scale_by_bin_width,
-                        label=None if n_overlays == 1 else label,
-                        w2=w2,
-                        **kwargs,
-                    )
-                else:
-                    self.logger.warning(
-                        f"WARNING: Histogram '{varname}' not found. Will try to generate."
-                    )
-                    if bins is None:
-                        raise ValueError("Must provide bins if histogram is not yet generated.")
-
-                    hist = self[dataset].plot_hist(
-                        var=varname,
-                        bins=bins,
-                        weight=weight[i] if isinstance(weight, list) else weight,
-                        ax=ax,
-                        yerr=yerr,
-                        normalise=normalise,
-                        logbins=logbins,
-                        name=hist_name,
-                        label=None if n_overlays == 1 else label,
-                        w2=w2,
-                        stats_box=stats_box,
-                        scale_by_bin_width=scale_by_bin_width,
-                        cut=cut,
-                        **kwargs,
-                    )
+                hist = self.get_hist(varname, dataset, cut)
+                hist.plot(
+                    ax=ax,
+                    yerr=yerr,
+                    normalise=normalise,
+                    stats_box=stats_box,
+                    scale_by_bin_width=scale_by_bin_width,
+                    label=None if n_overlays == 1 else label,
+                    w2=w2,
+                    **kwargs,
+                )
 
                 # save
                 hists.append(hist)
@@ -649,17 +526,20 @@ class Analysis:
 
                 if ratio_plot and len(hists) > 1:
                     # ratio of first dataset to this one
-                    label = (
-                        f"{labels[-1]}/{labels[0]}"
-                        if labels
-                        else f"{self[dataset].label}/{self[datasets[0]].label}"
-                    )
+                    try:
+                        label = (
+                            f"{labels[-1]}/{labels[0]}"
+                            if labels
+                            else f"{self[dataset].label}/{self[datasets[0]].label}"
+                        )
+                    except KeyError:
+                        label = None
                     # match ratio colour to plot
                     color = ax.get_lines()[-1].get_color() if (n_overlays > 2) else "k"
                     ratio_hist_name = (
                         name_template.format(
                             short=name_template_short.format(
-                                dataset=f"{dataset}_{datasets[0]}", variable=varname
+                                dataset=f"{dataset}_{datasets[0]}" if dataset else None, variable=varname
                             )
                         )
                         + "_ratio"
@@ -704,7 +584,7 @@ class Analysis:
                 ax.set_xticklabels([])
                 ax.set_xlabel("")
 
-                if len(datasets) > 2:  # don't show legend if there's only two datasets
+                if n_overlays > 2:  # don't show legend if there's only two plots
                     ratio_ax.legend(fontsize=10, loc=1)
 
                 plotting_tools.set_axis_options(
@@ -730,7 +610,7 @@ class Analysis:
                 filepath = self.paths.plot_dir / (
                     name_template.format(
                         short=name_template_short.format(
-                            dataset="_".join(datasets), variable=varname
+                            dataset="_".join(datasets) if dataset else None, variable=varname
                         )
                     )
                     + (f"_{cut}_cut" if cut else "")
@@ -757,7 +637,7 @@ class Analysis:
         x_axlim: tuple[float, float] | None = None,
         y_axlim: tuple[float, float] | None = None,
         filename: str | Path | None = None,
-        cut: bool = False,
+        cut: bool | str | list[str] = False,
         histtype="fill",
         sort: bool = True,
         ratio_plot: bool = False,
@@ -889,6 +769,8 @@ class Analysis:
 
                 if is_colours:
                     colours_list.append(self[dataset].colour)
+                else:
+                    colours_list.append(None)
 
                 hist = self.get_hist(varname, dataset, cut)
                 if scale_by_bin_width:
@@ -1061,9 +943,17 @@ class Analysis:
             if y_axlim:
                 ax.set_ylim(*y_axlim)
 
+            # limit to 4 rows and reverse order (so more important samples go in front)
             ncols = len(hist_list) + bool(data) + bool(yerr)
             ncols //= 4
-            ax.legend(fontsize=10, loc="upper right", ncols=ncols)
+            handles, labels = ax.get_legend_handles_labels()
+            ax.legend(
+                reversed(handles), 
+                reversed(labels),
+                fontsize=10,
+                loc="upper right",
+                ncols=ncols
+            )
 
             if filename:
                 filepath = self.paths.plot_dir / filename
@@ -1083,20 +973,33 @@ class Analysis:
             self.logger.info(f"Saved plot of {var} to {filepath}")
             plt.close(fig)
 
-    def get_hist(self, variable: str, dataset: str, cut: str | None = None) -> Histogram1D:
+    def get_hist(
+            self, 
+            variable: str, 
+            dataset: str | None = None, 
+            cut: str | None = None,
+            TH1: bool = False,
+        ) -> Histogram1D:
         """Get TH1 histogram from histogram dict or internal dataset"""
         # if passing a histogram name directly as the variable
-        if cut and f"{variable}_{cut}_cut" in self.histograms:
+        if variable in self.histograms:
+            hist_name_internal = variable
+
+        elif cut and f"{variable}_{cut}_cut" in self.histograms:
             hist_name_internal = f"{variable}_{cut}_cut"
+
+        elif dataset is None:
+            raise ValueError(f"No variable '{variable}' for cut '{cut}' found in analysis: {self.name}")
+
         elif cut and f"{variable}_{cut}_cut" in self[dataset].histograms:
             hist_name_internal = f"{dataset}_{variable}_{cut}_cut"
+
         elif cut:
             raise ValueError(f"No cut {cut} found for {variable} in {dataset}")
 
-        elif variable in self.histograms:
-            hist_name_internal = variable
         elif variable in self[dataset].histograms:
             hist_name_internal = dataset + "_" + variable
+
         else:
             raise ValueError(
                 f"No histogram for {variable} in {dataset}."
@@ -1106,7 +1009,10 @@ class Analysis:
                 + "\n".join(self[dataset].histograms.keys())
             )
 
-        return Histogram1D(th1=self.histograms[hist_name_internal], logger=self.logger)
+        if TH1:
+            return self.histograms[hist_name_internal]
+        else:
+            return Histogram1D(th1=self.histograms[hist_name_internal], logger=self.logger)
     
     def __verify_same_cuts(self, datasets: list[str]):
         """check that all datasets to be plot have the same sets of cuts"""
@@ -1147,7 +1053,7 @@ class Analysis:
         for cutset in cutsets:
             # header
             latex_str += r"\hline" + "\n"
-            latex_str += " & ".join([f"Cut ({cutset})"] + [self[dataset].label for dataset in datasets]) + r"\\" + "\n"
+            latex_str += " & ".join([f"Cut (\mathrm{{{cutset}}})"] + [self[dataset].label for dataset in datasets]) + r"\\" + "\n"
             latex_str += r"\hline" + "\n"
 
             cut_names = [cutflow_item.cut.name for cutflow_item in self[datasets[0]].cutflows[cutset]]

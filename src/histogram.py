@@ -293,6 +293,27 @@ class Histogram1D(bh.Histogram, family=None):
                 self.TH1.Add(other)
 
         return self._compute_inplace_op("__iadd__", other)
+    
+    def __sub__(self, other: bh.Histogram | "np.typing.NDArray[Any]" | float) -> Histogram1D:
+        """Need to handle adding together TH1s"""
+        result = self.copy()
+        return result.__isub__(other)
+    
+    def __isub__(self, other:  bh.Histogram | "np.typing.NDArray[Any]" | float) -> Histogram1D:
+        """Handle adding TH1s"""
+        if isinstance(other, Histogram1D):
+            self.TH1.Add(other.TH1, -1)
+        else:
+            # scale TH1 properly
+            if hasattr(other, "__iter__"):
+                for i, val in enumerate(other):
+                    self.TH1.SetBinContent(i + 1, self.TH1.GetBinContent(i + 1) - val)
+                    self.TH1.SetBinError(i + 1, self.TH1.GetBinError(i + 1) - val)
+            else:
+                self.TH1.Add(other, -1)
+
+        return self._compute_inplace_op("__iadd__", other)
+
 
 
     @staticmethod
