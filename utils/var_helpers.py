@@ -28,11 +28,14 @@ def calc_delta_z0_sintheta(df: pd.DataFrame, z0: str, eta: str) -> pd.Series:
 def calc_dilep_m(df: pd.DataFrame, m1: str, m2: str) -> pd.Series:
     return df[m1] + df[m2]
 
+
 def calc_delta_r(df: pd.DataFrame, eta1: str, eta2: str, phi1: str, phi2: str) -> pd.Series:
-    return np.sqrt((df[eta1] - df[eta2])**2 + (df[phi1] - df[phi2])**2)
+    return np.sqrt((df[eta1] - df[eta2]) ** 2 + (df[phi1] - df[phi2]) ** 2)
+
 
 def calc_div(df: pd.DataFrame, x1: str, x2: str) -> pd.Series:
     return df[x1] / df[x2]
+
 
 def calc_diff(df: pd.DataFrame, x1: str, x2: str) -> pd.Series:
     return abs(df[x1] - df[x2])
@@ -194,7 +197,7 @@ derived_vars: Dict[str, OtherVar] = {
         ],
         "tree": "",
         "func": calc_delta_r,
-        "cfunc": "delta_r"
+        "cfunc": "delta_r",
     },
     "DeltaR_tau_e": {
         "var_args": [
@@ -205,7 +208,7 @@ derived_vars: Dict[str, OtherVar] = {
         ],
         "tree": "",
         "func": calc_delta_r,
-        "cfunc": "delta_r"
+        "cfunc": "delta_r",
     },
     "DeltaR_e_mu": {
         "var_args": [
@@ -216,7 +219,7 @@ derived_vars: Dict[str, OtherVar] = {
         ],
         "tree": "",
         "func": calc_delta_r,
-        "cfunc": "delta_r"
+        "cfunc": "delta_r",
     },
     "TauPt_div_MET": {
         "var_args": {

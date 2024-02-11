@@ -115,7 +115,7 @@ def get_axis_labels(
             if var[:4] == "cut_":  # cut out prefix if it exists
                 var = var[4:]
 
-            if var in variable_data:
+            if isinstance(var, str) and (var in variable_data):
                 new_varname = var
                 break
 
@@ -130,7 +130,7 @@ def get_axis_labels(
     try:
         name = variable_data[var_name]["name"]
         units = variable_data[var_name]["units"]
-    except KeyError:
+    except (KeyError, TypeError):
         return var_name, "Entries"
 
     # just the symbol(s) in latex math format if it exists

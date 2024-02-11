@@ -273,13 +273,13 @@ class Histogram1D(bh.Histogram, family=None):
             else:
                 self.TH1.Scale(other)
             return self._compute_inplace_op("__imul__", other)
-    
+
     def __add__(self, other: bh.Histogram | "np.typing.NDArray[Any]" | float) -> Histogram1D:
         """Need to handle adding together TH1s"""
         result = self.copy()
         return result.__iadd__(other)
-    
-    def __iadd__(self, other:  bh.Histogram | "np.typing.NDArray[Any]" | float) -> Histogram1D:
+
+    def __iadd__(self, other: bh.Histogram | "np.typing.NDArray[Any]" | float) -> Histogram1D:
         """Handle adding TH1s"""
         if isinstance(other, Histogram1D):
             self.TH1.Add(other.TH1)
@@ -293,13 +293,13 @@ class Histogram1D(bh.Histogram, family=None):
                 self.TH1.Add(other)
 
         return self._compute_inplace_op("__iadd__", other)
-    
+
     def __sub__(self, other: bh.Histogram | "np.typing.NDArray[Any]" | float) -> Histogram1D:
         """Need to handle adding together TH1s"""
         result = self.copy()
         return result.__isub__(other)
-    
-    def __isub__(self, other:  bh.Histogram | "np.typing.NDArray[Any]" | float) -> Histogram1D:
+
+    def __isub__(self, other: bh.Histogram | "np.typing.NDArray[Any]" | float) -> Histogram1D:
         """Handle adding TH1s"""
         if isinstance(other, Histogram1D):
             self.TH1.Add(other.TH1, -1)
@@ -313,8 +313,6 @@ class Histogram1D(bh.Histogram, family=None):
                 self.TH1.Add(other, -1)
 
         return self._compute_inplace_op("__iadd__", other)
-
-
 
     @staticmethod
     @overload
@@ -828,8 +826,10 @@ class Histogram1D(bh.Histogram, family=None):
                 ax.set_ylim(1 - yax_lim, 1 + yax_lim)
         else:
             # I don't know why the matplotlib automatic yaxis scaling doesn't work, but I've done it for them here
-            ymax = np.max(np.ma.masked_invalid(h_ratio.bin_values() + (err / 2)))  # type: ignore
-            ymin = np.min(np.ma.masked_invalid(h_ratio.bin_values() - (err / 2)))  # type: ignore
+            # ymax = np.max(np.ma.masked_invalid(h_ratio.bin_values() + (err / 2)))  # type: ignore
+            # ymin = np.min(np.ma.masked_invalid(h_ratio.bin_values() - (err / 2)))  # type: ignore
+            ymax = np.max(np.ma.masked_invalid(h_ratio.bin_values()))  # type: ignore
+            ymin = np.min(np.ma.masked_invalid(h_ratio.bin_values()))  # type: ignore
             vspace = (ymax - ymin) * 0.1
             ax.set_ylim(ymin - vspace, ymax + vspace)
 

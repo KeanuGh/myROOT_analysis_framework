@@ -320,7 +320,7 @@ class Analysis:
     # ===============================
     def plot_hist(
         self,
-        var: str | Sequence[str],
+        var: str | Sequence[str] | Histogram1D,
         datasets: str | Sequence[str] | None = None,
         yerr: ArrayLike | str = True,
         labels: list[str] | None = None,
@@ -355,7 +355,7 @@ class Analysis:
 
         :param datasets: string or list of strings corresponding to datasets in the analysis
         :param var: variable name to be plotted. Either a string that exists in all datasets
-                    or a list one for each dataset
+                    or a list one for each dataset, or histograms themselves
         :param yerr: Histogram uncertainties. Following modes are supported:
                      - 'rsumw2', sqrt(SumW2) errors
                      - 'sqrtN', sqrt(N) errors or poissonian interval when w2 is specified
@@ -393,6 +393,7 @@ class Analysis:
         self.logger.info(
             f"Plotting %s%s...", var, f"in {datasets}" in datasets if datasets else None
         )
+        _passed_hists = False
 
         # naming template for file/histogram name
         name_template = (
@@ -409,7 +410,7 @@ class Analysis:
             datasets = [datasets]
         if isinstance(labels, str):
             labels = [labels]
-        if isinstance(var, str):
+        if isinstance(var, (str, Histogram1D)):
             var = [var]
 
         # handle how cuts are going to be done
@@ -492,12 +493,13 @@ class Analysis:
                     label = labels[i] if labels else self[dataset].label
                 except KeyError:
                     label = None
-                hist_name = name_template.format(
-                    short=name_template_short.format(dataset=dataset, variable=varname)
-                )
 
                 # plot
-                hist = self.get_hist(varname, dataset, cut)
+                if isinstance(varname, Histogram1D):
+                    hist = varname
+                    _passed_hists = True
+                else:
+                    hist = self.get_hist(varname, dataset, cut)
                 hist.plot(
                     ax=ax,
                     yerr=yerr,
@@ -511,7 +513,6 @@ class Analysis:
 
                 # save
                 hists.append(hist)
-                self.histograms[hist_name] = hist.TH1
 
                 if ratio_plot and len(hists) > 1:
                     # ratio of first dataset to this one
@@ -529,7 +530,7 @@ class Analysis:
                         name_template.format(
                             short=name_template_short.format(
                                 dataset=f"{dataset}_{datasets[0]}" if dataset else None,
-                                variable=varname,
+                                variable=varname.name if _passed_hists else varname,
                             )
                         )
                         + "_ratio"
@@ -595,6 +596,11 @@ class Analysis:
             else:
                 if isinstance(var, str):
                     varname = var
+                elif _passed_hists:
+                    if isinstance(var, Histogram1D):
+                        varname = var.name
+                    else:
+                        varname = "_".join([h.name for h in var])
                 else:
                     varname = "_".join(var)
                 filepath = self.paths.plot_dir / (
@@ -690,12 +696,12 @@ class Analysis:
 
         # handle how cuts are going to be done
         if cut is False or cut is None:
-            cutsets_to_loop = [False]
+            cutsets_to_loop = [None]
         elif cut is True:
             # separate plot for EACH set of cuts
             if len(datasets) > 1:
                 self.__verify_same_cuts(datasets)
-            cutsets_to_loop = self[datasets[0]].cuts
+            cutsets_to_loop = list(self[datasets[0]].cuts.keys())
         elif isinstance(cut, str):
             cutsets_to_loop = [cut]
         elif isinstance(cut, list):
@@ -704,20 +710,20 @@ class Analysis:
             raise ValueError(f"Unknown cut {cut}")
 
         # figure out if we should loop over datasets or variables or both
-        varloop = False
-        datasetloop = False
+        _varloop = False
+        _datasetloop = False
         if len(datasets) > 1:
             if (len(datasets) != len(var)) and (len(var) > 1):
                 raise ValueError(
                     "Number of datasets and variables must match if passing multiple variables."
                 )
-            datasetloop = True
+            _datasetloop = True
             if len(var) > 1:
-                varloop = True
+                _varloop = True
             n_stacks = len(datasets)
         elif len(var) > 1:
             n_stacks = len(var)
-            varloop = True
+            _varloop = True
         else:
             n_stacks = 1
 
@@ -734,15 +740,15 @@ class Analysis:
             signal_ds = data_ds = ""
             for i in range(n_stacks):
                 # save signal for the end if only plotting one variable and many datasets
-                if self[datasets[i]].is_signal and datasetloop:
+                if self[datasets[i]].is_signal and _datasetloop:
                     signal_ds = datasets[i]
                     continue
-                elif self[datasets[i]].is_data and datasetloop:
+                elif self[datasets[i]].is_data and _datasetloop:
                     data_ds = datasets[i]
                     continue
 
-                dataset = datasets[i] if datasetloop else datasets[0]
-                varname = var[i] if varloop else var[0]
+                dataset = datasets[i] if _datasetloop else datasets[0]
+                varname = var[i] if _varloop else var[0]
 
                 label = labels[i] if labels else self[dataset].label
                 label_list.append(label)
@@ -794,7 +800,8 @@ class Analysis:
             # handle signal seperately
             if signal_ds:
                 bkg_sum = reduce((lambda x, y: x + y), hist_list)
-                sig_hist = self.get_hist(var[0], signal_ds, cut)
+                sig_var = var[datasets.index(signal_ds)] if _varloop else var[0]
+                sig_hist = self.get_hist(sig_var, signal_ds, cut)
                 if scale_by_bin_width:
                     sig_hist /= sig_hist.bin_widths
                 hist_list.append(sig_hist)
@@ -957,7 +964,7 @@ class Analysis:
         dataset: str | None = None,
         cut: str | None = None,
         TH1: bool = False,
-    ) -> Histogram1D:
+    ) -> Histogram1D | ROOT.TH1:
         """Get TH1 histogram from histogram dict or internal dataset"""
         # if passing a histogram name directly as the variable
         if variable in self.histograms:
@@ -1029,11 +1036,12 @@ class Analysis:
         latex_str = r"\begin{tabular}{" + "l" * (len(datasets) + 1) + "}\n"
 
         for cutset in cutsets:
+            sanitised_str = cutset.replace(r"_", r"\_")
             # header
             latex_str += r"\hline" + "\n"
             latex_str += (
                 " & ".join(
-                    [f"Cut (\\mathrm{{{cutset}}})"] + [self[dataset].label for dataset in datasets]
+                    [f"Cut ({sanitised_str})"] + [self[dataset].label for dataset in datasets]
                 )
                 + r"\\"
                 + "\n"
