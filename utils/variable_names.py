@@ -128,21 +128,9 @@ variable_data: Dict[str, Branch] = {
         "units": "",
         "tag": VarTag.RECO,
     },
-    "TauRNNJetScore": {
-        "name": "Tau JetRNN Score",
-        "units": "",
-        "tag": VarTag.RECO
-    },
-    "TauBDTJetScore": {
-        "name": "Tau JetBDT Score",
-        "units": "",
-        "tag": VarTag.RECO
-    },
-    "TauBDTEleScore": {
-        "name": "Tau eBDT Score",
-        "units": "",
-        "tag": VarTag.RECO
-    },
+    "TauRNNJetScore": {"name": "Tau JetRNN Score", "units": "", "tag": VarTag.RECO},
+    "TauBDTJetScore": {"name": "Tau JetBDT Score", "units": "", "tag": VarTag.RECO},
+    "TauBDTEleScore": {"name": "Tau eBDT Score", "units": "", "tag": VarTag.RECO},
     "nVtx": {
         "name": "number of vertices",
         "units": "",
@@ -581,6 +569,11 @@ variable_data: Dict[str, Branch] = {
     },
     "MET_phi": {
         "name": r"$E_T^{\mathrm{miss}} \phi$",
+        "units": "",
+        "tag": VarTag.RECO,
+    },
+    "TauNCoreTracks": {
+        "name": r"Number of Tau tracks",
         "units": "",
         "tag": VarTag.RECO,
     },

@@ -11,7 +11,7 @@ from src.cutfile import Cut
 DTA_PATH = Path("/data/DTA_outputs/2024-02-05/")
 # DTA_PATH = Path("/eos/home-k/kghorban/DTA_OUT/2024-02-05/")
 CUTFILE_DIR = Path("/afs/cern.ch/user/k/kghorban/framework/options/DTA_cuts/reco")
-REDO_ANALYSIS = False
+REDO_ANALYSIS = True
 
 if __name__ == "__main__":
     datasets: Dict[str, Dict] = {
@@ -131,7 +131,7 @@ if __name__ == "__main__":
     # ========================================================================
     pass_presel = Cut(
         r"Pass preselection",
-        r"passReco",
+        r"(passReco == 1) & (TauBaselineWP == 1)",
     )
     pass_taupt170 = Cut(
         r"$p_T^\tau > 170$",
@@ -143,11 +143,15 @@ if __name__ == "__main__":
     )
     pass_loose = Cut(
         r"\mathrm{Pass Loose ID}",
-        r"TauLooseWP & (TauRNNJetScore > 0.25)",
+        # r"TauLooseWP & (TauRNNJetScore > 0.25)",
+        r"(TauBDTEleScore > 0.05) && "
+        r"((TauRNNJetScore > 0.15) * (TauNCoreTracks == 1) + (TauRNNJetScore > 0.25) * (TauNCoreTracks == 3))",
     )
     fail_loose = Cut(
         r"\mathrm{Fail Loose ID}",
-        r"(TauLooseWP == 0) & (0.01 < TauRNNJetScore < 0.25)",
+        # r"(TauLooseWP == 0) & (0.01 < TauRNNJetScore < 0.15)",
+        r"(TauBDTEleScore > 0.05) && "
+        "!((TauRNNJetScore > 0.15) * (TauNCoreTracks == 1) + (TauRNNJetScore > 0.25) * (TauNCoreTracks == 3))",
     )
     pass_met150 = Cut(
         r"$E_T^{\mathrm{miss}} > 150$",
@@ -159,9 +163,10 @@ if __name__ == "__main__":
     )
     pass_truetau = Cut(
         r"True Tau",
-        r"!isnan(TruthTauPt) "
-        r"& (TruthTauPt > 170) "
-        r"& ((isnan(TruthTauEta) || (abs(TruthTauEta) < 1.37 || 1.52 < abs(TruthTauEta) < 2.47)))",
+        r"TruthTau_isHadronic == 1",
+        # r"!isnan(TruthTauPt) "
+        # r"& (TruthTauPt > 170) "
+        # r"& ((isnan(TruthTauEta) || (abs(TruthTauEta) < 1.37 || 1.52 < abs(TruthTauEta) < 2.47)))",
     )
 
     # selections
@@ -243,6 +248,7 @@ if __name__ == "__main__":
         "TruthTauPt",
         "TruthTauEta",
         "TruthTauPhi",
+        "TauNCoreTracks",
     }
     mc_samples = [
         "wtaunu",
@@ -280,6 +286,7 @@ if __name__ == "__main__":
                 "TauRNNJetScore": np.linspace(0, 1, 51),
                 "TauBDTEleScore": np.linspace(0, 1, 51),
                 "TruthTauPt": np.geomspace(1, 1000, 21),
+                "TauNCoreTracks": np.linspace(0, 4, 5),
             },
             "CR_failID": {
                 "MET_met": np.geomspace(1, 100, 51),
@@ -377,13 +384,14 @@ if __name__ == "__main__":
         "yerr": True,
         "cut": False,
         "ratio_plot": False,
+        "stats_box": False,
     }
-    analysis.plot_hist(var="TruthTauPt", **default_args)
+    analysis.plot_hist(var="TruthTauPt", **default_args, logx=True)
     analysis.plot_hist(var="TruthTauEta", **default_args)
     analysis.plot_hist(var="TruthTauPhi", **default_args)
 
     default_args["cut"] = "SR_failID_trueTau"
-    analysis.plot_hist(var="TruthTauPt", **default_args)
+    analysis.plot_hist(var="TruthTauPt", **default_args, logx=True)
     analysis.plot_hist(var="TruthTauEta", **default_args)
     analysis.plot_hist(var="TruthTauPhi", **default_args)
 
@@ -413,6 +421,7 @@ if __name__ == "__main__":
         # "DeltaPhi_tau_met",
         "TauRNNJetScore",
         "TauBDTEleScore",
+        "TauNCoreTracks",
     ]:
         analysis.stack_plot(var=var, **default_args)
         analysis.stack_plot(var=var, **default_args, logy=False, suffix="liny")
@@ -422,25 +431,25 @@ if __name__ == "__main__":
     default_args = {"yerr": False, "cut": False, "logy": False, "ylabel": "Fake factor"}
     analysis.plot_hist(
         var="TauPt_FF",
-        # logx=True,
+        logx=True,
         xlabel=r"$p_T^\tau$ [GeV]",
         **default_args,
     )
     analysis.plot_hist(
         var="MTW_FF",
-        # logx=True,
+        logx=True,
         xlabel=r"$M_T^W$ [GeV]",
         **default_args,
     )
     analysis.plot_hist(
         var="TauEta_FF",
-        # logx=False,
+        logx=False,
         xlabel=r"$\eta^\tau$",
         **default_args,
     )
     analysis.plot_hist(
         var="TauPhi_FF",
-        # logx=False,
+        logx=False,
         xlabel=r"$\phi^\tau$",
         **default_args,
     )
@@ -462,14 +471,14 @@ if __name__ == "__main__":
 
     analysis.stack_plot(
         var=FF_vars("TauPt"),
-        # logx=True,
+        logx=True,
         **default_args,
         xlabel=r"$p_T^\tau$ [GeV]",
         filename="TauPt_FF_scaled.png",
     )
     analysis.stack_plot(
         var=FF_vars("MTW"),
-        # logx=True,
+        logx=True,
         **default_args,
         xlabel=r"$M_T^W$ [GeV]",
         filename="MTW_FF_scaled.png",

@@ -402,9 +402,7 @@ class Analysis:
             + ("_NORMED" if normalise else "")  # normalisation flag
             + (("_" + suffix) if suffix else "")  # suffix
         )
-        name_template_short = (
-            "{dataset}" + "_{variable}"  # name of dataset(s)  # name of variable(s)
-        )
+        name_template_short = "{dataset}_{variable}"  # name of dataset(s)  # name of variable(s)
 
         if datasets and isinstance(datasets, str):
             datasets = [datasets]
@@ -1002,7 +1000,7 @@ class Analysis:
             return Histogram1D(th1=self.histograms[hist_name_internal], logger=self.logger)
 
     def __verify_same_cuts(self, datasets: list[str]):
-        """check that all datasets to be plot have the same sets of cuts"""
+        """check that all datasets to be plotted have the same sets of cuts"""
         first_cutflow = self[datasets[0]].cuts
         if not all(ds.cuts == first_cutflow for ds in list(self.datasets.values())[1:]):
             raise ValueError("Datasets do not have the same cuts")
