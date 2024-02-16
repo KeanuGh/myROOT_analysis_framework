@@ -12,20 +12,20 @@ import pandas as pd  # type: ignore
 from src.cutfile import Cut
 from src.dataset import RDataset
 from src.logger import get_logger
-from utils import ROOT_utils, PMG_tool
+from utils import ROOT_utils
 from utils.var_helpers import derived_vars
 from utils.variable_names import variable_data
 
 # total dataset luminosity per year (pb-1)
 lumi_year: Final[dict] = {
-    "2015": 3219.56,
-    "2017": 44307.4,
-    "2018": 5845.01,
-    "2015+2016": 32988.1 + 3219.56,
+    2015: 3219.56,
+    2016: 32988.1 + 3219.56,
+    2017: 44307.4,
+    2018: 5845.01,
 }
 
 
-def find_variables_in_string(s: str):
+def find_variables_in_string(s: str) -> set[str]:
     """Find any variables in the variable list that are in given string"""
     split_string = set(re.findall(r"\w+|[.,!?;]", s))
     return split_string & set(variable_data.keys())
@@ -60,7 +60,7 @@ class DatasetBuilder:
 
     name: str = "data"
     ttree: str | set[str] = ""
-    year: str = "2015+2016"
+    year: int = 2017
     lumi: float = 139.0
     label: str = "data"
     lepton: str = "lepton"
@@ -96,7 +96,7 @@ class DatasetBuilder:
     def build(
         self,
         data_path: Path | list[Path],
-        cuts: list[Cut] | dict[str, list[Cut]] | None = None,
+        cuts: list[Cut] | dict[str, list[Cut]],
         extract_vars: set[str] | None = None,
     ) -> RDataset:
         """
@@ -104,6 +104,7 @@ class DatasetBuilder:
 
         :param data_path: Path to ROOT file(s) must be passed if not providing a pickle file
         :param cuts: list of Cut objects if cuts are to be applied but no cutfile is given
+        :param metadata: DatasetMetadata object containg info about DSIDs
         :param extract_vars: set of branches to extract if cutfile is not given
         :return: full built Dataset object
         """
@@ -122,7 +123,7 @@ class DatasetBuilder:
 
         # Parsing cuts
         # extract all variables in all cuts in all cut sets passed to builder and which to extract
-        all_vars = set()
+        all_vars: set[str] = set()
         for cut_list in cuts.values():
             for cut in cut_list:
                 all_vars |= cut.var
@@ -228,20 +229,6 @@ class DatasetBuilder:
 
         self.logger.info(f"Initiating RDataFrame from trees {ttrees}")
 
-        # create c++ map for dataset ID metadatas
-        if self.is_MC:
-            self.logger.debug("Calculating DSID metadata...")
-            # each tree /SHOULD/ have the same dsid here
-            dsid_metadata = self._get_dsid_values(files, list(ttrees)[0])
-            self.logger.info(f"Sum of weights per dsid:\n{dsid_metadata['sumOfWeights']}")
-            ROOT.gInterpreter.Declare(
-                f"""
-                    std::map<int, float> {self.name}_dsid_sumw{{{','.join(f'{{{t.Index}, {t.sumOfWeights}}}' for t in dsid_metadata.itertuples())}}};
-                    std::map<int, float> {self.name}_dsid_xsec{{{','.join(f'{{{t.Index}, {t.cross_section}}}' for t in dsid_metadata.itertuples())}}};
-                    std::map<int, float> {self.name}_dsid_pmgf{{{','.join(f'{{{t.Index}, {t.PMG_factor}}}' for t in dsid_metadata.itertuples())}}};
-                """
-            )
-
         # make rdataframe
         Rdf = ROOT_utils.init_rdataframe(self.name, files, ttrees)
         ROOT.RDF.Experimental.AddProgressBar(Rdf)
@@ -251,19 +238,19 @@ class DatasetBuilder:
             raise ValueError("Missing column(s) in RDataFrame: \n\t" + "\n\t".join(missing_cols))
 
         # workaround for broken wmunu file (zero'd out dataset IDs)
-        workaround_str = "(mcChannel == 0) ? 700446 : mcChannel"
+        dsid = "(mcChannel == 0) ? 700446 : mcChannel"
 
         # create weights
         if self.is_MC:
             Rdf = (
                 Rdf.Define(
                     "truth_weight",
-                    f"(mcWeight * rwCorr * {self.lumi} * prwWeight * {self.name}_dsid_pmgf[{workaround_str}]) "
-                    f"/ {self.name}_dsid_sumw[{workaround_str}]",
+                    f"(mcWeight * rwCorr * {self.lumi} * prwWeight * dsid_xsec[{dsid}] * dsid_kfac[{dsid}] * dsid_feff[{dsid}]) "
+                    f"/ dsid_sumw[{dsid}]",
                 ).Define(
                     "reco_weight",
-                    f"(weight * {self.lumi} * {self.name}_dsid_pmgf[{workaround_str}]) "
-                    f"/ {self.name}_dsid_sumw[{workaround_str}]",
+                    f"(weight * {self.lumi} * dsid_xsec[{dsid}] * dsid_kfac[{dsid}] * dsid_feff[{dsid}]) "
+                    f"/ dsid_sumw[{dsid}]",
                 )
             )
         else:
@@ -349,81 +336,6 @@ class DatasetBuilder:
 
         return Rdf
 
-    # ===============================
-    # ========== HELPERS ============
-    # ===============================
-    def _get_dsid_values(self, files: list[str], ttree_name: str = "") -> pd.DataFrame:
-        """Return DataFrame containing sumw, xs and PMG factor per DSID"""
-        # PNG factor is cross-section * kfactor * filter eff.
-        dsid_sumw: dict[int, float] = dict()
-        dsid_xs: dict[int, float] = dict()
-        dsid_pmg_factor: dict[int, float] = dict()
-        dsid_phys_short: dict[int, str] = dict()
-
-        # loop over files and sum sumw values per dataset ID (assuming each file only has one dataset ID value)
-        prev_dsid = None
-        for file in files:
-            with ROOT_utils.ROOT_TFile_mgr(file, "read") as tfile:
-                if not tfile.GetListOfKeys().Contains(ttree_name):
-                    raise ValueError(
-                        "Missing key '{}' from file {}\nKeys available: {}".format(
-                            ttree_name,
-                            tfile,
-                            "\n".join([key.GetName() for key in tfile.GetListOfKeys()]),
-                        )
-                    )
-
-                # read first DSID from branch (there should only be one value)
-                tree = tfile.Get(ttree_name)
-                tree.GetEntry(0)
-                dsid = tree.mcChannel
-                sumw = tfile.Get("sumOfWeights").GetBinContent(4)  # bin 4 is AOD sum of weights
-
-                if dsid == 0:
-                    self.logger.warning("Passed a '0' DSID")
-                    # workaround for broken wmunu samples
-                    if "Sh_2211_Wmunu_mW_120_ECMS_BFilter" in str(file):
-                        self.logger.warning(
-                            f"Working around broken DSID for file {file}, setting DSID to 700446"
-                        )
-                        dsid = 700446
-                    else:
-                        self.logger.error(
-                            f"Unknown DSID for file {file}, THIS WILL LEAD TO A BROKEN DATASET!!!"
-                        )
-
-                # self.logger.debug(f"dsid: {dsid}: sumw {sumw} for file {file}")
-                if dsid not in dsid_sumw:
-                    dsid_sumw[dsid] = sumw
-                else:
-                    dsid_sumw[dsid] += sumw
-
-            if prev_dsid != dsid:  # do only for one dsid
-                if not PMG_tool.check_dsid(dsid):
-                    raise self.logger.error(f"Unknown dataset ID: {dsid}")
-
-                xs = PMG_tool.get_crossSection(dsid)
-                dsid_xs[dsid] = xs
-                dsid_pmg_factor[dsid] = (
-                    xs * PMG_tool.get_kFactor(dsid) * PMG_tool.get_genFiltEff(dsid)
-                )
-                dsid_phys_short[dsid] = PMG_tool.get_physics_short(dsid)
-
-            prev_dsid = dsid
-
-        df = pd.concat(
-            [
-                pd.DataFrame.from_dict(dsid_sumw, orient="index", columns=["sumOfWeights"]),
-                pd.DataFrame.from_dict(dsid_xs, orient="index", columns=["cross_section"]),
-                pd.DataFrame.from_dict(dsid_pmg_factor, orient="index", columns=["PMG_factor"]),
-            ],
-            axis=1,
-            join="inner",
-        )
-        df.index.name = "mcChannel"
-
-        return df
-
     def __add_necessary_dta_variables(self, tree_dict: dict[str, set[str]]) -> dict[str, set[str]]:
         necc_vars = {
             # "weight",
@@ -441,7 +353,7 @@ class DatasetBuilder:
             tree_dict[tree] |= necc_vars
         self.logger.debug(f"Added {necc_vars} to DTA import")
         return tree_dict
-    
+
     def _multi_glob(self, paths: Path | list[Path] | str | list[str]) -> list[str]:
         """Return list of files from list of paths"""
         if isinstance(paths, (str, Path)):

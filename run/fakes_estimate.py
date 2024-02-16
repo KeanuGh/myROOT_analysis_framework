@@ -8,10 +8,9 @@ import numpy as np
 from src.analysis import Analysis
 from src.cutfile import Cut
 
-DTA_PATH = Path("/data/DTA_outputs/2024-02-05/")
-# DTA_PATH = Path("/eos/home-k/kghorban/DTA_OUT/2024-02-05/")
+# DTA_PATH = Path("/data/DTA_outputs/2024-02-05/")
+DTA_PATH = Path("/eos/home-k/kghorban/DTA_OUT/2024-02-05/")
 CUTFILE_DIR = Path("/afs/cern.ch/user/k/kghorban/framework/options/DTA_cuts/reco")
-REDO_ANALYSIS = True
 
 if __name__ == "__main__":
     datasets: Dict[str, Dict] = {
@@ -264,14 +263,15 @@ if __name__ == "__main__":
     # ========================================================================
     analysis = Analysis(
         datasets,
-        year="2017",
-        regen_histograms=REDO_ANALYSIS,
+        year=2017,
+        # regen_histograms=True,
+        # regen_metadata=True,
         ttree="T_s1thv_NOMINAL",
         cuts=selections,
         analysis_label="fakes_estimate",
         dataset_type="dta",
-        # log_level=10,
-        log_out="both",
+        log_level=10,
+        log_out="console",
         extract_vars=wanted_branches,
         binnings={
             "": {

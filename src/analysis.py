@@ -9,14 +9,15 @@ import ROOT
 import matplotlib.pyplot as plt  # type: ignore
 import mplhep as hep
 import numpy as np
-import pandas as pd  # type: ignore
 from numpy.typing import ArrayLike
 from tabulate import tabulate  # type: ignore
 
 from src.dataset import Dataset, RDataset  # PDataset
 from src.datasetbuilder import DatasetBuilder, lumi_year
 from src.histogram import Histogram1D
+from src.cutfile import Cut
 from src.logger import get_logger
+from utils.dsid_meta import DatasetMetadata
 from utils import plotting_tools, ROOT_utils
 from utils.context import handle_dataset_arg, redirect_stdout
 
@@ -55,6 +56,8 @@ class Analysis:
         "global_lumi",
         "_output_dir",
         "cmap",
+        "year",
+        "metadata",
     )
 
     def __init__(
@@ -68,6 +71,8 @@ class Analysis:
         timedatelog: bool = True,
         separate_loggers: bool = False,
         regen_histograms: bool = False,
+        regen_metadata: bool = False,
+        year: int = 2017,
         **kwargs,
     ):
         """
@@ -81,6 +86,8 @@ class Analysis:
                (useful to turn off for testing or you'll be flooded with log files)
         :param separate_loggers: Whether each dataset should output logs to separate log files
         :param regen_histograms: Whether to regenerate all histograms for all datasets (can be applied separately)
+        :param regen_metadata: Whether to regenerate DSID metadata (requires connection to pyami)
+        :param year: Data-year. One of 2016, 2017, 2018
         :param kwargs: Options arguments to pass to all dataset builders
         """
         self.name = analysis_label
@@ -113,17 +120,53 @@ class Analysis:
 
         # SET OTHER GLOBAL OPTIONS
         # ============================
-        self.name = analysis_label
-        if "year" in kwargs:
+        self.year = year
+        if self.year:
             try:
-                self.global_lumi = lumi_year[kwargs["year"]]
+                self.global_lumi = lumi_year[self.year]
             except KeyError as e:
                 raise KeyError(
-                    f"Unknown data-year: {kwargs['year']}. Known data-years: {lumi_year.keys()}"
+                    f"Unknown data-year: {self.year}. Known data-years: {list(lumi_year.keys())}"
                 ) from e
         else:
             self.global_lumi = global_lumi
         self.logger.debug(f"Set global luminosity scale to {self.global_lumi} pb-1")
+
+        # HANDLE METADATA
+        # ============================
+        self.metadata = DatasetMetadata(logger=self.logger)
+        dsid_metadata_cache = self._output_dir / "dsid_meta_cache.json"
+
+        if (not dsid_metadata_cache.is_file()) or regen_metadata:
+            # fetch and save metadata
+            if "ttree" in kwargs:
+                self.metadata.fetch_metadata(datasets=data_dict, ttree=kwargs["ttree"], data_year=self.year)
+            else:
+                self.metadata.fetch_metadata(datasets=data_dict, data_year=self.year)
+
+            self.metadata.save_metadata(dsid_metadata_cache)
+            self.logger.debug(f"Saved metadata cache in %s", dsid_metadata_cache)
+
+        else:
+            # load metadata
+            self.metadata.read_metadata_from_file(dsid_metadata_cache)
+            self.logger.debug(f"Loaded metadata cache from %s", dsid_metadata_cache)
+
+        # create c++ map for dataset ID metadata
+        sumws = [(dsid, meta["sumw"]) for (dsid, meta) in self.metadata]
+        xss = [(dsid, meta["cross_section"]) for (dsid, meta) in self.metadata]
+        kfactors = [(dsid, meta["kfactor"]) for (dsid, meta) in self.metadata]
+        filter_effs = [(dsid, meta["filter_eff"]) for (dsid, meta) in self.metadata]
+
+        ROOT.gInterpreter.Declare(
+            f"""
+                std::map<int, float> dsid_sumw{{{','.join(f'{{{dsid}, {sumw}}}' for (dsid, sumw) in sumws)}}};
+                std::map<int, float> dsid_xsec{{{','.join(f'{{{dsid}, {xs}}}' for (dsid, xs) in xss)}}};
+                std::map<int, float> dsid_kfac{{{','.join(f'{{{dsid}, {kfactor}}}' for (dsid, kfactor) in kfactors)}}};
+                std::map<int, float> dsid_feff{{{','.join(f'{{{dsid}, {f_eff}}}' for (dsid, f_eff) in filter_effs)}}};
+            """
+        )
+        self.logger.debug("Declared metadata maps in ROOT...") 
 
         # BUILD DATASETS
         # ============================
@@ -287,7 +330,7 @@ class Analysis:
                 continue
             if arg in params:
                 args[arg] = params[arg]
-        return args
+        return args        
 
     # ===============================
     # ========== BUILTINS ===========
@@ -320,7 +363,7 @@ class Analysis:
     # ===============================
     def plot_hist(
         self,
-        var: str | Sequence[str] | Histogram1D,
+        var: str | Histogram1D | Sequence[str | Histogram1D],
         datasets: str | Sequence[str] | None = None,
         yerr: ArrayLike | str = True,
         labels: list[str] | None = None,
@@ -413,7 +456,7 @@ class Analysis:
 
         # handle how cuts are going to be done
         if cut is False or cut is None:
-            cutsets_to_loop = [False]
+            cutsets_to_loop: dict[str, list[Cut]] = [dict()]
         elif cut is True:
             # separate plot for EACH set of cuts
             if datasets and len(datasets) > 1:
@@ -433,7 +476,7 @@ class Analysis:
         varloop = False
         datasetloop = False
         if datasets is None:
-            varloop = (True,)
+            varloop = True
             n_overlays = len(var)
         elif len(datasets) > 1:
             if (len(datasets) != len(var)) and (len(var) > 1):
@@ -960,7 +1003,7 @@ class Analysis:
         self,
         variable: str,
         dataset: str | None = None,
-        cut: str | None = None,
+        cut: str | None | bool = None,
         TH1: bool = False,
     ) -> Histogram1D | ROOT.TH1:
         """Get TH1 histogram from histogram dict or internal dataset"""
@@ -1018,7 +1061,7 @@ class Analysis:
         self,
         datasets: list[str],
         cutsets: list[str] | str | None = None,
-        filename: str | None = None,
+        filename: str | Path | None = None,
     ) -> None:
         """Prints full cutflows for all passed datasets"""
 
@@ -1058,7 +1101,7 @@ class Analysis:
         latex_str += r"\hline" + "\n" + r"\end{tabular}"
 
         # print to file
-        if not filename:
+        if filename is None:
             filename = self.paths.latex_dir / f"{self.name}_full_cutflows.tex"
 
         with open(filename, "w") as f:

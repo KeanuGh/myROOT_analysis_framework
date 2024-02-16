@@ -1,5 +1,6 @@
 import os
 from glob import glob
+from warnings import warn
 from pathlib import Path
 
 
@@ -33,6 +34,22 @@ def n_files(filepath: str | Path) -> int:
     if isinstance(filepath, Path):
         return len(list(filepath.parent.rglob("*.root")))
     return len(glob(filepath))
+
+
+def multi_glob(paths: Path | list[Path] | str | list[str]) -> list[str]:
+    """Return list of files from list of paths with wildcards"""
+    if isinstance(paths, (str, Path)):
+        paths = [paths]
+    
+    files = []
+    for path in paths:
+        f = glob(str(path))
+        if not f:
+            warn(f"Path passed with no files: {path}")
+
+        files += glob(str(path))
+    
+    return files
 
 
 # # FIXME
