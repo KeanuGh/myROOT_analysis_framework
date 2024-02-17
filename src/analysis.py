@@ -15,11 +15,10 @@ from tabulate import tabulate  # type: ignore
 from src.dataset import Dataset, RDataset  # PDataset
 from src.datasetbuilder import DatasetBuilder, lumi_year
 from src.histogram import Histogram1D
-from src.cutfile import Cut
 from src.logger import get_logger
-from utils.dsid_meta import DatasetMetadata
 from utils import plotting_tools, ROOT_utils
 from utils.context import handle_dataset_arg, redirect_stdout
+from utils.dsid_meta import DatasetMetadata
 
 
 @dataclass(slots=True)
@@ -140,7 +139,9 @@ class Analysis:
         if (not dsid_metadata_cache.is_file()) or regen_metadata:
             # fetch and save metadata
             if "ttree" in kwargs:
-                self.metadata.fetch_metadata(datasets=data_dict, ttree=kwargs["ttree"], data_year=self.year)
+                self.metadata.fetch_metadata(
+                    datasets=data_dict, ttree=kwargs["ttree"], data_year=self.year
+                )
             else:
                 self.metadata.fetch_metadata(datasets=data_dict, data_year=self.year)
 
@@ -154,14 +155,17 @@ class Analysis:
 
         # create c++ maps for calculation of weights in datasets
         sumws = [(dsid, meta["sumw"]) for (dsid, meta) in self.metadata]
-        pmgfs = [(dsid, meta["cross_section"] * meta["kfactor"] * meta["filter_eff"]) for (dsid, meta) in self.metadata]
+        pmgfs = [
+            (dsid, meta["cross_section"] * meta["kfactor"] * meta["filter_eff"])
+            for (dsid, meta) in self.metadata
+        ]
         ROOT.gInterpreter.Declare(
             f"""
                 std::map<int, float> dsid_sumw{{{','.join(f'{{{dsid}, {sumw}}}' for (dsid, sumw) in sumws)}}};
                 std::map<int, float> dsid_pmgf{{{','.join(f'{{{dsid}, {pmgf}}}' for (dsid, pmgf) in pmgfs)}}};
             """
         )
-        self.logger.debug("Declared metadata maps in ROOT") 
+        self.logger.debug("Declared metadata maps in ROOT")
 
         # BUILD DATASETS
         # ============================
@@ -325,7 +329,7 @@ class Analysis:
                 continue
             if arg in params:
                 args[arg] = params[arg]
-        return args        
+        return args
 
     # ===============================
     # ========== BUILTINS ===========
@@ -451,7 +455,7 @@ class Analysis:
 
         # handle how cuts are going to be done
         if cut is False or cut is None:
-            cutsets_to_loop: dict[str, list[Cut]] = [dict()]
+            cutsets_to_loop: list[str | None] = [None]
         elif cut is True:
             # separate plot for EACH set of cuts
             if datasets and len(datasets) > 1:
@@ -459,7 +463,7 @@ class Analysis:
                 first_cutflow = self[datasets[0]].cuts.keys()
                 if not all(ds.cuts.keys() == first_cutflow for ds in self.datasets.values()):
                     raise ValueError("Datasets do not have the same cuts")
-            cutsets_to_loop = self[datasets[0]].cuts
+            cutsets_to_loop = list(self[datasets[0]].cuts.keys())
         elif isinstance(cut, str):
             cutsets_to_loop = [cut]
         elif isinstance(cut, list):
@@ -509,7 +513,7 @@ class Analysis:
             )
 
         # plot for each cut
-        for cut in cutsets_to_loop:
+        for selection in cutsets_to_loop:
             if ratio_plot:
                 fig, (ax, ratio_ax) = plt.subplots(2, 1, gridspec_kw={"height_ratios": [3, 1]})
             else:
@@ -535,7 +539,7 @@ class Analysis:
                     hist = varname
                     _passed_hists = True
                 else:
-                    hist = self.get_hist(varname, dataset, cut)
+                    hist = self.get_hist(varname, dataset, selection)
                 hist.plot(
                     ax=ax,
                     yerr=yerr,
@@ -645,7 +649,7 @@ class Analysis:
                             dataset="_".join(datasets) if dataset else None, variable=varname
                         )
                     )
-                    + (f"_{cut}_cut" if cut else "")
+                    + (f"_{selection}_cut" if selection else "")
                     + ".png"
                 )
 
@@ -1101,6 +1105,50 @@ class Analysis:
 
         with open(filename, "w") as f:
             f.write(latex_str)
+
+    def print_metadata_table(
+        self,
+        datasets: list[str] | None = None,
+        columns: list[str] | str = "all",
+        filename: str | Path | None = None,
+    ) -> None:
+        """Print a latex table containing metadata for all datasets"""
+
+        # Which datasets to run over?
+        if datasets is None:
+            datasets = list(self.datasets.keys())
+
+        # possible headings
+        header_names: dict[str, str] = {
+            "phys_short": "Physics short",
+            "total_event": "Total Events",
+            "sumw": "Sum of weights",
+            "cross_section": "Cross-section (pb)",
+            "kfactor": "K-Factor",
+            "filter_eff": "Filter Efficiency",
+            "generator_name": "Generator",
+            "etag": "e-tag",
+            "total_size": "Total size",
+            "dsid": "Dataset ID",
+        }
+        if columns == "all":
+            columns = list(header_names.keys())
+        else:
+            if unexpected_column := [col for col in columns if col not in header_names.keys()]:
+                self.logger.warning(
+                    "Metadata column(s) %s not contained in labels dictionary. "
+                    "Possble column names: %s",
+                    unexpected_column,
+                    list(header_names.keys()),
+                )
+
+        # table build loop
+        latex_str = r"\begin{tabular}{" + "l" * (len(columns) + 1) + "}\n"
+        latex_str += " & ".join(["Dataset"] + [header_names[col] for col in columns]) + "\\\\\n"
+
+        # loop over wanted datasets
+        for dataset in datasets:
+            dataset_dsids = self.metadata.dataset_dsids[dataset]
 
     def save_histograms(
         self,
