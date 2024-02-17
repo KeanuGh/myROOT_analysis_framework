@@ -264,14 +264,14 @@ if __name__ == "__main__":
     analysis = Analysis(
         datasets,
         year=2017,
-        # regen_histograms=True,
-        # regen_metadata=True,
+        regen_histograms=True,
+        regen_metadata=True,
         ttree="T_s1thv_NOMINAL",
         cuts=selections,
         analysis_label="fakes_estimate",
         dataset_type="dta",
         log_level=10,
-        log_out="console",
+        log_out="both",
         extract_vars=wanted_branches,
         binnings={
             "": {

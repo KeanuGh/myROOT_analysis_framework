@@ -152,21 +152,16 @@ class Analysis:
             self.metadata.read_metadata_from_file(dsid_metadata_cache)
             self.logger.debug(f"Loaded metadata cache from %s", dsid_metadata_cache)
 
-        # create c++ map for dataset ID metadata
+        # create c++ maps for calculation of weights in datasets
         sumws = [(dsid, meta["sumw"]) for (dsid, meta) in self.metadata]
-        xss = [(dsid, meta["cross_section"]) for (dsid, meta) in self.metadata]
-        kfactors = [(dsid, meta["kfactor"]) for (dsid, meta) in self.metadata]
-        filter_effs = [(dsid, meta["filter_eff"]) for (dsid, meta) in self.metadata]
-
+        pmgfs = [(dsid, meta["cross_section"] * meta["kfactor"] * meta["filter_eff"]) for (dsid, meta) in self.metadata]
         ROOT.gInterpreter.Declare(
             f"""
                 std::map<int, float> dsid_sumw{{{','.join(f'{{{dsid}, {sumw}}}' for (dsid, sumw) in sumws)}}};
-                std::map<int, float> dsid_xsec{{{','.join(f'{{{dsid}, {xs}}}' for (dsid, xs) in xss)}}};
-                std::map<int, float> dsid_kfac{{{','.join(f'{{{dsid}, {kfactor}}}' for (dsid, kfactor) in kfactors)}}};
-                std::map<int, float> dsid_feff{{{','.join(f'{{{dsid}, {f_eff}}}' for (dsid, f_eff) in filter_effs)}}};
+                std::map<int, float> dsid_pmgf{{{','.join(f'{{{dsid}, {pmgf}}}' for (dsid, pmgf) in pmgfs)}}};
             """
         )
-        self.logger.debug("Declared metadata maps in ROOT...") 
+        self.logger.debug("Declared metadata maps in ROOT") 
 
         # BUILD DATASETS
         # ============================

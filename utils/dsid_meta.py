@@ -6,6 +6,7 @@ from pathlib import Path
 from dataclasses import dataclass, field
 import json
 import re
+import math
 
 import ROOT
 import numpy as np
@@ -14,8 +15,8 @@ import pandas as pd
 from utils.file_utils import multi_glob
 from src.logger import get_logger
 
-_PMG_DB = "/cvmfs/atlas.cern.ch/repo/sw/database/GroupData/dev/PMGTools/PMGxsecDB_mc16.txt"
-_PMG_DB_BACKUP = "PMGxsecDB_mc16.txt"
+_PMG_DB = "PMGxsecDB_mc16.txt"
+_PMG_DB_BACKUP = "/cvmfs/atlas.cern.ch/repo/sw/database/GroupData/dev/PMGTools/PMGxsecDB_mc16.txt"
 
 
 class DatasetIdMetaContainer(TypedDict):
@@ -62,9 +63,9 @@ class PmgTool:
                 "crossSection",
                 "genFiltEff",
                 "kFactor",
-                "generator_name",
                 "relUncertUP",
                 "relUncertDOWN",
+                "generator_name",
                 "etag",
             ],
             dtype={
@@ -73,9 +74,9 @@ class PmgTool:
                 "crossSection": float,
                 "genFiltEff": float,
                 "kFactor": float,
-                "generator_name": str,
                 "relUncertUP": float,
                 "relUnvertDOWN": float,
+                "generator_name": str,
                 "etag": str,
             },
         )
@@ -133,7 +134,7 @@ class DatasetMetadata:
         return (len(self._dsid_meta_dict) > 0)
     
     def __err_on_no_dict(self) -> None:
-        if not self.__check_id_dict:
+        if not self.__check_id_dict():
             raise ValueError("Dictionary of DSID metadata is empty. Run `fetch_metadata()` first.")
 
     def fetch_metadata(self, datasets: dict, ttree: str = "T_s1thv_NOMINAL", data_year: int = 2017) -> None:
@@ -160,6 +161,7 @@ class DatasetMetadata:
                 raise OSError("No voms module found. Are you running on lxplus?")
 
             if res.returncode:
+                self.logger.info("Connecting to voms proxy server..")
                 os.system("voms-proxy-init -voms atlas")
 
             # initialise pyami
@@ -362,7 +364,7 @@ class DatasetMetadata:
     def save_metadata(self, file: str | Path) -> None:
         """Save metadata to file"""
 
-        if not self.__check_id_dict:
+        if not self.__check_id_dict():
             raise ValueError("Dictionary of DSID metadata is empty. Run `fetch_metadata` first.")
 
         with open(file, "w") as outfile:
@@ -378,7 +380,7 @@ class DatasetMetadata:
         if size_bytes == 0:
             return "0B"
         size_name = ("B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB")
-        i = int(np.floor(np.log(size_bytes, 1024)))
-        p = np.pow(1024, i)
+        i = int(math.floor(math.log(size_bytes, 1024)))
+        p = math.pow(1024, i)
         s = round(size_bytes / p, 2)
         return f"{s} {size_name[i]}"  

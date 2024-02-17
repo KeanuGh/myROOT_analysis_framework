@@ -241,15 +241,16 @@ class DatasetBuilder:
         dsid = "(mcChannel == 0) ? 700446 : mcChannel"
 
         # create weights
+        self.logger.info(f"{self.lumi=}")
         if self.is_MC:
             Rdf = (
                 Rdf.Define(
                     "truth_weight",
-                    f"(mcWeight * rwCorr * {self.lumi} * prwWeight * dsid_xsec[{dsid}] * dsid_kfac[{dsid}] * dsid_feff[{dsid}]) "
+                    f"(mcWeight * rwCorr * {self.lumi} * prwWeight * dsid_pmgf[{dsid}]) "
                     f"/ dsid_sumw[{dsid}]",
                 ).Define(
                     "reco_weight",
-                    f"(weight * {self.lumi} * dsid_xsec[{dsid}] * dsid_kfac[{dsid}] * dsid_feff[{dsid}]) "
+                    f"(weight * {self.lumi} * dsid_pmgf[{dsid}])"
                     f"/ dsid_sumw[{dsid}]",
                 )
             )
