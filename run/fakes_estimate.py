@@ -264,8 +264,8 @@ if __name__ == "__main__":
     analysis = Analysis(
         datasets,
         year=2017,
-        regen_histograms=True,
-        regen_metadata=True,
+        # regen_histograms=True,
+        # regen_metadata=True,
         ttree="T_s1thv_NOMINAL",
         cuts=selections,
         analysis_label="fakes_estimate",
@@ -303,6 +303,7 @@ if __name__ == "__main__":
         },
     )
     analysis.full_cutflow_printout(datasets=all_samples)
+    analysis.print_metadata_table(datasets=all_samples)
     analysis["wtaunu"].is_signal = True
 
     # set colours for samples

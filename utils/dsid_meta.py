@@ -32,6 +32,9 @@ class DatasetIdMetaContainer:
     total_events: int = 0
     total_size: str = ""
 
+    def __getitem__(self, item):
+        return self.__getattribute__(item)
+
 
 @dataclass(slots=True)
 class PmgTool:
@@ -362,16 +365,12 @@ class DatasetMetadata:
     def read_metadata_from_file(self, file: str | Path) -> None:
         """Get metadata from file"""
 
-        def MetaDataDecoder(obj):
-            """Convert metadata container object from json object"""
-            if obj.keys() == DatasetIdMetaContainer.__annotations__.keys():
-                return DatasetIdMetaContainer(**obj)
-            return obj
-
         with open(file, "r") as infile:
-            json_dict = json.load(infile, object_hook=MetaDataDecoder)
+            json_dict = json.load(infile)
 
-        self._dsid_meta_dict = json_dict["metadata"]
+        self._dsid_meta_dict = {
+            int(k): DatasetIdMetaContainer(**v) for k, v in json_dict["metadata"].items()
+        }
         self.dataset_dsids = json_dict["dataset_ids"]
 
     def save_metadata(self, file: str | Path) -> None:
@@ -380,6 +379,10 @@ class DatasetMetadata:
         if not self.__check_id_dict():
             raise ValueError("Dictionary of DSID metadata is empty. Run `fetch_metadata` first.")
 
+        dict_to_json = dict()
+        dict_to_json["metadata"] = self._dsid_meta_dict
+        dict_to_json["dataset_ids"] = self.dataset_dsids
+
         class DataclassDictConverterEncoder(json.JSONEncoder):
             def default(self, obj):
                 if isinstance(obj, DatasetIdMetaContainer):
@@ -387,10 +390,6 @@ class DatasetMetadata:
                 return super().default(obj)
 
         with open(file, "w") as outfile:
-            dict_to_json = dict()
-            dict_to_json["metadata"] = self._dsid_meta_dict
-            dict_to_json["dataset_ids"] = self.dataset_dsids
-
             json.dump(dict_to_json, outfile, indent=4, cls=DataclassDictConverterEncoder)
 
     @staticmethod

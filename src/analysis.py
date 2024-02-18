@@ -156,7 +156,7 @@ class Analysis:
         # create c++ maps for calculation of weights in datasets
         sumws = [(dsid, meta.sumw) for (dsid, meta) in self.metadata]
         pmgfs = [
-            (dsid, meta.cross_section * meta.kFactor * meta.filter_eff)
+            (dsid, meta.cross_section * meta.kfactor * meta.filter_eff)
             for (dsid, meta) in self.metadata
         ]
         ROOT.gInterpreter.Declare(
@@ -1051,6 +1051,10 @@ class Analysis:
     # ===============================
     # ========= PRINTOUTS ===========
     # ===============================
+    @staticmethod
+    def __sanitise_for_latex(s: Any) -> str:
+        return str(s).replace(r"_", r"\_")
+
     @handle_dataset_arg
     def cutflow_printout(self, datasets: str, latex: bool = False) -> None:
         """Prints cutflow table to terminal"""
@@ -1073,20 +1077,19 @@ class Analysis:
             cutsets = list(self[datasets[0]].cuts)
 
         # table build loop
-        latex_str = r"\begin{tabular}{" + "l" * (len(datasets) + 1) + "}\n"
+        latex_str = f"\\begin{{tabular}}{{{'l' * (len(datasets) + 1)}}}\n"
 
         for cutset in cutsets:
-            sanitised_str = cutset.replace(r"_", r"\_")
+            sanitised_str = self.__sanitise_for_latex(cutset)
             # header
-            latex_str += r"\hline" + "\n"
+            latex_str += "\\hline\n"
             latex_str += (
                 " & ".join(
                     [f"Cut ({sanitised_str})"] + [self[dataset].label for dataset in datasets]
                 )
-                + r"\\"
-                + "\n"
+                + "\\\\\n"
             )
-            latex_str += r"\hline" + "\n"
+            latex_str += "\\hline\n"
 
             cut_names = [
                 cutflow_item.cut.name for cutflow_item in self[datasets[0]].cutflows[cutset]
@@ -1095,9 +1098,9 @@ class Analysis:
                 passes_list = [
                     str(int(self[dataset].cutflows[cutset][i].npass)) for dataset in datasets
                 ]
-                latex_str += cut_name + " & " + " & ".join(passes_list) + r"\\" + "\n"
+                latex_str += f"{cut_name} & {' & '.join(passes_list)}\\\\\n"
 
-        latex_str += r"\hline" + "\n" + r"\end{tabular}"
+        latex_str += "\\hline\n\\end{tabular}"
 
         # print to file
         if filename is None:
@@ -1121,7 +1124,7 @@ class Analysis:
         # possible headings
         header_names: dict[str, str] = {
             "phys_short": "Physics short",
-            "total_event": "Total Events",
+            "total_events": "Total Events",
             "sumw": "Sum of weights",
             "cross_section": "Cross-section (pb)",
             "kfactor": "K-Factor",
@@ -1143,12 +1146,39 @@ class Analysis:
                 )
 
         # table build loop
-        latex_str = r"\begin{tabular}{" + "l" * (len(columns) + 1) + "}\n"
-        latex_str += " & ".join(["Dataset"] + [header_names[col] for col in columns]) + "\\\\\n"
+        latex_str = f"\\begin{{tabular}}{{{'l' * (len(columns) + 1)}}}\n"
+        latex_str += (
+            " & ".join(["Dataset"] + [header_names[col] for col in columns])
+            + "\\\\\n\\hline\\hline\n"
+        )
 
         # loop over wanted datasets
         for dataset in datasets:
             dataset_dsids = self.metadata.dataset_dsids[dataset]
+            latex_str += f"{self.__sanitise_for_latex(dataset)} & "
+
+            for i, dsid in enumerate(dataset_dsids):
+                if i != 0:
+                    # blank space in first column under dataset name
+                    latex_str += " & "
+
+                row_values = [
+                    self.__sanitise_for_latex(self.metadata[dsid][s])
+                    if s != "dsid"
+                    else self.__sanitise_for_latex(dsid)
+                    for s in header_names
+                ]
+                latex_str += " & ".join(row_values) + "\\\\\n"
+            latex_str += "\\hline\n"
+
+        latex_str += "\\end{tabular}"
+
+        # print to file
+        if filename is None:
+            filename = self.paths.latex_dir / f"{self.name}_metadata.tex"
+
+        with open(filename, "w") as f:
+            f.write(latex_str)
 
     def save_histograms(
         self,
