@@ -4,9 +4,9 @@ import math
 import os
 import re
 import subprocess
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, asdict
 from pathlib import Path
-from typing import TypedDict, Generator
+from typing import Generator
 
 import ROOT
 import pandas as pd
@@ -18,18 +18,19 @@ _PMG_DB = "PMGxsecDB_mc16.txt"
 _PMG_DB_BACKUP = "/cvmfs/atlas.cern.ch/repo/sw/database/GroupData/dev/PMGTools/PMGxsecDB_mc16.txt"
 
 
-class DatasetIdMetaContainer(TypedDict):
+@dataclass(slots=True)
+class DatasetIdMetaContainer:
     """Container class for dataset metadata"""
 
-    sumw: float
-    cross_section: float
-    kfactor: float
-    filter_eff: float
-    phys_short: str
-    generator_name: str
-    etag: str
-    total_events: int
-    total_size: str
+    sumw: float = 1.0
+    cross_section: float = 1.0
+    kfactor: float = 1.0
+    filter_eff: float = 1.0
+    phys_short: str = ""
+    generator_name: str = ""
+    etag: str = ""
+    total_events: int = 0
+    total_size: str = ""
 
 
 @dataclass(slots=True)
@@ -117,7 +118,6 @@ class DatasetMetadata:
     logger: logging.Logger = field(default_factory=get_logger)
     _dsid_meta_dict: dict[int, DatasetIdMetaContainer] = field(init=False, default_factory=dict)
     dataset_dsids: dict[str, list[int]] = field(init=False, default_factory=dict)
-    _periods: dict[int, list[str]] = field(init=False)
 
     def __getitem__(self, dsid: int) -> DatasetIdMetaContainer:
         self.__err_on_no_dict()
@@ -173,8 +173,9 @@ class DatasetMetadata:
         # initialise PMG tool
         pmg_tool = PmgTool()
 
-        # collect files
+        # collect files and calculate sumw
         all_files: set[str] = set()
+        data_samples: set[int] = set()
         for dataset_name, dataset_dict in datasets.items():
             files = multi_glob(dataset_dict["data_path"])
             ttree_name = dataset_dict["ttree"] if "tree" in dataset_dict else ttree
@@ -195,6 +196,7 @@ class DatasetMetadata:
                     dsid = self._period_to_int(data_year, period)
 
                     dsids.add(dsid)
+                    data_samples.add(dsid)
                     if dsid not in self._dsid_meta_dict:
                         self._dsid_meta_dict[dsid] = DatasetIdMetaContainer(sumw=0)
 
@@ -246,7 +248,7 @@ class DatasetMetadata:
                     if dsid not in self._dsid_meta_dict:
                         self._dsid_meta_dict[dsid] = DatasetIdMetaContainer(sumw=sumw)
                     else:
-                        self._dsid_meta_dict[dsid]["sumw"] += sumw
+                        self._dsid_meta_dict[dsid].sumw += sumw
 
             self.dataset_dsids[dataset_name] = list(dsids)
             if merge_dataset:
@@ -259,14 +261,7 @@ class DatasetMetadata:
         for dsid in self._dsid_meta_dict:
             self.logger.info("Getting metadata for dataset %s...", dsid)
 
-            if not pmg_tool.dsid_exists(dsid):  # for data
-                self._dsid_meta_dict[dsid]["cross_section"] = 1.0
-                self._dsid_meta_dict[dsid]["kfactor"] = 1.0
-                self._dsid_meta_dict[dsid]["filter_eff"] = 1.0
-                self._dsid_meta_dict[dsid]["phys_short"] = ""
-                self._dsid_meta_dict[dsid]["etag"] = ""
-                self._dsid_meta_dict[dsid]["generator_name"] = ""
-
+            if dsid in data_samples:  # for data
                 year, period = self._int_to_period(dsid)
                 year -= 2000  # actually just need the last two numbers
                 ds_name = f"data{year}_13TeV.period{period}.physics_Main.PhysCont.DAOD_PHYS.grp{year}_v01_p5314"
@@ -275,19 +270,19 @@ class DatasetMetadata:
                 ds_info = AtlasAPI.get_dataset_info(client, dataset=ds_name)[0]
 
                 # save info
-                self._dsid_meta_dict[dsid]["total_events"] = ds_info["totalEvents"]
-                self._dsid_meta_dict[dsid]["total_size"] = self._convert_size(
+                self._dsid_meta_dict[dsid].total_events = ds_info["totalEvents"]
+                self._dsid_meta_dict[dsid].total_size = self._convert_size(
                     int(ds_info["totalSize"])
                 )
 
             else:  # for MC
                 dsid_pmg_data = pmg_tool.get_dsid_data(dsid)
-                self._dsid_meta_dict[dsid]["cross_section"] = dsid_pmg_data["crossSection"]
-                self._dsid_meta_dict[dsid]["kfactor"] = dsid_pmg_data["kFactor"]
-                self._dsid_meta_dict[dsid]["filter_eff"] = dsid_pmg_data["genFiltEff"]
-                self._dsid_meta_dict[dsid]["phys_short"] = dsid_pmg_data["physics_short"]
-                self._dsid_meta_dict[dsid]["etag"] = dsid_pmg_data["etag"]
-                self._dsid_meta_dict[dsid]["generator_name"] = dsid_pmg_data["generator_name"]
+                self._dsid_meta_dict[dsid].cross_section = dsid_pmg_data["crossSection"]
+                self._dsid_meta_dict[dsid].kfactor = dsid_pmg_data["kFactor"]
+                self._dsid_meta_dict[dsid].filter_eff = dsid_pmg_data["genFiltEff"]
+                self._dsid_meta_dict[dsid].phys_short = dsid_pmg_data["physics_short"]
+                self._dsid_meta_dict[dsid].etag = dsid_pmg_data["etag"]
+                self._dsid_meta_dict[dsid].generator_name = dsid_pmg_data["generator_name"]
 
                 # work out dataset name from dsid
                 # e-tag?
@@ -303,7 +298,7 @@ class DatasetMetadata:
                     }[data_year]
                 except KeyError as e:
                     raise ValueError(
-                        f"Missing dataset year: {data_year}. Pass one of ['2016', '2017', '2018']"
+                        f"Missing dataset year: {data_year}. Pass one of ['2015', '2016', '2017', '2018']"
                     ) from e
 
                 # s-tag?
@@ -338,8 +333,8 @@ class DatasetMetadata:
                 ds_info = AtlasAPI.get_dataset_info(client, dataset=ds_name)[0]
 
                 # save info
-                self._dsid_meta_dict[dsid]["total_events"] = ds_info["totalEvents"]
-                self._dsid_meta_dict[dsid]["total_size"] = self._convert_size(
+                self._dsid_meta_dict[dsid].total_events = ds_info["totalEvents"]
+                self._dsid_meta_dict[dsid].total_size = self._convert_size(
                     int(ds_info["totalSize"])
                 )
 
@@ -367,8 +362,14 @@ class DatasetMetadata:
     def read_metadata_from_file(self, file: str | Path) -> None:
         """Get metadata from file"""
 
+        def MetaDataDecoder(obj):
+            """Convert metadata container object from json object"""
+            if obj.keys() == DatasetIdMetaContainer.__annotations__.keys():
+                return DatasetIdMetaContainer(**obj)
+            return obj
+
         with open(file, "r") as infile:
-            json_dict = json.load(infile)
+            json_dict = json.load(infile, object_hook=MetaDataDecoder)
 
         self._dsid_meta_dict = json_dict["metadata"]
         self.dataset_dsids = json_dict["dataset_ids"]
@@ -379,12 +380,18 @@ class DatasetMetadata:
         if not self.__check_id_dict():
             raise ValueError("Dictionary of DSID metadata is empty. Run `fetch_metadata` first.")
 
+        class DataclassDictConverterEncoder(json.JSONEncoder):
+            def default(self, obj):
+                if isinstance(obj, DatasetIdMetaContainer):
+                    return asdict(obj)
+                return super().default(obj)
+
         with open(file, "w") as outfile:
             dict_to_json = dict()
             dict_to_json["metadata"] = self._dsid_meta_dict
             dict_to_json["dataset_ids"] = self.dataset_dsids
 
-            json.dump(dict_to_json, outfile, indent=4)
+            json.dump(dict_to_json, outfile, indent=4, cls=DataclassDictConverterEncoder)
 
     @staticmethod
     def _convert_size(size_bytes: int) -> str:

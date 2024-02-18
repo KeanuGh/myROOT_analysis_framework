@@ -154,9 +154,9 @@ class Analysis:
             self.logger.debug(f"Loaded metadata cache from %s", dsid_metadata_cache)
 
         # create c++ maps for calculation of weights in datasets
-        sumws = [(dsid, meta["sumw"]) for (dsid, meta) in self.metadata]
+        sumws = [(dsid, meta.sumw) for (dsid, meta) in self.metadata]
         pmgfs = [
-            (dsid, meta["cross_section"] * meta["kfactor"] * meta["filter_eff"])
+            (dsid, meta.cross_section * meta.kFactor * meta.filter_eff)
             for (dsid, meta) in self.metadata
         ]
         ROOT.gInterpreter.Declare(

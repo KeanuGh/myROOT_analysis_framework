@@ -8,8 +8,8 @@ import numpy as np
 from src.analysis import Analysis
 from src.cutfile import Cut
 
-# DTA_PATH = Path("/data/DTA_outputs/2024-02-05/")
-DTA_PATH = Path("/eos/home-k/kghorban/DTA_OUT/2024-02-05/")
+DTA_PATH = Path("/data/DTA_outputs/2024-02-05/")
+# DTA_PATH = Path("/eos/home-k/kghorban/DTA_OUT/2024-02-05/")
 CUTFILE_DIR = Path("/afs/cern.ch/user/k/kghorban/framework/options/DTA_cuts/reco")
 
 if __name__ == "__main__":
