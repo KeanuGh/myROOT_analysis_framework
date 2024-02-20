@@ -5,6 +5,7 @@ import os
 import re
 import subprocess
 from dataclasses import dataclass, field, asdict
+from functools import cached_property
 from pathlib import Path
 from typing import Generator
 
@@ -14,113 +15,43 @@ import pandas as pd
 from src.logger import get_logger
 from utils.file_utils import multi_glob
 
-_PMG_DB = "PMGxsecDB_mc16.txt"
-_PMG_DB_BACKUP = "/cvmfs/atlas.cern.ch/repo/sw/database/GroupData/dev/PMGTools/PMGxsecDB_mc16.txt"
-
 
 @dataclass(slots=True)
 class DatasetIdMetaContainer:
     """Container class for dataset metadata"""
 
+    dsid: int = 0
     sumw: float = 1.0
     cross_section: float = 1.0
     kfactor: float = 1.0
     filter_eff: float = 1.0
     phys_short: str = ""
     generator_name: str = ""
-    etag: str = ""
     total_events: int = 0
     total_size: str = ""
+    etag: str = ""
+    ptag: str = ""
+    stag: str = ""
+    rtag: str = ""
 
     def __getitem__(self, item):
         return self.__getattribute__(item)
 
 
 @dataclass(slots=True)
-class PmgTool:
-    _df: pd.DataFrame = field(init=False)
-    db_file: str | None = field(default=None)
-
-    def __post_init__(self) -> None:
-        if self.db_file:
-            self._read_pmg(self.db_file)
-        else:
-            try:
-                print(f"reading pmg database file {_PMG_DB}...")
-                self._read_pmg(_PMG_DB)
-            except FileNotFoundError:
-                try:
-                    print(f"File not found. Looking for backup at {_PMG_DB_BACKUP}...")
-                    self._read_pmg(_PMG_DB_BACKUP)
-                except FileNotFoundError as e:
-                    raise FileNotFoundError(f"Could not find PMG database file '{_PMG_DB}'") from e
-
-    def _read_pmg(self, file: str) -> None:
-        self._df = pd.read_csv(
-            Path(__file__).parent / Path(file),
-            delim_whitespace=True,
-            header=0,
-            index_col=0,
-            names=[
-                "DSID",
-                "physics_short",
-                "crossSection",
-                "genFiltEff",
-                "kFactor",
-                "relUncertUP",
-                "relUncertDOWN",
-                "generator_name",
-                "etag",
-            ],
-            dtype={
-                "DSID": int,
-                "physics_short": str,
-                "crossSection": float,
-                "genFiltEff": float,
-                "kFactor": float,
-                "relUncertUP": float,
-                "relUnvertDOWN": float,
-                "generator_name": str,
-                "etag": str,
-            },
-        )
-
-    def get_dsid_data(self, dsid: int) -> pd.Series:
-        return self._df.loc[dsid]
-
-    def dsid_exists(self, dsid: int) -> bool:
-        return dsid in self._df.index
-
-    def get_crossSection(self, dsid: int) -> float:
-        return self._df.loc[dsid, "crossSection"]
-
-    def get_physics_short(self, dsid: int) -> str:
-        return self._df.loc[dsid, "physics_short"]
-
-    def get_genFiltEff(self, dsid: int) -> float:
-        return self._df.loc[dsid, "genFiltEff"]
-
-    def get_kFactor(self, dsid: int) -> float:
-        return self._df.loc[dsid, "kFactor"]
-
-    def get_relUncertUP(self, dsid: int) -> float:
-        return self._df.loc[dsid, "relUncertUP"]
-
-    def get_relUncertDOWN(self, dsid: int) -> float:
-        return self._df.loc[dsid, "relUncertDOWN"]
-
-    def get_generator_name(self, dsid: int) -> str:
-        return self._df.loc[dsid, "generator_name"]
-
-    def get_etag(self, dsid: int) -> str:
-        return self._df.loc[dsid, "etag"]
-
-
-@dataclass(slots=True)
 class DatasetMetadata:
+    """
+    Container class for metadata per dataset ID. Wrapper around a dictionary containing ID: DatasetIdMetaContainer
+    key-value pairs.
+    """
+
     logger: logging.Logger = field(default_factory=get_logger)
     _dsid_meta_dict: dict[int, DatasetIdMetaContainer] = field(init=False, default_factory=dict)
     dataset_dsids: dict[str, list[int]] = field(init=False, default_factory=dict)
+    _PMG_DB = Path("PMGxsecDB_mc16.txt")
+    _PMG_DB_BACKUP = Path(
+        "/cvmfs/atlas.cern.ch/repo/sw/database/GroupData/dev/PMGTools/PMGxsecDB_mc16.txt"
+    )
 
     def __getitem__(self, dsid: int) -> DatasetIdMetaContainer:
         self.__err_on_no_dict()
@@ -140,6 +71,53 @@ class DatasetMetadata:
         if not self.__check_id_dict():
             raise ValueError("Dictionary of DSID metadata is empty. Run `fetch_metadata()` first.")
 
+    @cached_property
+    def __pmg_db(self) -> pd.DataFrame:
+        """Return pandas DataFrame containing data drom PMG database"""
+
+        def __read_pmg(file: Path) -> pd.DataFrame:
+            """Return DataFrame from database file"""
+            return pd.read_csv(
+                file,
+                delim_whitespace=True,
+                header=0,
+                index_col=0,
+                names=[
+                    "DSID",
+                    "physics_short",
+                    "crossSection",
+                    "genFiltEff",
+                    "kFactor",
+                    "relUncertUP",
+                    "relUncertDOWN",
+                    "generator_name",
+                    "etag",
+                ],
+                dtype={
+                    "DSID": int,
+                    "physics_short": str,
+                    "crossSection": float,
+                    "genFiltEff": float,
+                    "kFactor": float,
+                    "relUncertUP": float,
+                    "relUnvertDOWN": float,
+                    "generator_name": str,
+                    "etag": str,
+                },
+            )
+
+        try:
+            self.logger.info(f"reading pmg database file '%s'...", self._PMG_DB)
+            return __read_pmg(self._PMG_DB)
+        except FileNotFoundError:
+            try:
+                self.logger.info(
+                    f"File not found. Looking for backup at '%s'...", self._PMG_DB_BACKUP
+                )
+                return __read_pmg(self._PMG_DB_BACKUP)
+            except FileNotFoundError as e:
+                raise FileNotFoundError(f"Could not find PMG database file '{self._PMG_DB}'") from e
+
     def fetch_metadata(
         self, datasets: dict, ttree: str = "T_s1thv_NOMINAL", data_year: int = 2017
     ) -> None:
@@ -150,8 +128,8 @@ class DatasetMetadata:
 
         # load and test modules first
         try:
-            import pyAMI.client
-            import pyAMI_atlas.api as AtlasAPI
+            import pyAMI.client as pyami_client
+            import pyAMI_atlas.api as atlas_api
         except ModuleNotFoundError as e:
             raise ModuleNotFoundError(
                 "Install pyami_atlas to regenerate metadata cache:\n"
@@ -170,11 +148,11 @@ class DatasetMetadata:
             os.system("voms-proxy-init -voms atlas")
 
         # initialise pyami
-        client = pyAMI.client.Client("atlas-v2")
-        AtlasAPI.init()
+        client = pyami_client.Client("atlas-v2")
+        atlas_api.init()
 
         # initialise PMG tool
-        pmg_tool = PmgTool()
+        pmg_df = self.__pmg_db
 
         # collect files and calculate sumw
         all_files: set[str] = set()
@@ -201,7 +179,7 @@ class DatasetMetadata:
                     dsids.add(dsid)
                     data_samples.add(dsid)
                     if dsid not in self._dsid_meta_dict:
-                        self._dsid_meta_dict[dsid] = DatasetIdMetaContainer(sumw=0)
+                        self._dsid_meta_dict[dsid] = DatasetIdMetaContainer(dsid=dsid, sumw=0)
 
                     continue
 
@@ -249,7 +227,7 @@ class DatasetMetadata:
 
                     # self.logger.debug(f"dsid: {dsid}: sumw {sumw} for file {file}")
                     if dsid not in self._dsid_meta_dict:
-                        self._dsid_meta_dict[dsid] = DatasetIdMetaContainer(sumw=sumw)
+                        self._dsid_meta_dict[dsid] = DatasetIdMetaContainer(dsid=dsid, sumw=sumw)
                     else:
                         self._dsid_meta_dict[dsid].sumw += sumw
 
@@ -270,16 +248,17 @@ class DatasetMetadata:
                 ds_name = f"data{year}_13TeV.period{period}.physics_Main.PhysCont.DAOD_PHYS.grp{year}_v01_p5314"
 
                 self.logger.info("Fetching info from AMI for dataset: %s", ds_name)
-                ds_info = AtlasAPI.get_dataset_info(client, dataset=ds_name)[0]
+                ds_info = atlas_api.get_dataset_info(client, dataset=ds_name)[0]
 
                 # save info
+                self._dsid_meta_dict[dsid].phys_short = ds_name
                 self._dsid_meta_dict[dsid].total_events = ds_info["totalEvents"]
                 self._dsid_meta_dict[dsid].total_size = self._convert_size(
                     int(ds_info["totalSize"])
                 )
 
             else:  # for MC
-                dsid_pmg_data = pmg_tool.get_dsid_data(dsid)
+                dsid_pmg_data = pmg_df.loc[dsid]
                 self._dsid_meta_dict[dsid].cross_section = dsid_pmg_data["crossSection"]
                 self._dsid_meta_dict[dsid].kfactor = dsid_pmg_data["kFactor"]
                 self._dsid_meta_dict[dsid].filter_eff = dsid_pmg_data["genFiltEff"]
@@ -305,7 +284,7 @@ class DatasetMetadata:
                     ) from e
 
                 # s-tag?
-                if "powheg" in dsid_pmg_data["generator_name"]:
+                if "powheg" in dsid_pmg_data["generator_name"].lower():
                     stag = "s875"
                 else:
                     stag = "s3126"
@@ -317,7 +296,7 @@ class DatasetMetadata:
                 short = dsid_pmg_data["physics_short"]
                 pattern = f"mc16_13TeV.{dsid}.{short}.deriv.DAOD_PHYS.{etag}_{stag}_{rtag}_p%"
 
-                res = AtlasAPI.list_datasets(client, patterns=pattern, ami_status="VALID")
+                res = atlas_api.list_datasets(client, patterns=pattern, ami_status="VALID")
                 if not res:
                     raise ValueError(f"No matching datasets: {pattern}")
 
@@ -333,9 +312,12 @@ class DatasetMetadata:
 
                 # look for matching dataset
                 self.logger.info("Fetching info from AMI for dataset: %s", ds_name)
-                ds_info = AtlasAPI.get_dataset_info(client, dataset=ds_name)[0]
+                ds_info = atlas_api.get_dataset_info(client, dataset=ds_name)[0]
 
                 # save info
+                self._dsid_meta_dict[dsid].rtag = rtag
+                self._dsid_meta_dict[dsid].stag = stag
+                self._dsid_meta_dict[dsid].ptag = ptag
                 self._dsid_meta_dict[dsid].total_events = ds_info["totalEvents"]
                 self._dsid_meta_dict[dsid].total_size = self._convert_size(
                     int(ds_info["totalSize"])
@@ -362,10 +344,10 @@ class DatasetMetadata:
         period = self.periods[int(year)][int(string[-1])]
         return year, period
 
-    def read_metadata_from_file(self, file: str | Path) -> None:
+    def read_metadata(self, file: str | Path) -> None:
         """Get metadata from file"""
 
-        with open(file, "r") as infile:
+        with open(file) as infile:
             json_dict = json.load(infile)
 
         self._dsid_meta_dict = {
@@ -384,7 +366,10 @@ class DatasetMetadata:
         dict_to_json["dataset_ids"] = self.dataset_dsids
 
         class DataclassDictConverterEncoder(json.JSONEncoder):
+            """Encoder for dataclasses to json"""
+
             def default(self, obj):
+                """."""
                 if isinstance(obj, DatasetIdMetaContainer):
                     return asdict(obj)
                 return super().default(obj)

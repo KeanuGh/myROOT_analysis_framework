@@ -352,27 +352,27 @@ class Histogram1D(bh.Histogram, family=None):
         return self.axes[0].extent
 
     @property
-    def bin_widths(self) -> np.ndarray:
+    def bin_widths(self) -> np.typing.NDArray[1, float]:
         """get bin widths"""
         return self.axes[0].widths
 
     @property
-    def bin_range(self) -> np.ndarray:
+    def bin_range(self) -> float:
         """get histogram range"""
         return self.bin_edges[-1] - self.bin_edges[0]  # type: ignore
 
     @property
-    def bin_edges(self) -> np.ndarray:
+    def bin_edges(self) -> np.typing.NDArray[1, float]:
         """get bin edges"""
         return self.axes[0].edges
 
     @property
-    def bin_centres(self) -> np.ndarray:
+    def bin_centres(self) -> np.typing.NDArray[1, float]:
         """get bin centres"""
         return self.axes[0].centers
 
     @property
-    def n_entries(self) -> float:
+    def n_entries(self) -> int:
         """Get number of entries"""
         return self.TH1.GetEntries()
 
@@ -380,30 +380,31 @@ class Histogram1D(bh.Histogram, family=None):
         """get effective number of entries"""
         return self.bin_sum(flow) * self.bin_sum(flow) / sum(self.sumw2(flow))  # type: ignore
 
-    def sumw2(self, flow: bool = False) -> np.ndarray:
+    def sumw2(self, flow: bool = False) -> np.typing.NDArray[1, float]:
         """get squared sum of weights"""
         return self.view(flow).variance  # type: ignore
 
     def get_error(self, idx: int) -> float:
+        """Get ROOT error of bin"""
         return self.TH1.GetBinError(idx + 1)
 
-    def error(self, flow: bool = False) -> np.ndarray:
+    def error(self, flow: bool = False) -> np.typing.NDArray[1, float]:
         """get ROOT error"""
         if flow:
             return np.array([self.TH1.GetBinError(i) for i in range(self.TH1.GetNbinsX() + 2)])
         else:
             return np.array([self.TH1.GetBinError(i + 1) for i in range(self.TH1.GetNbinsX())])
 
-    def root_sumw2(self, flow: bool = False) -> np.ndarray:
+    def root_sumw2(self, flow: bool = False) -> np.typing.NDArray[1, float]:
         """get squared sum of weights"""
         return np.sqrt(self.sumw2(flow))
 
-    def bin_values(self, flow: bool = False) -> np.ndarray:
+    def bin_values(self, flow: bool = False) -> np.typing.NDArray[1, float]:
         """get bin values"""
         return self.values(flow)
 
     @property
-    def areas(self) -> np.ndarray:
+    def areas(self) -> np.typing.NDArray[1, float]:
         """get bin areas"""
         return self.bin_values() * self.bin_widths  # type: ignore
 
@@ -572,6 +573,7 @@ class Histogram1D(bh.Histogram, family=None):
         :param stats_box: whether to add a stats box to the plot
         :param kwargs: keyword arguments to pass to mplhep.histplot()
         :param out_filename: provide filename to print. If not given, nothing is saved
+        :param histtype: histogram type to be passed to mplhep
         :param show: whether to display the plot (plt.show())
         :return: matplotlib axis object with plot
         """

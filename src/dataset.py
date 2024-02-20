@@ -169,7 +169,8 @@ class Dataset(ABC):
 
     @abstractmethod
     def gen_histograms(
-        self, cut: bool = True, to_file: bool | str | Path = True
+        self,
+        to_file: bool | str | Path = True,
     ) -> OrderedDict[str, ROOT.TH1]:
         ...
 

@@ -6,17 +6,17 @@ from pathlib import Path
 from typing import Callable, Any, Sequence, Generator
 
 import ROOT
-import matplotlib.pyplot as plt  # type: ignore
+import matplotlib.pyplot as plt
 import mplhep as hep
 import numpy as np
 from numpy.typing import ArrayLike
-from tabulate import tabulate  # type: ignore
+from tabulate import tabulate
 
-from src.dataset import Dataset, RDataset  # PDataset
+from src.dataset import Dataset, RDataset
 from src.datasetbuilder import DatasetBuilder, lumi_year
 from src.histogram import Histogram1D
 from src.logger import get_logger
-from utils import plotting_tools, ROOT_utils
+from utils import plotting_tools
 from utils.context import handle_dataset_arg, redirect_stdout
 from utils.dsid_meta import DatasetMetadata
 
@@ -30,6 +30,7 @@ class AnalysisPath:
     log_dir: Path
 
     def create_paths(self):
+        """Create paths needed by analyses"""
         for p in (
             self.plot_dir,
             self.latex_dir,
@@ -150,7 +151,7 @@ class Analysis:
 
         else:
             # load metadata
-            self.metadata.read_metadata_from_file(dsid_metadata_cache)
+            self.metadata.read_metadata(dsid_metadata_cache)
             self.logger.debug(f"Loaded metadata cache from %s", dsid_metadata_cache)
 
         # create c++ maps for calculation of weights in datasets
@@ -492,6 +493,9 @@ class Analysis:
         else:
             n_overlays = 1
 
+        if n_overlays == 0:
+            raise ValueError("This should never happen. Congrats!")
+
         # no ratio if just one thing being plotted
         if n_overlays == 1:
             ratio_plot = False
@@ -625,9 +629,7 @@ class Analysis:
                     xlim=(ratio_hist.bin_edges[0], ratio_hist.bin_edges[-1]),
                     xlabel=xlabel,
                     ylabel=ratio_label,
-                    title="",
                     logx=logx,
-                    logy=False,
                     label=False,
                 )
 
@@ -767,7 +769,7 @@ class Analysis:
         else:
             n_stacks = 1
 
-        if n_stacks < 1:
+        if n_stacks == 0:
             raise ValueError("Nothing to plot!")
 
         # plot for each cut
@@ -949,9 +951,7 @@ class Analysis:
                         ylim=ratio_axlim,
                         xlabel=xlabel,
                         ylabel="Data / Simulation",
-                        title="",
                         logx=logx,
-                        logy=False,
                         label=False,
                     )
 
@@ -1123,16 +1123,16 @@ class Analysis:
 
         # possible headings
         header_names: dict[str, str] = {
+            "dsid": "Dataset ID",
             "phys_short": "Physics short",
             "total_events": "Total Events",
-            "sumw": "Sum of weights",
+            "sumw": "Sum of weights (post pre-selection)",
             "cross_section": "Cross-section (pb)",
             "kfactor": "K-Factor",
             "filter_eff": "Filter Efficiency",
             "generator_name": "Generator",
-            "etag": "e-tag",
-            "total_size": "Total size",
-            "dsid": "Dataset ID",
+            "ptag": "p-tag",
+            # "total_size": "Total size",
         }
         if columns == "all":
             columns = list(header_names.keys())
@@ -1163,10 +1163,7 @@ class Analysis:
                     latex_str += " & "
 
                 row_values = [
-                    self.__sanitise_for_latex(self.metadata[dsid][s])
-                    if s != "dsid"
-                    else self.__sanitise_for_latex(dsid)
-                    for s in header_names
+                    self.__sanitise_for_latex(self.metadata[dsid][s]) for s in header_names
                 ]
                 latex_str += " & ".join(row_values) + "\\\\\n"
             latex_str += "\\hline\n"
@@ -1201,7 +1198,7 @@ class Analysis:
             filename = self._output_dir / f"{self.name}_histograms.root"
 
         self.logger.info(f"Saving {len(self.histograms)} histograms to file {filename}...")
-        with ROOT_utils.ROOT_TFile_mgr(str(filename), tfile_option) as file:
+        with ROOT.TFile(str(filename), tfile_option) as file:
             for name, histo in self.histograms.items():
                 file.WriteObject(histo, name, write_option)
 
