@@ -303,7 +303,7 @@ if __name__ == "__main__":
         },
     )
     analysis.full_cutflow_printout(datasets=all_samples)
-    analysis.print_metadata_table(datasets=all_samples)
+    analysis.print_metadata_table(datasets=mc_samples)
     analysis["wtaunu"].is_signal = True
 
     # set colours for samples
@@ -375,6 +375,14 @@ if __name__ == "__main__":
             ratio_plot=False,
             filename=f"FF_calculation_{var}.png",
         )
+        analysis.plot_hist(
+            SR_failID_data - SR_failID_mc,
+            labels=["SR_failID_data - SR_failID_mc"],
+            yerr=False,
+            xlabel=var,
+            ratio_plot=False,
+            filename=f"FF_calculation_delta_SR_fail_{var}.png",
+        )
 
     # HISTORGRAMS
     # ========================================================================
@@ -403,6 +411,8 @@ if __name__ == "__main__":
         "title": f"data17 | mc16d | {analysis.global_lumi / 1000:.3g}" + r"fb$^{-1}$",
         "yerr": True,
         "cut": True,
+        "ratio_plot": True,
+        # "ratio_axlim": (0, 2),
     }
 
     # mass-like variables
@@ -464,6 +474,7 @@ if __name__ == "__main__":
         "yerr": True,
         "logy": True,
         "suffix": "fake_scaled_log",
+        "ratio_plot": True,
     }
 
     def FF_vars(s: str) -> list[str]:
@@ -511,7 +522,7 @@ if __name__ == "__main__":
         var=FF_vars("MTW"),
         **default_args,
         xlabel=r"$M_T^W$ [GeV]",
-        filename="TauMTW_FF_scaled_liny.png",
+        filename="MTW_FF_scaled_liny.png",
     )
     analysis.stack_plot(
         var=FF_vars("TauEta"),
@@ -541,21 +552,25 @@ if __name__ == "__main__":
         var=["TauPt_FF_scaled", "data_TauPt_SR_passID_cut"],
         **default_args,
         xlabel=r"$p_T^\tau$ [GeV]",
+        filename="FF_compare_TauPt.png",
     )
     analysis.plot_hist(
         var=["MTW_FF_scaled", "data_MTW_SR_passID_cut"],
         **default_args,
         xlabel=r"$M_T^W$ [GeV]",
+        filename="FF_compare_MTW.png",
     )
     analysis.plot_hist(
         var=["TauEta_FF_scaled", "data_TauEta_SR_passID_cut"],
         **default_args,
         xlabel=r"$\eta^\tau$",
+        filename="FF_compare_TauEta.png",
     )
     analysis.plot_hist(
         var=["TauPhi_FF_scaled", "data_TauPhi_SR_passID_cut"],
         **default_args,
         xlabel=r"$\phi_T^\tau$",
+        filename="FF_compare_Tauphi.png",
     )
 
     # linear axes

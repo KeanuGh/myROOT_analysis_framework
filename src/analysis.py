@@ -433,9 +433,6 @@ class Analysis:
         :param prefix: prefix to add at start of histogram/file
         :param kwargs: keyword arguments to pass to mplhep.histplot()
         """
-        self.logger.info(
-            f"Plotting %s%s...", var, f"in {datasets}" in datasets if datasets else None
-        )
         _passed_hists = False
 
         # naming template for file/histogram name
@@ -678,7 +675,7 @@ class Analysis:
         histtype="fill",
         sort: bool = True,
         ratio_plot: bool = False,
-        ratio_axlim: float | tuple[float, float] | None = (0.5, 1.5),
+        ratio_axlim: float | tuple[float, float] | None = None,
         suffix: str = "",
         prefix: str = "",
         **kwargs,
@@ -886,7 +883,6 @@ class Analysis:
 
                 # get histogram and plot
                 data_hist = self.get_hist(varname, data_ds, cut)
-                hist_list.append(data_hist)
 
                 if scale_by_bin_width:
                     data_hist /= data_hist.bin_widths
@@ -901,17 +897,16 @@ class Analysis:
                     label=self["data"].label,
                 )
 
-                # TODO: fix
                 if ratio_plot:
                     fig.tight_layout()
                     fig.subplots_adjust(hspace=0.1, wspace=0)
-                    ax.set_xticklabels([])
-                    ax.set_xlabel("")
+                    all_mc_hist = reduce((lambda x, y: x + y), hist_list)
+                    all_mc_bin_vals = all_mc_hist.bin_values()
 
                     # MC errors
                     if yerr:
-                        err_bottom = 1 - errs
-                        err_top = 1 + errs
+                        err_bottom = (all_mc_bin_vals - errs) / all_mc_bin_vals
+                        err_top = (all_mc_bin_vals + errs) / all_mc_bin_vals
                         ratio_ax.fill_between(
                             x=edges,
                             y1=np.append(err_top, err_top[-1]),
@@ -931,13 +926,10 @@ class Analysis:
                         colors="r",
                     )
 
-                    # plot data/mc ratio
-                    all_mc_hist = reduce((lambda x, y: x.__add__(y)), hist_list)
-
-                    ratio_hist = data_hist.plot_ratio(
-                        all_mc_hist,
+                    ratio_hist = all_mc_hist.plot_ratio(
+                        data_hist,
                         ax=ratio_ax,
-                        yerr="binom",
+                        yerr=True,
                         label=label,
                         color="k",
                         yax_lim=ratio_axlim,
@@ -948,9 +940,8 @@ class Analysis:
                         axis=ratio_ax,
                         var_name=var,
                         xlim=(ratio_hist.bin_edges[0], ratio_hist.bin_edges[-1]),
-                        ylim=ratio_axlim,
                         xlabel=xlabel,
-                        ylabel="Data / Simulation",
+                        ylabel="Data / MC",
                         logx=logx,
                         label=False,
                     )
@@ -967,17 +958,27 @@ class Analysis:
                 logy=logy,
                 diff_xs=scale_by_bin_width,
             )
+            if ratio_plot:
+                ax.set_xticklabels([])
+                ax.set_xticklabels([], minor=True)
+                ax.set_xlim(*ratio_ax.get_xlim())
+                ax.set_xlabel("")
+
             if x_axlim:
                 ax.set_xlim(*x_axlim)
             if y_axlim:
                 ax.set_ylim(*y_axlim)
 
             # limit to 4 rows and reverse order (so more important samples go in front)
-            ncols = len(hist_list) + bool(yerr)
+            ncols = len(hist_list) + bool(yerr) + bool(data_ds)
             ncols //= 4
-            handles, labels_ = ax.get_legend_handles_labels()
+            legend_handles, legend_labels = ax.get_legend_handles_labels()
             ax.legend(
-                reversed(handles), reversed(labels_), fontsize=10, loc="upper right", ncols=ncols
+                reversed(legend_handles),
+                reversed(legend_labels),
+                fontsize=10,
+                loc="upper right",
+                ncols=ncols,
             )
 
             if filename:

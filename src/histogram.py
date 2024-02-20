@@ -5,17 +5,17 @@ import logging
 from collections import OrderedDict
 from typing import List, Tuple, Any, overload, Type
 
-import ROOT  # type: ignore
+import ROOT
 import boost_histogram as bh
-import matplotlib.pyplot as plt  # type: ignore
-import mplhep as hep  # type: ignore
+import matplotlib.pyplot as plt
+import mplhep as hep
 import numpy as np
-import pandas as pd  # type: ignore
-from matplotlib.offsetbox import AnchoredText  # type: ignore
+import pandas as pd
+from matplotlib.offsetbox import AnchoredText
 from numpy.typing import ArrayLike
 
 from src.logger import get_logger
-from utils.AtlasStyle import set_atlas_style  # type: ignore
+from utils.AtlasStyle import set_atlas_style
 from utils.ROOT_utils import load_ROOT_settings
 from utils.context import redirect_stdout
 from utils.plotting_tools import get_TH1_bins
@@ -113,7 +113,6 @@ class Histogram1D(bh.Histogram, family=None):
 
         if th1:
             # create from TH1
-            self.logger.debug(f"Creating histogram from TH1: '{th1}'...")
             edges = [th1.GetBinLowEdge(i + 1) for i in range(th1.GetNbinsX() + 1)]
             super().__init__(bh.axis.Variable(edges), storage=bh.storage.Weight())
 
@@ -129,8 +128,8 @@ class Histogram1D(bh.Histogram, family=None):
 
             # fill
             for idx, _ in np.ndenumerate(self.view(flow=True)):
-                self.view(flow=True).value[idx] = th1.GetBinContent(*idx)  # type: ignore # bin value
-                self.view(flow=True).variance[idx] = th1.GetBinError(*idx) ** 2  # type: ignore
+                self.view(flow=True).value[idx] = th1.GetBinContent(*idx)  # bin value
+                self.view(flow=True).variance[idx] = th1.GetBinError(*idx) ** 2
 
             if var is not None:
                 self.Fill(var, weight=weight)
@@ -138,9 +137,9 @@ class Histogram1D(bh.Histogram, family=None):
         else:
             self.logger.debug("Checking variables..")
             # check length of var and weight
-            if hasattr(weight, "__len__") and (len(var) != len(weight)):  # type: ignore
+            if hasattr(weight, "__len__") and (len(var) != len(weight)):
                 raise ValueError(
-                    f"Weight and value arrays are of different lengths! {len(weight)}, {len(var)}"  # type: ignore
+                    f"Weight and value arrays are of different lengths! {len(weight)}, {len(var)}"
                 )
 
             if hasattr(var, "dtype") and var.dtype.name == "object":
@@ -162,11 +161,11 @@ class Histogram1D(bh.Histogram, family=None):
             self.logger.debug(f"Initialising histogram {name}...")
 
             # TH1
-            self.TH1 = ROOT.TH1F(name, title, *get_TH1_bins(bins, logbins=logbins))  # type: ignore
+            self.TH1 = ROOT.TH1F(name, title, *get_TH1_bins(bins, logbins=logbins))
             self.name = name
 
             # get axis
-            axis = bins if isinstance(bins, bh.axis.Axis) else self.__gen_axis(bins, logbins)  # type: ignore
+            axis = bins if isinstance(bins, bh.axis.Axis) else self.__gen_axis(bins, logbins)
             super().__init__(axis, storage=bh.storage.Weight(), **kwargs)
 
             if var is not None:
@@ -349,6 +348,7 @@ class Histogram1D(bh.Histogram, family=None):
 
     @property
     def extent(self) -> int:
+        """Get axis extent"""
         return self.axes[0].extent
 
     @property
@@ -722,6 +722,9 @@ class Histogram1D(bh.Histogram, family=None):
         if not ax:
             _, ax = plt.subplots()
 
+        ax.set_axisbelow(True)  # prevents grid from being drawn above lines
+        ax.grid(visible=True, which="both", axis="y")
+
         # create ratio histogram
         if normalise:
             h_ratio = other.normalised() / self.normalised()
@@ -819,7 +822,6 @@ class Histogram1D(bh.Histogram, family=None):
             c=color,
             **kwargs,
         )
-        ax.grid(visible=True, which="both", axis="y")
 
         if yax_lim:
             if isinstance(yax_lim, tuple):

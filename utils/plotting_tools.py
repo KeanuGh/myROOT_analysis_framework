@@ -257,16 +257,16 @@ def set_axis_options(
         axis.set_ylim(*ylim)
     elif strict_yax_lims:
         try:
-            ymin = min(
+            ymin = np.nanmin(
                 [
-                    min(line.get_ydata(), default=np.inf)
+                    np.nanmin(np.ma.masked_invalid(line.get_ydata()))
                     for line in axis.lines
                     if len(line.get_xdata()) > 2
                 ],
             )
-            ymax = max(
+            ymax = np.nanmax(
                 [
-                    max(line.get_ydata(), default=-np.inf)
+                    np.nanmax(np.ma.masked_invalid(line.get_ydata()))
                     for line in axis.lines
                     if len(line.get_xdata()) > 2
                 ],
