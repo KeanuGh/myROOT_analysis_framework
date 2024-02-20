@@ -5,7 +5,6 @@ import os
 import re
 import subprocess
 from dataclasses import dataclass, field, asdict
-from functools import cached_property
 from pathlib import Path
 from typing import Generator
 
@@ -46,10 +45,11 @@ class DatasetMetadata:
     """
 
     logger: logging.Logger = field(default_factory=get_logger)
-    _dsid_meta_dict: dict[int, DatasetIdMetaContainer] = field(init=False, default_factory=dict)
     dataset_dsids: dict[str, list[int]] = field(init=False, default_factory=dict)
-    _PMG_DB = Path("PMGxsecDB_mc16.txt")
-    _PMG_DB_BACKUP = Path(
+    _dsid_meta_dict: dict[int, DatasetIdMetaContainer] = field(init=False, default_factory=dict)
+    _pmg_db: pd.DataFrame = field(init=False)
+    _PMG_DB: Path = Path(__file__).parent / "PMGxsecDB_mc16.txt"
+    _PMG_DB_BACKUP: Path = Path(
         "/cvmfs/atlas.cern.ch/repo/sw/database/GroupData/dev/PMGTools/PMGxsecDB_mc16.txt"
     )
 
@@ -71,8 +71,7 @@ class DatasetMetadata:
         if not self.__check_id_dict():
             raise ValueError("Dictionary of DSID metadata is empty. Run `fetch_metadata()` first.")
 
-    @cached_property
-    def __pmg_db(self) -> pd.DataFrame:
+    def _get_pmg_db(self) -> pd.DataFrame:
         """Return pandas DataFrame containing data drom PMG database"""
 
         def __read_pmg(file: Path) -> pd.DataFrame:
@@ -152,7 +151,7 @@ class DatasetMetadata:
         atlas_api.init()
 
         # initialise PMG tool
-        pmg_df = self.__pmg_db
+        pmg_df = self._get_pmg_db()
 
         # collect files and calculate sumw
         all_files: set[str] = set()
@@ -237,6 +236,9 @@ class DatasetMetadata:
             self.logger.debug(
                 "Found the following dataset IDs for dataset '%s': %s", dataset_name, dsids
             )
+        
+        if len(self._dsid_meta_dict) == 0:
+            raise ValueError("No datasets found in passed files. Double check inputs.")
 
         # get other metadata for dataset IDs
         for dsid in self._dsid_meta_dict:
@@ -285,7 +287,7 @@ class DatasetMetadata:
 
                 # s-tag?
                 if "powheg" in dsid_pmg_data["generator_name"].lower():
-                    stag = "s875"
+                    stag = "a875"
                 else:
                     stag = "s3126"
 
