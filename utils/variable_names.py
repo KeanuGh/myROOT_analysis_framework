@@ -244,12 +244,12 @@ variable_data: Dict[str, Branch] = {
         "tag": VarTag.TRUTH,
     },
     "MTW": {
-        "name": r"Reco $M^{W}_{T}$",
+        "name": r"$m^{W}_{T}$",
         "units": "GeV",
         "tag": VarTag.RECO,
     },
     "TruthMTW": {
-        "name": r"Truth $M^{W}_{T}$",
+        "name": r"Truth $m^{W}_{T}$",
         "units": "GeV",
         "tag": VarTag.TRUTH,
     },
@@ -572,9 +572,59 @@ variable_data: Dict[str, Branch] = {
         "units": "",
         "tag": VarTag.RECO,
     },
+    "MatchedTruthParticlePt": {
+        "name": r"Truth Matched Particle $p_T$",
+        "units": "GeV",
+        "tag": VarTag.RECO,
+    },
+    "MatchedTruthParticleE": {
+        "name": r"Truth Matched Particle Energy",
+        "units": "GeV",
+        "tag": VarTag.RECO,
+    },
+    "MatchedTruthParticleEta": {
+        "name": r"Truth Matched Particle $\eta$",
+        "units": "",
+        "tag": VarTag.RECO,
+    },
+    "MatchedTruthParticlePhi": {
+        "name": r"Truth Matched Particle $\phi$",
+        "units": "",
+        "tag": VarTag.RECO,
+    },
+    "MatchedTruthParticle_isTau": {
+        "name": r"Truth Matched Particle is Tau",
+        "units": "",
+        "tag": VarTag.RECO,
+    },
+    "MatchedTruthParticle_isHadronicTau": {
+        "name": r"Truth Matched Particle is Hadronic Tau",
+        "units": "",
+        "tag": VarTag.RECO,
+    },
+    "MatchedTruthParticle_isElectron": {
+        "name": r"Truth Matched Particle is Electron",
+        "units": "",
+        "tag": VarTag.RECO,
+    },
+    "MatchedTruthParticle_isMuon": {
+        "name": r"Truth Matched Particle is Muon",
+        "units": "",
+        "tag": VarTag.RECO,
+    },
     "TauNCoreTracks": {
         "name": r"Number of Tau tracks",
         "units": "",
+        "tag": VarTag.RECO,
+    },
+    "TauPt_res": {
+        "name": r"$(p_T^\mathrm{true} - p_T^\mathrm{reco}) / p_T^\mathrm{true}$",
+        "units": "",
+        "tag": VarTag.RECO,
+    },
+    "TauPt_diff": {
+        "name": r"$p_T^\mathrm{true} - p_T^\mathrm{reco}$",
+        "units": "GeV",
         "tag": VarTag.RECO,
     },
     # TRUTH-LEVEL KINEMATIC VARIABLES

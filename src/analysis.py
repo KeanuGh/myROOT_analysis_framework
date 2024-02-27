@@ -386,7 +386,7 @@ class Analysis:
         ratio_label: str = "Ratio",
         ratio_err: str = "sumw2",
         filename: str | Path | None = None,
-        cut: bool = False,
+        cut: bool | str | Sequence[str] = False,
         suffix: str = "",
         prefix: str = "",
         **kwargs,
@@ -1139,7 +1139,7 @@ class Analysis:
             columns = list(header_names.keys())
         else:
             if unexpected_column := [col for col in columns if col not in header_names.keys()]:
-                self.logger.warning(
+                self.logger.error(
                     "Metadata column(s) %s not contained in labels dictionary. "
                     "Possble column names: %s",
                     unexpected_column,

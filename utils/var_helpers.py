@@ -1,44 +1,9 @@
 """
 Defines helper functions to calculate various kinematic/other physical variables
 """
-from typing import Dict, TypedDict, Callable, List
+from typing import Dict, TypedDict, List
 
-import numpy as np
 import pandas as pd  # type: ignore
-
-
-# VARIABLE FUNCTIONS
-# ================================
-def calc_mt(df: pd.DataFrame, l1_pt: str, l2_pt: str, l1_phi: str, l2_phi: str) -> pd.Series:
-    """Calculate transverse mass of vector boson in Drell-Yan process"""
-    dphi = abs(df[l1_phi] - df[l2_phi])
-    dphi.loc[dphi > np.pi] = 2 * np.pi - dphi.loc[dphi > np.pi]
-    return np.sqrt(2.0 * df[l1_pt] * df[l2_pt] * (1 - np.cos(dphi)))
-
-
-def calc_vy(df: pd.DataFrame, x1: str, x2: str) -> pd.Series:
-    """Calculate boson rapidity"""
-    return 0.5 * np.log(df[x1] / df[x2])
-
-
-def calc_delta_z0_sintheta(df: pd.DataFrame, z0: str, eta: str) -> pd.Series:
-    return df[z0] * np.sin(2 * np.arctan(np.exp(-df[eta])))
-
-
-def calc_dilep_m(df: pd.DataFrame, m1: str, m2: str) -> pd.Series:
-    return df[m1] + df[m2]
-
-
-def calc_delta_r(df: pd.DataFrame, eta1: str, eta2: str, phi1: str, phi2: str) -> pd.Series:
-    return np.sqrt((df[eta1] - df[eta2]) ** 2 + (df[phi1] - df[phi2]) ** 2)
-
-
-def calc_div(df: pd.DataFrame, x1: str, x2: str) -> pd.Series:
-    return df[x1] / df[x2]
-
-
-def calc_diff(df: pd.DataFrame, x1: str, x2: str) -> pd.Series:
-    return abs(df[x1] - df[x2])
 
 
 # VARIABLE BUILDING DICTIONARY
@@ -48,7 +13,6 @@ class OtherVar(TypedDict):
 
     var_args: List[str]
     tree: str
-    func: Callable
     cfunc: str
 
 
@@ -64,7 +28,6 @@ derived_vars: Dict[str, OtherVar] = {
             "met_phi",
         ],
         "tree": "nominal_Loose",
-        "func": calc_mt,
         "cfunc": "mt",
     },
     "mu_mt_reco": {
@@ -75,7 +38,6 @@ derived_vars: Dict[str, OtherVar] = {
             "met_phi",
         ],
         "tree": "nominal_Loose",
-        "func": calc_mt,
         "cfunc": "mt",
     },
     "mt_born": {  # boson mt
@@ -86,7 +48,6 @@ derived_vars: Dict[str, OtherVar] = {
             "MC_WZneutrino_phi_born",
         ],
         "tree": "truth",
-        "func": calc_mt,
         "cfunc": "mt",
     },
     "mt_bare": {  # boson mt
@@ -97,7 +58,6 @@ derived_vars: Dict[str, OtherVar] = {
             "MC_WZneutrino_phi_bare",
         ],
         "tree": "truth",
-        "func": calc_mt,
         "cfunc": "mt",
     },
     "mt_dres": {  # boson mt
@@ -108,7 +68,6 @@ derived_vars: Dict[str, OtherVar] = {
             "MC_WZneutrino_phi_dres",
         ],
         "tree": "truth",
-        "func": calc_mt,
         "cfunc": "mt",
     },
     "w_y": {  # boson rapidity
@@ -117,7 +76,6 @@ derived_vars: Dict[str, OtherVar] = {
             "PDFinfo_X2",
         ],
         "tree": "truth",
-        "func": calc_vy,
         "cfunc": "vy",
     },
     "z_y": {  # boson rapidity
@@ -126,7 +84,6 @@ derived_vars: Dict[str, OtherVar] = {
             "PDFinfo_X2",
         ],
         "tree": "truth",
-        "func": calc_vy,
         "cfunc": "vy",
     },
     "v_y": {  # boson rapidity
@@ -135,7 +92,6 @@ derived_vars: Dict[str, OtherVar] = {
             "PDFinfo_X2",
         ],
         "tree": "truth",
-        "func": calc_vy,
         "cfunc": "vy",
     },
     # DTA
@@ -147,7 +103,6 @@ derived_vars: Dict[str, OtherVar] = {
             "MET_phi",
         ],
         "tree": "",
-        "func": calc_mt,
         "cfunc": "mt",
     },
     "TruthMTW": {  # truth boson mt
@@ -158,7 +113,6 @@ derived_vars: Dict[str, OtherVar] = {
             "TruthNeutrinoPhi",
         ],
         "tree": "",
-        "func": calc_mt,
         "cfunc": "mt",
     },
     "Muon_delta_z0_sintheta": {
@@ -167,7 +121,6 @@ derived_vars: Dict[str, OtherVar] = {
             "MuonEta",
         ],
         "tree": "",
-        "func": calc_delta_z0_sintheta,
         "cfunc": "delta_z0_sintheta",
     },
     "Ele_delta_z0_sintheta": {
@@ -176,7 +129,6 @@ derived_vars: Dict[str, OtherVar] = {
             "EleEta",
         ],
         "tree": "",
-        "func": calc_delta_z0_sintheta,
         "cfunc": "delta_z0_sintheta",
     },
     "DilepM": {
@@ -185,7 +137,6 @@ derived_vars: Dict[str, OtherVar] = {
             "TruthNeutrinoE",
         ],
         "tree": "",
-        "func": calc_dilep_m,
         "cfunc": "dilep_m",
     },
     "DeltaR_tau_mu": {
@@ -196,7 +147,6 @@ derived_vars: Dict[str, OtherVar] = {
             "MuonPhi",
         ],
         "tree": "",
-        "func": calc_delta_r,
         "cfunc": "delta_r",
     },
     "DeltaR_tau_e": {
@@ -207,7 +157,6 @@ derived_vars: Dict[str, OtherVar] = {
             "ElePhi",
         ],
         "tree": "",
-        "func": calc_delta_r,
         "cfunc": "delta_r",
     },
     "DeltaR_e_mu": {
@@ -218,7 +167,6 @@ derived_vars: Dict[str, OtherVar] = {
             "TauPhi",
         ],
         "tree": "",
-        "func": calc_delta_r,
         "cfunc": "delta_r",
     },
     "TauPt_div_MET": {
@@ -227,7 +175,6 @@ derived_vars: Dict[str, OtherVar] = {
             "MET_met",
         },
         "tree": "",
-        "func": calc_div,
         "cfunc": "calc_div",
     },
     "DeltaPhi_tau_met": {
@@ -236,7 +183,22 @@ derived_vars: Dict[str, OtherVar] = {
             "MET_phi",
         },
         "tree": "",
-        "func": calc_diff,
+        "cfunc": "calc_absdiff",
+    },
+    "TauPt_res": {
+        "var_args": {
+            "MatchedTruthParticlePt",
+            "TauPt",
+        },
+        "tree": "",
+        "cfunc": "calc_frac",
+    },
+    "TauPt_diff": {
+        "var_args": {
+            "MatchedTruthParticlePt",
+            "TauPt",
+        },
+        "tree": "",
         "cfunc": "calc_diff",
     },
 }

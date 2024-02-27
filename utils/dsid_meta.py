@@ -211,14 +211,12 @@ class DatasetMetadata:
 
                     if dsid == 0:
                         self.logger.warning("Passed a '0' DSID for dataset %s", dataset_name)
-                        # workaround for broken wmunu samples and ignore data
+                        # workaround for broken wmunu samples
                         if "Sh_2211_Wmunu_mW_120_ECMS_BFilter" in str(file):
                             self.logger.warning(
                                 f"Working around broken DSID for file {file}, setting DSID to 700446"
                             )
                             dsid = 700446
-                        elif "is_data" in dataset_dict and dataset_dict["is_data"]:
-                            pass
                         else:
                             self.logger.error(
                                 f"Unknown DSID for file {file}, THIS WILL LEAD TO A BROKEN DATASET!!!"
@@ -231,12 +229,10 @@ class DatasetMetadata:
                         self._dsid_meta_dict[dsid].sumw += sumw
 
             self.dataset_dsids[dataset_name] = list(dsids)
-            if merge_dataset:
-                self.dataset_dsids[dataset_name] = list(dsids)
             self.logger.debug(
                 "Found the following dataset IDs for dataset '%s': %s", dataset_name, dsids
             )
-        
+
         if len(self._dsid_meta_dict) == 0:
             raise ValueError("No datasets found in passed files. Double check inputs.")
 

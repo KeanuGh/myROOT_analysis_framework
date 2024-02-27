@@ -69,6 +69,7 @@ class DatasetBuilder:
     dataset_type: str = "dta"
     is_MC: bool = True
     is_signal: bool = False
+    import_missing_columns_as_nan: bool = False
 
     def __post_init__(self):
         # argument checks
@@ -82,7 +83,7 @@ class DatasetBuilder:
                 self.ttree = {self.ttree}
         else:
             NotImplementedError("Only allow DTA outputs from now on")
-        
+
         if self.name == "data":
             self.is_MC = False
 
@@ -159,8 +160,8 @@ class DatasetBuilder:
         # BUILD
         # ===============================
         df = self.__build_dataframe_dta(
-            files=files, 
-            tree_dict=tree_dict, 
+            files=files,
+            tree_dict=tree_dict,
             vars_to_calc=vars_to_calc,
         )
 
@@ -235,7 +236,15 @@ class DatasetBuilder:
 
         # check columns exist in dataframe
         if missing_cols := (set(import_cols) - set(Rdf.GetColumnNames())):
-            raise ValueError("Missing column(s) in RDataFrame: \n\t" + "\n\t".join(missing_cols))
+            if self.import_missing_columns_as_nan:
+                self.logger.warning("Importing missing columns as NAN: %s", missing_cols)
+
+                for col in missing_cols:
+                    Rdf = Rdf.Define(col, "NAN")
+            else:
+                raise ValueError(
+                    "Missing column(s) in RDataFrame: \n\t" + "\n\t".join(missing_cols)
+                )
 
         # workaround for broken wmunu file (zero'd out dataset IDs)
         dsid = "(mcChannel == 0) ? 700446 : mcChannel"
@@ -243,16 +252,13 @@ class DatasetBuilder:
         # create weights
         self.logger.info(f"{self.lumi=}")
         if self.is_MC:
-            Rdf = (
-                Rdf.Define(
-                    "truth_weight",
-                    f"(mcWeight * rwCorr * {self.lumi} * prwWeight * dsid_pmgf[{dsid}]) "
-                    f"/ dsid_sumw[{dsid}]",
-                ).Define(
-                    "reco_weight",
-                    f"(weight * {self.lumi} * dsid_pmgf[{dsid}])"
-                    f"/ dsid_sumw[{dsid}]",
-                )
+            Rdf = Rdf.Define(
+                "truth_weight",
+                f"(mcWeight * rwCorr * {self.lumi} * prwWeight * dsid_pmgf[{dsid}]) "
+                f"/ dsid_sumw[{dsid}]",
+            ).Define(
+                "reco_weight",
+                f"(weight * {self.lumi} * dsid_pmgf[{dsid}])" f"/ dsid_sumw[{dsid}]",
             )
         else:
             # for consistency's sake
@@ -318,9 +324,28 @@ class DatasetBuilder:
                 self.logger.debug(f"calculating variable: {derived_var}")
                 function = derived_vars[derived_var]["cfunc"]
                 args = derived_vars[derived_var]["var_args"]
-                func_str = f"{function}({','.join(args)})"
 
-                Rdf = Rdf.Define(derived_var, func_str)
+                is_invalid = False
+                for arg in args:
+                    if arg not in Rdf.GetColumnNames():
+                        if self.import_missing_columns_as_nan:
+                            self.logger.warning(
+                                "NAN column '%s' passed as argument. "
+                                "Will fill derived column '%s' with NAN",
+                                arg,
+                                derived_var,
+                            )
+                            Rdf = Rdf.Define(derived_var, "NAN")
+                            is_invalid = True
+                            break
+                        else:
+                            raise ValueError(
+                                f"Missing argument column for '{derived_var}': '{arg}'"
+                            )
+
+                if not is_invalid:
+                    func_str = f"{function}({','.join(args)})"
+                    Rdf = Rdf.Define(derived_var, func_str)
 
         # apply any hard cuts
         if self.hard_cut:
@@ -359,7 +384,7 @@ class DatasetBuilder:
         """Return list of files from list of paths"""
         if isinstance(paths, (str, Path)):
             paths = [paths]
-        
+
         files = []
         for path in paths:
             f = glob.glob(str(path))
@@ -367,5 +392,5 @@ class DatasetBuilder:
                 self.logger.warning("Path passed with no files: %s", path)
 
             files += glob.glob(str(path))
-        
+
         return files

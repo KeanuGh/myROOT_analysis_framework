@@ -8,7 +8,7 @@ import numpy as np
 from src.analysis import Analysis
 from src.cutfile import Cut
 
-DTA_PATH = Path("/data/DTA_outputs/2024-02-05/")
+DTA_PATH = Path("/data/DTA_outputs/2024-02-22/")
 # DTA_PATH = Path("/eos/home-k/kghorban/DTA_OUT/2024-02-05/")
 CUTFILE_DIR = Path("/afs/cern.ch/user/k/kghorban/framework/options/DTA_cuts/reco")
 
@@ -20,6 +20,7 @@ if __name__ == "__main__":
             "data_path": DTA_PATH / "*data17*/*.root",
             "label": "data",
             "is_data": True,
+            "import_missing_columns_as_nan": True,
         },
         # SIGNAL
         # ====================================================================
@@ -130,7 +131,7 @@ if __name__ == "__main__":
     # ========================================================================
     pass_presel = Cut(
         r"Pass preselection",
-        r"(passReco == 1) & (TauBaselineWP == 1)",
+        r"(passReco == 1) && (TauBaselineWP == 1)",
     )
     pass_taupt170 = Cut(
         r"$p_T^\tau > 170$",
@@ -162,7 +163,8 @@ if __name__ == "__main__":
     )
     pass_truetau = Cut(
         r"True Tau",
-        r"TruthTau_isHadronic == 1",
+        # r"TruthTau_isHadronic == 1",
+        "MatchedTruthParticle_isHadronicTau == true"
         # r"!isnan(TruthTauPt) "
         # r"& (TruthTauPt > 170) "
         # r"& ((isnan(TruthTauEta) || (abs(TruthTauEta) < 1.37 || 1.52 < abs(TruthTauEta) < 2.47)))",
@@ -233,7 +235,7 @@ if __name__ == "__main__":
         ],
     }
 
-    wanted_branches = {
+    wanted_variables = {
         "TauEta",
         "TauPhi",
         "TauPt",
@@ -248,6 +250,9 @@ if __name__ == "__main__":
         "TruthTauEta",
         "TruthTauPhi",
         "TauNCoreTracks",
+        "TauPt_res",
+        "TauPt_diff",
+        "MatchedTruthParticlePt",
     }
     mc_samples = [
         "wtaunu",
@@ -264,19 +269,20 @@ if __name__ == "__main__":
     analysis = Analysis(
         datasets,
         year=2017,
-        # regen_histograms=True,
+        regen_histograms=True,
         # regen_metadata=True,
         ttree="T_s1thv_NOMINAL",
         cuts=selections,
         analysis_label="fakes_estimate",
         dataset_type="dta",
         log_level=10,
-        log_out="both",
-        extract_vars=wanted_branches,
+        log_out="console",
+        extract_vars=wanted_variables,
         binnings={
             "": {
                 "MTW": np.geomspace(150, 1000, 21),
                 "TauPt": np.geomspace(170, 1000, 21),
+                "MatchedTruthParticlePt": np.geomspace(170, 1000, 21),
                 "TauEta": np.linspace(-2.47, 2.47, 21),
                 "EleEta": np.linspace(-2.47, 2.47, 21),
                 "MuonEta": np.linspace(-2.5, 2.5, 21),
@@ -287,6 +293,8 @@ if __name__ == "__main__":
                 "TauBDTEleScore": np.linspace(0, 1, 51),
                 "TruthTauPt": np.geomspace(1, 1000, 21),
                 "TauNCoreTracks": np.linspace(0, 4, 5),
+                "TauPt_res": np.linspace(-1, 1, 51),
+                "TauPt_diff": np.linspace(-300, 300, 51),
             },
             "CR_failID": {
                 "MET_met": np.geomspace(1, 100, 51),
@@ -388,21 +396,79 @@ if __name__ == "__main__":
     # ========================================================================
     # truth taus for mental health
     default_args = {
-        "datasets": all_samples,
-        "title": f"TRUTH | data17(?) | mc16d | {analysis.global_lumi / 1000:.3g}" + r"fb$^{-1}$",
+        "datasets": mc_samples,
+        "title": f"Truth Taus | mc16d | {analysis.global_lumi / 1000:.3g}" + r"fb$^{-1}$",
         "yerr": True,
         "cut": False,
         "ratio_plot": False,
         "stats_box": False,
     }
+    analysis.plot_hist(var="MatchedTruthParticlePt", **default_args, logx=True)
     analysis.plot_hist(var="TruthTauPt", **default_args, logx=True)
     analysis.plot_hist(var="TruthTauEta", **default_args)
     analysis.plot_hist(var="TruthTauPhi", **default_args)
 
-    default_args["cut"] = "SR_failID_trueTau"
+    default_args["cut"] = "SR_passID_trueTau"
+    analysis.plot_hist(var="MatchedTruthParticlePt", **default_args, logx=True)
     analysis.plot_hist(var="TruthTauPt", **default_args, logx=True)
     analysis.plot_hist(var="TruthTauEta", **default_args)
     analysis.plot_hist(var="TruthTauPhi", **default_args)
+
+    # tau pt resolution
+    analysis.plot_hist(
+        var="TauPt_res",
+        datasets="wtaunu",
+        xlabel=r"$(p_T^\mathrm{true} - p_T^\mathrm{reco}) / p_T^\mathrm{true}$",
+        title=r"Tau $p_T$ resolution in $W\rightarrow\tau\nu$ | mc16d | "
+        + f"{analysis.global_lumi / 1000:.3g}"
+        + r"fb$^{-1}$",
+        filename="wtaunu_taupt_resolution.png",
+        logy=False,
+    )
+    analysis.plot_hist(
+        var="TauPt_diff",
+        datasets="wtaunu",
+        xlabel=r"$p_T^\mathrm{true} - p_T^\mathrm{reco}$ [GeV]",
+        title=r"Tau $p_T$ resolution in $W\rightarrow\tau\nu$ | mc16d | "
+        + f"{analysis.global_lumi / 1000:.3g}"
+        + r"fb$^{-1}$",
+        filename="wtaunu_taupt_truthrecodiff.png",
+        logy=False,
+    )
+    analysis.plot_hist(
+        var=[
+            "TauPt_res_SR_passID_trueTau_cut",
+            "TauPt_res_SR_failID_trueTau_cut",
+            "TauPt_res_CR_passID_trueTau_cut",
+            "TauPt_res_CR_failID_trueTau_cut",
+        ],
+        datasets="wtaunu",
+        labels=["SR_passID", "SR_failID", "CR_passID", "CR_failID"],
+        xlabel=r"$(p_T^\mathrm{true} - p_T^\mathrm{reco}) / p_T^\mathrm{true}$",
+        title=r"Tau $p_T$ resolution in $W\rightarrow\tau\nu$ | mc16d | "
+        + f"{analysis.global_lumi / 1000:.3g}"
+        + r"fb$^{-1}$",
+        ratio_plot=False,
+        filename="wtaunu_taupt_resolution_selections.png",
+        logy=False,
+    )
+    analysis.plot_hist(
+        var=[
+            "TauPt_diff_SR_passID_trueTau_cut",
+            "TauPt_diff_SR_failID_trueTau_cut",
+            "TauPt_diff_CR_passID_trueTau_cut",
+            "TauPt_diff_CR_failID_trueTau_cut",
+        ],
+        datasets="wtaunu",
+        labels=["SR_passID", "SR_failID", "CR_passID", "CR_failID"],
+        xlabel=r"$p_T^\mathrm{true} - p_T^\mathrm{reco}$ [GeV]",
+        title=r"Tau $p_T$ resolution in $W\rightarrow\tau\nu$ | mc16d | "
+        + f"{analysis.global_lumi / 1000:.3g}"
+        + r"fb$^{-1}$",
+        ratio_plot=False,
+        filename="wtaunu_taupt_truthrecodiff_selections.png",
+        logy=False,
+    )
 
     # No fakes scaling
     # ----------------------------------------------------------------------------
@@ -410,7 +476,7 @@ if __name__ == "__main__":
         "datasets": all_samples,
         "title": f"data17 | mc16d | {analysis.global_lumi / 1000:.3g}" + r"fb$^{-1}$",
         "yerr": True,
-        "cut": True,
+        "cut": ["SR_passID", "SR_failID", "CR_passID", "CR_failID"],
         "ratio_plot": True,
         # "ratio_axlim": (0, 2),
     }
@@ -439,7 +505,12 @@ if __name__ == "__main__":
 
     # Fake factors
     # ----------------------------------------------------------------------------
-    default_args = {"yerr": False, "cut": False, "logy": False, "ylabel": "Fake factor"}
+    default_args = {
+        "yerr": False,
+        "cut": False,
+        "logy": False,
+        "ylabel": "Fake factor",
+    }
     analysis.plot_hist(
         var="TauPt_FF",
         logx=True,

@@ -113,7 +113,16 @@ double calc_div(double x1, double x2) {
 }
 
 double calc_diff(double x1, double x2) {
+    return x1 - x2;
+}
+
+double calc_absdiff(double x1, double x2) {
     return std::abs(x1 - x2);
+}
+
+double calc_frac(double x1, double x2) {
+	if ((x1 == NAN) || (x2 == NAN)) return NAN;
+	else return (x1 - x2) / x1;
 }
 
 #endif
