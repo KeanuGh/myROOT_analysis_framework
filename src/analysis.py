@@ -213,12 +213,14 @@ class Analysis:
             dataset = builder.build(**self.__match_params(args, DatasetBuilder.build))
 
             # apply some manual settings
-            if "binnings" in args:
-                dataset.binnings = args["binnings"]
-            if "is_data" in args:
-                dataset.is_data = args["is_data"]
-            if "is_signal" in args:
-                dataset.is_signal = args["is_signal"]
+            for manual_setting in [
+                "binnings",
+                "profiles",
+                "is_data",
+                "is_signal",
+            ]:
+                if manual_setting in args:
+                    dataset.__setattr__(manual_setting, args[manual_setting])
 
             if separate_loggers:
                 # set new logger to append to analysis logger
@@ -306,11 +308,6 @@ class Analysis:
                 else:
                     self[merged_ds].cutflows = deepcopy(dataset.cutflows)
 
-            try:
-                dataset.dsid_metadata_printout()
-            except NotImplementedError:
-                pass
-
             self[dataset_name] = dataset  # save to analysis
 
             self.logger.info("=" * (42 + len(dataset_name)))
@@ -374,7 +371,6 @@ class Analysis:
         xlabel: str = "",
         ylabel: str = "",
         title: str = "",
-        lepton: str = "lepton",
         scale_by_bin_width: bool = False,
         stats_box: bool = False,
         x_axlim: tuple[float, float] | None = None,
@@ -416,7 +412,6 @@ class Analysis:
         :param xlabel: x label
         :param ylabel: y label
         :param title: plot title
-        :param lepton: lepton to fill variable label
         :param scale_by_bin_width: divide histogram bin values by bin width
         :param stats_box: display stats box
         :param x_axlim: x-axis limits. If None matplolib decides
@@ -595,7 +590,6 @@ class Analysis:
             plotting_tools.set_axis_options(
                 axis=ax,
                 var_name=var,
-                lepton=lepton,
                 xlim=(hist.bin_edges[0], hist.bin_edges[-1]),
                 xlabel=xlabel,
                 ylabel=ylabel,
@@ -622,7 +616,6 @@ class Analysis:
                 plotting_tools.set_axis_options(
                     axis=ratio_ax,
                     var_name=var,
-                    lepton=lepton,
                     xlim=(ratio_hist.bin_edges[0], ratio_hist.bin_edges[-1]),
                     xlabel=xlabel,
                     ylabel=ratio_label,

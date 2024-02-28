@@ -43,7 +43,6 @@ class DatasetBuilder:
     :param year: data year for luminosty mapping
     :param lumi: data luminosity. Pass either this or year
     :param label: Label to put on plots
-    :param lepton: Name of charged DY lepton channel in dataset (if applicable)
     :param logger: logger to write to. Defaults to console output at DEBUG-level
     :param hard_cut: string representing a cut that should be applied to dataframe immediately (eg. "TauPt > 20")
     :param force_rebuild: whether to force build of DataFrame
@@ -63,7 +62,6 @@ class DatasetBuilder:
     year: int = 2017
     lumi: float = 139.0
     label: str = "data"
-    lepton: str = "lepton"
     logger: logging.Logger = field(default_factory=get_logger)
     hard_cut: str = ""
     dataset_type: str = "dta"
@@ -175,7 +173,6 @@ class DatasetBuilder:
             logger=self.logger,
             lumi=self.lumi,
             label=self.label,
-            lepton=self.lepton,
             is_signal=self.is_signal,
         )
 

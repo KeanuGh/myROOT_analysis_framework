@@ -17,7 +17,7 @@ from src.cutfile import Cut
 from src.cutflow import RCutflow
 from src.histogram import Histogram1D
 from src.logger import get_logger
-from utils import plotting_tools, ROOT_utils
+from utils import plotting_tools
 from utils.variable_names import variable_data, VarTag
 
 
@@ -28,14 +28,14 @@ class Dataset(ABC):
     cuts: dict[str, list[Cut]] = field(default_factory=list)
     all_vars: set[str] = field(default_factory=set)
     cutflows: dict[str, RCutflow] = None
+    profiles: dict[str, tuple[str, str]] = field(default_factory=dict)
     lumi: float = 139.0
     label: str = "data"
     logger: logging.Logger = field(default_factory=get_logger)
-    lepton: str = "lepton"
     file: Path = field(init=False)
-    histograms: OrderedDict[str, ROOT.TH1] = field(init=False, default_factory=OrderedDict)
+    histograms: dict[str, ROOT.TH1 | ROOT.TProfile] = field(init=False, default_factory=dict)
     do_fakes: bool = False
-    binnings: dict[dict[str, list[float]]] = field(default_factory=dict)
+    binnings: dict[str, dict[str, list[float]]] = field(default_factory=dict)
     colour: str | tuple = field(default_factory=str)
     is_merged: bool = False
     is_signal: bool = False
@@ -121,10 +121,6 @@ class Dataset(ABC):
         else:
             raise AttributeError("Must have applied cuts to obtain cutflow")
 
-    @abstractmethod
-    def dsid_metadata_printout(self, truth: bool = True, reco: bool = False) -> None:
-        ...
-
     # ===========================================
     # =========== PLOTING FUNCTIONS =============
     # ===========================================
@@ -172,6 +168,7 @@ class Dataset(ABC):
         self,
         to_file: bool | str | Path = True,
     ) -> OrderedDict[str, ROOT.TH1]:
+        """Generate histograms for all variables and cuts."""
         ...
 
     def export_histograms(
@@ -183,7 +180,7 @@ class Dataset(ABC):
         """Save histograms in histogram dictionary to ROOT file containing TH1 objects"""
         if filepath is None:
             filepath = self.name + "_histograms.root"
-        with ROOT_utils.ROOT_TFile_mgr(filepath, tfile_option) as file:
+        with ROOT.TFile(str(filepath), tfile_option) as file:
             for name, hist in self.histograms.items():
                 file.WriteObject(
                     hist.TH1 if isinstance(hist, Histogram1D) else hist, name, write_option
@@ -194,10 +191,11 @@ class Dataset(ABC):
         """Import histograms from root file into histogram dictionary"""
         histograms: OrderedDict[str, ROOT.TH1] = OrderedDict()
 
-        with ROOT_utils.ROOT_TFile_mgr(in_file, "read") as file:
+        with ROOT.TFile(str(in_file), "read") as file:
             for obj in file.GetListOfKeys():
-                if "TH1" not in (obj_class := obj.GetClassName()):
-                    self.logger.warning(f"Non-TH1 Object {obj_class} found in file")
+                obj_class = obj.GetClassName()
+                if ("TH1" not in obj_class) and ("Profile" not in obj_class):
+                    self.logger.warning(f"Non-TH1 or Profile Object {obj_class} found in file")
                     continue
 
                 th1 = obj.ReadObj()
@@ -218,7 +216,6 @@ class RDataset(Dataset):
     :param lumi: Dataset Luminosity
     :param label: Label to put on plots
     :param logger: Logger object to print to. Defaults to console output at DEBUG-level
-    :param lepton: Name of charged DY lepton channel in dataset (if applicable)
     :param plot_dir: directory to save plots to. Defaults to current directory
     :param binnings: dict of variable name : list of bin edges to use for given variables
     """
@@ -313,13 +310,9 @@ class RDataset(Dataset):
         if not path:
             path = Path(self.file)
         self.logger.info("Saving to ROOT file...")
-        with ROOT_utils.ROOT_TFile_mgr(path, tfile_option):
+        with ROOT.TFile(path, tfile_option):
             self.df.Snapshot(ttree, path, tfile_option)
         self.logger.info(f"Saved to {path}")
-
-    def dsid_metadata_printout(self, truth: bool = True, reco: bool = False) -> None:
-        # TODO
-        raise NotImplementedError()
 
     # ===============================
     # ========== CUTTING ============
@@ -426,7 +419,7 @@ class RDataset(Dataset):
     def gen_histograms(
         self,
         to_file: bool | str | Path = True,
-    ) -> OrderedDict[str, ROOT.TH1]:
+    ) -> dict[str, ROOT.TH1]:
         """Generate histograms for all variables and cuts."""
 
         output_histogram_variables = self.all_vars
@@ -445,6 +438,11 @@ class RDataset(Dataset):
         # to contain smart pointers to TH1s
         th1_histograms: dict[str, ROOT.RResultsPtr] = dict()
 
+        # # histogram weights
+        # for weight_str in ["truth_weight", "reco_weight"]:
+        #     wgt_th1 = ROOT.TH1F(weight_str, weight_str, 100, -1000, 1000)
+        #     th1_histograms[weight_str] = self.df.Fill(wgt_th1, [weight_str])
+
         def match_weight(var) -> str:
             match variable_data[var]:
                 case {"tag": VarTag.TRUTH}:
@@ -456,17 +454,10 @@ class RDataset(Dataset):
                 case _:
                     raise ValueError(f"Unknown variable tag for variable {var}")
 
-        # # histogram weights
-        # for weight_str in ["truth_weight", "reco_weight"]:
-        #     wgt_th1 = ROOT.TH1F(weight_str, weight_str, 100, -1000, 1000)
-        #     th1_histograms[weight_str] = self.df.Fill(wgt_th1, [weight_str])
-
+        # build histograms
         for variable_name in output_histogram_variables:
             # which binning?
-            if variable_name in self.binnings[""]:
-                bin_args = {"bins": self.binnings[""][variable_name]}
-            else:
-                bin_args = self.match_bin_args(variable_name)
+            bin_args = self.__get_binnings(variable_name)
             weight = match_weight(variable_name)
             fill_cols = [variable_name, weight] if weight else [variable_name]
 
@@ -482,13 +473,7 @@ class RDataset(Dataset):
 
             for cutflow_name, filtered_df in self.filtered_df.items():
                 # which binning?
-                if cutflow_name in self.binnings and variable_name in self.binnings[cutflow_name]:
-                    bin_args = {"bins": self.binnings[cutflow_name][variable_name]}
-                elif variable_name in self.binnings[""]:
-                    bin_args = {"bins": self.binnings[""][variable_name]}
-                else:
-                    bin_args = self.match_bin_args(variable_name)
-
+                bin_args = self.__get_binnings(variable_name, cutflow_name)
                 cut_hist_name = (
                     variable_name + (("_" + cutflow_name) if cutflow_name else "") + "_cut"
                 )
@@ -498,6 +483,40 @@ class RDataset(Dataset):
                     *plotting_tools.get_TH1_bins(**bin_args),
                 )
                 th1_histograms[cut_hist_name] = filtered_df.Fill(cut_th1, fill_cols)
+
+        # build profiles
+        if self.profiles:
+            for profile_name, var_names in self.profiles.items():
+                binning_var = var_names[0]
+                bin_args = self.__get_binnings(binning_var)
+                weight = match_weight(binning_var)
+                th1_histograms[profile_name + "_PROFILE"] = self.df.Profile1D(
+                    ROOT.RDF.TProfile1DModel(
+                        profile_name + "_PROFILE",
+                        profile_name + "_PROFILE",
+                        *plotting_tools.get_TH1_bins(**bin_args),
+                    ),
+                    *var_names,
+                    weight,
+                )
+
+                for cutflow_name, filtered_df in self.filtered_df.items():
+                    # which binning?
+                    bin_args = self.__get_binnings(binning_var, cutflow_name)
+                    cut_profile_name = (
+                        profile_name
+                        + (("_" + cutflow_name) if cutflow_name else "")
+                        + "_cut_PROFILE"
+                    )
+                    th1_histograms[cut_profile_name] = filtered_df.Profile1D(
+                        ROOT.RDF.TProfile1DModel(
+                            cut_profile_name,
+                            cut_profile_name,
+                            *plotting_tools.get_TH1_bins(**bin_args),
+                        ),
+                        *var_names,
+                        weight,
+                    )
 
         # generate histograms
         t = time.time()
@@ -524,3 +543,19 @@ class RDataset(Dataset):
             self.export_histograms(filepath=to_file)
 
         return self.histograms
+
+    def __get_binnings(self, variable_name: str, selection: str | None = None) -> dict:
+        """Get correct binnings for variable"""
+
+        if (
+            (selection is not None)
+            and (selection in self.binnings)
+            and (variable_name in self.binnings[selection])
+        ):
+            bin_args = {"bins": self.binnings[selection][variable_name]}
+        elif variable_name in self.binnings[""]:
+            bin_args = {"bins": self.binnings[""][variable_name]}
+        else:
+            bin_args = self.match_bin_args(variable_name)
+
+        return bin_args

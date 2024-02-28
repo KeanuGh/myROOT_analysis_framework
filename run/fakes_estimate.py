@@ -228,7 +228,7 @@ if __name__ == "__main__":
         "CR_failID_trueTau": [
             pass_presel,
             pass_taupt170,
-            pass_mtw150,
+            # pass_mtw150,
             fail_loose,
             pass_100met,
             pass_truetau,
@@ -269,7 +269,7 @@ if __name__ == "__main__":
     analysis = Analysis(
         datasets,
         year=2017,
-        regen_histograms=True,
+        # regen_histograms=True,
         # regen_metadata=True,
         ttree="T_s1thv_NOMINAL",
         cuts=selections,
@@ -278,6 +278,11 @@ if __name__ == "__main__":
         log_level=10,
         log_out="console",
         extract_vars=wanted_variables,
+        profiles={
+            "MTW_TauPt_res": ("MTW", "TauPt_res"),
+            "TauEta_TauPt_res": ("TauEta", "TauPt_res"),
+            "TauPt_TauPt_res": ("TauPt", "TauPt_res"),
+        },
         binnings={
             "": {
                 "MTW": np.geomspace(150, 1000, 21),
@@ -436,6 +441,18 @@ if __name__ == "__main__":
         logy=False,
     )
     analysis.plot_hist(
+        var="MTW_TauPt_res_SR_passID_cut_PROFILE",
+        datasets="wtaunu",
+        ylabel=r"Mean $(p_T^\mathrm{true} - p_T^\mathrm{reco}) / p_T^\mathrm{true}$",
+        xlabel=r"$m_W^T$ [GeV]",
+        title=r"Tau $p_T$ resolution in $W\rightarrow\tau\nu$ | mc16d | "
+        + f"{analysis.global_lumi / 1000:.3g}"
+        + r"fb$^{-1}$",
+        y_axlim=(-1, 1),
+        filename="wtaunu_mtw_taupt_profile.png",
+        logy=False,
+    )
+    analysis.plot_hist(
         var=[
             "TauPt_res_SR_passID_trueTau_cut",
             "TauPt_res_SR_failID_trueTau_cut",
@@ -467,6 +484,25 @@ if __name__ == "__main__":
         + r"fb$^{-1}$",
         ratio_plot=False,
         filename="wtaunu_taupt_truthrecodiff_selections.png",
+        logy=False,
+    )
+    analysis.plot_hist(
+        var=[
+            "MTW_TauPt_res_SR_passID_trueTau_cut_PROFILE",
+            "MTW_TauPt_res_SR_failID_trueTau_cut_PROFILE",
+            "MTW_TauPt_res_CR_passID_trueTau_cut_PROFILE",
+            "MTW_TauPt_res_CR_failID_trueTau_cut_PROFILE",
+        ],
+        datasets="wtaunu",
+        labels=["SR_passID", "SR_failID", "CR_passID", "CR_failID"],
+        ylabel=r"Mean $(p_T^\mathrm{true} - p_T^\mathrm{reco}) / p_T^\mathrm{true}$",
+        xlabel=r"$m_W^T$ [GeV]",
+        title=r"Tau $p_T$ resolution in $W\rightarrow\tau\nu$ | mc16d | "
+        + f"{analysis.global_lumi / 1000:.3g}"
+        + r"fb$^{-1}$",
+        y_axlim=(-1, 1),
+        ratio_plot=False,
+        filename="wtaunu_mtw_taupt_profile_selections.png",
         logy=False,
     )
 
