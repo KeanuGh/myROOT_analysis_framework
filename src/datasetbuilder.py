@@ -1,4 +1,3 @@
-import glob
 import logging
 import re
 import time
@@ -12,7 +11,7 @@ import pandas as pd  # type: ignore
 from src.cutfile import Cut
 from src.dataset import RDataset
 from src.logger import get_logger
-from utils import ROOT_utils
+from utils import ROOT_utils, file_utils
 from utils.var_helpers import derived_vars
 from utils.variable_names import variable_data
 
@@ -103,14 +102,13 @@ class DatasetBuilder:
 
         :param data_path: Path to ROOT file(s) must be passed if not providing a pickle file
         :param cuts: list of Cut objects if cuts are to be applied but no cutfile is given
-        :param metadata: DatasetMetadata object containg info about DSIDs
         :param extract_vars: set of branches to extract if cutfile is not given
         :return: full built Dataset object
         """
 
         # PRE-PROCESSING
         # ===============================
-        files = self._multi_glob(data_path)
+        files = file_utils.multi_glob(data_path)
         if len(files) == 0:
             raise FileExistsError(f"No files found in {str(data_path)}!")
         else:
@@ -183,9 +181,9 @@ class DatasetBuilder:
     # ===============================
     def __check_axis_labels(self, tree_dict: dict[str, set[str]], calc_vars: set[str]) -> None:
         """Check whether variables exist in"""
-        vars = {var for var_set in tree_dict.values() for var in var_set} | calc_vars
+        vars_ = {var for var_set in tree_dict.values() for var in var_set} | calc_vars
         if unexpected_vars := [
-            unexpected_var for unexpected_var in vars if unexpected_var not in variable_data
+            unexpected_var for unexpected_var in vars_ if unexpected_var not in variable_data
         ]:
             self.logger.warning(
                 f"Variable(s) {unexpected_vars} not contained in labels dictionary. "
@@ -195,7 +193,6 @@ class DatasetBuilder:
     # ===============================
     # ===== DATAFRAME FUNCTIONS =====
     # ==============================
-
     def __build_dataframe_dta(
         self,
         files: list[str] | list[Path],
@@ -376,18 +373,3 @@ class DatasetBuilder:
             tree_dict[tree] |= necc_vars
         self.logger.debug(f"Added {necc_vars} to DTA import")
         return tree_dict
-
-    def _multi_glob(self, paths: Path | list[Path] | str | list[str]) -> list[str]:
-        """Return list of files from list of paths"""
-        if isinstance(paths, (str, Path)):
-            paths = [paths]
-
-        files = []
-        for path in paths:
-            f = glob.glob(str(path))
-            if not f:
-                self.logger.warning("Path passed with no files: %s", path)
-
-            files += glob.glob(str(path))
-
-        return files

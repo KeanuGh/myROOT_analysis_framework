@@ -158,7 +158,7 @@ class DatasetMetadata:
         data_samples: set[int] = set()
         for dataset_name, dataset_dict in datasets.items():
             files = multi_glob(dataset_dict["data_path"])
-            ttree_name = dataset_dict["ttree"] if "tree" in dataset_dict else ttree
+            ttree_name = dataset_dict["ttree"] if "ttree" in dataset_dict else ttree
             all_files |= set(files)
             dsids: set[int] = set()
             merge_dataset = ""

@@ -121,8 +121,7 @@ double calc_absdiff(double x1, double x2) {
 }
 
 double calc_frac(double x1, double x2) {
-	if ((x1 == NAN) || (x2 == NAN)) return NAN;
-	else return (x1 - x2) / x1;
+	return (x1 - x2) / x1;
 }
 
 #endif

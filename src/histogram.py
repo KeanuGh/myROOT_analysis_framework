@@ -15,7 +15,7 @@ from matplotlib.offsetbox import AnchoredText
 from numpy.typing import ArrayLike
 
 from src.logger import get_logger
-from utils.AtlasStyle import set_atlas_style
+from utils.AtlasUtils import set_atlas_style
 from utils.ROOT_utils import load_ROOT_settings
 from utils.context import redirect_stdout
 from utils.plotting_tools import get_TH1_bins

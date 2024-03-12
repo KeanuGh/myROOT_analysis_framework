@@ -195,7 +195,7 @@ class Dataset(ABC):
             for obj in file.GetListOfKeys():
                 obj_class = obj.GetClassName()
                 if ("TH1" not in obj_class) and ("Profile" not in obj_class):
-                    self.logger.warning(f"Non-TH1 or Profile Object {obj_class} found in file")
+                    self.logger.warning(f"Non-TH1 object {obj_class} found in file")
                     continue
 
                 th1 = obj.ReadObj()
@@ -234,9 +234,8 @@ class RDataset(Dataset):
                 return string.replace("\\", "\\\\")
 
             # find the minimum shared cuts between each cutflow in order to avoid having to repeat computations
-            if len(self.cuts) == 1:
-                n_shared_cuts = 0
-            else:
+            n_shared_cuts = 0
+            if len(self.cuts) > 1:
                 max_shared_cuts = min(len(cuts) for cuts in self.cuts.values())
                 for i in range(max_shared_cuts):
                     first_element = self.cuts[list(self.cuts.keys())[0]][i]
@@ -416,10 +415,7 @@ class RDataset(Dataset):
 
         return hist
 
-    def gen_histograms(
-        self,
-        to_file: bool | str | Path = True,
-    ) -> dict[str, ROOT.TH1]:
+    def gen_histograms(self, to_file: bool | str | Path = True) -> dict[str, ROOT.TH1]:
         """Generate histograms for all variables and cuts."""
 
         output_histogram_variables = self.all_vars
@@ -444,6 +440,7 @@ class RDataset(Dataset):
         #     th1_histograms[weight_str] = self.df.Fill(wgt_th1, [weight_str])
 
         def match_weight(var) -> str:
+            """match variable to weight"""
             match variable_data[var]:
                 case {"tag": VarTag.TRUTH}:
                     return "truth_weight"

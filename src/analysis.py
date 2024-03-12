@@ -2,6 +2,7 @@ import inspect
 from copy import deepcopy
 from dataclasses import dataclass
 from functools import reduce
+from itertools import islice
 from pathlib import Path
 from typing import Callable, Any, Sequence, Generator
 
@@ -14,11 +15,11 @@ from tabulate import tabulate
 
 from src.dataset import Dataset, RDataset
 from src.datasetbuilder import DatasetBuilder, lumi_year
+from src.dsid_meta import DatasetMetadata
 from src.histogram import Histogram1D
 from src.logger import get_logger
 from utils import plotting_tools
 from utils.context import handle_dataset_arg, redirect_stdout
-from utils.dsid_meta import DatasetMetadata
 
 
 @dataclass(slots=True)
@@ -358,14 +359,13 @@ class Analysis:
     # ===============================
     # =========== PLOTS =============
     # ===============================
-    def plot_hist(
+    def plot(
         self,
         var: str | Histogram1D | Sequence[str | Histogram1D],
-        datasets: str | Sequence[str] | None = None,
-        yerr: ArrayLike | str = True,
+        datasets: str | Sequence[str | None] | None = None,
         labels: list[str] | None = None,
-        w2: bool = False,
-        normalise: float | bool = False,
+        colours: list[str] | None = None,
+        yerr: ArrayLike | str = True,
         logx: bool = False,
         logy: bool = True,
         xlabel: str = "",
@@ -375,7 +375,6 @@ class Analysis:
         stats_box: bool = False,
         x_axlim: tuple[float, float] | None = None,
         y_axlim: tuple[float, float] | None = None,
-        gridopts: bool | tuple[bool | None, str | None, str | None] = False,
         ratio_plot: bool = True,
         ratio_fit: bool = False,
         ratio_axlim: float | tuple[float, float] | None = None,
@@ -383,6 +382,7 @@ class Analysis:
         ratio_err: str = "sumw2",
         filename: str | Path | None = None,
         cut: bool | str | Sequence[str] = False,
+        kind: str = "overlay",
         suffix: str = "",
         prefix: str = "",
         **kwargs,
@@ -395,18 +395,13 @@ class Analysis:
         :param datasets: string or list of strings corresponding to datasets in the analysis
         :param var: variable name to be plotted. Either a string that exists in all datasets
                     or a list one for each dataset, or histograms themselves
+        :param labels: list of labels for plot legend corresponding to each line
+        :param colours: list of colours for histograms
         :param yerr: Histogram uncertainties. Following modes are supported:
                      - 'rsumw2', sqrt(SumW2) errors
                      - 'sqrtN', sqrt(N) errors or poissonian interval when w2 is specified
                      - shape(N) array of for one-sided errors or list thereof
                      - shape(Nx2) array of for two-sided errors or list thereof
-        :param labels: list of labels for plot legend corresponding to each dataset
-        :param w2: Whether to do a poissonian interval error calculation based on weights
-        :param normalise: Normalisation value:
-                          - int or float
-                          - True for normalisation of unity
-                          - 'lumi' (default) for normalisation to global_uni variable in analysis
-                          - False for no normalisation
         :param logx: whether log scale x-axis
         :param logy: whether log scale y-axis
         :param xlabel: x label
@@ -416,7 +411,6 @@ class Analysis:
         :param stats_box: display stats box
         :param x_axlim: x-axis limits. If None matplolib decides
         :param y_axlim: x-axis limits. If None matplolib decides
-        :param gridopts: arguments to pass to plt.grid()
         :param ratio_plot: If True, adds ratio of the first plot with each subseqent plot below
         :param ratio_fit: If True, fits ratio plot to a 0-degree polynomial and display line, chi-square and p-value
         :param ratio_axlim: pass to yax_lim in rato plotter
@@ -424,322 +418,53 @@ class Analysis:
         :param ratio_err: yerr for ratio plot. Either "sumw2", "binom", or "carry"
         :param filename: name of output
         :param cut: applies cuts before plotting
+        :param kind: "overlay" for overlays of line histograms, "stack" for stacks
         :param suffix: suffix to add at end of histogram/file name
         :param prefix: prefix to add at start of histogram/file
         :param kwargs: keyword arguments to pass to mplhep.histplot()
         """
-        _passed_hists = False
 
-        # naming template for file/histogram name
-        name_template = (
-            ((prefix + "_") if prefix else "")  # prefix
-            + "{short}"
-            + ("_NORMED" if normalise else "")  # normalisation flag
-            + (("_" + suffix) if suffix else "")  # suffix
-        )
-        name_template_short = "{dataset}_{variable}"  # name of dataset(s)  # name of variable(s)
+        # check options
+        if kind not in {"stack", "overlay"}:
+            raise ValueError("Histogram types are either either 'stack' or 'overlay'.")
+        do_stack = True if kind == "stack" else False
 
-        if datasets and isinstance(datasets, str):
-            datasets = [datasets]
-        if isinstance(labels, str):
-            labels = [labels]
-        if isinstance(var, (str, Histogram1D)):
+        # normalise inputs that could be single strings
+        if not isinstance(var, (list, tuple)):
             var = [var]
+        if not isinstance(datasets, (list, tuple)):
+            datasets = [datasets]
 
-        # handle how cuts are going to be done
+        # check length of per-histogram inputs
+        opt_lens = [
+            len(opt) for opt in [var, datasets, labels, colours] if opt is not None and len(opt) > 1
+        ]
+        if len(set(opt_lens)) > 1:
+            raise ValueError(
+                f"Lengths for options passed per histogram must all be of the same length if not None. Got:\n"
+                + f"var: {len(var)}\n"
+                + (f"datasets: {len(datasets)}\n" if datasets else "")
+                + (f"labels: {len(labels)}\n" if labels else "")
+                + (f"colours: {len(colours)}\n" if colours else "")
+            )
+
+        # handle how many plots there are actually going to be
         if cut is False or cut is None:
-            cutsets_to_loop: list[str | None] = [None]
+            selections_to_loop: list[str | None] = [None]
         elif cut is True:
             # separate plot for EACH set of cuts
-            if datasets and len(datasets) > 1:
+            if len(datasets) > 1:
                 # check that all datasets to be plot have the same sets of cuts
                 first_cutflow = self[datasets[0]].cuts.keys()
                 if not all(ds.cuts.keys() == first_cutflow for ds in self.datasets.values()):
                     raise ValueError("Datasets do not have the same cuts")
-            cutsets_to_loop = list(self[datasets[0]].cuts.keys())
+            selections_to_loop = list(self[datasets[0]].cuts.keys())
         elif isinstance(cut, str):
-            cutsets_to_loop = [cut]
+            selections_to_loop = [cut]
         elif isinstance(cut, list):
-            cutsets_to_loop = cut
+            selections_to_loop = cut
         else:
-            raise ValueError(f"Unknown cut {cut}")
-
-        # figure out if we should loop over datasets or variables or both
-        varloop = False
-        datasetloop = False
-        if datasets is None:
-            varloop = True
-            n_overlays = len(var)
-        elif len(datasets) > 1:
-            if (len(datasets) != len(var)) and (len(var) > 1):
-                raise ValueError(
-                    "Number of datasets and variables must match if passing multiple variables."
-                )
-            datasetloop = True
-            if len(var) > 1:
-                varloop = True
-            n_overlays = len(datasets)
-        elif len(var) > 1:
-            n_overlays = len(var)
-            varloop = True
-        else:
-            n_overlays = 1
-
-        if n_overlays == 0:
-            raise ValueError("This should never happen. Congrats!")
-
-        # no ratio if just one thing being plotted
-        if n_overlays == 1:
-            ratio_plot = False
-
-        if isinstance(normalise, str):
-            if normalise == "lumi":
-                normalise = self.global_lumi
-            else:
-                raise ValueError("Only 'lumi' allowed for string value normalisation")
-
-        if n_overlays > 2:
-            self.logger.warning("Not enough space to display stats box. Will not display")
-            stats_box = False
-
-        if labels:
-            assert len(labels) == n_overlays, (
-                f"Labels iterable (length: {len(labels)}) "
-                f"must be of same length as number of overlaid plots ({n_overlays})"
-            )
-
-        # plot for each cut
-        for selection in cutsets_to_loop:
-            if ratio_plot:
-                fig, (ax, ratio_ax) = plt.subplots(2, 1, gridspec_kw={"height_ratios": [3, 1]})
-            else:
-                fig, ax = plt.subplots()
-                ratio_ax = None  # just so IDE doesn't complain about missing variable
-
-            # plotting loop
-            hists = []  # add histograms to be overlaid in this list
-            for i in range(n_overlays):
-                if datasets:
-                    dataset = datasets[i] if datasetloop else datasets[0]
-                else:
-                    dataset = None
-                varname = var[i] if varloop else var[0]
-
-                try:
-                    label = labels[i] if labels else self[dataset].label
-                except KeyError:
-                    label = None
-
-                # plot
-                if isinstance(varname, Histogram1D):
-                    hist = varname
-                    _passed_hists = True
-                else:
-                    hist = self.get_hist(varname, dataset, selection)
-                hist.plot(
-                    ax=ax,
-                    yerr=yerr,
-                    normalise=normalise,
-                    stats_box=stats_box,
-                    scale_by_bin_width=scale_by_bin_width,
-                    label=None if n_overlays == 1 else label,
-                    w2=w2,
-                    **kwargs,
-                )
-
-                # save
-                hists.append(hist)
-
-                if ratio_plot and len(hists) > 1:
-                    # ratio of first dataset to this one
-                    try:
-                        label = (
-                            f"{labels[-1]}/{labels[0]}"
-                            if labels
-                            else f"{self[dataset].label}/{self[datasets[0]].label}"
-                        )
-                    except KeyError:
-                        label = None
-                    # match ratio colour to plot
-                    color = ax.get_lines()[-1].get_color() if (n_overlays > 2) else "k"
-                    ratio_hist_name = (
-                        name_template.format(
-                            short=name_template_short.format(
-                                dataset=f"{dataset}_{datasets[0]}" if dataset else None,
-                                variable=varname.name if _passed_hists else varname,
-                            )
-                        )
-                        + "_ratio"
-                    )
-                    ratio_hist = hists[0].plot_ratio(
-                        hists[-1],
-                        ax=ratio_ax,
-                        yerr=ratio_err,
-                        label=label,
-                        normalise=bool(normalise),
-                        color=color,
-                        fit=ratio_fit,
-                        yax_lim=ratio_axlim,
-                        name=ratio_hist_name,
-                        display_stats=n_overlays <= 3,  # display results if there are <2 fits
-                    )
-                    self.histograms[ratio_hist_name] = ratio_hist.TH1
-
-            if n_overlays > 1:
-                ax.legend(fontsize=10, loc="upper right")
-            plotting_tools.set_axis_options(
-                axis=ax,
-                var_name=var,
-                xlim=(hist.bin_edges[0], hist.bin_edges[-1]),
-                xlabel=xlabel,
-                ylabel=ylabel,
-                title=title,
-                logx=logx,
-                logy=logy,
-                diff_xs=scale_by_bin_width,
-            )
-            if x_axlim:
-                ax.set_xlim(*x_axlim)
-            if y_axlim:
-                ax.set_ylim(*y_axlim)
-            if gridopts:
-                ax.grid(*gridopts)
-            if ratio_plot:
-                fig.tight_layout()
-                fig.subplots_adjust(hspace=0.1, wspace=0)
-                ax.set_xticklabels([])
-                ax.set_xlabel("")
-
-                if n_overlays > 2:  # don't show legend if there's only two plots
-                    ratio_ax.legend(fontsize=10, loc=1)
-
-                plotting_tools.set_axis_options(
-                    axis=ratio_ax,
-                    var_name=var,
-                    xlim=(ratio_hist.bin_edges[0], ratio_hist.bin_edges[-1]),
-                    xlabel=xlabel,
-                    ylabel=ratio_label,
-                    logx=logx,
-                    label=False,
-                )
-
-            if filename:
-                filepath = self.paths.plot_dir / filename
-            else:
-                if isinstance(var, str):
-                    varname = var
-                elif _passed_hists:
-                    if isinstance(var, Histogram1D):
-                        varname = var.name
-                    else:
-                        varname = "_".join([h.name for h in var])
-                else:
-                    varname = "_".join(var)
-                filepath = self.paths.plot_dir / (
-                    name_template.format(
-                        short=name_template_short.format(
-                            dataset="_".join(datasets) if dataset else None, variable=varname
-                        )
-                    )
-                    + (f"_{selection}_cut" if selection else "")
-                    + ".png"
-                )
-
-            fig.savefig(filepath, bbox_inches="tight")
-            self.logger.info(f"Saved plot of {var} to {filepath}")
-            plt.close(fig)
-
-    def stack_plot(
-        self,
-        datasets: str | Sequence[str],
-        var: str | Sequence[str],
-        yerr: ArrayLike | str = True,
-        labels: list[str] | None = None,
-        logx: bool = False,
-        logy: bool = True,
-        xlabel: str = "",
-        ylabel: str = "",
-        title: str = "",
-        scale_by_bin_width: bool = False,
-        x_axlim: tuple[float, float] | None = None,
-        y_axlim: tuple[float, float] | None = None,
-        filename: str | Path | None = None,
-        cut: bool | str | list[str] = False,
-        histtype="fill",
-        sort: bool = True,
-        ratio_plot: bool = False,
-        ratio_axlim: float | tuple[float, float] | None = None,
-        suffix: str = "",
-        prefix: str = "",
-        **kwargs,
-    ) -> None:
-        """
-        Plot stacked histograms for datasets/variables.
-        If one dataset is passed but multiple variables, will plot overlays of the variable for that one dataset
-
-        :param datasets: string or list of strings corresponding to datasets in the analysis
-        :param var: variable name to be plotted. Either a string that exists in all datasets
-                    or a list one for each dataset
-        :param yerr: Histogram uncertainties. Following modes are supported:
-                - True: will calculate sum of histogram stack errors
-                - shape(N) array of for one-sided errors or list thereof
-                - shape(Nx2) array of for two-sided errors or list thereof
-        :param labels: list of labels for plot legend corresponding to each dataset
-        :param logx: whether log scale x-axis
-        :param logy: whether log scale y-axis
-        :param xlabel: x label
-        :param ylabel: y label
-        :param title: plot title
-        :param scale_by_bin_width: divide histogram bin values by bin width
-        :param x_axlim: x-axis limits. If None matplolib decides
-        :param y_axlim: x-axis limits. If None matplolib decides
-        :param filename: name of output
-        :param cut: applies cuts before plotting
-        :param histtype: type of stack plot to be passed to mplhep
-        :param sort: whether to sort histograms from lowest to highest integral before plotting.
-        :param ratio_plot: add data/mc ratio plot to the bottom of figure
-        :param ratio_axlim: pass to yax_lim in rato plotter
-        :param suffix: suffix to add at end of histogram/file name
-        :param prefix: prefix to add at start of histogram/file
-        :param kwargs: keyword arguments to pass to mplhep.histplot()
-        """
-        self.logger.info(f"Plotting stack plot of {var} in {datasets}")
-
-        # naming template for file/histogram name
-        name_template = (
-            ((prefix + "_") if prefix else "")  # prefix
-            + "{variable}"
-            + ("_BIN_SCALED" if scale_by_bin_width else "")
-            + "_STACKED"
-        )
-
-        if isinstance(datasets, str):
-            datasets = [datasets]
-        if isinstance(labels, str):
-            labels = [labels]
-        if isinstance(var, str):
-            var = [var]
-
-        if (len(datasets) > 1) and (len(var) > 1) and (len(datasets) != len(var)):
-            raise ValueError(
-                f"If both multiple datasets and variables passed, lengths must match."
-                f"Got {len(datasets)} datasets and {len(var)} variables"
-            )
-
-        # handle how cuts are going to be done
-        if cut is False or cut is None:
-            cutsets_to_loop = [None]
-        elif cut is True:
-            # separate plot for EACH set of cuts
-            if len(datasets) > 1:
-                self.__verify_same_cuts(datasets)
-            cutsets_to_loop = list(self[datasets[0]].cuts.keys())
-        elif isinstance(cut, str):
-            cutsets_to_loop = [cut]
-        elif isinstance(cut, list):
-            cutsets_to_loop = cut
-        else:
-            raise ValueError(f"Unknown cut {cut}")
+            raise ValueError(f"I don't know what you mean by cut '{cut}'")
 
         # figure out if we should loop over datasets or variables or both
         _varloop = False
@@ -752,44 +477,83 @@ class Analysis:
             _datasetloop = True
             if len(var) > 1:
                 _varloop = True
-            n_stacks = len(datasets)
+            n_hists = len(datasets)
         elif len(var) > 1:
-            n_stacks = len(var)
+            n_hists = len(var)
             _varloop = True
         else:
-            n_stacks = 1
+            n_hists = 1
+        if n_hists == 0:
+            raise ValueError("This should never happen. Congrats!!!")
 
-        if n_stacks == 0:
-            raise ValueError("Nothing to plot!")
+        # handle which labels and colours are to be used
+        if not labels:
+            if n_hists > 1:
+                try:
+                    labels = [self[ds].label for ds in datasets]
+                except KeyError:
+                    raise ValueError(
+                        "Labels must be passed manually if a histogram is passed with no dataset"
+                    )
+            else:
+                labels = [labels]
+        if not colours:
+            if _datasetloop:
+                colours = [self[ds].colour for ds in datasets]
+            else:
+                # just use default prop cycle colours in matplotib
+                c_iter = iter(plt.rcParams["axes.prop_cycle"].by_key()["color"])
+                colours = list(islice(c_iter, n_hists))
 
-        # plot for each cut
-        for cut in cutsets_to_loop:
-            # work out histograms to stack
+        # no options that depend on multiple histograms
+        if n_hists == 1:
+            if ratio_plot:
+                self.logger.warning("Cannot generate ratio plot for plot with only one histogram!")
+            ratio_plot = False
+        if n_hists > 2:
+            if stats_box:
+                self.logger.warning("Not enough space to display stats box. Will not display.")
+            stats_box = False
+
+        # per-plot loop
+        for selection in selections_to_loop:
+            if ratio_plot:
+                fig, (ax, ratio_ax) = plt.subplots(2, 1, gridspec_kw={"height_ratios": [3, 1]})
+            else:
+                fig, ax = plt.subplots()
+
             hist_list: list[Histogram1D] = []
             label_list: list[str | None] = []
             colours_list: list[str | None] = []
 
-            signal_ds = data_ds = ""
-            for i in range(n_stacks):
-                # save signal for the end if only plotting one variable and many datasets
-                if self[datasets[i]].is_signal and _datasetloop:
-                    signal_ds = datasets[i]
-                    continue
-                elif self[datasets[i]].is_data and _datasetloop:
-                    data_ds = datasets[i]
-                    continue
-
+            signal_ds = data_ds = ""  # save signal and data if they are found
+            for i in range(n_hists):
+                variable = var[i] if _varloop else var[0]
                 dataset = datasets[i] if _datasetloop else datasets[0]
-                varname = var[i] if _varloop else var[0]
 
-                label = labels[i] if labels else self[dataset].label
-                label_list.append(label)
+                if do_stack and (dataset is not None):
+                    # save signal & data for the end if only stacking one variable and many datasets
+                    if self[datasets[i]].is_signal and _datasetloop:
+                        if signal_ds:
+                            raise ValueError("More than one signal histogram found!")
+                        signal_ds = datasets[i]
+                        continue
+                    elif self[datasets[i]].is_data and _datasetloop:
+                        if data_ds:
+                            raise ValueError("More than one data histogram found!")
+                        data_ds = datasets[i]
+                        continue
 
-                colours_list.append(self[dataset].colour)
-
-                hist = self.get_hist(varname, dataset, cut)
+                # save options for this histogram
+                if isinstance(variable, Histogram1D):
+                    hist = variable
+                else:
+                    hist = self.get_hist(variable, dataset, selection)
                 if scale_by_bin_width:
                     hist /= hist.bin_widths
+                hist_list.append(hist)
+                label_list.append(labels[i])
+                colours_list.append(colours[i])
 
                 # check bins
                 if len(hist_list) > 1:
@@ -797,100 +561,93 @@ class Analysis:
                         hist.bin_edges, hist_list[-1].bin_edges
                     ), f"Bins {hist} and {hist_list[-1]} not equal!"
 
-                hist_list.append(hist)
+            bin_range = (hist_list[0].bin_edges[0], hist_list[0].bin_edges[-1])
 
-            if sort:
+            if do_stack:
                 # Sort lists based on integral of histograms so smallest histograms sit at bottom
                 all_lists = zip(hist_list, label_list, colours_list)
-                sorted_lists = sorted(all_lists, key=lambda l: l[0].integral)
-                hist_list, label_list, colours_list = [list(l) for l in zip(*sorted_lists)]
+                sorted_lists = sorted(all_lists, key=lambda ls: ls[0].integral)
+                hist_list, label_list, colours_list = [list(ls) for ls in zip(*sorted_lists)]
 
-            # plot
-            if ratio_plot:
-                fig, (ax, ratio_ax) = plt.subplots(2, 1, gridspec_kw={"height_ratios": [3, 1]})
-            else:
-                fig, ax = plt.subplots()
-                ratio_ax = None  # just so IDE doesn't complain about missing variable
-
-            alpha_list = [0.8] * len(hist_list)
-            edgecolour_list = ["k"] * len(hist_list)
-            hep.histplot(
-                H=[h.bin_values() for h in hist_list],
-                bins=hist_list[-1].bin_edges,
-                ax=ax,
-                color=colours_list if colours_list else None,
-                alpha=alpha_list if alpha_list else None,
-                edgecolor=edgecolour_list if edgecolour_list else None,
-                linewidth=1 if edgecolour_list else 0,
-                label=label_list,
-                stack=True,
-                histtype=histtype,
-                zorder=reversed(range(len(hist_list))),  # mplhep plots in wrong order
-                **kwargs,
-            )
-
-            # handle signal seperately
-            if signal_ds:
-                bkg_sum = reduce((lambda x, y: x + y), hist_list)
-                sig_var = var[datasets.index(signal_ds)] if _varloop else var[0]
-                sig_hist = self.get_hist(sig_var, signal_ds, cut)
-                if scale_by_bin_width:
-                    sig_hist /= sig_hist.bin_widths
-                hist_list.append(sig_hist)
-
-                sig_stack = sig_hist + bkg_sum
-
-                sig_stack.plot(ax=ax, yerr=None, color="r", label=self[signal_ds].label)
-
-            edges = hist_list[0].bin_edges
-            if yerr:
-                # MC error propagation
-                errs = np.array([hist.error() for hist in hist_list])
-                errs = np.sum(errs, axis=0)
-
-                # top of histogram stack
-                stack = np.array([hist.bin_values() for hist in hist_list])
-                stack = np.sum(stack, axis=0)
-                err_top = stack + (errs / 2)
-                err_bottom = stack - (errs / 2)
-
-                # add error as clear hatch
-                ax.fill_between(
-                    x=edges,
-                    y1=np.append(err_top, err_top[-1]),
-                    y2=np.append(err_bottom, err_bottom[-1]),
-                    alpha=0.3,
-                    color="grey",
-                    hatch="/",
-                    label="MC error",
-                    step="post",
+                alpha_list = [0.8] * len(hist_list)
+                edgecolour_list = ["k"] * len(hist_list)
+                hep.histplot(
+                    H=[h.bin_values() for h in hist_list],
+                    bins=hist_list[-1].bin_edges,
+                    ax=ax,
+                    color=colours_list,
+                    alpha=alpha_list if alpha_list else None,
+                    edgecolor=edgecolour_list if edgecolour_list else None,
+                    linewidth=1 if edgecolour_list else 0,
+                    label=label_list,
+                    stack=True,
+                    zorder=reversed(range(len(hist_list))),  # mplhep plots in wrong order
+                    **kwargs,
                 )
 
-            # handle data separately
-            if data_ds:
-                # figure out which variable we're meant to plot
-                if len(var) < 2:
-                    varname = var[0]
-                else:
-                    varname = var[datasets.index(data_ds)]
+                if signal_ds:
+                    # handle signal seperately
+                    bkg_sum = reduce((lambda x, y: x + y), hist_list)
+                    sig_var = var[datasets.index(signal_ds)] if _varloop else var[0]
+                    sig_hist = self.get_hist(sig_var, signal_ds, selection)
+                    if scale_by_bin_width:
+                        sig_hist /= sig_hist.bin_widths
+                    hist_list.append(sig_hist)
+                    sig_stack = sig_hist + bkg_sum
+                    sig_stack.plot(ax=ax, yerr=None, color="r", label=self[signal_ds].label)
 
-                # get histogram and plot
-                data_hist = self.get_hist(varname, data_ds, cut)
+                edges = hist_list[0].bin_edges
+                if yerr:
+                    # MC error propagation
+                    errs = np.array([hist.error() for hist in hist_list])
+                    errs = np.sum(errs, axis=0)
 
-                if scale_by_bin_width:
-                    data_hist /= data_hist.bin_widths
-                ax.errorbar(
-                    data_hist.bin_centres,
-                    data_hist.bin_values(),
-                    xerr=data_hist.bin_widths / 2,
-                    yerr=data_hist.error(),
-                    linestyle="None",
-                    color="black",
-                    marker=".",
-                    label=self["data"].label,
-                )
+                    # top of histogram stack
+                    stack = np.array([hist.bin_values() for hist in hist_list])
+                    stack = np.sum(stack, axis=0)
+                    err_top = stack + (errs / 2)
+                    err_bottom = stack - (errs / 2)
+
+                    # add error as clear hatch
+                    ax.fill_between(
+                        x=edges,
+                        y1=np.append(err_top, err_top[-1]),
+                        y2=np.append(err_bottom, err_bottom[-1]),
+                        alpha=0.3,
+                        color="grey",
+                        hatch="/",
+                        label="MC error",
+                        step="post",
+                    )
+
+                # handle data separately
+                if data_ds:
+                    # figure out which variable we're meant to plot
+                    if len(var) < 2:
+                        varname = var[0]
+                    else:
+                        varname = var[datasets.index(data_ds)]
+
+                    # get histogram and plot
+                    data_hist = self.get_hist(varname, data_ds, selection)
+
+                    if scale_by_bin_width:
+                        data_hist /= data_hist.bin_widths
+                    ax.errorbar(
+                        data_hist.bin_centres,
+                        data_hist.bin_values(),
+                        xerr=data_hist.bin_widths / 2,
+                        yerr=data_hist.error(),
+                        linestyle="None",
+                        color="black",
+                        marker=".",
+                        label=self["data"].label,
+                    )
 
                 if ratio_plot:
+                    if not data_ds:
+                        raise ValueError("Ratio of what?")
+
                     fig.tight_layout()
                     fig.subplots_adjust(hspace=0.1, wspace=0)
                     all_mc_hist = reduce((lambda x, y: x + y), hist_list)
@@ -919,31 +676,55 @@ class Analysis:
                         colors="r",
                     )
 
-                    ratio_hist = all_mc_hist.plot_ratio(
+                    all_mc_hist.plot_ratio(
                         data_hist,
                         ax=ratio_ax,
                         yerr=True,
-                        label=label,
                         color="k",
                         yax_lim=ratio_axlim,
                         display_unity=False,
                     )
-
                     plotting_tools.set_axis_options(
                         axis=ratio_ax,
                         var_name=var,
-                        xlim=(ratio_hist.bin_edges[0], ratio_hist.bin_edges[-1]),
+                        xlim=bin_range,
                         xlabel=xlabel,
                         ylabel="Data / MC",
                         logx=logx,
                         label=False,
                     )
 
+            else:  # overlays
+                for i, hist in enumerate(hist_list):
+                    hist.plot(
+                        ax=ax,
+                        yerr=yerr,
+                        stats_box=stats_box,
+                        scale_by_bin_width=scale_by_bin_width,
+                        label=label_list[i],
+                        color=colours_list[i],
+                        **kwargs,
+                    )
+
+                    if ratio_plot and len(hist_list) > 1:
+                        # ratio of first histogram to this one
+                        hist_list[0].plot_ratio(
+                            hist,
+                            ax=ratio_ax,
+                            yerr=ratio_err,
+                            label=f"{label_list[i]}/{label_list[0]}",
+                            color=colours_list[i],
+                            fit=ratio_fit,
+                            yax_lim=ratio_axlim,
+                            display_stats=len(hist_list) <= 3,
+                        )
+
+            if n_hists > 1:
+                ax.legend(fontsize=10, loc="upper right")
             plotting_tools.set_axis_options(
                 axis=ax,
                 var_name=var,
-                xlim=(x_axlim if x_axlim else (hist.bin_edges[0], hist.bin_edges[-1])),
-                ylim=y_axlim,
+                xlim=bin_range,
                 xlabel=xlabel,
                 ylabel=ylabel,
                 title=title,
@@ -951,42 +732,43 @@ class Analysis:
                 logy=logy,
                 diff_xs=scale_by_bin_width,
             )
-            if ratio_plot:
-                ax.set_xticklabels([])
-                ax.set_xticklabels([], minor=True)
-                ax.set_xlim(*ratio_ax.get_xlim())
-                ax.set_xlabel("")
-
             if x_axlim:
                 ax.set_xlim(*x_axlim)
             if y_axlim:
                 ax.set_ylim(*y_axlim)
+            if ratio_plot:
+                fig.tight_layout()
+                fig.subplots_adjust(hspace=0.1, wspace=0)
+                ax.set_xticklabels([])
+                ax.set_xlabel("")
 
-            # limit to 4 rows and reverse order (so more important samples go in front)
-            ncols = len(hist_list) + bool(yerr) + bool(data_ds)
-            ncols //= 4
-            legend_handles, legend_labels = ax.get_legend_handles_labels()
-            ax.legend(
-                reversed(legend_handles),
-                reversed(legend_labels),
-                fontsize=10,
-                loc="upper right",
-                ncols=ncols,
-            )
+                if n_hists > 2:  # don't show legend if there's only two plots
+                    ratio_ax.legend(fontsize=10, loc=1)
+
+                plotting_tools.set_axis_options(
+                    axis=ratio_ax,
+                    var_name=var,
+                    xlim=bin_range,
+                    xlabel=xlabel,
+                    ylabel=ratio_label,
+                    logx=logx,
+                    label=False,
+                )
 
             if filename:
                 filepath = self.paths.plot_dir / filename
             else:
-                if isinstance(var, str):
-                    varname = var
-                else:
-                    varname = "_".join(var)
-                filepath = self.paths.plot_dir / (
-                    name_template.format(variable=varname)
-                    + (f"_{cut}_cut" if cut else "")
+                # naming template for file/histogram name
+                filename_template = (
+                    (f"{prefix}_" if prefix else "")
+                    + "_".join(var)
+                    + ("_".join([ds for ds in datasets if ds is not None]))
+                    + ("_BIN_SCALED" if scale_by_bin_width else "")
+                    + ("_STACKED" if kind == "stack" else "")
+                    + (f"_{selection}_cut" if cut else "")
                     + (f"_{suffix}" if suffix else "")
-                    + ".png"
                 )
+                filepath = self.paths.plot_dir / (filename_template + ".png")
 
             fig.savefig(filepath, bbox_inches="tight")
             self.logger.info(f"Saved plot of {var} to {filepath}")
@@ -996,7 +778,7 @@ class Analysis:
         self,
         variable: str,
         dataset: str | None = None,
-        cut: str | None | bool = None,
+        selection: str | None | bool = None,
         TH1: bool = False,
     ) -> Histogram1D | ROOT.TH1:
         """Get TH1 histogram from histogram dict or internal dataset"""
@@ -1004,19 +786,19 @@ class Analysis:
         if variable in self.histograms:
             hist_name_internal = variable
 
-        elif cut and f"{variable}_{cut}_cut" in self.histograms:
-            hist_name_internal = f"{variable}_{cut}_cut"
+        elif selection and f"{variable}_{selection}_cut" in self.histograms:
+            hist_name_internal = f"{variable}_{selection}_cut"
 
         elif dataset is None:
             raise ValueError(
-                f"No variable '{variable}' for cut '{cut}' found in analysis: {self.name}"
+                f"No variable '{variable}' for selection '{selection}' found in analysis: {self.name}"
             )
 
-        elif cut and f"{variable}_{cut}_cut" in self[dataset].histograms:
-            hist_name_internal = f"{dataset}_{variable}_{cut}_cut"
+        elif selection and f"{variable}_{selection}_cut" in self[dataset].histograms:
+            hist_name_internal = f"{dataset}_{variable}_{selection}_cut"
 
-        elif cut:
-            raise ValueError(f"No cut {cut} found for {variable} in {dataset}")
+        elif selection:
+            raise ValueError(f"No selection {selection} found for {variable} in {dataset}")
 
         elif variable in self[dataset].histograms:
             hist_name_internal = dataset + "_" + variable

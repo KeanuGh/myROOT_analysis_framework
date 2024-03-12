@@ -287,7 +287,7 @@ def set_axis_options(
     if ylabel:
         axis.set_ylabel(ylabel)
     if label:
-        hep.atlas.label(italic=(True, True), ax=axis, loc=0, llabel="Internal", rlabel=title)
+        hep.atlas.label(italic=(True, True, False), ax=axis, loc=0, llabel="Internal", rlabel=title)
 
     return axis
 
