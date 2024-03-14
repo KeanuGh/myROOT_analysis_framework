@@ -627,6 +627,11 @@ variable_data: Dict[str, Branch] = {
         "units": "GeV",
         "tag": VarTag.RECO,
     },
+    "badJet": {
+        "name": r"Event contains bad jet",
+        "units": "",
+        "tag": VarTag.RECO,
+    },
     # TRUTH-LEVEL KINEMATIC VARIABLES
     # =======================================================
     # analysistop

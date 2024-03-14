@@ -22,7 +22,7 @@ if __name__ == "__main__":
             "data_path": Path("/data/DTA_outputs/2024-03-05/*data17*/*.root"),
             "label": "data",
             "is_data": True,
-            "import_missing_columns_as_nan": True,
+            # "import_missing_columns_as_nan": True,
         },
         # SIGNAL
         # ====================================================================
@@ -98,17 +98,18 @@ if __name__ == "__main__":
             "merge_into": "zll",
         },
         # TTBAR/TOP
-        "ttbar": {
-            "data_path": DTA_PATH / "*PP8_ttbar_hdamp258p75*/*.root",
-            "label": r"$t\bar{t}$",
-        },
-        "other_top": {
+        # "ttbar": {
+        #     "data_path": DTA_PATH / "*PP8_ttbar_hdamp258p75*/*.root",
+        #     "label": r"$t\bar{t}$",
+        # },
+        "Top": {
             "data_path": [
                 DTA_PATH / "*PP8_singletop*/*.root",
                 DTA_PATH / "*PP8_tchan*/*.root",
                 DTA_PATH / "*PP8_Wt_DR_dilepton*/*.root",
+                DTA_PATH / "*PP8_ttbar_hdamp258p75*/*.root",
             ],
-            "label": "Other Top",
+            # "label": "Other Top",
         },
         # DIBOSON
         "diboson": {
@@ -253,13 +254,13 @@ if __name__ == "__main__":
         "TauPt_res",
         "TauPt_diff",
         "MatchedTruthParticlePt",
+        "badJet",
     }
     mc_samples = [
         "wtaunu",
         "wlnu",
         "zll",
-        "ttbar",
-        "other_top",
+        "Top",
         "diboson",
     ]
     all_samples = ["data"] + mc_samples
@@ -278,6 +279,7 @@ if __name__ == "__main__":
         log_level=10,
         log_out="console",
         extract_vars=wanted_variables,
+        import_missing_columns_as_nan=True,
         profiles={
             "MTW_TauPt_res": ("MTW", "TauPt_res"),
             "TauEta_TauPt_res": ("TauEta", "TauPt_res"),
@@ -300,6 +302,7 @@ if __name__ == "__main__":
                 "TauNCoreTracks": np.linspace(0, 4, 5),
                 "TauPt_res": np.linspace(-1, 1, 51),
                 "TauPt_diff": np.linspace(-300, 300, 51),
+                "badJet": (2, 0, 2),
             },
             "noID": {
                 "MTW": np.geomspace(1, 1000, 51),
@@ -511,6 +514,8 @@ if __name__ == "__main__":
         filename="wtaunu_mtw_taupt_profile_selections.png",
         logy=False,
     )
+
+    analysis.plot(var="badJet", datasets="data")
 
     # No fakes scaling
     # ----------------------------------------------------------------------------

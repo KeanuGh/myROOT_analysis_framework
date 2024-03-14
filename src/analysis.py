@@ -581,6 +581,7 @@ class Analysis:
                     linewidth=1 if edgecolour_list else 0,
                     label=label_list,
                     stack=True,
+                    histtype="fill",
                     zorder=reversed(range(len(hist_list))),  # mplhep plots in wrong order
                     **kwargs,
                 )
@@ -720,7 +721,17 @@ class Analysis:
                         )
 
             if n_hists > 1:
-                ax.legend(fontsize=10, loc="upper right")
+                # limit to 4 rows and reverse order (so more important samples go in front)
+                ncols = len(hist_list) + bool(yerr) + bool(data_ds)
+                ncols //= 4
+                legend_handles, legend_labels = ax.get_legend_handles_labels()
+                ax.legend(
+                    reversed(legend_handles),
+                    reversed(legend_labels),
+                    fontsize=10,
+                    loc="upper right",
+                    ncols=ncols,
+                )
             plotting_tools.set_axis_options(
                 axis=ax,
                 var_name=var,
