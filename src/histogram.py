@@ -113,7 +113,7 @@ class Histogram1D(bh.Histogram, family=None):
 
         if th1:
             # create from TH1
-            edges = [th1.GetBinLowEdge(i + 1) for i in range(th1.GetNbinsX() + 1)]
+            edges = TH1_bin_edges(th1)
             super().__init__(bh.axis.Variable(edges), storage=bh.storage.Weight())
 
             # set vars
@@ -236,6 +236,8 @@ class Histogram1D(bh.Histogram, family=None):
         else:
             # scale TH1 properly
             if hasattr(other, "__iter__"):
+                if len(other) != self.TH1.GetNbinsX():
+                    raise ValueError("Number of bins don't match!")
                 for i, val in enumerate(other):
                     self.TH1.SetBinContent(i + 1, self.TH1.GetBinContent(i + 1) / val)
                     self.TH1.SetBinError(i + 1, self.TH1.GetBinError(i + 1) / val)
@@ -266,6 +268,8 @@ class Histogram1D(bh.Histogram, family=None):
         else:
             # scale TH1 properly
             if hasattr(other, "__iter__"):
+                if len(other) != self.TH1.GetNbinsX():
+                    raise ValueError("Number of bins don't match!")
                 for i, val in enumerate(other):
                     self.TH1.SetBinContent(i + 1, self.TH1.GetBinContent(i + 1) * val)
                     self.TH1.SetBinError(i + 1, self.TH1.GetBinError(i + 1) * val)
@@ -285,11 +289,14 @@ class Histogram1D(bh.Histogram, family=None):
         else:
             # scale TH1 properly
             if hasattr(other, "__iter__"):
+                if len(other) != self.TH1.GetNbinsX():
+                    raise ValueError("Number of bins don't match!")
                 for i, val in enumerate(other):
                     self.TH1.SetBinContent(i + 1, self.TH1.GetBinContent(i + 1) + val)
                     self.TH1.SetBinError(i + 1, self.TH1.GetBinError(i + 1) + val)
             else:
-                self.TH1.Add(other)
+                for i in range(self.TH1.GetNbinsX() + 2):
+                    self.TH1.SetBinContent(i, self.TH1.GetBinContent(i) + other)
 
         return self._compute_inplace_op("__iadd__", other)
 
@@ -305,11 +312,14 @@ class Histogram1D(bh.Histogram, family=None):
         else:
             # scale TH1 properly
             if hasattr(other, "__iter__"):
+                if len(other) != self.TH1.GetNbinsX():
+                    raise ValueError("Number of bins don't match!")
                 for i, val in enumerate(other):
                     self.TH1.SetBinContent(i + 1, self.TH1.GetBinContent(i + 1) - val)
                     self.TH1.SetBinError(i + 1, self.TH1.GetBinError(i + 1) - val)
             else:
-                self.TH1.Add(other, -1)
+                for i in range(self.TH1.GetNbinsX() + 2):
+                    self.TH1.SetBinContent(i, self.TH1.GetBinContent(i) - other)
 
         return self._compute_inplace_op("__iadd__", other)
 
@@ -390,10 +400,7 @@ class Histogram1D(bh.Histogram, family=None):
 
     def error(self, flow: bool = False) -> np.typing.NDArray[1, float]:
         """get ROOT error"""
-        if flow:
-            return np.array([self.TH1.GetBinError(i) for i in range(self.TH1.GetNbinsX() + 2)])
-        else:
-            return np.array([self.TH1.GetBinError(i + 1) for i in range(self.TH1.GetNbinsX())])
+        return np.array(TH1_bin_error(self.TH1, flow))
 
     def root_sumw2(self, flow: bool = False) -> np.typing.NDArray[1, float]:
         """get squared sum of weights"""
@@ -842,3 +849,26 @@ class Histogram1D(bh.Histogram, family=None):
             self.logger.info(f"image saved in {out_filename}")
 
         return h_ratio
+
+
+# some utility functions
+# ==================================================================
+def TH1_bin_edges(h: ROOT.TH1) -> np.typing.NDArray[1, float]:
+    """Return bin edges for TH1 object hist"""
+    return np.array([h.GetBinLowEdge(i) for i in range(h.GetNbinsX() + 1)])
+
+
+def TH1_bin_values(h: ROOT.TH1, flow: bool = False) -> np.typing.NDArray[1, float]:
+    """Return bin contents for TH1 object hist"""
+    if flow:
+        return np.array([h.GetBinContent(i) for i in range(h.GetNbinsX() + 2)])
+    else:
+        return np.array([h.GetBinContent(i + 1) for i in range(h.GetNbinsX())])
+
+
+def TH1_bin_error(h: ROOT.TH1, flow: bool = False) -> np.typing.NDArray[1, float]:
+    """Return bin error for TH1 object hist"""
+    if flow:
+        return np.array([h.GetBinError(i) for i in range(h.GetNbinsX() + 2)])
+    else:
+        return np.array([h.GetBinError(i + 1) for i in range(h.GetNbinsX())])

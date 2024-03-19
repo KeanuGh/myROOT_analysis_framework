@@ -375,12 +375,13 @@ class Analysis:
         stats_box: bool = False,
         x_axlim: tuple[float, float] | None = None,
         y_axlim: tuple[float, float] | None = None,
-        ratio_plot: bool = True,
+        ratio_plot: bool = False,
         ratio_fit: bool = False,
         ratio_axlim: float | tuple[float, float] | None = None,
         ratio_label: str = "Ratio",
         ratio_err: str = "sumw2",
         filename: str | Path | None = None,
+        sort: bool = True,
         cut: bool | str | Sequence[str] = False,
         kind: str = "overlay",
         suffix: str = "",
@@ -417,6 +418,7 @@ class Analysis:
         :param ratio_label: y-axis label for ratio plot
         :param ratio_err: yerr for ratio plot. Either "sumw2", "binom", or "carry"
         :param filename: name of output
+        :param sort: sort stacks by size so smallest histogram is at the bottom
         :param cut: applies cuts before plotting
         :param kind: "overlay" for overlays of line histograms, "stack" for stacks
         :param suffix: suffix to add at end of histogram/file name
@@ -424,6 +426,8 @@ class Analysis:
         :param kwargs: keyword arguments to pass to mplhep.histplot()
         """
 
+        # PREAMBLE
+        # ============================
         # check options
         if kind not in {"stack", "overlay"}:
             raise ValueError("Histogram types are either either 'stack' or 'overlay'.")
@@ -448,24 +452,6 @@ class Analysis:
                 + (f"colours: {len(colours)}\n" if colours else "")
             )
 
-        # handle how many plots there are actually going to be
-        if cut is False or cut is None:
-            selections_to_loop: list[str | None] = [None]
-        elif cut is True:
-            # separate plot for EACH set of cuts
-            if len(datasets) > 1:
-                # check that all datasets to be plot have the same sets of cuts
-                first_cutflow = self[datasets[0]].cuts.keys()
-                if not all(ds.cuts.keys() == first_cutflow for ds in self.datasets.values()):
-                    raise ValueError("Datasets do not have the same cuts")
-            selections_to_loop = list(self[datasets[0]].cuts.keys())
-        elif isinstance(cut, str):
-            selections_to_loop = [cut]
-        elif isinstance(cut, list):
-            selections_to_loop = cut
-        else:
-            raise ValueError(f"I don't know what you mean by cut '{cut}'")
-
         # figure out if we should loop over datasets or variables or both
         _varloop = False
         _datasetloop = False
@@ -484,7 +470,25 @@ class Analysis:
         else:
             n_hists = 1
         if n_hists == 0:
-            raise ValueError("This should never happen. Congrats!!!")
+            raise Exception("Nothing to plot!")
+
+        # handle how many plots there are actually going to be
+        if cut is False or cut is None:
+            selections_to_loop: list[str | None] = [None]
+        elif cut is True:
+            # separate plot for EACH set of cuts
+            if _datasetloop:
+                # check that all datasets to be plot have the same sets of cuts
+                first_cutflow = self[datasets[0]].cuts.keys()
+                if not all(ds.cuts.keys() == first_cutflow for ds in self.datasets.values()):
+                    raise ValueError("Datasets do not have the same cuts")
+            selections_to_loop = list(self[datasets[0]].cuts.keys())
+        elif isinstance(cut, str):
+            selections_to_loop = [cut]
+        elif isinstance(cut, list):
+            selections_to_loop = cut
+        else:
+            raise ValueError(f"I don't know what you mean by cut '{cut}'")
 
         # handle which labels and colours are to be used
         if not labels:
@@ -515,7 +519,8 @@ class Analysis:
                 self.logger.warning("Not enough space to display stats box. Will not display.")
             stats_box = False
 
-        # per-plot loop
+        # PER-SELECTION LOOP
+        # ============================
         for selection in selections_to_loop:
             if ratio_plot:
                 fig, (ax, ratio_ax) = plt.subplots(2, 1, gridspec_kw={"height_ratios": [3, 1]})
@@ -547,6 +552,8 @@ class Analysis:
                 # save options for this histogram
                 if isinstance(variable, Histogram1D):
                     hist = variable
+                elif isinstance(variable, ROOT.TH1):
+                    hist = Histogram1D(th1=variable)
                 else:
                     hist = self.get_hist(variable, dataset, selection)
                 if scale_by_bin_width:
@@ -563,11 +570,14 @@ class Analysis:
 
             bin_range = (hist_list[0].bin_edges[0], hist_list[0].bin_edges[-1])
 
+            # STACK PLOT
+            # ============================
             if do_stack:
                 # Sort lists based on integral of histograms so smallest histograms sit at bottom
-                all_lists = zip(hist_list, label_list, colours_list)
-                sorted_lists = sorted(all_lists, key=lambda ls: ls[0].integral)
-                hist_list, label_list, colours_list = [list(ls) for ls in zip(*sorted_lists)]
+                if sort:
+                    all_lists = zip(hist_list, label_list, colours_list)
+                    sorted_lists = sorted(all_lists, key=lambda ls: ls[0].integral)
+                    hist_list, label_list, colours_list = [list(ls) for ls in zip(*sorted_lists)]
 
                 alpha_list = [0.8] * len(hist_list)
                 edgecolour_list = ["k"] * len(hist_list)
@@ -586,8 +596,8 @@ class Analysis:
                     **kwargs,
                 )
 
+                # handle signal seperately
                 if signal_ds:
-                    # handle signal seperately
                     bkg_sum = reduce((lambda x, y: x + y), hist_list)
                     sig_var = var[datasets.index(signal_ds)] if _varloop else var[0]
                     sig_hist = self.get_hist(sig_var, signal_ds, selection)
@@ -695,6 +705,8 @@ class Analysis:
                         label=False,
                     )
 
+            # OVERLAY PLOT
+            # ============================
             else:  # overlays
                 for i, hist in enumerate(hist_list):
                     hist.plot(
@@ -720,10 +732,12 @@ class Analysis:
                             display_stats=len(hist_list) <= 3,
                         )
 
+            # CLEANUP
+            # ============================
             if n_hists > 1:
                 # limit to 4 rows and reverse order (so more important samples go in front)
                 ncols = len(hist_list) + bool(yerr) + bool(data_ds)
-                ncols //= 4
+                ncols = max(ncols // 4, 1)  # need at least one column!
                 legend_handles, legend_labels = ax.get_legend_handles_labels()
                 ax.legend(
                     reversed(legend_handles),
@@ -782,7 +796,7 @@ class Analysis:
                 filepath = self.paths.plot_dir / (filename_template + ".png")
 
             fig.savefig(filepath, bbox_inches="tight")
-            self.logger.info(f"Saved plot of {var} to {filepath}")
+            self.logger.info(f"Saved plot to {filepath}")
             plt.close(fig)
 
     def get_hist(
@@ -793,12 +807,24 @@ class Analysis:
         TH1: bool = False,
     ) -> Histogram1D | ROOT.TH1:
         """Get TH1 histogram from histogram dict or internal dataset"""
-        # if passing a histogram name directly as the variable
+        hist_name_internal = self.get_hist_name(variable, dataset, selection)
+        if TH1:
+            return self.histograms[hist_name_internal]
+        else:
+            return Histogram1D(th1=self.histograms[hist_name_internal], logger=self.logger)
+
+    def get_hist_name(
+        self,
+        variable: str,
+        dataset: str | None = None,
+        selection: str | None | bool = None,
+    ) -> str:
+        """Get name of histogram saved in histogram dict"""
         if variable in self.histograms:
-            hist_name_internal = variable
+            return variable
 
         elif selection and f"{variable}_{selection}_cut" in self.histograms:
-            hist_name_internal = f"{variable}_{selection}_cut"
+            return f"{variable}_{selection}_cut"
 
         elif dataset is None:
             raise ValueError(
@@ -806,13 +832,13 @@ class Analysis:
             )
 
         elif selection and f"{variable}_{selection}_cut" in self[dataset].histograms:
-            hist_name_internal = f"{dataset}_{variable}_{selection}_cut"
+            return f"{dataset}_{variable}_{selection}_cut"
 
         elif selection:
             raise ValueError(f"No selection {selection} found for {variable} in {dataset}")
 
         elif variable in self[dataset].histograms:
-            hist_name_internal = dataset + "_" + variable
+            return dataset + "_" + variable
 
         else:
             raise ValueError(
@@ -823,10 +849,19 @@ class Analysis:
                 + "\n".join(self[dataset].histograms.keys())
             )
 
-        if TH1:
-            return self.histograms[hist_name_internal]
-        else:
-            return Histogram1D(th1=self.histograms[hist_name_internal], logger=self.logger)
+    def sum_hists(self, hists: list[str], inplace_name: str | None = None) -> ROOT.TH1 | None:
+        """
+        Sum together internal histograms.
+        Optionally pass inplace_name to save automatically to internal histogram dictionary
+        """
+        h = self.histograms[hists[0]].Clone()
+        for hist_name in hists[1:]:
+            hist = self.histograms[hist_name]
+            h.Add(hist)
+
+        if inplace_name:
+            self.histograms[inplace_name] = h
+        return h
 
     def __verify_same_cuts(self, datasets: list[str]):
         """check that all datasets to be plotted have the same sets of cuts"""

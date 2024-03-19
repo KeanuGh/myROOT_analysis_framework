@@ -21,6 +21,16 @@ from utils import plotting_tools
 from utils.variable_names import variable_data, VarTag
 
 
+@dataclass(slots=True)
+class ProfileOptions:
+    """Options for building profile"""
+
+    x: str
+    y: str
+    weight: str = ""
+    option: str = ""
+
+
 @dataclass
 class Dataset(ABC):
     name: str = ""
@@ -28,7 +38,7 @@ class Dataset(ABC):
     cuts: dict[str, list[Cut]] = field(default_factory=list)
     all_vars: set[str] = field(default_factory=set)
     cutflows: dict[str, RCutflow] = None
-    profiles: dict[str, tuple[str, str]] = field(default_factory=dict)
+    profiles: dict[str, ProfileOptions] = field(default_factory=dict)
     lumi: float = 139.0
     label: str = "data"
     logger: logging.Logger = field(default_factory=get_logger)
@@ -483,19 +493,22 @@ class RDataset(Dataset):
 
         # build profiles
         if self.profiles:
-            for profile_name, var_names in self.profiles.items():
-                binning_var = var_names[0]
+            for profile_name, options in self.profiles.items():
+                binning_var = options.x
                 bin_args = self.__get_binnings(binning_var)
-                weight = match_weight(binning_var)
-                th1_histograms[profile_name + "_PROFILE"] = self.df.Profile1D(
+                profile_args = [
                     ROOT.RDF.TProfile1DModel(
                         profile_name + "_PROFILE",
                         profile_name + "_PROFILE",
                         *plotting_tools.get_TH1_bins(**bin_args),
+                        options.option,
                     ),
-                    *var_names,
-                    weight,
-                )
+                    options.x,
+                    options.y,
+                ]
+                if options.weight:
+                    profile_args.append(options.weight)
+                th1_histograms[profile_name + "_PROFILE"] = self.df.Profile1D(*profile_args)
 
                 for cutflow_name, filtered_df in self.filtered_df.items():
                     # which binning?
@@ -505,15 +518,13 @@ class RDataset(Dataset):
                         + (("_" + cutflow_name) if cutflow_name else "")
                         + "_cut_PROFILE"
                     )
-                    th1_histograms[cut_profile_name] = filtered_df.Profile1D(
-                        ROOT.RDF.TProfile1DModel(
-                            cut_profile_name,
-                            cut_profile_name,
-                            *plotting_tools.get_TH1_bins(**bin_args),
-                        ),
-                        *var_names,
-                        weight,
+                    profile_args[0] = ROOT.RDF.TProfile1DModel(
+                        cut_profile_name,
+                        cut_profile_name,
+                        *plotting_tools.get_TH1_bins(**bin_args),
+                        options.option,
                     )
+                    th1_histograms[cut_profile_name] = filtered_df.Profile1D(*profile_args)
 
         # generate histograms
         t = time.time()

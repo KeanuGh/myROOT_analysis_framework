@@ -612,6 +612,16 @@ variable_data: Dict[str, Branch] = {
         "units": "",
         "tag": VarTag.RECO,
     },
+    "MatchedTruthParticle_isPhoton": {
+        "name": r"Truth Matched Particle is Photon",
+        "units": "",
+        "tag": VarTag.RECO,
+    },
+    "MatchedTruthParticle_isJet": {
+        "name": r"Truth Matched Particle is a Jet",
+        "units": "",
+        "tag": VarTag.RECO,
+    },
     "TauNCoreTracks": {
         "name": r"Number of Tau tracks",
         "units": "",

@@ -4,10 +4,14 @@ from typing import Dict
 
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
+from tabulate import tabulate
 
 from src.analysis import Analysis
 from src.cutfile import Cut
-from src.histogram import Histogram1D
+from src.dataset import ProfileOptions
+from src.histogram import Histogram1D, TH1_bin_edges
+from utils.plotting_tools import get_axis_labels
 
 DTA_PATH = Path("/data/DTA_outputs/2024-02-22/")
 # DTA_PATH = Path("/eos/home-k/kghorban/DTA_OUT/2024-02-05/")
@@ -15,15 +19,6 @@ CUTFILE_DIR = Path("/afs/cern.ch/user/k/kghorban/framework/options/DTA_cuts/reco
 
 if __name__ == "__main__":
     datasets: Dict[str, Dict] = {
-        # DATA
-        # ====================================================================
-        "data": {
-            # "data_path": DTA_PATH / "*data17*/*.root",
-            "data_path": Path("/data/DTA_outputs/2024-03-05/*data17*/*.root"),
-            "label": "data",
-            "is_data": True,
-            # "import_missing_columns_as_nan": True,
-        },
         # SIGNAL
         # ====================================================================
         "wtaunu_lm": {
@@ -102,14 +97,14 @@ if __name__ == "__main__":
         #     "data_path": DTA_PATH / "*PP8_ttbar_hdamp258p75*/*.root",
         #     "label": r"$t\bar{t}$",
         # },
-        "Top": {
+        "top": {
             "data_path": [
                 DTA_PATH / "*PP8_singletop*/*.root",
                 DTA_PATH / "*PP8_tchan*/*.root",
                 DTA_PATH / "*PP8_Wt_DR_dilepton*/*.root",
                 DTA_PATH / "*PP8_ttbar_hdamp258p75*/*.root",
             ],
-            # "label": "Other Top",
+            "label": "Top",
         },
         # DIBOSON
         "diboson": {
@@ -128,13 +123,23 @@ if __name__ == "__main__":
             ],
             "label": "Diboson",
         },
+        # DATA
+        # ====================================================================
+        "data": {
+            # "data_path": DTA_PATH / "*data17*/*.root",
+            "data_path": Path("/data/DTA_outputs/2024-03-05/*data17*/*.root"),
+            "label": "data",
+            "is_data": True,
+            # "import_missing_columns_as_nan": True,
+        },
     }
 
     # CUTS & SELECTIONS
     # ========================================================================
     pass_presel = Cut(
         r"Pass preselection",
-        r"(passReco == 1) && (TauBaselineWP == 1) && (abs(TauCharge) == 1)",
+        r"(passReco == 1) && (TauBaselineWP == 1) && (abs(TauCharge) == 1)"
+        r"&& (MatchedTruthParticle_isTau + MatchedTruthParticle_isElectron + MatchedTruthParticle_isMuon + MatchedTruthParticle_isPhoton <= 1)",
     )
     pass_taupt170 = Cut(
         r"$p_T^\tau > 170$",
@@ -170,9 +175,6 @@ if __name__ == "__main__":
 
     # selections
     selections: dict[str, list[Cut]] = {
-        # "noID": [
-        #     pass_presel,
-        # ],
         "SR_passID": [
             pass_presel,
             pass_taupt170,
@@ -254,15 +256,45 @@ if __name__ == "__main__":
         "TauPt_res",
         "TauPt_diff",
         "MatchedTruthParticlePt",
+        "MatchedTruthParticle_isTau",
+        "MatchedTruthParticle_isElectron",
+        "MatchedTruthParticle_isMuon",
+        "MatchedTruthParticle_isPhoton",
+        "MatchedTruthParticle_isJet",
         "badJet",
     }
     mc_samples = [
         "wtaunu",
         "wlnu",
         "zll",
-        "Top",
+        "top",
         "diboson",
     ]
+    measurement_vars = [
+        "TauEta",
+        "TauPhi",
+        "TauPt",
+        "MTW",
+    ]
+    profile_vars = [
+        "TauPt_res",
+        "TauPt_diff",
+        "MatchedTruthParticlePt",
+        "MatchedTruthParticle_isTau",
+        "MatchedTruthParticle_isElectron",
+        "MatchedTruthParticle_isMuon",
+        "MatchedTruthParticle_isPhoton",
+        "MatchedTruthParticle_isJet",
+    ]
+    # define which profiles to calculate
+    profiles: dict[str, ProfileOptions] = dict()
+    for meas_var in measurement_vars:
+        for prof_var in profile_vars:
+            profiles[f"{meas_var}_{prof_var}"] = ProfileOptions(
+                x=meas_var,
+                y=prof_var,
+                weight="" if "MatchedTruthParticle" in prof_var else "reco_weight",
+            )
     all_samples = ["data"] + mc_samples
 
     # RUN
@@ -276,22 +308,17 @@ if __name__ == "__main__":
         cuts=selections,
         analysis_label="fakes_estimate",
         dataset_type="dta",
-        log_level=10,
+        # log_level=10,
         log_out="console",
         extract_vars=wanted_variables,
         import_missing_columns_as_nan=True,
-        profiles={
-            "MTW_TauPt_res": ("MTW", "TauPt_res"),
-            "TauEta_TauPt_res": ("TauEta", "TauPt_res"),
-            "TauPt_TauPt_res": ("TauPt", "TauPt_res"),
-        },
+        profiles=profiles,
         binnings={
             "": {
                 "MTW": np.geomspace(150, 1000, 21),
                 "TauPt": np.geomspace(170, 1000, 21),
-                "MatchedTruthParticlePt": np.geomspace(170, 1000, 21),
-                "TauEta": np.linspace(-2.47, 2.47, 21),
-                "EleEta": np.linspace(-2.47, 2.47, 21),
+                "TauEta": np.linspace(-2.5, 2.5, 21),
+                "EleEta": np.linspace(-2.5, 2.5, 21),
                 "MuonEta": np.linspace(-2.5, 2.5, 21),
                 "MET_met": np.geomspace(150, 1000, 21),
                 "DeltaPhi_tau_met": np.linspace(0, 3.5, 21),
@@ -334,44 +361,161 @@ if __name__ == "__main__":
         analysis[ds].colour = c
     analysis["data"].colour = "k"
 
+    # analysis.logger.info("Histograms: ")
+    # analysis.logger.info(analysis.histograms.keys())
+
     # FAKES ESTIMATE
     # ========================================================================
-    def sum_mc_for_region(var_, region):
-        """Return sum of MC histograms for variable in region"""
-        return reduce(
-            lambda x, y: x + y, [analysis.get_hist(var_, mc_ds, region) for mc_ds in mc_samples]
-        )
+    integrals = {}
+    for var in measurement_vars:
+        xlabel = get_axis_labels(var)[0]
 
-    FF_vars = [
-        "TauEta",
-        "TauPhi",
-        "TauPt",
-        "MTW",
-    ]
-    for var in FF_vars:
-        analysis.logger.info("Calculating fake factors for %s...", var)
+        # Fakes distribution across kinematic variable for signal MC
+        # -----------------------------------------------------------------------
+        for mc in mc_samples + ["all_mc"]:
+            for selection in [
+                "SR_passID",
+                "SR_failID",
+                "CR_passID",
+                "CR_failID",
+            ]:
+                if mc == "all_mc":
+                    ele_fakes = analysis.sum_hists(
+                        [
+                            f"{mc}_{var}_MatchedTruthParticle_isElectron_{selection}_cut_PROFILE"
+                            for mc in mc_samples
+                        ],
+                        f"{mc}_{var}_MatchedTruthParticle_isElectron_{selection}_cut_PROFILE",
+                    )
+                    muon_fakes = analysis.sum_hists(
+                        [
+                            f"{mc}_{var}_MatchedTruthParticle_isMuon_{selection}_cut_PROFILE"
+                            for mc in mc_samples
+                        ],
+                        f"{mc}_{var}_MatchedTruthParticle_isMuon_{selection}_cut_PROFILE",
+                    )
+                    photon_fakes = analysis.sum_hists(
+                        [
+                            f"{mc}_{var}_MatchedTruthParticle_isPhoton_{selection}_cut_PROFILE"
+                            for mc in mc_samples
+                        ],
+                        f"{mc}_{var}_MatchedTruthParticle_isPhoton_{selection}_cut_PROFILE",
+                    )
+                    jet_fakes = analysis.sum_hists(
+                        [
+                            f"{mc}_{var}_MatchedTruthParticle_isJet_{selection}_cut_PROFILE"
+                            for mc in mc_samples
+                        ],
+                        f"{mc}_{var}_MatchedTruthParticle_isJet_{selection}_cut_PROFILE",
+                    )
+                    true_taus = analysis.sum_hists(
+                        [
+                            f"{mc}_{var}_MatchedTruthParticle_isTau_{selection}_cut_PROFILE"
+                            for mc in mc_samples
+                        ],
+                        f"{mc}_{var}_MatchedTruthParticle_isTau_{selection}_cut_PROFILE",
+                    )
+                else:
+                    ele_fakes = analysis.histograms[
+                        f"{mc}_{var}_MatchedTruthParticle_isElectron_{selection}_cut_PROFILE"
+                    ]
+                    muon_fakes = analysis.histograms[
+                        f"{mc}_{var}_MatchedTruthParticle_isMuon_{selection}_cut_PROFILE"
+                    ]
+                    photon_fakes = analysis.histograms[
+                        f"{mc}_{var}_MatchedTruthParticle_isPhoton_{selection}_cut_PROFILE"
+                    ]
+                    jet_fakes = analysis.histograms[
+                        f"{mc}_{var}_MatchedTruthParticle_isJet_{selection}_cut_PROFILE"
+                    ]
+                    true_taus = analysis.histograms[
+                        f"{mc}_{var}_MatchedTruthParticle_isTau_{selection}_cut_PROFILE"
+                    ]
+                sel_hist = analysis.get_hist(var, "wtaunu", selection, TH1=True)
+                nbins = sel_hist.GetNbinsX()
+                bin_edges = TH1_bin_edges(sel_hist)
+
+                for logy in (True, False):
+                    analysis.plot(
+                        [jet_fakes, photon_fakes, muon_fakes, ele_fakes, true_taus],
+                        labels=[
+                            "Jet Fakes",
+                            "Photon Fakes",
+                            "Muon Fakes",
+                            "Electron Fakes",
+                            "True taus",
+                        ],
+                        sort=False,
+                        logx=False,
+                        logy=logy,
+                        yerr=False,
+                        colours=list(plt.rcParams["axes.prop_cycle"].by_key()["color"])[:5],
+                        title=f"Fake fractions for {var} in {selection}",
+                        y_axlim=(0, 1),
+                        kind="stack",
+                        xlabel=xlabel,
+                        ylabel="Fraction of fake matched taus in signal MC",
+                        filename=f"{mc}_{var}_{selection}_fake_fractions{'_liny' if not logy else ''}.png",
+                    )
 
         # calculate FF histograms
-        CR_passID_data = analysis.get_hist(var, "data", "CR_passID")
-        CR_failID_data = analysis.get_hist(var, "data", "CR_failID")
-        SR_passID_data = analysis.get_hist(var, "data", "SR_passID")
-        SR_failID_data = analysis.get_hist(var, "data", "SR_failID")
+        # -----------------------------------------------------------------------
+        analysis.logger.info("Calculating fake factors for %s...", var)
+        CR_passID_data = analysis.get_hist(var, "data", "CR_passID", TH1=True)
+        CR_failID_data = analysis.get_hist(var, "data", "CR_failID", TH1=True)
+        SR_passID_data = analysis.get_hist(var, "data", "SR_passID", TH1=True)
+        SR_failID_data = analysis.get_hist(var, "data", "SR_failID", TH1=True)
+        CR_passID_mc = analysis.sum_hists(
+            [f"{ds}_{var}_CR_passID_trueTau_cut" for ds in mc_samples]
+        )
+        CR_failID_mc = analysis.sum_hists(
+            [f"{ds}_{var}_CR_failID_trueTau_cut" for ds in mc_samples]
+        )
+        SR_passID_mc = analysis.sum_hists(
+            [f"{ds}_{var}_SR_passID_trueTau_cut" for ds in mc_samples]
+        )
+        SR_failID_mc = analysis.sum_hists(
+            [f"{ds}_{var}_SR_failID_trueTau_cut" for ds in mc_samples]
+        )
+        analysis.histograms[f"all_mc_{var}_CR_passID_mc_cut"] = CR_passID_mc
+        analysis.histograms[f"all_mc_{var}_CR_failID_mc_cut"] = CR_failID_mc
+        analysis.histograms[f"all_mc_{var}_SR_passID_mc_cut"] = SR_passID_mc
+        analysis.histograms[f"all_mc_{var}_SR_failID_mc_cut"] = SR_failID_mc
 
-        CR_passID_mc = sum_mc_for_region(var, "CR_passID_trueTau")
-        CR_failID_mc = sum_mc_for_region(var, "CR_failID_trueTau")
-        SR_passID_mc = sum_mc_for_region(var, "SR_passID_trueTau")
-        SR_failID_mc = sum_mc_for_region(var, "SR_failID_trueTau")
-        analysis.histograms[f"CR_passID_mc_{var}"] = CR_passID_mc.TH1
-        analysis.histograms[f"CR_failID_mc_{var}"] = CR_failID_mc.TH1
-        analysis.histograms[f"SR_passID_mc_{var}"] = SR_passID_mc.TH1
-        analysis.histograms[f"SR_failID_mc_{var}"] = SR_failID_mc.TH1
-
+        # FF calculation
         FF_hist = (CR_passID_data - CR_passID_mc) / (CR_failID_data - CR_failID_mc)
         SR_data_fakes = (SR_failID_data - SR_failID_mc) * FF_hist
-        analysis.histograms[f"{var}_FF"] = FF_hist.TH1
-        analysis.histograms[f"{var}_fakes_bkg"] = SR_data_fakes.TH1
 
-        # plot these histograms, for mental health
+        analysis.histograms[f"{var}_FF"] = FF_hist
+        analysis.histograms[f"{var}_fakes_bkg"] = SR_data_fakes
+
+        integrals[var] = {
+            "CR_passID_mc": CR_passID_mc.Integral(),
+            "CR_failID_mc": CR_failID_mc.Integral(),
+            "SR_passID_mc": SR_passID_mc.Integral(),
+            "SR_failID_mc": SR_failID_mc.Integral(),
+            "CR_passID_data": CR_passID_data.Integral(),
+            "CR_failID_data": CR_failID_data.Integral(),
+            "SR_passID_data": SR_passID_data.Integral(),
+            "SR_failID_data": SR_failID_data.Integral(),
+            "FF_numerator": (CR_passID_data - CR_passID_mc).Integral(),
+            "FF_denominator": (CR_failID_data - CR_failID_mc).Integral(),
+            "FF_hist": FF_hist.Integral(),
+            "SR_failID_diff": (SR_failID_data - SR_failID_mc).Integral(),
+            "SR_data_fakes": SR_data_fakes.Integral(),
+        }
+
+        CR_passID_mc = Histogram1D(th1=CR_passID_mc)
+        CR_failID_mc = Histogram1D(th1=CR_failID_mc)
+        SR_passID_mc = Histogram1D(th1=SR_passID_mc)
+        SR_failID_mc = Histogram1D(th1=SR_failID_mc)
+        CR_passID_data = Histogram1D(th1=CR_passID_data)
+        CR_failID_data = Histogram1D(th1=CR_failID_data)
+        SR_passID_data = Histogram1D(th1=SR_passID_data)
+        SR_failID_data = Histogram1D(th1=SR_failID_data)
+
+        # plot intermediate histograms for by-eye verification
+        # -----------------------------------------------------------------------
         analysis.plot(
             [CR_passID_data, CR_failID_data, CR_passID_mc, CR_failID_mc],
             labels=["CR_passID_data", "CR_failID_data", "CR_passID_mc", "CR_failID_mc"],
@@ -405,6 +549,10 @@ if __name__ == "__main__":
             ratio_plot=False,
             filename=f"FF_calculation_delta_SR_fail_{var}.png",
         )
+
+    integrals = pd.DataFrame.from_dict(integrals)
+    analysis.logger.info("Table of FF histogram integrals:")
+    analysis.logger.info(tabulate(integrals, headers="keys", tablefmt="fancy_grid"))
 
     # HISTORGRAMS
     # ========================================================================
@@ -517,7 +665,7 @@ if __name__ == "__main__":
 
     analysis.plot(var="badJet", datasets="data")
 
-    # No fakes scaling
+    # No Fakes
     # ----------------------------------------------------------------------------
     default_args = {
         "datasets": all_samples,
@@ -589,7 +737,7 @@ if __name__ == "__main__":
         **default_args,
     )
 
-    # Fake scaled stacks
+    # Stacks with Fakes background
     # ----------------------------------------------------------------------------
     # log axes
     default_args = {
@@ -678,12 +826,9 @@ if __name__ == "__main__":
 
     def FF_full_bkg(s: str) -> Histogram1D:
         """Sum of all backgrounds + signal + FF"""
-        return (
-            reduce(
-                (lambda x, y: x + y), [analysis.get_hist(s, ds_, "SR_passID") for ds_ in mc_samples]
-            )
-            + analysis.histograms[f"{s}_fakes_bkg"]
-        )
+        return reduce(
+            (lambda x, y: x + y), [analysis.get_hist(s, ds_, "SR_passID") for ds_ in mc_samples]
+        ) + analysis.get_hist(f"{s}_fakes_bkg")
 
     analysis.plot(
         var=[FF_full_bkg("TauPt"), "data_TauPt_SR_passID_cut"],
@@ -739,7 +884,7 @@ if __name__ == "__main__":
         filename="FF_compare_TauPhi_liny.png",
     )
 
-    analysis.histogram_printout()
+    # analysis.histogram_printout()
     analysis.save_histograms()
 
     analysis.logger.info("DONE.")

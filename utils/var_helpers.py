@@ -201,4 +201,14 @@ derived_vars: Dict[str, OtherVar] = {
         "tree": "",
         "cfunc": "calc_diff",
     },
+    "MatchedTruthParticle_isJet": {
+        "var_args": {
+            "MatchedTruthParticle_isTau",
+            "MatchedTruthParticle_isElectron",
+            "MatchedTruthParticle_isMuon",
+            "MatchedTruthParticle_isPhoton",
+        },
+        "tree": "",
+        "cfunc": "is_not",
+    },
 }
