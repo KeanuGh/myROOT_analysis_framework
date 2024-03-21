@@ -3,8 +3,6 @@ Defines helper functions to calculate various kinematic/other physical variables
 """
 from typing import Dict, TypedDict, List
 
-import pandas as pd  # type: ignore
-
 
 # VARIABLE BUILDING DICTIONARY
 # ================================
@@ -170,45 +168,51 @@ derived_vars: Dict[str, OtherVar] = {
         "cfunc": "delta_r",
     },
     "TauPt_div_MET": {
-        "var_args": {
+        "var_args": [
             "TauPt",
             "MET_met",
-        },
+        ],
         "tree": "",
         "cfunc": "calc_div",
     },
     "DeltaPhi_tau_met": {
-        "var_args": {
+        "var_args": [
             "TauPhi",
             "MET_phi",
-        },
+        ],
         "tree": "",
         "cfunc": "calc_absdiff",
     },
     "TauPt_res": {
-        "var_args": {
+        "var_args": [
             "MatchedTruthParticlePt",
             "TauPt",
-        },
+        ],
         "tree": "",
         "cfunc": "calc_frac",
     },
     "TauPt_diff": {
-        "var_args": {
+        "var_args": [
             "MatchedTruthParticlePt",
             "TauPt",
-        },
+        ],
         "tree": "",
         "cfunc": "calc_diff",
     },
     "MatchedTruthParticle_isJet": {
-        "var_args": {
+        "var_args": [
             "MatchedTruthParticle_isTau",
             "MatchedTruthParticle_isElectron",
             "MatchedTruthParticle_isMuon",
             "MatchedTruthParticle_isPhoton",
-        },
+        ],
         "tree": "",
         "cfunc": "is_not",
     },
+    "nJets": {
+        "var_args": ["JetPt"],
+        "tree": "",
+        "cfunc": "n_vec",
+    },
+    "LeadingJetPt": {"var_args": ["JetPt"], "tree": "", "cfunc": "lead_val"},
 }

@@ -139,6 +139,7 @@ if __name__ == "__main__":
     pass_presel = Cut(
         r"Pass preselection",
         r"(passReco == 1) && (TauBaselineWP == 1) && (abs(TauCharge) == 1)"
+        r"&& (LeadingJetPt > 10)"
         r"&& (MatchedTruthParticle_isTau + MatchedTruthParticle_isElectron + MatchedTruthParticle_isMuon + MatchedTruthParticle_isPhoton <= 1)",
     )
     pass_taupt170 = Cut(
@@ -261,7 +262,7 @@ if __name__ == "__main__":
         "MatchedTruthParticle_isMuon",
         "MatchedTruthParticle_isPhoton",
         "MatchedTruthParticle_isJet",
-        "badJet",
+        "nJets",
     }
     mc_samples = [
         "wtaunu",
@@ -275,6 +276,7 @@ if __name__ == "__main__":
         "TauPhi",
         "TauPt",
         "MTW",
+        "nJets",
     ]
     profile_vars = [
         "TauPt_res",
@@ -302,7 +304,7 @@ if __name__ == "__main__":
     analysis = Analysis(
         datasets,
         year=2017,
-        # regen_histograms=True,
+        regen_histograms=True,
         # regen_metadata=True,
         ttree="T_s1thv_NOMINAL",
         cuts=selections,
@@ -663,8 +665,6 @@ if __name__ == "__main__":
         logy=False,
     )
 
-    analysis.plot(var="badJet", datasets="data")
-
     # No Fakes
     # ----------------------------------------------------------------------------
     default_args = {
@@ -742,7 +742,7 @@ if __name__ == "__main__":
     # log axes
     default_args = {
         "datasets": all_samples + [None],
-        "labels": [analysis[ds].label for ds in all_samples] + ["Fakes Background"],
+        "labels": [analysis[ds].label for ds in all_samples] + ["Multijet"],
         "colours": [analysis[ds].colour for ds in all_samples] + [next(c_iter)],
         "title": f"data17 | mc16d | {analysis.global_lumi / 1000:.3g}" + r"fb$^{-1}$",
         "yerr": True,

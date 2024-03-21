@@ -642,6 +642,16 @@ variable_data: Dict[str, Branch] = {
         "units": "",
         "tag": VarTag.RECO,
     },
+    "nJets": {
+        "name": "Number of jets",
+        "units": "",
+        "tag": VarTag.RECO,
+    },
+    "LeadingJetPt": {
+        "name": "Leading jet $p_T$",
+        "units": "GeV",
+        "tag": VarTag.RECO,
+    },
     # TRUTH-LEVEL KINEMATIC VARIABLES
     # =======================================================
     # analysistop
