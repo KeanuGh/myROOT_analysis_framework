@@ -161,7 +161,6 @@ class DatasetMetadata:
             ttree_name = dataset_dict["ttree"] if "ttree" in dataset_dict else ttree
             all_files |= set(files)
             dsids: set[int] = set()
-            merge_dataset = ""
 
             self.logger.info("Calculating sum of weights for dataset '%s'...", dataset_name)
 

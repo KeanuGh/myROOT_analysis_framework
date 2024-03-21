@@ -13,7 +13,7 @@ import numpy as np
 from numpy.typing import ArrayLike
 from tabulate import tabulate
 
-from src.dataset import Dataset, RDataset
+from src.dataset import Dataset
 from src.datasetbuilder import DatasetBuilder, lumi_year
 from src.dsid_meta import DatasetMetadata
 from src.histogram import Histogram1D
@@ -250,17 +250,20 @@ class Analysis:
 
                 # create a "dummy" dataset with only the label and cuts of the first dataset
                 if merged_ds not in self.datasets:
-                    self[merged_ds] = RDataset(
-                        name=merged_ds, label=dataset.label, cuts=dataset.cuts, is_merged=True
+                    self[merged_ds] = Dataset(
+                        name=merged_ds,
+                        label=dataset.label,
+                        selections=dataset.selections,
+                        is_merged=True,
                     )
                 else:
                     # verify cuts are the same
-                    if self[merged_ds].cuts != dataset.cuts:
+                    if self[merged_ds].selections != dataset.selections:
                         raise ValueError(
                             f"Cuts in merged dataset are not the same. Got:"
-                            f"\nMerged: {self[merged_ds].cuts}"
+                            f"\nMerged: {self[merged_ds].selections}"
                             f"\nand"
-                            f"\nOriginal: {dataset.cuts}"
+                            f"\nOriginal: {dataset.selections}"
                         )
 
                 for hist_name, hist in dataset.histograms.items():
@@ -479,10 +482,10 @@ class Analysis:
             # separate plot for EACH set of cuts
             if _datasetloop:
                 # check that all datasets to be plot have the same sets of cuts
-                first_cutflow = self[datasets[0]].cuts.keys()
-                if not all(ds.cuts.keys() == first_cutflow for ds in self.datasets.values()):
+                first_cutflow = self[datasets[0]].selections.keys()
+                if not all(ds.selections.keys() == first_cutflow for ds in self.datasets.values()):
                     raise ValueError("Datasets do not have the same cuts")
-            selections_to_loop = list(self[datasets[0]].cuts.keys())
+            selections_to_loop = list(self[datasets[0]].selections.keys())
         elif isinstance(cut, str):
             selections_to_loop = [cut]
         elif isinstance(cut, list):
@@ -865,8 +868,8 @@ class Analysis:
 
     def __verify_same_cuts(self, datasets: list[str]):
         """check that all datasets to be plotted have the same sets of cuts"""
-        first_cutflow = self[datasets[0]].cuts
-        if not all(ds.cuts == first_cutflow for ds in list(self.datasets.values())[1:]):
+        first_cutflow = self[datasets[0]].selections
+        if not all(ds.selections == first_cutflow for ds in list(self.datasets.values())[1:]):
             raise ValueError("Datasets do not have the same cuts")
         return True
 
@@ -896,7 +899,7 @@ class Analysis:
         if isinstance(cutsets, str):
             cutsets = [cutsets]
         elif cutsets is None:
-            cutsets = list(self[datasets[0]].cuts)
+            cutsets = list(self[datasets[0]].selections)
 
         # table build loop
         latex_str = f"\\begin{{tabular}}{{{'l' * (len(datasets) + 1)}}}\n"

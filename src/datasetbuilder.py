@@ -9,7 +9,7 @@ import ROOT  # type: ignore
 import pandas as pd  # type: ignore
 
 from src.cutfile import Cut
-from src.dataset import RDataset
+from src.dataset import Dataset
 from src.logger import get_logger
 from utils import ROOT_utils, file_utils
 from utils.var_helpers import derived_vars
@@ -96,7 +96,7 @@ class DatasetBuilder:
         data_path: Path | list[Path],
         cuts: list[Cut] | dict[str, list[Cut]],
         extract_vars: set[str] | None = None,
-    ) -> RDataset:
+    ) -> Dataset:
         """
         Builds a dataframe from cut inputs.
 
@@ -163,10 +163,10 @@ class DatasetBuilder:
 
         # BUILD DATASET
         # ===============================
-        dataset = RDataset(
+        dataset = Dataset(
             name=self.name,
             df=df,
-            cuts=cuts,
+            selections=cuts,
             all_vars=all_vars | vars_to_calc,
             logger=self.logger,
             lumi=self.lumi,
