@@ -2,9 +2,9 @@ import pathlib
 
 import numpy as np
 from tabulate import tabulate
+from utils.PMG_tool import get_crossSection
 
 from analysis import Analysis
-from utils.PMG_tool import get_crossSection
 
 ANALYSISTOP_PATH = pathlib.Path("/data/analysistop_out/mc16a")
 DATA_OUT_DIR = "/data/dataset_pkl_outputs/"

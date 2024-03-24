@@ -1,9 +1,7 @@
 from typing import Dict
 
-import matplotlib.pyplot as plt
 import numpy as np
 
-from src.histogram import Histogram1D
 from src.analysis import Analysis
 
 DTA_PATH = "/eos/home-k/kghorban/DTA_OUT/2023-10-25/"
@@ -14,21 +12,24 @@ if __name__ == "__main__":
     datasets: Dict[str, Dict] = {
         "wmunu_hm_BFilter_mu": {
             # "data_path": DTA_PATH + "user.kghorban.Sh_2211_Wmunu_mW_120_ECMS_BFilter*/*.root",
-            "data_path": DTA_PATH + "user.kghorban.Sh_2211_Wmunu_mW_120_ECMS_BFilter.e8351.MC16d.v1.2023-11-10_histograms.root/user.kghorban.35460771._000001.histograms.root",            
+            "data_path": DTA_PATH
+            + "user.kghorban.Sh_2211_Wmunu_mW_120_ECMS_BFilter.e8351.MC16d.v1.2023-11-10_histograms.root/user.kghorban.35460771._000001.histograms.root",
             "ttree": "T_s1tmv_NOMINAL",
             "cutfile": ROOT_DIR + "/options/DTA_cuts/dta_full_mu.txt",
             "label": r"BFilter muon tree high-mass $W\rightarrow\mu\nu$",
         },
         "wmunu_hm_BFilter_e": {
             # "data_path": DTA_PATH + "user.kghorban.Sh_2211_Wmunu_mW_120_ECMS_BFilter*/*.root",
-            "data_path": DTA_PATH + "user.kghorban.Sh_2211_Wmunu_mW_120_ECMS_BFilter.e8351.MC16d.v1.2023-11-10_histograms.root/user.kghorban.35460771._000001.histograms.root",            
+            "data_path": DTA_PATH
+            + "user.kghorban.Sh_2211_Wmunu_mW_120_ECMS_BFilter.e8351.MC16d.v1.2023-11-10_histograms.root/user.kghorban.35460771._000001.histograms.root",
             "ttree": "T_s1tev_NOMINAL",
             "cutfile": ROOT_DIR + "/options/DTA_cuts/dta_full_mu.txt",
             "label": r"BFilter electron tree high-mass $W\rightarrow\mu\nu$",
         },
         "wmunu_hm_BFilter_had": {
             # "data_path": DTA_PATH + "user.kghorban.Sh_2211_Wmunu_mW_120_ECMS_BFilter*/*.root",
-            "data_path": DTA_PATH + "user.kghorban.Sh_2211_Wmunu_mW_120_ECMS_BFilter.e8351.MC16d.v1.2023-11-10_histograms.root/user.kghorban.35460771._000001.histograms.root",            
+            "data_path": DTA_PATH
+            + "user.kghorban.Sh_2211_Wmunu_mW_120_ECMS_BFilter.e8351.MC16d.v1.2023-11-10_histograms.root/user.kghorban.35460771._000001.histograms.root",
             "ttree": "T_s1thv_NOMINAL",
             "cutfile": ROOT_DIR + "/options/DTA_cuts/dta_full_mu.txt",
             "label": r"BFilter hadron tree high-mass $W\rightarrow\mu\nu$",
@@ -73,7 +74,6 @@ if __name__ == "__main__":
         #     "cutfile": ROOT_DIR + "/options/DTA_cuts/dta_full_mu.txt",
         #     "label": r"high-mass $W\rightarrow\mu\nu$ hadron channel",
         # },
-
         # "wmunu_hm_full": {
         #     "data_path": DTA_PATH + "user.kghorban.Sh_2211_Wmunu_mW_120_ECMS*/*.root",
         #     "ttree": {"T_s1thv_NOMINAL", "T_s1tev_NOMINAL", "T_s1tmv_NOMINAL"},
@@ -99,7 +99,6 @@ if __name__ == "__main__":
             "rwCorr": (50, 0, 2),
             "TruthBosonM": np.geomspace(120, 5000, 20),
         },
-
     )
     # my_analysis["wmunu_hm_full"].label = r"merged high-mass $W\rightarrow\mu\nu$"
     my_analysis.cutflow_printout(latex=True)
@@ -133,7 +132,7 @@ if __name__ == "__main__":
     # TRUTH
     # -----------------------------------
     for datasets in list(datasets.keys()):
-                    #  + [flavour_ds, decay_ds]:
+        #  + [flavour_ds, decay_ds]:
         my_analysis.plot_hist(
             datasets,
             "TruthBosonM",
