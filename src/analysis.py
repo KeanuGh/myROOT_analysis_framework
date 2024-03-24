@@ -1,6 +1,6 @@
 import inspect
-from copy import deepcopy
-from dataclasses import dataclass
+import os
+from dataclasses import dataclass, fields
 from functools import reduce
 from itertools import islice
 from pathlib import Path
@@ -19,25 +19,56 @@ from src.dsid_meta import DatasetMetadata
 from src.histogram import Histogram1D
 from src.logger import get_logger
 from utils import plotting_tools
-from utils.context import handle_dataset_arg, redirect_stdout
+from utils.context import handle_dataset_arg
+
+
+@dataclass(slots=True)
+class FakesOpts:
+    """
+    Options for basic fakes estimation
+
+    :param fakes_source_var: variable from which to calculate fake factors from
+    :param apply_fakes_to: fakes histograms will be calculated in these variables from source
+    :param CR_passID_data: selection name for control region pass-ID for data (must exist in analysis)
+    :param CR_failID_data: selection name for control region fail-ID for data (must exist in analysis)
+    :param CR_failID_data: selection name for signal region fail-ID for data (must exist in analysis)
+    :param CR_passID_mc: selection name for control region pass-ID for "true" tau MC (must exist in analysis)
+    :param CR_failID_mc: selection name for control region fail-ID for "true" tau MC (must exist in analysis)
+    :param CR_failID_mc: selection name for signal region fail-ID for "true" tau MC (must exist in analysis)
+    """
+
+    fakes_source_var: str
+    apply_fakes_to: set[str]
+    CR_passID_data: str = "CR_passID"
+    CR_failID_data: str = "CR_failID"
+    SR_failID_data: str = "SR_failID"
+    CR_passID_mc: str = "CR_passID_trueTau"
+    CR_failID_mc: str = "CR_failID_trueTau"
+    SR_failID_mc: str = "SR_failID_trueTau"
 
 
 @dataclass(slots=True)
 class AnalysisPath:
-    """Container class for paths needed by analyses"""
+    """
+    Container class for paths needed by analyses
+
+    :param plot_dir: directory to save plots to
+    :param latex_dir: directory to save latex tables to
+    :param root_dir: directory to save root files to
+    :param log_dir: directory to save log files to
+    """
 
     plot_dir: Path
     latex_dir: Path
+    root_dir: Path
     log_dir: Path
 
     def create_paths(self):
         """Create paths needed by analyses"""
-        for p in (
-            self.plot_dir,
-            self.latex_dir,
-            self.log_dir,
-        ):
-            p.mkdir(parents=True, exist_ok=True)
+        for field in fields(self):
+            if not issubclass(field.type, Path):
+                raise ValueError(f"Non-Path attribute in {self}!")
+            getattr(self, field.name).mkdir(parents=True, exist_ok=True)
 
 
 class Analysis:
@@ -59,6 +90,10 @@ class Analysis:
         "cmap",
         "year",
         "metadata",
+        "mc_samples",
+        "data_sample",
+        "signal_sample",
+        "binnings",
     )
 
     def __init__(
@@ -104,6 +139,7 @@ class Analysis:
         self._output_dir = Path(output_dir) / "outputs" / analysis_label  # where outputs go
         self.paths = AnalysisPath(
             plot_dir=Path(self._output_dir) / "plots",
+            root_dir=Path(self._output_dir) / "root",
             latex_dir=Path(self._output_dir) / "LaTeX",  # where to print latex cutflow table(s)
             log_dir=Path(self._output_dir) / "logs",
         )
@@ -170,13 +206,28 @@ class Analysis:
         self.logger.debug("Declared metadata maps in ROOT")
 
         # BUILD DATASETS
-        # ============================
+        # ===============================
+        self.mc_samples: list[str] = []
+        self.data_sample: str = ""
+        self.signal_sample: str = ""
         self.datasets: dict[str, Dataset] = dict()
         for dataset_name, data_args in data_dict.items():
             self.logger.info("")
             self.logger.info("=" * (42 + len(dataset_name)))
             self.logger.info(f"======== INITIALISING DATASET '{dataset_name}' =========")
             self.logger.info("=" * (42 + len(dataset_name)))
+
+            if "is_data" in data_args:
+                if self.data_sample != "":
+                    raise ValueError("Can't have more than one data sample!")
+                self.data_sample = dataset_name
+            if "is_signal" in data_args:
+                if self.signal_sample != "":
+                    raise ValueError("Can't have more than one signal sample!")
+                self.signal_sample = dataset_name
+                self.mc_samples.append(dataset_name)
+            else:
+                self.mc_samples.append(dataset_name)
 
             # get dataset build arguments out of options passed to analysis
             if "regen_histograms" in data_args and "regen_histograms" in kwargs:
@@ -198,7 +249,7 @@ class Analysis:
             # make dataset
             builder = DatasetBuilder(
                 name=dataset_name,
-                **self.__match_params(args, DatasetBuilder.__init__),
+                **self._match_params(args, DatasetBuilder.__init__),
                 logger=(
                     self.logger
                     if not separate_loggers  # use single logger
@@ -211,14 +262,12 @@ class Analysis:
                     )
                 ),
             )
-            dataset = builder.build(**self.__match_params(args, DatasetBuilder.build))
+            dataset = builder.build(**self._match_params(args, DatasetBuilder.build))
 
             # apply some manual settings
             for manual_setting in [
                 "binnings",
                 "profiles",
-                "is_data",
-                "is_signal",
             ]:
                 if manual_setting in args:
                     dataset.__setattr__(manual_setting, args[manual_setting])
@@ -244,74 +293,6 @@ class Analysis:
             for hist_name, hist in dataset.histograms.items():
                 self.histograms[dataset_name + "_" + hist_name] = hist
 
-            # merge histograms if label is given
-            if "merge_into" in args:
-                merged_ds = args["merge_into"]
-
-                # create a "dummy" dataset with only the label and cuts of the first dataset
-                if merged_ds not in self.datasets:
-                    self[merged_ds] = Dataset(
-                        name=merged_ds,
-                        label=dataset.label,
-                        selections=dataset.selections,
-                        is_merged=True,
-                    )
-                else:
-                    # verify cuts are the same
-                    if self[merged_ds].selections != dataset.selections:
-                        raise ValueError(
-                            f"Cuts in merged dataset are not the same. Got:"
-                            f"\nMerged: {self[merged_ds].selections}"
-                            f"\nand"
-                            f"\nOriginal: {dataset.selections}"
-                        )
-
-                for hist_name, hist in dataset.histograms.items():
-                    hist_name_merged = merged_ds + "_" + hist_name
-                    if hist_name_merged not in self.histograms:
-                        self.histograms[hist_name_merged] = dataset.histograms[hist_name].Clone()
-                        self.logger.debug(
-                            f"Added {hist_name_merged} to histograms from {dataset_name}"
-                        )
-                    else:
-                        # check bin edges are the same
-                        edges_1 = [
-                            self.histograms[hist_name_merged].GetBinLowEdge(i + 1)
-                            for i in range(self.histograms[hist_name_merged].GetNbinsX())
-                        ]
-                        edges_2 = [
-                            dataset.histograms[hist_name].GetBinLowEdge(i + 1)
-                            for i in range(dataset.histograms[hist_name].GetNbinsX())
-                        ]
-                        if edges_1 != edges_2:
-                            raise ValueError(
-                                f"Histograms cannot be merged, bin edges do not match."
-                                f"Got \n{edges_1} and \n{edges_2}"
-                            )
-
-                        # merge but capture any ROOT error messages
-                        with redirect_stdout(in_stream="stderr") as root_msg:
-                            self.histograms[hist_name_merged].Add(dataset.histograms[hist_name])
-                        if "Attempt to add histograms with different labels" in root_msg.getvalue():
-                            self.logger.warning(
-                                f"Histograms {hist_name_merged} and {dataset_name}_{hist_name} have different labels."
-                                f"Cannot add directly. Attempting TH1::Merge.."
-                            )
-
-                        self.logger.debug(
-                            f"Merged {dataset_name}_{hist_name} into {hist_name_merged}"
-                        )
-
-                    # add/replace to dummy dataset
-                    self[merged_ds].histograms[hist_name] = self.histograms[hist_name_merged]
-
-                # sum cutflows
-                if self[merged_ds].cutflows:
-                    for cutflow_name, cutflow in self[merged_ds].cutflows.items():
-                        self[merged_ds].cutflows[cutflow_name] += cutflow
-                else:
-                    self[merged_ds].cutflows = deepcopy(dataset.cutflows)
-
             self[dataset_name] = dataset  # save to analysis
 
             self.logger.info("=" * (42 + len(dataset_name)))
@@ -323,7 +304,7 @@ class Analysis:
         self.logger.info(f"ANALYSIS '{analysis_label}' INITIALISED")
 
     @staticmethod
-    def __match_params(params: dict[str, Any], func: Callable) -> dict[str, Any]:
+    def _match_params(params: dict[str, Any], func: Callable) -> dict[str, Any]:
         """Return parameters matching passed function signature"""
         args = dict()
         for arg in inspect.signature(func).parameters:
@@ -534,22 +515,13 @@ class Analysis:
             label_list: list[str | None] = []
             colours_list: list[str | None] = []
 
-            signal_ds = data_ds = ""  # save signal and data if they are found
             for i in range(n_hists):
                 variable = var[i] if _varloop else var[0]
                 dataset = datasets[i] if _datasetloop else datasets[0]
 
                 if do_stack and (dataset is not None):
                     # save signal & data for the end if only stacking one variable and many datasets
-                    if self[datasets[i]].is_signal and _datasetloop:
-                        if signal_ds:
-                            raise ValueError("More than one signal histogram found!")
-                        signal_ds = datasets[i]
-                        continue
-                    elif self[datasets[i]].is_data and _datasetloop:
-                        if data_ds:
-                            raise ValueError("More than one data histogram found!")
-                        data_ds = datasets[i]
+                    if _datasetloop and (datasets[i] in (self.data_sample, self.signal_sample)):
                         continue
 
                 # save options for this histogram
@@ -600,15 +572,17 @@ class Analysis:
                 )
 
                 # handle signal seperately
-                if signal_ds:
+                if self.signal_sample in datasets:
                     bkg_sum = reduce((lambda x, y: x + y), hist_list)
-                    sig_var = var[datasets.index(signal_ds)] if _varloop else var[0]
-                    sig_hist = self.get_hist(sig_var, signal_ds, selection)
+                    sig_var = var[datasets.index(self.signal_sample)] if _varloop else var[0]
+                    sig_hist = self.get_hist(sig_var, self.signal_sample, selection)
                     if scale_by_bin_width:
                         sig_hist /= sig_hist.bin_widths
                     hist_list.append(sig_hist)
                     sig_stack = sig_hist + bkg_sum
-                    sig_stack.plot(ax=ax, yerr=None, color="r", label=self[signal_ds].label)
+                    sig_stack.plot(
+                        ax=ax, yerr=None, color="r", label=self[self.signal_sample].label
+                    )
 
                 edges = hist_list[0].bin_edges
                 if yerr:
@@ -635,15 +609,15 @@ class Analysis:
                     )
 
                 # handle data separately
-                if data_ds:
+                if self.data_sample in datasets:
                     # figure out which variable we're meant to plot
                     if len(var) < 2:
                         varname = var[0]
                     else:
-                        varname = var[datasets.index(data_ds)]
+                        varname = var[datasets.index(self.data_sample)]
 
                     # get histogram and plot
-                    data_hist = self.get_hist(varname, data_ds, selection)
+                    data_hist = self.get_hist(varname, self.data_sample, selection)
 
                     if scale_by_bin_width:
                         data_hist /= data_hist.bin_widths
@@ -659,7 +633,7 @@ class Analysis:
                     )
 
                 if ratio_plot:
-                    if not data_ds:
+                    if not self.data_sample:
                         raise ValueError("Ratio of what?")
 
                     fig.tight_layout()
@@ -739,7 +713,7 @@ class Analysis:
             # ============================
             if n_hists > 1:
                 # limit to 4 rows and reverse order (so more important samples go in front)
-                ncols = len(hist_list) + bool(yerr) + bool(data_ds)
+                ncols = len(hist_list) + bool(yerr) + bool(self.data_sample in datasets)
                 ncols = max(ncols // 4, 1)  # need at least one column!
                 legend_handles, legend_labels = ax.get_legend_handles_labels()
                 ax.legend(
@@ -873,7 +847,79 @@ class Analysis:
             raise ValueError("Datasets do not have the same cuts")
         return True
 
-    # ===============================
+    def do_fakes_estimate(
+        self,
+        fakes_source_var: str,
+        fakes_target_vars: set[str],
+        CR_passID_data: str = "CR_passID",
+        CR_failID_data: str = "CR_failID",
+        SR_passID_data: str = "SR_passID",
+        SR_failID_data: str = "SR_failID",
+        CR_passID_mc: str = "CR_passID_trueTau",
+        CR_failID_mc: str = "CR_failID_trueTau",
+        SR_passID_mc: str = "SR_passID_trueTau",
+        SR_failID_mc: str = "SR_failID_trueTau",
+    ) -> None:
+        """Perform fakes estimate"""
+        ff_var = fakes_source_var
+
+        self.logger.info("Calculating fake factors for %s...", ff_var)
+
+        # data histograms
+        hCR_passID_data = self.get_hist(ff_var, "data", CR_passID_data, TH1=True)
+        hCR_failID_data = self.get_hist(ff_var, "data", CR_failID_data, TH1=True)
+        hSR_failID_data = self.get_hist(ff_var, "data", SR_failID_data, TH1=True)
+
+        # mc "true tau" histograms
+        mc_ds = self.mc_samples
+        hCR_passID_mc = self.sum_hists([f"{ds}_{ff_var}_{CR_passID_mc}_cut" for ds in mc_ds])
+        hCR_failID_mc = self.sum_hists([f"{ds}_{ff_var}_{CR_failID_mc}_cut" for ds in mc_ds])
+        hSR_failID_mc = self.sum_hists([f"{ds}_{ff_var}_{SR_failID_mc}_cut" for ds in mc_ds])
+        self.histograms[f"all_mc_{ff_var}_{CR_passID_mc}_cut"] = hCR_passID_mc
+        self.histograms[f"all_mc_{ff_var}_{CR_failID_mc}_cut"] = hCR_failID_mc
+        self.histograms[f"all_mc_{ff_var}_{SR_failID_mc}_cut"] = hSR_failID_mc
+
+        # FF calculation
+        h_FF = (hCR_passID_data - hCR_passID_mc) / (hCR_failID_data - hCR_failID_mc)
+        h_FF.SetName(f"{ff_var}_FF")
+        h_SR_data_fakes = (hSR_failID_data - hSR_failID_mc) * h_FF
+
+        self.histograms[f"{ff_var}_FF"] = h_FF
+        self.histograms[f"{ff_var}_fakes_bkg"] = h_SR_data_fakes
+
+        # bin histograms in other variables
+        mc_ff_all_hists: dict[str, dict[str, ROOT.RResultsPtr]] = dict()
+        ROOT.gInterpreter.Declare(
+            f"TH1F* FF_hist = reinterpret_cast<TH1F*>({ROOT.addressof(h_FF)});"
+        )
+        for target_var in fakes_target_vars:
+            # define target histogram
+            h_name = f"{target_var}_FF"
+            h_bins = self[self.data_sample].get_binnings(target_var, SR_passID_data)
+            h_target_var_ff = ROOT.TH1F(h_name, h_name, *plotting_tools.get_TH1_bins(**h_bins))
+
+            # need to fill histograms for each MC sample
+            mc_ff_hists: dict[str, ROOT.RResultsPtr] = dict()
+            for mc in mc_ds:
+                weight = f"reco_weight * FF_hist->GetBinContent(FF_hist->FindBin({ff_var}))"
+                mc_ff_hists[mc] = (
+                    self[mc].filtered_df[SR_passID_mc].Fill(h_target_var_ff, [target_var, weight])
+                )
+            mc_ff_all_hists[target_var] = mc_ff_hists
+
+        # rerun over data (must be its own loop to avoid separating the runs)
+        for v_name, hists in mc_ff_all_hists.items():
+            for h in hists:
+                hists[h] = hists[h].GetValue()
+
+        # sum mc for each variable and save
+        def sum_hists(hist_list):
+            return reduce(lambda x, y: x + y, hist_list)
+
+        for target_var in fakes_target_vars:
+            self.histograms[f"{target_var}_FF"] = sum_hists(mc_ff_all_hists[target_var].values())
+            self.histograms[f"{target_var}_FF"] = sum_hists(mc_ff_all_hists[target_var].values())
+
     # ========= PRINTOUTS ===========
     # ===============================
     @staticmethod
@@ -884,6 +930,30 @@ class Analysis:
     def cutflow_printout(self, datasets: str, latex: bool = False) -> None:
         """Prints cutflow table to terminal"""
         self[datasets].cutflow_printout(self.paths.latex_dir if latex else None)
+
+    def snapshot(self, filepath: str = "", recreate: bool = True) -> None:
+        """
+        Save snapshot of all datasets to ROOT file, where each tree contains the ntuple representation of the dataset
+        """
+        self.logger.info(f"Saving snapshot of datasets...")
+
+        if not filepath:
+            filepath = str(self.paths.root_dir / f"{self.name}.root")
+
+        if recreate and os.path.isfile(filepath):
+            self.logger.debug(f"Found file at {filepath}. Removing..")
+            os.remove(filepath)
+
+        opts = ROOT.RDF.RSnapshotOptions()
+        opts.fMode = "UPDATE"
+        opts.fOverwriteIfExists = True
+        for dataset in self.datasets.values():
+            for selection in dataset.filtered_df:
+                self.logger.info(f"Snapshoting '{selection}' selection in {dataset}...")
+                dataset.filtered_df[selection].Snapshot(
+                    f"{dataset.name}/{selection}", filepath, list(dataset.all_vars), opts
+                )
+        self.logger.info(f"Full snapshot sucessfully saved.")
 
     def full_cutflow_printout(
         self,
@@ -1020,7 +1090,7 @@ class Analysis:
         :param clear_hists: clears histograms in dictionary
         """
         if not filename:
-            filename = self._output_dir / f"{self.name}_histograms.root"
+            filename = self.paths.root_dir / f"{self.name}_histograms.root"
 
         self.logger.info(f"Saving {len(self.histograms)} histograms to file {filename}...")
         with ROOT.TFile(str(filename), tfile_option) as file:

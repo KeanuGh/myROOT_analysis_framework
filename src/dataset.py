@@ -21,7 +21,7 @@ from utils.variable_names import variable_data, VarTag
 
 
 @dataclass(slots=True)
-class ProfileOptions:
+class ProfileOpts:
     """
     Options for building ROOT profile from RDataFrame columns
 
@@ -39,27 +39,6 @@ class ProfileOptions:
 
 
 @dataclass(slots=True)
-class FakesOptions:
-    """
-    Options for fakes estimation
-
-    :param fakes_source_var: variable from which to calculate fake factors from
-    :param apply_fakes_to: fakes histograms will be calculated in these variables from source
-    :param CR_passID: selection name for control region pass-ID (must exist in analysis)
-    :param CR_failID: selection name for control region fail-ID (must exist in analysis)
-    :param SR_passID: selection name for signal region pass-ID (must exist in analysis)
-    :param CR_failID: selection name for signal region fail-ID (must exist in analysis)
-    """
-
-    fakes_source_var: str
-    apply_fakes_to: set[str]
-    CR_passID: str = "CR_passID"
-    CR_failID: str = "CR_failID"
-    SR_passID: str = "SR_passID"
-    SR_failID: str = "SR_failID"
-
-
-@dataclass(slots=True)
 class Dataset:
     """
     Dataset class. Contains/will contain all the variables needed for a singular analysis dataset.
@@ -68,6 +47,7 @@ class Dataset:
     :param df: ROOT RDataframe containing data
     :param selections: dictionary of name: list of cuts to serve as selections/regions for analysis
     :param all_vars: set of all variables to extract from data (taken from branch names in df
+    :param profiles: dictionary of profile_name: ProfileOpts to build TProfile objects from dataframe
     :param lumi: Dataset Luminosity scale
     :param label: Dataset label to put on plots
     :param logger: Logger object to print to. Defaults to console output at DEBUG-level
@@ -84,7 +64,7 @@ class Dataset:
     df: pd.DataFrame | ROOT.RDataFrame = None
     selections: dict[str, list[Cut]] = field(default_factory=list)
     all_vars: set[str] = field(default_factory=set)
-    profiles: dict[str, ProfileOptions] = field(default_factory=dict)
+    profiles: dict[str, ProfileOpts] = field(default_factory=dict)
     lumi: float = 139.0
     label: str = "data"
     logger: logging.Logger = field(default_factory=get_logger)
@@ -216,7 +196,7 @@ class Dataset:
             self.cutflows[cuts_name] = cutflow
 
     # ===========================================
-    # =========== PLOTING FUNCTIONS =============
+    # =========== PLOTING FUNCTION(S) ===========
     # ===========================================
     def plot_hist(
         self,
@@ -305,7 +285,12 @@ class Dataset:
 
         return hist
 
-    def __match_bin_args(self, var: str) -> dict:
+    # ===========================================
+    # ============== HISTOGRAMMING ==============
+    # ===========================================
+
+    @staticmethod
+    def __match_bin_args(var: str) -> dict:
         """Match arguments for plotting bins from variable name"""
         try:
             var_dict = variable_data[var]
@@ -366,7 +351,7 @@ class Dataset:
         # build histograms
         for variable_name in output_histogram_variables:
             # which binning?
-            bin_args = self.__get_binnings(variable_name)
+            bin_args = self.get_binnings(variable_name)
             weight = match_weight(variable_name)
             fill_cols = [variable_name, weight] if weight else [variable_name]
 
@@ -379,7 +364,7 @@ class Dataset:
 
             for cutflow_name, filtered_df in self.filtered_df.items():
                 # which binning?
-                bin_args = self.__get_binnings(variable_name, cutflow_name)
+                bin_args = self.get_binnings(variable_name, cutflow_name)
                 cut_hist_name = (
                     variable_name + (("_" + cutflow_name) if cutflow_name else "") + "_cut"
                 )
@@ -394,7 +379,7 @@ class Dataset:
         if self.profiles:
             for profile_name, options in self.profiles.items():
                 binning_var = options.x
-                bin_args = self.__get_binnings(binning_var)
+                bin_args = self.get_binnings(binning_var)
                 profile_args = [
                     ROOT.RDF.TProfile1DModel(
                         profile_name + "_PROFILE",
@@ -411,7 +396,7 @@ class Dataset:
 
                 for cutflow_name, filtered_df in self.filtered_df.items():
                     # which binning?
-                    bin_args = self.__get_binnings(binning_var, cutflow_name)
+                    bin_args = self.get_binnings(binning_var, cutflow_name)
                     cut_profile_name = (
                         profile_name
                         + (("_" + cutflow_name) if cutflow_name else "")
@@ -483,7 +468,7 @@ class Dataset:
 
         self.histograms = histograms
 
-    def __get_binnings(self, variable_name: str, selection: str | None = None) -> dict:
+    def get_binnings(self, variable_name: str, selection: str | None = None) -> dict:
         """Get correct binnings for variable"""
 
         if (

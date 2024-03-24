@@ -9,7 +9,7 @@ from tabulate import tabulate
 
 from src.analysis import Analysis
 from src.cutfile import Cut
-from src.dataset import ProfileOptions
+from src.dataset import ProfileOpts
 from src.histogram import Histogram1D, TH1_bin_edges
 from utils.plotting_tools import get_axis_labels
 
@@ -19,84 +19,60 @@ CUTFILE_DIR = Path("/afs/cern.ch/user/k/kghorban/framework/options/DTA_cuts/reco
 
 if __name__ == "__main__":
     datasets: Dict[str, Dict] = {
+        # DATA
+        # ====================================================================
+        "data": {
+            # "data_path": DTA_PATH / "*data17*/*.root",
+            "data_path": Path("/data/DTA_outputs/2024-03-05/*data17*/*.root"),
+            "label": "data",
+            "is_data": True,
+        },
         # SIGNAL
         # ====================================================================
-        "wtaunu_lm": {
-            "data_path": DTA_PATH / "*Sh_2211_Wtaunu_*_maxHTpTV2*/*.root",
-            "hard_cut": "TruthBosonM < 120",
+        "wtaunu": {
+            "data_path": {
+                "lm_cut": DTA_PATH / "*Sh_2211_Wtaunu_*_maxHTpTV2*/*.root",
+                "full": DTA_PATH / "*Sh_2211_Wtaunu_mW_120*/*.root",
+            },
+            "hard_cut": {"lm_cut": "TruthBosonM < 120"},
             "label": r"$W\rightarrow\tau\nu$",
-            "merge_into": "wtaunu",
-        },
-        "wtaunu_hm": {
-            "data_path": DTA_PATH / "*Sh_2211_Wtaunu_mW_120*/*.root",
-            "hard_cut": "TruthBosonM >= 120",
-            "label": r"$W\rightarrow\tau\nu$",
-            "merge_into": "wtaunu",
+            "is_signal": True,
         },
         # BACKGROUNDS
         # ====================================================================
         # W -> light lepton
-        "wlv_lm": {
-            "data_path": [
-                DTA_PATH / "*Sh_2211_Wmunu_maxHTpTV2*/*.root",
-                DTA_PATH / "*Sh_2211_Wenu_maxHTpTV2*/*.root",
-            ],
-            "hard_cut": "TruthBosonM < 120",
+        "wlv": {
+            "data_path": {
+                "lm_cut": [
+                    DTA_PATH / "*Sh_2211_Wmunu_maxHTpTV2*/*.root",
+                    DTA_PATH / "*Sh_2211_Wenu_maxHTpTV2*/*.root",
+                ],
+                "full": [
+                    DTA_PATH / "*Sh_2211_Wmunu_mW_120*/*.root",
+                    DTA_PATH / "*Sh_2211_Wenu_mW_120*/*.root",
+                ],
+            },
+            "hard_cut": {"lm_cut": "TruthBosonM < 120"},
             "label": r"$W\rightarrow (e/\mu)\nu$",
-            "merge_into": "wlnu",
         },
-        "wlv_hm": {
-            "data_path": [
-                DTA_PATH / "*Sh_2211_Wmunu_mW_120*/*.root",
-                DTA_PATH / "*Sh_2211_Wenu_mW_120*/*.root",
-            ],
-            "hard_cut": "TruthBosonM >= 120",
-            "label": r"$W\rightarrow (e/\mu)\nu$",
-            "merge_into": "wlnu",
-        },
-        # Z -> TauTau
-        "ztautau_lm": {
-            "data_path": DTA_PATH / "*Sh_2211_Ztautau_*_maxHTpTV2*/*.root",
-            "hard_cut": "TruthBosonM < 120",
+        # Z -> ll
+        "zll": {
+            "data_path": {
+                "lm_cut": [
+                    DTA_PATH / "*Sh_2211_Ztautau_*_maxHTpTV2*/*.root",
+                    DTA_PATH / "*Sh_2211_Zee_maxHTpTV2*/*.root",
+                    DTA_PATH / "*Sh_2211_Zmumu_maxHTpTV2*/*.root",
+                ],
+                "full": [
+                    DTA_PATH / "*Sh_2211_Ztautau_mZ_120*/*.root",
+                    DTA_PATH / "*Sh_2211_Zmumu_mZ_120*/*.root",
+                    DTA_PATH / "*Sh_2211_Zee_mZ_120*/*.root",
+                    DTA_PATH / "*Sh_2211_Znunu_pTV2*/*.root",
+                ],
+            },
+            "hard_cut": {"lm_cut": "TruthBosonM < 120"},
             "label": r"$Z\rightarrow (l/\nu)(l/\nu)$",
-            "merge_into": "zll",
         },
-        "ztautau_hm": {
-            "data_path": DTA_PATH / "*Sh_2211_Ztautau_mZ_120*/*.root",
-            "hard_cut": "TruthBosonM >= 120",
-            "label": r"$Z\rightarrow (l/\nu)(l/\nu)$",
-            "merge_into": "zll",
-        },
-        # Z -> Light Lepton
-        "zll_lm": {
-            "data_path": [
-                DTA_PATH / "*Sh_2211_Zee_maxHTpTV2*/*.root",
-                DTA_PATH / "*Sh_2211_Zmumu_maxHTpTV2*/*.root",
-            ],
-            "hard_cut": "TruthBosonM < 120",
-            "label": r"$Z\rightarrow (l/\nu)(l/\nu)$",
-            "merge_into": "zll",
-        },
-        "zll_hm": {
-            "data_path": [
-                DTA_PATH / "*Sh_2211_Zmumu_mZ_120*/*.root",
-                DTA_PATH / "*Sh_2211_Zee_mZ_120*/*.root",
-            ],
-            "hard_cut": "TruthBosonM >= 120",
-            "label": r"$Z\rightarrow (l/\nu)(l/\nu)$",
-            "merge_into": "zll",
-        },
-        # Z -> Neutrinos
-        "znunu": {
-            "data_path": DTA_PATH / "*Sh_2211_Znunu_pTV2*/*.root",
-            "label": r"$Z\rightarrow (l/\nu)(l/\nu)$",
-            "merge_into": "zll",
-        },
-        # TTBAR/TOP
-        # "ttbar": {
-        #     "data_path": DTA_PATH / "*PP8_ttbar_hdamp258p75*/*.root",
-        #     "label": r"$t\bar{t}$",
-        # },
         "top": {
             "data_path": [
                 DTA_PATH / "*PP8_singletop*/*.root",
@@ -123,15 +99,6 @@ if __name__ == "__main__":
             ],
             "label": "Diboson",
         },
-        # DATA
-        # ====================================================================
-        "data": {
-            # "data_path": DTA_PATH / "*data17*/*.root",
-            "data_path": Path("/data/DTA_outputs/2024-03-05/*data17*/*.root"),
-            "label": "data",
-            "is_data": True,
-            # "import_missing_columns_as_nan": True,
-        },
     }
 
     # CUTS & SELECTIONS
@@ -139,7 +106,6 @@ if __name__ == "__main__":
     pass_presel = Cut(
         r"Pass preselection",
         r"(passReco == 1) && (TauBaselineWP == 1) && (abs(TauCharge) == 1)"
-        r"&& (LeadingJetPt > 10)"
         r"&& (MatchedTruthParticle_isTau + MatchedTruthParticle_isElectron + MatchedTruthParticle_isMuon + MatchedTruthParticle_isPhoton <= 1)",
     )
     pass_taupt170 = Cut(
@@ -264,13 +230,6 @@ if __name__ == "__main__":
         "MatchedTruthParticle_isJet",
         "nJets",
     }
-    mc_samples = [
-        "wtaunu",
-        "wlnu",
-        "zll",
-        "top",
-        "diboson",
-    ]
     measurement_vars = [
         "TauEta",
         "TauPhi",
@@ -289,29 +248,28 @@ if __name__ == "__main__":
         "MatchedTruthParticle_isJet",
     ]
     # define which profiles to calculate
-    profiles: dict[str, ProfileOptions] = dict()
+    profiles: dict[str, ProfileOpts] = dict()
     for meas_var in measurement_vars:
         for prof_var in profile_vars:
-            profiles[f"{meas_var}_{prof_var}"] = ProfileOptions(
+            profiles[f"{meas_var}_{prof_var}"] = ProfileOpts(
                 x=meas_var,
                 y=prof_var,
                 weight="" if "MatchedTruthParticle" in prof_var else "reco_weight",
             )
-    all_samples = ["data"] + mc_samples
 
     # RUN
     # ========================================================================
     analysis = Analysis(
         datasets,
         year=2017,
-        regen_histograms=True,
+        # regen_histograms=True,
         # regen_metadata=True,
         ttree="T_s1thv_NOMINAL",
         cuts=selections,
         analysis_label="fakes_estimate",
         dataset_type="dta",
-        # log_level=10,
-        log_out="console",
+        log_level=10,
+        log_out="both",
         extract_vars=wanted_variables,
         import_missing_columns_as_nan=True,
         profiles=profiles,
@@ -352,9 +310,11 @@ if __name__ == "__main__":
             },
         },
     )
+    all_samples = analysis.mc_samples + [analysis.data_sample]
+    mc_samples = analysis.mc_samples
     analysis.full_cutflow_printout(datasets=all_samples)
     analysis.print_metadata_table(datasets=mc_samples)
-    analysis["wtaunu"].is_signal = True
+    # analysis.snapshot()
 
     # set colours for samples
     c_iter = iter(plt.rcParams["axes.prop_cycle"].by_key()["color"])
@@ -886,5 +846,4 @@ if __name__ == "__main__":
 
     # analysis.histogram_printout()
     analysis.save_histograms()
-
     analysis.logger.info("DONE.")

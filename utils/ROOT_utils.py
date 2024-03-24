@@ -174,7 +174,9 @@ def glob_chain(TTree: str, path: Path | str) -> ROOT.TChain:
 #         super().__init__(self.chain)
 
 
-def init_rdataframe(name: str, filepaths: Path | str | Iterable[str | Path], trees: Iterable[str]):
+def init_rdataframe(
+    name: str, filepaths: Path | str | Iterable[str | Path], trees: Iterable[str]
+) -> ROOT.RDataFrame:
     """
     Returns an RDataFrame for a given name
 
