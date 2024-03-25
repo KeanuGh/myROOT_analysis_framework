@@ -25,7 +25,7 @@ if ROOT.PyConfig.StartGUIThread:  # prevents a ROOT crash from settings being ap
     load_ROOT_settings()
     set_atlas_style()  # set ATLAS plotting style to ROOT plots
     plt.style.use(hep.style.ATLAS)  # set atlas-style plots in matplotilb
-    np.seterr(invalid="ignore")  # ignore division by zero errors
+    np.seterr(invalid="ignore", divide="ignore")  # ignore division by zero errors
 
 
 # TODO: 2D hist
