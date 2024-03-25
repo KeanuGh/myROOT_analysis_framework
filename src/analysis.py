@@ -681,7 +681,7 @@ class Analysis:
                         xlim=bin_range,
                         xlabel=xlabel,
                         ylabel="Data / MC",
-                        logx=logx,
+                        logx=not ratio_plot,
                         label=False,
                     )
 
@@ -733,7 +733,7 @@ class Analysis:
                 xlabel=xlabel,
                 ylabel=ylabel,
                 title=title,
-                logx=logx,
+                logx=not ratio_plot,
                 logy=logy,
                 diff_xs=scale_by_bin_width,
             )
@@ -755,8 +755,8 @@ class Analysis:
                     ylim=ratio_axlim,
                     xlabel=xlabel,
                     ylabel=ratio_label,
-                    logx=logx,
                     label=False,
+                    logx=logx,
                 )
                 ax.set_xticklabels([])
                 ax.set_xlabel("")
@@ -899,7 +899,9 @@ class Analysis:
         ROOT.gInterpreter.Declare(
             f"TH1F* FF_hist_{ff_var} = reinterpret_cast<TH1F*>({ROOT.addressof(h_FF)});"
         )
-        ff_weight = f"reco_weight * FF_hist_{ff_var}->GetBinContent(FF_hist->FindBin({ff_var}))"
+        ff_weight = (
+            f"reco_weight * FF_hist_{ff_var}->GetBinContent(FF_hist_{ff_var}->FindBin({ff_var}))"
+        )
         ff_weight_col = f"FF_weight_{ff_var}"
         for mc in mc_ds:
             self[mc].filtered_df[SR_passID_mc] = (
