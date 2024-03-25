@@ -318,6 +318,7 @@ if __name__ == "__main__":
         c = next(c_iter)
         analysis[ds].colour = c
     analysis["data"].colour = "k"
+    fakes_colour = next(c_iter)
 
     # FAKES ESTIMATE
     # ========================================================================
@@ -346,12 +347,13 @@ if __name__ == "__main__":
         default_args = {
             "datasets": all_samples + [None],
             "labels": [analysis[ds].label for ds in all_samples] + ["Multijet"],
-            "colours": [analysis[ds].colour for ds in all_samples] + [next(c_iter)],
+            "colours": [analysis[ds].colour for ds in all_samples] + [fakes_colour],
             "title": f"data17 | mc16d | {analysis.global_lumi / 1000:.3g}" + r"fb$^{-1}$",
             "yerr": True,
             "logy": True,
             "suffix": "fake_scaled_log",
             "ratio_plot": True,
+            "ratio_axlim": (0.8, 1.2),
             "kind": "stack",
         }
 
@@ -417,78 +419,104 @@ if __name__ == "__main__":
             filename=f"TauPhi_fakes_stack_{fakes_source}_liny.png",
         )
 
-        # Direct data scaling comparison
-        # ----------------------------------------------------------------------------
-        # log axes
-        default_args = {
-            "title": f"data17 | mc16d | {analysis.global_lumi / 1000:.3g}" + r"fb$^{-1}$",
-            "labels": ["SR Fake Scaling", "SR No Scaling"],
-            "yerr": True,
-            "logy": True,
-            "cut": "SR_passID",
-            "suffix": "fake_scaled_log",
-            "ratio_plot": True,
-        }
+    # Direct data scaling comparison
+    # ----------------------------------------------------------------------------
+    # log axes
+    default_args = {
+        "title": f"data17 | mc16d | {analysis.global_lumi / 1000:.3g}" + r"fb$^{-1}$",
+        "labels": ["Data SR", "MC + TauPt Fakes", "MC + MTW Fakes"],
+        "colours": ["k", "b", "r"],
+        "yerr": True,
+        "logy": True,
+        "cut": "SR_passID",
+        "suffix": "fake_scaled_log",
+        "ratio_plot": True,
+        "ratio_axlim": (0.8, 1.2),
+    }
 
-        def FF_full_bkg(s: str) -> Histogram1D:
-            """Sum of all backgrounds + signal + FF"""
-            return reduce(
-                (lambda x, y: x + y), [analysis.get_hist(s, ds_, "SR_passID") for ds_ in mc_samples]
-            ) + analysis.get_hist(f"{s}_fakes_bkg_{fakes_source}_src")
+    def FF_full_bkg(s: str, t: str) -> Histogram1D:
+        """Sum of all backgrounds + signal + FF"""
+        return reduce(
+            (lambda x, y: x + y), [analysis.get_hist(s, ds_, "SR_passID") for ds_ in mc_samples]
+        ) + analysis.get_hist(f"{s}_fakes_bkg_{t}_src")
 
-        analysis.plot(
-            var=[FF_full_bkg("TauPt"), "data_TauPt_SR_passID_cut"],
-            **default_args,
-            xlabel=r"$p_T^\tau$ [GeV]",
-            filename=f"FF_compare_TauPt_{fakes_source}_src.png",
-        )
-        analysis.plot(
-            var=[FF_full_bkg("MTW"), "data_MTW_SR_passID_cut"],
-            **default_args,
-            xlabel=r"$M_T^W$ [GeV]",
-            filename=f"FF_compare_MTW_{fakes_source}_src.png",
-        )
-        analysis.plot(
-            var=[FF_full_bkg("TauEta"), "data_TauEta_SR_passID_cut"],
-            **default_args,
-            xlabel=r"$\eta^\tau$",
-            filename=f"FF_compare_TauEta_{fakes_source}_src.png",
-        )
-        analysis.plot(
-            var=[FF_full_bkg("TauPhi"), "data_TauPhi_SR_passID_cut"],
-            **default_args,
-            xlabel=r"$\phi_T^\tau$",
-            filename=f"FF_compare_Tauphi_{fakes_source}_src.png",
-        )
+    analysis.plot(
+        var=[
+            "data_TauPt_SR_passID_cut",
+            FF_full_bkg("TauPt", "TauPt"),
+            FF_full_bkg("TauPt", "MTW"),
+        ],
+        **default_args,
+        xlabel=r"$p_T^\tau$ [GeV]",
+        filename=f"FF_compare_TauPt.png",
+    )
+    analysis.plot(
+        var=["data_MTW_SR_passID_cut", FF_full_bkg("MTW", "TauPt"), FF_full_bkg("MTW", "MTW")],
+        **default_args,
+        xlabel=r"$M_T^W$ [GeV]",
+        filename=f"FF_compare_MTW.png",
+    )
+    analysis.plot(
+        var=[
+            "data_TauEta_SR_passID_cut",
+            FF_full_bkg("TauEta", "TauPt"),
+            FF_full_bkg("TauEta", "MTW"),
+        ],
+        **default_args,
+        xlabel=r"$\eta^\tau$",
+        filename=f"FF_compare_TauEta.png",
+    )
+    analysis.plot(
+        var=[
+            "data_TauPhi_SR_passID_cut",
+            FF_full_bkg("TauPhi", "TauPt"),
+            FF_full_bkg("TauPhi", "MTW"),
+        ],
+        **default_args,
+        xlabel=r"$\phi_T^\tau$",
+        filename=f"FF_compare_TauPhi.png",
+    )
 
-        # linear axes
-        default_args["logy"] = False
-        default_args["logx"] = False
-        default_args["suffix"] = "fake_scaled_linear"
-        analysis.plot(
-            var=[FF_full_bkg("TauPt"), "data_TauPt_SR_passID_cut"],
-            **default_args,
-            xlabel=r"$p_T^\tau$ [GeV]",
-            filename=f"FF_compare_TauPt_{fakes_source}_src_liny.png",
-        )
-        analysis.plot(
-            var=[FF_full_bkg("MTW"), "data_MTW_SR_passID_cut"],
-            **default_args,
-            xlabel=r"$M_T^W$ [GeV]",
-            filename=f"FF_compare_MTW_{fakes_source}_src_liny.png",
-        )
-        analysis.plot(
-            var=[FF_full_bkg("TauEta"), "data_TauEta_SR_passID_cut"],
-            **default_args,
-            xlabel=r"$\eta^\tau$",
-            filename=f"FF_compare_TauEta_{fakes_source}_src_liny.png",
-        )
-        analysis.plot(
-            var=[FF_full_bkg("TauPhi"), "data_TauPhi_SR_passID_cut"],
-            **default_args,
-            xlabel=r"$\phi_T^\tau$",
-            filename=f"FF_compare_TauPhi_{fakes_source}_src_liny.png",
-        )
+    # linear axes
+    default_args["logy"] = False
+    default_args["logx"] = False
+    default_args["suffix"] = "fake_scaled_linear"
+    analysis.plot(
+        var=[
+            "data_TauPt_SR_passID_cut",
+            FF_full_bkg("TauPt", "TauPt"),
+            FF_full_bkg("TauPt", "MTW"),
+        ],
+        **default_args,
+        xlabel=r"$p_T^\tau$ [GeV]",
+        filename=f"FF_compare_TauPt_liny.png",
+    )
+    analysis.plot(
+        var=["data_MTW_SR_passID_cut", FF_full_bkg("MTW", "TauPt"), FF_full_bkg("MTW", "MTW")],
+        **default_args,
+        xlabel=r"$M_T^W$ [GeV]",
+        filename=f"FF_compare_MTW_liny.png",
+    )
+    analysis.plot(
+        var=[
+            "data_TauEta_SR_passID_cut",
+            FF_full_bkg("TauEta", "TauPt"),
+            FF_full_bkg("TauEta", "MTW"),
+        ],
+        **default_args,
+        xlabel=r"$\eta^\tau$",
+        filename=f"FF_compare_TauEta_liny.png",
+    )
+    analysis.plot(
+        var=[
+            "data_TauPhi_SR_passID_cut",
+            FF_full_bkg("TauPhi", "TauPt"),
+            FF_full_bkg("TauPhi", "MTW"),
+        ],
+        **default_args,
+        xlabel=r"$\phi_T^\tau$",
+        filename=f"FF_compare_TauPhi_liny.png",
+    )
 
     # No Fakes
     # ----------------------------------------------------------------------------
@@ -503,7 +531,7 @@ if __name__ == "__main__":
             "CR_failID",
         ],
         "ratio_plot": True,
-        # "ratio_axlim": (0, 2),
+        "ratio_axlim": (0.8, 1.2),
         "kind": "stack",
     }
 

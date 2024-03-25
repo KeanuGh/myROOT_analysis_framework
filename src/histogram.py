@@ -832,9 +832,36 @@ class Histogram1D(bh.Histogram, family=None):
 
         if yax_lim:
             if isinstance(yax_lim, tuple):
-                ax.set_ylim(*yax_lim)
+                ymin = yax_lim[0]
+                ymax = yax_lim[1]
             else:
-                ax.set_ylim(1 - yax_lim, 1 + yax_lim)
+                ymin = 1 - yax_lim
+                ymax = 1 + yax_lim
+            ax.set_ylim(ymin, ymax)
+
+            # annotate points outside range with a little arrow
+            for i, bin_val in enumerate(h_ratio.bin_values()):
+                if (bin_val < ymin) or (bin_val > ymax):
+                    is_above = bin_val > ymax
+
+                    plt.annotate(
+                        "",
+                        xy=(h_ratio.bin_centres[i], ymax if is_above else ymin),  # type: ignore
+                        xytext=(  # type: ignore
+                            h_ratio.bin_centres[i],
+                            ((ymax - ymin) * 0.7 + ymin)
+                            if is_above
+                            else ((ymax - ymin) * 0.3 + ymin),
+                        ),
+                        xycoords="data",
+                        textcoords="data",
+                        arrowprops=dict(
+                            arrowstyle="-|>",
+                            connectionstyle="arc3,rad=0",
+                            color="r",
+                        ),
+                    )
+
         else:
             # I don't know why the matplotlib automatic yaxis scaling doesn't work, but I've done it for them here
             # ymax = np.max(np.ma.masked_invalid(h_ratio.bin_values() + (err / 2)))  # type: ignore

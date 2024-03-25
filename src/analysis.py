@@ -744,8 +744,6 @@ class Analysis:
             if ratio_plot:
                 fig.tight_layout()
                 fig.subplots_adjust(hspace=0.1, wspace=0)
-                ax.set_xticklabels([])
-                ax.set_xlabel("")
 
                 if n_hists > 2:  # don't show legend if there's only two plots
                     ratio_ax.legend(fontsize=10, loc=1)
@@ -754,11 +752,14 @@ class Analysis:
                     axis=ratio_ax,
                     var_name=var,
                     xlim=bin_range,
+                    ylim=ratio_axlim,
                     xlabel=xlabel,
                     ylabel=ratio_label,
                     logx=logx,
                     label=False,
                 )
+                ax.set_xticklabels([])
+                ax.set_xlabel("")
 
             if filename:
                 filepath = self.paths.plot_dir / filename
@@ -896,9 +897,9 @@ class Analysis:
 
         # define ff_weights in MC
         ROOT.gInterpreter.Declare(
-            f"TH1F* FF_hist = reinterpret_cast<TH1F*>({ROOT.addressof(h_FF)});"
+            f"TH1F* FF_hist_{ff_var} = reinterpret_cast<TH1F*>({ROOT.addressof(h_FF)});"
         )
-        ff_weight = f"reco_weight * FF_hist->GetBinContent(FF_hist->FindBin({ff_var}))"
+        ff_weight = f"reco_weight * FF_hist_{ff_var}->GetBinContent(FF_hist->FindBin({ff_var}))"
         ff_weight_col = f"FF_weight_{ff_var}"
         for mc in mc_ds:
             self[mc].filtered_df[SR_passID_mc] = (
