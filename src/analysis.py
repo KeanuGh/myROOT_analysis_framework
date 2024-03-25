@@ -223,7 +223,7 @@ class Analysis:
                 if self.data_sample != "":
                     raise ValueError("Can't have more than one data sample!")
                 self.data_sample = dataset_name
-            if "is_signal" in data_args:
+            elif "is_signal" in data_args:
                 if self.signal_sample != "":
                     raise ValueError("Can't have more than one signal sample!")
                 self.signal_sample = dataset_name
@@ -699,7 +699,7 @@ class Analysis:
                         **kwargs,
                     )
 
-                    if ratio_plot and len(hist_list) > 1:
+                    if ratio_plot and (len(hist_list) > 1) and (i > 0):
                         # ratio of first histogram to this one
                         hist_list[0].plot_ratio(
                             hist,
