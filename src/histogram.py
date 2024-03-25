@@ -695,7 +695,7 @@ class Histogram1D(bh.Histogram, family=None):
         display_stats: bool = True,
         fit_empty: bool = False,
         display_unity: bool = True,
-        color: str = "k",
+        color: str | None = "k",
         **kwargs,
     ) -> Histogram1D:
         """
@@ -787,15 +787,15 @@ class Histogram1D(bh.Histogram, family=None):
                     fit_err = fit_results.Errors()[0]
 
                     # display fit line
-                    col = "r" if color == "k" else color
+                    fit_col = color if color else "r"
                     ax.fill_between(
                         [self.bin_edges[0], self.bin_edges[-1]],  # type: ignore
                         [c - fit_err],
                         [c + fit_err],
-                        color=col,
+                        color=fit_col,
                         alpha=0.3,
                     )
-                    ax.axhline(c, color=col, linewidth=1.0)
+                    ax.axhline(c, color=fit_col, linewidth=1.0)
 
                     if display_stats:
                         textstr = "\n".join(
@@ -826,7 +826,7 @@ class Histogram1D(bh.Histogram, family=None):
             linestyle="None",
             label=label,
             marker=".",
-            c=color,
+            c=color if color else "k",
             **kwargs,
         )
 
@@ -858,7 +858,7 @@ class Histogram1D(bh.Histogram, family=None):
                         arrowprops=dict(
                             arrowstyle="-|>",
                             connectionstyle="arc3,rad=0",
-                            color="r",
+                            color=color if color else "r",
                         ),
                     )
 

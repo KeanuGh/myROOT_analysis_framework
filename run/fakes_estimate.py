@@ -1,4 +1,3 @@
-from functools import reduce
 from pathlib import Path
 from typing import Dict
 
@@ -327,18 +326,15 @@ if __name__ == "__main__":
 
         # Fake factors
         # ----------------------------------------------------------------------------
-        default_args = {
-            "yerr": False,
-            "cut": False,
-            "logy": False,
-            "ylabel": "Fake factor",
-        }
         analysis.plot(
-            var="TauPt_FF",
+            var=f"{fakes_source}_FF",
             logx=True,
-            xlabel=r"$p_T^\tau$ [GeV]",
-            **default_args,
-            filename="TauPt_FF.png",
+            xlabel=r"$p_T^\tau$ [GeV]" if fakes_source == "TauPt" else r"$m_T^W$ [GeV]",
+            yerr=False,
+            cut=False,
+            logy=False,
+            ylabel="Fake factor",
+            filename=f"{fakes_source}_FF.png",
         )
 
         # Stacks with Fakes background
@@ -436,9 +432,12 @@ if __name__ == "__main__":
 
     def FF_full_bkg(s: str, t: str) -> Histogram1D:
         """Sum of all backgrounds + signal + FF"""
-        return reduce(
-            (lambda x, y: x + y), [analysis.get_hist(s, ds_, "SR_passID") for ds_ in mc_samples]
-        ) + analysis.get_hist(f"{s}_fakes_bkg_{t}_src")
+        return Histogram1D(
+            th1=analysis.sum_hists(
+                [analysis.get_hist_name(s, ds_, "SR_passID") for ds_ in mc_samples]
+            )
+            + analysis.get_hist(f"{s}_fakes_bkg_{t}_src", TH1=True)
+        )
 
     analysis.plot(
         var=[
@@ -451,7 +450,11 @@ if __name__ == "__main__":
         filename=f"FF_compare_TauPt.png",
     )
     analysis.plot(
-        var=["data_MTW_SR_passID_cut", FF_full_bkg("MTW", "TauPt"), FF_full_bkg("MTW", "MTW")],
+        var=[
+            "data_MTW_SR_passID_cut",
+            FF_full_bkg("MTW", "TauPt"),
+            FF_full_bkg("MTW", "MTW"),
+        ],
         **default_args,
         xlabel=r"$M_T^W$ [GeV]",
         filename=f"FF_compare_MTW.png",
@@ -492,7 +495,11 @@ if __name__ == "__main__":
         filename=f"FF_compare_TauPt_liny.png",
     )
     analysis.plot(
-        var=["data_MTW_SR_passID_cut", FF_full_bkg("MTW", "TauPt"), FF_full_bkg("MTW", "MTW")],
+        var=[
+            "data_MTW_SR_passID_cut",
+            FF_full_bkg("MTW", "TauPt"),
+            FF_full_bkg("MTW", "MTW"),
+        ],
         **default_args,
         xlabel=r"$M_T^W$ [GeV]",
         filename=f"FF_compare_MTW_liny.png",
