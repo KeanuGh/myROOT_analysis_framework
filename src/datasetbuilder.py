@@ -161,7 +161,7 @@ class DatasetBuilder:
             name=self.name,
             df=df,
             selections=cuts,
-            all_vars=self._all_vars,
+            all_vars=self._all_vars | {"truth_weight", "reco_weight"},
             logger=self.logger,
             lumi=self.lumi,
             label=self.label,

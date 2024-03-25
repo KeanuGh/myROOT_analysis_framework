@@ -108,6 +108,7 @@ class Analysis:
         separate_loggers: bool = False,
         regen_histograms: bool = False,
         regen_metadata: bool = False,
+        snapshot: bool = True,
         year: int = 2017,
         **kwargs,
     ):
@@ -123,6 +124,7 @@ class Analysis:
         :param separate_loggers: Whether each dataset should output logs to separate log files
         :param regen_histograms: Whether to regenerate all histograms for all datasets (can be applied separately)
         :param regen_metadata: Whether to regenerate DSID metadata (requires connection to pyami)
+        :param snapshot: Whether to save a snapshot of datasets to disk
         :param year: Data-year. One of 2016, 2017, 2018
         :param kwargs: Options arguments to pass to all dataset builders
         """
@@ -277,15 +279,13 @@ class Analysis:
                 dataset.logger = self.logger
                 dataset.logger.debug(f"{dataset_name} log handler returned to analysis.")  # test
 
-            # histogramming
-            histogram_file = self._output_dir / f"{dataset_name}_histograms.root"
+            # load/gen histograms
+            histogram_file = self.paths.root_dir / f"{dataset_name}_histograms.root"
             if not indiv_regen_hists and histogram_file.exists():
                 # just read in previous histogram file if it exists
                 dataset.import_histograms(histogram_file)
+                dataset.import_dataframes(self.paths.root_dir / f"{self.name}.root")
                 dataset.reset_cutflows()
-                dataset.logger.info(
-                    f"Imported {len(dataset.histograms)} histogram(s) from file {histogram_file}"
-                )
             else:
                 dataset.gen_histograms(to_file=histogram_file)
 
@@ -302,6 +302,9 @@ class Analysis:
 
         self.logger.info("=" * (len(analysis_label) + 23))
         self.logger.info(f"ANALYSIS '{analysis_label}' INITIALISED")
+
+        if snapshot and regen_histograms:
+            self.snapshot(self.paths.root_dir / f"{self.name}.root")
 
     @staticmethod
     def _match_params(params: dict[str, Any], func: Callable) -> dict[str, Any]:
@@ -764,7 +767,11 @@ class Analysis:
                 filename_template = (
                     (f"{prefix}_" if prefix else "")
                     + "_".join(var)
-                    + ("_".join([ds for ds in datasets if ds is not None]))
+                    + (
+                        ("_" + "_".join([ds for ds in datasets if ds is not None]))
+                        if datasets
+                        else ""
+                    )
                     + ("_BIN_SCALED" if scale_by_bin_width else "")
                     + ("_STACKED" if kind == "stack" else "")
                     + (f"_{selection}_cut" if cut else "")
@@ -850,7 +857,7 @@ class Analysis:
     def do_fakes_estimate(
         self,
         fakes_source_var: str,
-        fakes_target_vars: set[str],
+        fakes_target_vars: Sequence[str],
         CR_passID_data: str = "CR_passID",
         CR_failID_data: str = "CR_failID",
         SR_passID_data: str = "SR_passID",
@@ -870,7 +877,7 @@ class Analysis:
         hCR_failID_data = self.get_hist(ff_var, "data", CR_failID_data, TH1=True)
         hSR_failID_data = self.get_hist(ff_var, "data", SR_failID_data, TH1=True)
 
-        # mc "true tau" histograms
+        # mc truth matched histograms
         mc_ds = self.mc_samples
         hCR_passID_mc = self.sum_hists([f"{ds}_{ff_var}_{CR_passID_mc}_cut" for ds in mc_ds])
         hCR_failID_mc = self.sum_hists([f"{ds}_{ff_var}_{CR_failID_mc}_cut" for ds in mc_ds])
@@ -885,41 +892,47 @@ class Analysis:
         h_SR_data_fakes = (hSR_failID_data - hSR_failID_mc) * h_FF
 
         self.histograms[f"{ff_var}_FF"] = h_FF
-        self.histograms[f"{ff_var}_fakes_bkg"] = h_SR_data_fakes
+        self.histograms[f"{ff_var}_fakes_bkg_{ff_var}_src"] = h_SR_data_fakes
 
-        # bin histograms in other variables
-        mc_ff_all_hists: dict[str, dict[str, ROOT.RResultsPtr]] = dict()
+        # define ff_weights in MC
         ROOT.gInterpreter.Declare(
             f"TH1F* FF_hist = reinterpret_cast<TH1F*>({ROOT.addressof(h_FF)});"
         )
+        ff_weight = f"reco_weight * FF_hist->GetBinContent(FF_hist->FindBin({ff_var}))"
+        ff_weight_col = f"FF_weight_{ff_var}"
+        for mc in mc_ds:
+            self[mc].filtered_df[SR_passID_mc] = (
+                self[mc].filtered_df[SR_passID_mc].Define(ff_weight_col, ff_weight)
+            )
+
+        # background estimation in target variables
+        mc_ff_hists: dict[str, dict[str, ROOT.RDF.RResultsPtr]] = dict()
         for target_var in fakes_target_vars:
             # define target histogram
-            h_name = f"{target_var}_FF"
+            h_name = f"{target_var}_fakes_bkg_{ff_var}_src"
             h_bins = self[self.data_sample].get_binnings(target_var, SR_passID_data)
             h_target_var_ff = ROOT.TH1F(h_name, h_name, *plotting_tools.get_TH1_bins(**h_bins))
 
             # need to fill histograms for each MC sample
-            mc_ff_hists: dict[str, ROOT.RResultsPtr] = dict()
+            ptrs: dict[str, ROOT.RDF.RResultsPtr] = {}
             for mc in mc_ds:
-                weight = f"reco_weight * FF_hist->GetBinContent(FF_hist->FindBin({ff_var}))"
-                mc_ff_hists[mc] = (
-                    self[mc].filtered_df[SR_passID_mc].Fill(h_target_var_ff, [target_var, weight])
+                ptrs[mc] = (
+                    self[mc]
+                    .filtered_df[SR_passID_mc]
+                    .Fill(h_target_var_ff, [target_var, ff_weight_col])
                 )
-            mc_ff_all_hists[target_var] = mc_ff_hists
+            mc_ff_hists[target_var] = ptrs
 
-        # rerun over data (must be its own loop to avoid separating the runs)
-        for v_name, hists in mc_ff_all_hists.items():
-            for h in hists:
-                hists[h] = hists[h].GetValue()
+        # rerun over dataframes (must be its own loop to avoid separating the runs)
+        for target_var, hists in mc_ff_hists.items():
+            self.logger.info(f"Calculating fake background estimate for '%s'...", target_var)
+            self.histograms[f"{target_var}_fakes_bkg_{ff_var}_src"] = reduce(
+                lambda x, y: x + y, [ptr.GetValue() for ptr in mc_ff_hists[target_var].values()]
+            )
 
-        # sum mc for each variable and save
-        def sum_hists(hist_list):
-            return reduce(lambda x, y: x + y, hist_list)
+        self.logger.info("Completed fakes estimate")
 
-        for target_var in fakes_target_vars:
-            self.histograms[f"{target_var}_FF"] = sum_hists(mc_ff_all_hists[target_var].values())
-            self.histograms[f"{target_var}_FF"] = sum_hists(mc_ff_all_hists[target_var].values())
-
+    # ===============================
     # ========= PRINTOUTS ===========
     # ===============================
     @staticmethod
@@ -931,14 +944,14 @@ class Analysis:
         """Prints cutflow table to terminal"""
         self[datasets].cutflow_printout(self.paths.latex_dir if latex else None)
 
-    def snapshot(self, filepath: str = "", recreate: bool = True) -> None:
+    def snapshot(self, filepath: Path = "", recreate: bool = True) -> None:
         """
         Save snapshot of all datasets to ROOT file, where each tree contains the ntuple representation of the dataset
         """
         self.logger.info(f"Saving snapshot of datasets...")
 
         if not filepath:
-            filepath = str(self.paths.root_dir / f"{self.name}.root")
+            filepath = self.paths.root_dir / f"{self.name}.root"
 
         if recreate and os.path.isfile(filepath):
             self.logger.debug(f"Found file at {filepath}. Removing..")
@@ -949,9 +962,9 @@ class Analysis:
         opts.fOverwriteIfExists = True
         for dataset in self.datasets.values():
             for selection in dataset.filtered_df:
-                self.logger.info(f"Snapshoting '{selection}' selection in {dataset}...")
+                self.logger.info(f"Snapshoting '{selection}' selection in {dataset.name}...")
                 dataset.filtered_df[selection].Snapshot(
-                    f"{dataset.name}/{selection}", filepath, list(dataset.all_vars), opts
+                    f"{dataset.name}/{selection}", str(filepath), list(dataset.all_vars), opts
                 )
         self.logger.info(f"Full snapshot sucessfully saved.")
 

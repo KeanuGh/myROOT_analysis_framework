@@ -3,7 +3,7 @@ from __future__ import annotations
 import copy
 import logging
 from collections import OrderedDict
-from typing import List, Tuple, Any, overload, Type
+from typing import Any, overload, Type
 
 import ROOT
 import boost_histogram as bh
@@ -49,7 +49,7 @@ class Histogram1D(bh.Histogram, family=None):
     @overload
     def __init__(
         self,
-        bins: List[float] | np.ndarray,
+        bins: list[float] | np.ndarray,
         logger: logging.Logger | None = None,
         name: str = "",
         title: str = "",
@@ -59,7 +59,7 @@ class Histogram1D(bh.Histogram, family=None):
     @overload
     def __init__(
         self,
-        bins: Tuple[int, float, float],
+        bins: tuple[int, float, float],
         logbins: bool = False,
         logger: logging.Logger | None = None,
         name: str = "",
@@ -71,7 +71,7 @@ class Histogram1D(bh.Histogram, family=None):
     def __init__(
         self,
         var: ArrayLike | None | ROOT.TH1 = None,
-        bins: List[float] | np.ndarray | Tuple[int, float, float] | bh.axis.Axis = (10, 0, 10),
+        bins: list[float] | np.ndarray | tuple[int, float, float] | bh.axis.Axis = (10, 0, 10),
         weight: ArrayLike | int | None = None,
         logbins: bool = False,
         logger: logging.Logger | None = None,
@@ -84,7 +84,7 @@ class Histogram1D(bh.Histogram, family=None):
     def __init__(
         self,
         var: ArrayLike | None | ROOT.TH1 = None,
-        bins: List[float] | np.ndarray | Tuple[int, float, float] | bh.axis.Axis = (10, 0, 10),
+        bins: list[float] | np.ndarray | tuple[int, float, float] | bh.axis.Axis = (10, 0, 10),
         weight: ArrayLike | float | None = None,
         logbins: bool = False,
         logger: logging.Logger | None = None,
@@ -325,17 +325,17 @@ class Histogram1D(bh.Histogram, family=None):
 
     @staticmethod
     @overload
-    def __gen_axis(bins: List[float] | ArrayLike) -> bh.axis.Axis:
+    def __gen_axis(bins: list[float] | ArrayLike) -> bh.axis.Axis:
         ...
 
     @staticmethod
     @overload
-    def __gen_axis(bins: Tuple[int, float, float], logbins: bool = False) -> bh.axis.Axis:
+    def __gen_axis(bins: tuple[int, float, float], logbins: bool = False) -> bh.axis.Axis:
         ...
 
     @staticmethod
     def __gen_axis(
-        bins: List[float] | ArrayLike | Tuple[int, float, float], logbins: bool = False
+        bins: list[float] | ArrayLike | tuple[int, float, float], logbins: bool = False
     ) -> bh.axis.Axis:
         """
         Returns the correct type of boost-histogram axis based on the input bins.
@@ -492,7 +492,7 @@ class Histogram1D(bh.Histogram, family=None):
 
     # Fitting
     # ===================
-    def chi_square(self, other: ROOT.TF1 | ROOT.TH1 | Histogram1D) -> Tuple[float, float]:
+    def chi_square(self, other: ROOT.TF1 | ROOT.TH1 | Histogram1D) -> tuple[float, float]:
         """Perform chi-squared test. Retun chi2 per degree of freedom, pvalue"""
         h1 = self.TH1
         if isinstance(other, ROOT.TH1):
@@ -691,7 +691,7 @@ class Histogram1D(bh.Histogram, family=None):
         fit: bool = False,
         name: str = "",
         out_filename: str | None = None,
-        yax_lim: float | Tuple[float, float] | None = None,
+        yax_lim: float | tuple[float, float] | None = None,
         display_stats: bool = True,
         fit_empty: bool = False,
         display_unity: bool = True,
@@ -855,7 +855,7 @@ class Histogram1D(bh.Histogram, family=None):
 # ==================================================================
 def TH1_bin_edges(h: ROOT.TH1) -> np.typing.NDArray[1, float]:
     """Return bin edges for TH1 object hist"""
-    return np.array([h.GetBinLowEdge(i) for i in range(h.GetNbinsX() + 1)])
+    return np.array([h.GetBinLowEdge(i + 1) for i in range(h.GetNbinsX() + 1)])
 
 
 def TH1_bin_values(h: ROOT.TH1, flow: bool = False) -> np.typing.NDArray[1, float]:

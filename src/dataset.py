@@ -156,6 +156,16 @@ class Dataset:
                 self.selections[cutset_name],
             )
 
+    def import_dataframes(self, in_file: Path) -> None:
+        """
+        Import RDataFrames from TTrees into filtered dataframe class members.
+        Due to not having run over full dataset, information relating to subsamples and individual filters is lost.
+        These can be obtained from the imported cutflow histogram instead.
+        """
+        for selection in self.selections.keys():
+            self.filtered_df[selection] = ROOT.RDataFrame(f"{self.name}/{selection}", str(in_file))
+        self.logger.info(f"Selection RDataFrames successfully imported from {in_file}")
+
     # ===============================
     # ========= PRINTOUTS ===========
     # ===============================
@@ -467,6 +477,9 @@ class Dataset:
                 histograms[th1.GetName()] = th1
 
         self.histograms = histograms
+        self.logger.info(
+            f"Successfully mported {len(self.histograms)} histogram(s) from file {in_file}"
+        )
 
     def get_binnings(self, variable_name: str, selection: str | None = None) -> dict:
         """Get correct binnings for variable"""

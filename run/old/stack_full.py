@@ -4,8 +4,8 @@ from typing import Dict
 import matplotlib.pyplot as plt
 import numpy as np
 
-from src.cutfile import Cut
 from src.analysis import Analysis
+from src.cutfile import Cut
 
 # DTA_PATH = Path("/eos/home-k/kghorban/DTA_OUT/2023-10-25/")
 DTA_PATH = Path("/eos/home-k/kghorban/DTA_OUT/2024-02-05/")
@@ -20,7 +20,6 @@ if __name__ == "__main__":
             "data_path": DTA_PATH / "*data17*/*.root",
             "label": "data",
         },
-
         # SIGNAL
         # ====================================================================
         "wtaunu_lm": {
@@ -35,10 +34,8 @@ if __name__ == "__main__":
             "label": r"$W\rightarrow\tau\nu$",
             "merge_into": "wtaunu",
         },
-
         # BACKGROUNDS
         # ====================================================================
-
         # W -> light lepton
         "wlv_lm": {
             "data_path": [
@@ -58,7 +55,6 @@ if __name__ == "__main__":
             "label": r"$W\rightarrow (e/\mu)\nu$",
             "merge_into": "wlnu",
         },
-
         # Z -> TauTau
         "ztautau_lm": {
             "data_path": DTA_PATH / "*Sh_2211_Ztautau_*_maxHTpTV2*/*.root",
@@ -72,7 +68,6 @@ if __name__ == "__main__":
             "label": r"$Z\rightarrow (l/\nu)(l/\nu)$",
             "merge_into": "zll",
         },
-
         # Z -> Light Lepton
         "zll_lm": {
             "data_path": [
@@ -92,14 +87,12 @@ if __name__ == "__main__":
             "label": r"$Z\rightarrow (l/\nu)(l/\nu)$",
             "merge_into": "zll",
         },
-
         # Z -> Neutrinos
         "znunu": {
             "data_path": DTA_PATH / "*Sh_2211_Znunu_pTV2*/*.root",
             "label": r"$Z\rightarrow (l/\nu)(l/\nu)$",
             "merge_into": "zll",
         },
-
         # TTBAR/TOP
         "ttbar": {
             "data_path": DTA_PATH / "*PP8_ttbar_hdamp258p75*/*.root",
@@ -113,7 +106,6 @@ if __name__ == "__main__":
             ],
             "label": "Other Top",
         },
-
         # DIBOSON
         "diboson": {
             "data_path": [
@@ -134,7 +126,7 @@ if __name__ == "__main__":
     }
 
     cuts: dict[str, list[Cut]] = {
-        "Loose Tau" : [
+        "Loose Tau": [
             Cut(
                 r"Pass preselection",
                 r"passReco",
@@ -156,7 +148,7 @@ if __name__ == "__main__":
                 r"MTW > 150",
             ),
         ],
-        "Very Loose Tau" : [
+        "Very Loose Tau": [
             Cut(
                 r"Pass preselection",
                 r"passReco",
@@ -183,7 +175,7 @@ if __name__ == "__main__":
                 r"$E_T^{\mathrm{miss}} < 100",
                 r"MET_met < 100",
             ),
-        ]
+        ],
     }
 
     wanted_branches = {
@@ -220,14 +212,14 @@ if __name__ == "__main__":
         extract_vars=wanted_branches,
         binnings={
             "": {
-            "MTW": np.geomspace(150, 1000, 20),
-            "TauPt": np.geomspace(170, 1000, 20),
-            "TauEta": np.linspace(-2.47, 2.47, 20),
-            "EleEta": np.linspace(-2.47, 2.47, 20),
-            "MuonEta": np.linspace(-2.5, 2.5, 20),
-            "MET_met": np.geomspace(150, 1000, 20),
-            "DeltaPhi_tau_met": np.linspace(0, 3.5, 20),
-            "TauPt_div_MET": np.linspace(0, 3.5, 20),
+                "MTW": np.geomspace(150, 1000, 20),
+                "TauPt": np.geomspace(170, 1000, 20),
+                "TauEta": np.linspace(-2.47, 2.47, 20),
+                "EleEta": np.linspace(-2.47, 2.47, 20),
+                "MuonEta": np.linspace(-2.5, 2.5, 20),
+                "MET_met": np.geomspace(150, 1000, 20),
+                "DeltaPhi_tau_met": np.linspace(0, 3.5, 20),
+                "TauPt_div_MET": np.linspace(0, 3.5, 20),
             },
             "Fakes CR": {
                 "MET_met": np.geomspace(1, 100, 20),
@@ -248,7 +240,7 @@ if __name__ == "__main__":
     # argument dicts
     default_args = {
         "datasets": mc_samples,
-        "title": f"data17 | mc16d | {analysis.global_lumi/1000:.3g}" + r"fb$^{-1}$",
+        "title": f"data17 | mc16d | {analysis.global_lumi / 1000:.3g}" + r"fb$^{-1}$",
         "cut": True,
         "yerr": True,
     }
@@ -261,7 +253,14 @@ if __name__ == "__main__":
     ]:
         analysis.stack_plot(var=var, **default_args, logx=True, data=True)
         analysis.stack_plot(var=var, **default_args, logy=False, data=True, suffix="liny")
-        analysis.stack_plot(var=var, **default_args, logx=True, data=True, scale_by_bin_width=True, ylabel="Entries / bin width")
+        analysis.stack_plot(
+            var=var,
+            **default_args,
+            logx=True,
+            data=True,
+            scale_by_bin_width=True,
+            ylabel="Entries / bin width",
+        )
         # analysis.plot_hist(var=var, **default_args, logx=True, )
 
     # unitless variables
