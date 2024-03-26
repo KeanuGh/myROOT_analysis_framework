@@ -230,7 +230,7 @@ def set_axis_options(
         axis.semilogy()
 
     # restrict axes to extent of data. if statement is there to skip blank/guide lines
-    # THIS ACTUALLY CUTS OF THE TWO OUTER BINS IN HALF BECAUSE AXIS LINE EXTENTS ARE AT BIN CENTERS (WHY??)
+    # THIS ACTUALLY CUTS OF THE TWO OUTER BINS IN HALF BECAUSE AXIS LINE EXTENTS ARE AT BIN CENTERS
     if xlim:
         axis.set_xlim(*xlim)
     elif strict_xax_lims:

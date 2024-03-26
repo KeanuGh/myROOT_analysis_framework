@@ -966,7 +966,7 @@ class Analysis:
         for dataset in self.datasets.values():
             for selection in dataset.filtered_df:
                 self.logger.info(f"Snapshoting '{selection}' selection in {dataset.name}...")
-                dataset.filtered_df[selection].Snapshot(
+                dataset.filtered_df[selection] = dataset.filtered_df[selection].Snapshot(
                     f"{dataset.name}/{selection}", str(filepath), list(dataset.all_vars), opts
                 )
         self.logger.info(f"Full snapshot sucessfully saved.")
