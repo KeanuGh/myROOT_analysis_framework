@@ -345,7 +345,8 @@ if __name__ == "__main__":
             "datasets": all_samples + [None],
             "labels": [analysis[ds].label for ds in all_samples] + ["Multijet"],
             "colours": [analysis[ds].colour for ds in all_samples] + [fakes_colour],
-            "title": f"data17 | mc16d | {analysis.global_lumi / 1000:.3g}" + r"fb$^{-1}$",
+            "title": f"{fakes_source} fakes est. | data17 | mc16d | {analysis.global_lumi / 1000:.3g}"
+            + r"fb$^{-1}$",
             "yerr": True,
             "suffix": "fake_scaled_log",
             "ratio_plot": True,
@@ -482,12 +483,7 @@ if __name__ == "__main__":
         "datasets": all_samples,
         "title": f"data17 | mc16d | {analysis.global_lumi / 1000:.3g}" + r"fb$^{-1}$",
         "yerr": True,
-        "cut": [
-            "SR_passID",
-            "SR_failID",
-            "CR_passID",
-            "CR_failID",
-        ],
+        "cut": "SR_passID",
         "ratio_plot": True,
         "ratio_axlim": (0.8, 1.2),
         "kind": "stack",

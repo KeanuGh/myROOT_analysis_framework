@@ -671,7 +671,6 @@ class Analysis:
                         data_hist,
                         ax=ratio_ax,
                         yerr=True,
-                        color="k",
                         yax_lim=ratio_axlim,
                         display_unity=False,
                     )
@@ -706,7 +705,7 @@ class Analysis:
                             ax=ratio_ax,
                             yerr=ratio_err,
                             label=f"{label_list[i]}/{label_list[0]}",
-                            color=colours_list[i],
+                            colour=colours_list[i],
                             fit=ratio_fit,
                             yax_lim=ratio_axlim,
                             display_stats=len(hist_list) <= 3,

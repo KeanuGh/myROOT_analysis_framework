@@ -695,7 +695,7 @@ class Histogram1D(bh.Histogram, family=None):
         display_stats: bool = True,
         fit_empty: bool = False,
         display_unity: bool = True,
-        color: str | None = "k",
+        colour: str | None = None,
         **kwargs,
     ) -> Histogram1D:
         """
@@ -718,7 +718,7 @@ class Histogram1D(bh.Histogram, family=None):
         :param display_stats: whether to display the fit parameters on the plot
         :param fit_empty: Whether to fit on empty bins. If false, fits on non-empty bin range
         :param display_unity: Whether to add in a line at 1
-        :param color: plot colour
+        :param colour: plot colour. Defaults to black.
         :param kwargs: Args to pass to ax.errorbar()
         :return: axis object with plot
         """
@@ -787,7 +787,7 @@ class Histogram1D(bh.Histogram, family=None):
                     fit_err = fit_results.Errors()[0]
 
                     # display fit line
-                    fit_col = color if color else "r"
+                    fit_col = colour if colour else "r"
                     ax.fill_between(
                         [self.bin_edges[0], self.bin_edges[-1]],  # type: ignore
                         [c - fit_err],
@@ -826,7 +826,7 @@ class Histogram1D(bh.Histogram, family=None):
             linestyle="None",
             label=label,
             marker=".",
-            c=color if color else "k",
+            c=colour if colour else "k",
             **kwargs,
         )
 
@@ -858,7 +858,7 @@ class Histogram1D(bh.Histogram, family=None):
                         arrowprops=dict(
                             arrowstyle="-|>",
                             connectionstyle="arc3,rad=0",
-                            color=color if color else "r",
+                            color=colour if colour else "r",
                         ),
                     )
 
