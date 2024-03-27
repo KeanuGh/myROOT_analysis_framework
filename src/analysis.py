@@ -680,7 +680,7 @@ class Analysis:
                         xlim=bin_range,
                         xlabel=xlabel,
                         ylabel="Data / MC",
-                        logx=not ratio_plot,
+                        logx=False if ratio_plot else logx,
                         label=False,
                     )
 
@@ -732,7 +732,7 @@ class Analysis:
                 xlabel=xlabel,
                 ylabel=ylabel,
                 title=title,
-                logx=not ratio_plot,
+                logx=False if ratio_plot else logx,
                 logy=logy,
                 diff_xs=scale_by_bin_width,
             )

@@ -345,7 +345,7 @@ if __name__ == "__main__":
             "datasets": all_samples + [None],
             "labels": [analysis[ds].label for ds in all_samples] + ["Multijet"],
             "colours": [analysis[ds].colour for ds in all_samples] + [fakes_colour],
-            "title": f"{fakes_source} fakes est. | data17 | mc16d | {analysis.global_lumi / 1000:.3g}"
+            "title": f"{fakes_source} fakes binning | data17 | mc16d | {analysis.global_lumi / 1000:.3g}"
             + r"fb$^{-1}$",
             "yerr": True,
             "suffix": "fake_scaled_log",
@@ -459,7 +459,7 @@ if __name__ == "__main__":
                 FF_full_bkg(v, "MTW"),
             ],
             logy=True,
-            logx=True,
+            logx=False,
             **default_args,
             xlabel=variable_data[v]["name"],
             filename=f"FF_compare_{v}_log.png",
@@ -495,9 +495,15 @@ if __name__ == "__main__":
         "TauPt",
         "MTW",
     ]:
-        analysis.plot(var=var, **default_args, logx=True, filename=f"{var}_stack_no_fakes_log.png")
         analysis.plot(
-            var=var, **default_args, logy=False, filename=f"{var}_stack_no_fakes_liny.png"
+            var=var, **default_args, logx=True, logy=True, filename=f"{var}_stack_no_fakes_log.png"
+        )
+        analysis.plot(
+            var=var,
+            **default_args,
+            logy=False,
+            logx=False,
+            filename=f"{var}_stack_no_fakes_liny.png",
         )
 
     # unitless variables
@@ -511,9 +517,13 @@ if __name__ == "__main__":
         "TauNCoreTracks",
         "nJets",
     ]:
-        analysis.plot(var=var, **default_args, filename=f"{var}_stack_no_fakes_log.png")
+        analysis.plot(var=var, **default_args, logx=False, filename=f"{var}_stack_no_fakes_log.png")
         analysis.plot(
-            var=var, **default_args, logy=False, filename=f"{var}_stack_no_fakes_liny.png"
+            var=var,
+            **default_args,
+            logy=False,
+            logx=False,
+            filename=f"{var}_stack_no_fakes_liny.png",
         )
 
     # truth hists for mental health
@@ -547,6 +557,7 @@ if __name__ == "__main__":
         + r"fb$^{-1}$",
         filename="wtaunu_taupt_resolution.png",
         logy=False,
+        logx=False,
     )
     analysis.plot(
         var="TauPt_diff",
@@ -557,6 +568,7 @@ if __name__ == "__main__":
         + r"fb$^{-1}$",
         filename="wtaunu_taupt_truthrecodiff.png",
         logy=False,
+        logx=False,
     )
     analysis.plot(
         var="MTW_TauPt_res_SR_passID_cut_PROFILE",
@@ -566,9 +578,10 @@ if __name__ == "__main__":
         title=r"Tau $p_T$ resolution in $W\rightarrow\tau\nu$ | mc16d | "
         + f"{analysis.global_lumi / 1000:.3g}"
         + r"fb$^{-1}$",
-        y_axlim=(-1, 1),
+        y_axlim=(-10, 10),
         filename="wtaunu_mtw_taupt_profile.png",
         logy=False,
+        logx=False,
     )
     analysis.plot(
         var=[
@@ -586,6 +599,7 @@ if __name__ == "__main__":
         ratio_plot=False,
         filename="wtaunu_taupt_resolution_selections.png",
         logy=False,
+        logx=False,
     )
     analysis.plot(
         var=[
@@ -603,6 +617,7 @@ if __name__ == "__main__":
         ratio_plot=False,
         filename="wtaunu_taupt_truthrecodiff_selections.png",
         logy=False,
+        logx=False,
     )
     analysis.plot(
         var=[
@@ -618,10 +633,11 @@ if __name__ == "__main__":
         title=r"Tau $p_T$ resolution in $W\rightarrow\tau\nu$ | mc16d | "
         + f"{analysis.global_lumi / 1000:.3g}"
         + r"fb$^{-1}$",
-        y_axlim=(-1, 1),
+        y_axlim=(-10, 10),
         ratio_plot=False,
         filename="wtaunu_mtw_taupt_profile_selections.png",
         logy=False,
+        logx=False,
     )
 
     # analysis.histogram_printout()
