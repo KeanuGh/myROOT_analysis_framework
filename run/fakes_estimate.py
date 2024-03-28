@@ -325,14 +325,62 @@ if __name__ == "__main__":
     for fakes_source in ["TauPt", "MTW"]:
         analysis.do_fakes_estimate(fakes_source, measurement_vars)
 
+        # Intermediates
+        # ----------------------------------------------------------------------------
+        CR_passID_data = analysis.get_hist(fakes_source, "data", "CR_passID", TH1=True)
+        CR_failID_data = analysis.get_hist(fakes_source, "data", "CR_failID", TH1=True)
+        SR_failID_data = analysis.get_hist(fakes_source, "data", "SR_failID", TH1=True)
+        CR_passID_mc = analysis.sum_hists(
+            [f"{ds}_{fakes_source}_CR_passID_trueTau_cut" for ds in mc_samples]
+        )
+        CR_failID_mc = analysis.sum_hists(
+            [f"{ds}_{fakes_source}_CR_failID_trueTau_cut" for ds in mc_samples]
+        )
+        SR_failID_mc = analysis.sum_hists(
+            [f"{ds}_{fakes_source}_SR_failID_trueTau_cut" for ds in mc_samples]
+        )
+        analysis.plot(
+            [CR_passID_data, CR_failID_data, CR_passID_mc, CR_failID_mc],
+            label=["CR_passID_data", "CR_failID_data", "CR_passID_mc", "CR_failID_mc"],
+            yerr=False,
+            xlabel=fakes_source,
+            ratio_plot=False,
+            filename=f"FF_histograms_{fakes_source}.png",
+        )
+        analysis.plot(
+            [CR_failID_data - CR_failID_mc, CR_passID_data - CR_passID_mc],
+            label=["CR_failID_data - CR_failID_mc", "CR_passID_data - CR_passID_mc"],
+            yerr=False,
+            xlabel=fakes_source,
+            ratio_plot=True,
+            filename=f"FF_histograms_diff_{fakes_source}.png",
+            ratio_label="Fake Factor",
+        )
+        analysis.plot(
+            [SR_failID_data, SR_failID_mc],
+            label=["SR_failID_data", "SR_failID_mc"],
+            yerr=False,
+            xlabel=fakes_source,
+            ratio_plot=False,
+            filename=f"FF_calculation_{fakes_source}.png",
+        )
+        analysis.plot(
+            SR_failID_data - SR_failID_mc,
+            label=["SR_failID_data - SR_failID_mc"],
+            yerr=False,
+            xlabel=fakes_source,
+            ratio_plot=False,
+            filename=f"FF_calculation_delta_SR_fail_{fakes_source}.png",
+        )
+
         # Fake factors
         # ----------------------------------------------------------------------------
         analysis.plot(
-            var=f"{fakes_source}_FF",
+            val=f"{fakes_source}_FF",
             logx=True,
             xlabel=r"$p_T^\tau$ [GeV]" if fakes_source == "TauPt" else r"$m_T^W$ [GeV]",
             yerr=False,
-            cut=False,
+            selection=None,
             logy=False,
             ylabel="Fake factor",
             filename=f"{fakes_source}_FF.png",
@@ -342,9 +390,9 @@ if __name__ == "__main__":
         # ----------------------------------------------------------------------------
         # log axes
         default_args = {
-            "datasets": all_samples + [None],
-            "labels": [analysis[ds].label for ds in all_samples] + ["Multijet"],
-            "colours": [analysis[ds].colour for ds in all_samples] + [fakes_colour],
+            "dataset": all_samples + [None],
+            "label": [analysis[ds].label for ds in all_samples] + ["Multijet"],
+            "colour": [analysis[ds].colour for ds in all_samples] + [fakes_colour],
             "title": f"{fakes_source} fakes binning | data17 | mc16d | {analysis.global_lumi / 1000:.3g}"
             + r"fb$^{-1}$",
             "yerr": True,
@@ -356,9 +404,6 @@ if __name__ == "__main__":
 
         def FF_vars(s: str) -> list[str]:
             """List of variable names for each sample"""
-            # return [f"{ds_}_{s}_SR_passID_cut" for ds_ in all_samples] + [
-            #     f"{s}_fakes_bkg_{fakes_source}_src"
-            # ]
             return (
                 [f"data_{s}_SR_passID_cut"]
                 + [f"{ds_}_{s}_SR_passID_trueTau_cut" for ds_ in mc_samples]
@@ -368,7 +413,7 @@ if __name__ == "__main__":
         # mass variables
         for v in ["TauPt", "MTW"]:
             analysis.plot(
-                var=FF_vars(v),
+                val=FF_vars(v),
                 logx=True,
                 logy=True,
                 **default_args,
@@ -376,7 +421,7 @@ if __name__ == "__main__":
                 filename=f"{v}_fakes_stack_{fakes_source}_log.png",
             )
             analysis.plot(
-                var=FF_vars(v),
+                val=FF_vars(v),
                 logx=False,
                 logy=False,
                 **default_args,
@@ -386,7 +431,7 @@ if __name__ == "__main__":
         # massless
         for v in ["TauEta", "TauPhi", "nJets"]:
             analysis.plot(
-                var=FF_vars(v),
+                val=FF_vars(v),
                 **default_args,
                 logy=True,
                 logx=False,
@@ -394,7 +439,7 @@ if __name__ == "__main__":
                 filename=f"{v}_fakes_stack_{fakes_source}_log.png",
             )
             analysis.plot(
-                var=FF_vars(v),
+                val=FF_vars(v),
                 **default_args,
                 logy=False,
                 logx=False,
@@ -407,8 +452,8 @@ if __name__ == "__main__":
     # log axes
     default_args = {
         "title": f"data17 | mc16d | {analysis.global_lumi / 1000:.3g}" + r"fb$^{-1}$",
-        "labels": ["Data SR", "MC + TauPt Fakes", "MC + MTW Fakes"],
-        "colours": ["k", "b", "r"],
+        "label": ["Data SR", "MC + TauPt Fakes", "MC + MTW Fakes"],
+        "colour": ["k", "b", "r"],
         "yerr": True,
         "suffix": "fake_scaled_log",
         "ratio_plot": True,
@@ -427,7 +472,7 @@ if __name__ == "__main__":
     # mass variables
     for v in ["TauPt", "MTW"]:
         analysis.plot(
-            var=[
+            val=[
                 f"data_{v}_SR_passID_cut",
                 FF_full_bkg(v, "TauPt"),
                 FF_full_bkg(v, "MTW"),
@@ -439,7 +484,7 @@ if __name__ == "__main__":
             filename=f"FF_compare_{v}_log.png",
         )
         analysis.plot(
-            var=[
+            val=[
                 f"data_{v}_SR_passID_cut",
                 FF_full_bkg(v, "TauPt"),
                 FF_full_bkg(v, "MTW"),
@@ -453,7 +498,7 @@ if __name__ == "__main__":
     # massless
     for v in ["TauEta", "TauPhi", "nJets"]:
         analysis.plot(
-            var=[
+            val=[
                 f"data_{v}_SR_passID_cut",
                 FF_full_bkg(v, "TauPt"),
                 FF_full_bkg(v, "MTW"),
@@ -465,7 +510,7 @@ if __name__ == "__main__":
             filename=f"FF_compare_{v}_log.png",
         )
         analysis.plot(
-            var=[
+            val=[
                 f"data_{v}_SR_passID_cut",
                 FF_full_bkg(v, "TauPt"),
                 FF_full_bkg(v, "MTW"),
@@ -480,10 +525,10 @@ if __name__ == "__main__":
     # No Fakes
     # ----------------------------------------------------------------------------
     default_args = {
-        "datasets": all_samples,
+        "dataset": all_samples,
         "title": f"data17 | mc16d | {analysis.global_lumi / 1000:.3g}" + r"fb$^{-1}$",
         "yerr": True,
-        "cut": "SR_passID",
+        "selection": "SR_passID",
         "ratio_plot": True,
         "ratio_axlim": (0.8, 1.2),
         "kind": "stack",
@@ -496,10 +541,10 @@ if __name__ == "__main__":
         "MTW",
     ]:
         analysis.plot(
-            var=var, **default_args, logx=True, logy=True, filename=f"{var}_stack_no_fakes_log.png"
+            val=var, **default_args, logx=True, logy=True, filename=f"{var}_stack_no_fakes_log.png"
         )
         analysis.plot(
-            var=var,
+            val=var,
             **default_args,
             logy=False,
             logx=False,
@@ -517,9 +562,9 @@ if __name__ == "__main__":
         "TauNCoreTracks",
         "nJets",
     ]:
-        analysis.plot(var=var, **default_args, logx=False, filename=f"{var}_stack_no_fakes_log.png")
+        analysis.plot(val=var, **default_args, logx=False, filename=f"{var}_stack_no_fakes_log.png")
         analysis.plot(
-            var=var,
+            val=var,
             **default_args,
             logy=False,
             logx=False,
@@ -529,28 +574,28 @@ if __name__ == "__main__":
     # truth hists for mental health
     # ----------------------------------------------------------------------------
     default_args = {
-        "datasets": mc_samples,
+        "dataset": mc_samples,
         "title": f"Truth Taus | mc16d | {analysis.global_lumi / 1000:.3g}" + r"fb$^{-1}$",
         "yerr": True,
-        "cut": False,
+        "selection": False,
         "ratio_plot": False,
         "stats_box": False,
     }
-    analysis.plot(var="MatchedTruthParticlePt", **default_args, logx=True)
-    analysis.plot(var="TruthTauPt", **default_args, logx=True)
-    analysis.plot(var="TruthTauEta", **default_args)
-    analysis.plot(var="TruthTauPhi", **default_args)
+    analysis.plot(val="MatchedTruthParticlePt", **default_args, logx=True)
+    analysis.plot(val="TruthTauPt", **default_args, logx=True)
+    analysis.plot(val="TruthTauEta", **default_args)
+    analysis.plot(val="TruthTauPhi", **default_args)
 
-    default_args["cut"] = "SR_passID_trueTau"
-    analysis.plot(var="MatchedTruthParticlePt", **default_args, logx=True)
-    analysis.plot(var="TruthTauPt", **default_args, logx=True)
-    analysis.plot(var="TruthTauEta", **default_args)
-    analysis.plot(var="TruthTauPhi", **default_args)
+    default_args["selection"] = "SR_passID_trueTau"
+    analysis.plot(val="MatchedTruthParticlePt", **default_args, logx=True)
+    analysis.plot(val="TruthTauPt", **default_args, logx=True)
+    analysis.plot(val="TruthTauEta", **default_args)
+    analysis.plot(val="TruthTauPhi", **default_args)
 
     # tau pt resolution
     analysis.plot(
-        var="TauPt_res",
-        datasets="wtaunu",
+        val="TauPt_res",
+        dataset="wtaunu",
         xlabel=r"$(p_T^\mathrm{true} - p_T^\mathrm{reco}) / p_T^\mathrm{true}$",
         title=r"Tau $p_T$ resolution in $W\rightarrow\tau\nu$ | mc16d | "
         + f"{analysis.global_lumi / 1000:.3g}"
@@ -560,8 +605,8 @@ if __name__ == "__main__":
         logx=False,
     )
     analysis.plot(
-        var="TauPt_diff",
-        datasets="wtaunu",
+        val="TauPt_diff",
+        dataset="wtaunu",
         xlabel=r"$p_T^\mathrm{true} - p_T^\mathrm{reco}$ [GeV]",
         title=r"Tau $p_T$ resolution in $W\rightarrow\tau\nu$ | mc16d | "
         + f"{analysis.global_lumi / 1000:.3g}"
@@ -571,8 +616,8 @@ if __name__ == "__main__":
         logx=False,
     )
     analysis.plot(
-        var="MTW_TauPt_res_SR_passID_cut_PROFILE",
-        datasets="wtaunu",
+        val="MTW_TauPt_res_SR_passID_cut_PROFILE",
+        dataset="wtaunu",
         ylabel=r"Mean $(p_T^\mathrm{true} - p_T^\mathrm{reco}) / p_T^\mathrm{true}$",
         xlabel=r"$m_W^T$ [GeV]",
         title=r"Tau $p_T$ resolution in $W\rightarrow\tau\nu$ | mc16d | "
@@ -584,14 +629,14 @@ if __name__ == "__main__":
         logx=False,
     )
     analysis.plot(
-        var=[
+        val=[
             "TauPt_res_SR_passID_trueTau_cut",
             "TauPt_res_SR_failID_trueTau_cut",
             "TauPt_res_CR_passID_trueTau_cut",
             "TauPt_res_CR_failID_trueTau_cut",
         ],
-        datasets="wtaunu",
-        labels=["SR_passID", "SR_failID", "CR_passID", "CR_failID"],
+        dataset="wtaunu",
+        label=["SR_passID", "SR_failID", "CR_passID", "CR_failID"],
         xlabel=r"$(p_T^\mathrm{true} - p_T^\mathrm{reco}) / p_T^\mathrm{true}$",
         title=r"Tau $p_T$ resolution in $W\rightarrow\tau\nu$ | mc16d | "
         + f"{analysis.global_lumi / 1000:.3g}"
@@ -602,14 +647,14 @@ if __name__ == "__main__":
         logx=False,
     )
     analysis.plot(
-        var=[
+        val=[
             "TauPt_diff_SR_passID_trueTau_cut",
             "TauPt_diff_SR_failID_trueTau_cut",
             "TauPt_diff_CR_passID_trueTau_cut",
             "TauPt_diff_CR_failID_trueTau_cut",
         ],
-        datasets="wtaunu",
-        labels=["SR_passID", "SR_failID", "CR_passID", "CR_failID"],
+        dataset="wtaunu",
+        label=["SR_passID", "SR_failID", "CR_passID", "CR_failID"],
         xlabel=r"$p_T^\mathrm{true} - p_T^\mathrm{reco}$ [GeV]",
         title=r"Tau $p_T$ resolution in $W\rightarrow\tau\nu$ | mc16d | "
         + f"{analysis.global_lumi / 1000:.3g}"
@@ -620,14 +665,14 @@ if __name__ == "__main__":
         logx=False,
     )
     analysis.plot(
-        var=[
+        val=[
             "MTW_TauPt_res_SR_passID_trueTau_cut_PROFILE",
             "MTW_TauPt_res_SR_failID_trueTau_cut_PROFILE",
             "MTW_TauPt_res_CR_passID_trueTau_cut_PROFILE",
             "MTW_TauPt_res_CR_failID_trueTau_cut_PROFILE",
         ],
-        datasets="wtaunu",
-        labels=["SR_passID", "SR_failID", "CR_passID", "CR_failID"],
+        dataset="wtaunu",
+        label=["SR_passID", "SR_failID", "CR_passID", "CR_failID"],
         ylabel=r"Mean $(p_T^\mathrm{true} - p_T^\mathrm{reco}) / p_T^\mathrm{true}$",
         xlabel=r"$m_W^T$ [GeV]",
         title=r"Tau $p_T$ resolution in $W\rightarrow\tau\nu$ | mc16d | "
