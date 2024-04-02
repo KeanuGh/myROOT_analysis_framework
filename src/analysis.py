@@ -605,7 +605,7 @@ class Analysis:
         # get axis labels from variable names if possible
         if (
             all([isinstance(val, str) for val in per_hist_vars["vals"]])
-            and (val_name := set(per_hist_vars["vals"])) == 1
+            and len(val_name := set(per_hist_vars["vals"])) == 1
         ):
             val_name = next(iter(val_name))
             if val_name in variable_names.variable_data:

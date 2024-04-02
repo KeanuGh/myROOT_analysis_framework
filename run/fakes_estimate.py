@@ -343,6 +343,7 @@ if __name__ == "__main__":
             [CR_passID_data, CR_failID_data, CR_passID_mc, CR_failID_mc],
             label=["CR_passID_data", "CR_failID_data", "CR_passID_mc", "CR_failID_mc"],
             yerr=False,
+            logy=True,
             xlabel=fakes_source,
             ratio_plot=False,
             filename=f"FF_histograms_{fakes_source}.png",
@@ -351,6 +352,7 @@ if __name__ == "__main__":
             [CR_failID_data - CR_failID_mc, CR_passID_data - CR_passID_mc],
             label=["CR_failID_data - CR_failID_mc", "CR_passID_data - CR_passID_mc"],
             yerr=False,
+            logy=True,
             xlabel=fakes_source,
             ratio_plot=True,
             filename=f"FF_histograms_diff_{fakes_source}.png",
@@ -360,6 +362,7 @@ if __name__ == "__main__":
             [SR_failID_data, SR_failID_mc],
             label=["SR_failID_data", "SR_failID_mc"],
             yerr=False,
+            logy=True,
             xlabel=fakes_source,
             ratio_plot=False,
             filename=f"FF_calculation_{fakes_source}.png",
@@ -368,6 +371,7 @@ if __name__ == "__main__":
             SR_failID_data - SR_failID_mc,
             label=["SR_failID_data - SR_failID_mc"],
             yerr=False,
+            logy=True,
             xlabel=fakes_source,
             ratio_plot=False,
             filename=f"FF_calculation_delta_SR_fail_{fakes_source}.png",
@@ -541,7 +545,11 @@ if __name__ == "__main__":
         "MTW",
     ]:
         analysis.plot(
-            val=var, **default_args, logx=True, logy=True, filename=f"{var}_stack_no_fakes_log.png"
+            val=var,
+            **default_args,
+            logx=True,
+            logy=True,
+            filename=f"{var}_stack_no_fakes_log.png",
         )
         analysis.plot(
             val=var,
@@ -562,7 +570,13 @@ if __name__ == "__main__":
         "TauNCoreTracks",
         "nJets",
     ]:
-        analysis.plot(val=var, **default_args, logx=False, filename=f"{var}_stack_no_fakes_log.png")
+        analysis.plot(
+            val=var,
+            **default_args,
+            logx=False,
+            logy=True,
+            filename=f"{var}_stack_no_fakes_log.png",
+        )
         analysis.plot(
             val=var,
             **default_args,
