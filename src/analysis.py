@@ -509,7 +509,7 @@ class Analysis:
                 **kwargs,
             )
 
-            # handle ratio_plot_options
+            # handle ratio plot options
             if ratio_plot:
                 all_mc_hist = reduce(
                     (lambda x, y: x + y), per_hist_vars["hists"] + [signal_plot_args["hists"]]
@@ -662,22 +662,22 @@ class Analysis:
             filepath = self.paths.plot_dir / filename
         else:
             # naming template for file/histogram name
-            if isinstance(val, list):
-                val = "_".join([v for v in val if isinstance(v, str)])
-            elif not isinstance(val, str):
-                val = ""
+            def _srep(s: str, init_: bool = True) -> str:
+                """String rep. of combinations of histogram definitions"""
+                out = [el for el in per_hist_vars[s] if (el is not None) and isinstance(el, str)]
+                init = "_" if init_ else ""
+                if out:
+                    return init + "_".join([el for el in per_hist_vars[s] if el is not None])
+                else:
+                    return ""
 
             filename_template = (
                 (f"{prefix}_" if prefix else "")
-                + val
-                + (("_" + "_".join([ds for ds in dataset if ds is not None])) if dataset else "")
+                + _srep("vals", init_=False)
+                + _srep("datasets")
+                + _srep("selections")
                 + ("_BIN_SCALED" if scale_by_bin_width else "")
                 + ("_STACKED" if kind == "stack" else "")
-                + (
-                    ("_" + "_".join([sel for sel in selection if sel is not None]))
-                    if selection
-                    else ""
-                )
                 + (f"_{suffix}" if suffix else "")
             )
             filepath = self.paths.plot_dir / (filename_template + ".png")
@@ -1019,6 +1019,7 @@ class Analysis:
         opts = ROOT.RDF.RSnapshotOptions()
         opts.fMode = "UPDATE"
         opts.fOverwriteIfExists = True
+
         for dataset in self.datasets.values():
             for selection in dataset.filtered_df:
                 self.logger.info(f"Snapshoting '{selection}' selection in {dataset.name}...")

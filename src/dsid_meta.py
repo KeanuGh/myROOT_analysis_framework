@@ -197,15 +197,6 @@ class DatasetMetadata:
                     dsid = tree.mcChannel
                     dsids.add(dsid)
 
-                    # handle dataset merging
-                    if "merge_into" in dataset_dict:
-                        merge_dataset = dataset_dict["merge_into"]
-                        if merge_dataset in self.dataset_dsids:
-                            if dsid not in self.dataset_dsids[merge_dataset]:
-                                self.dataset_dsids[merge_dataset].append(dsid)
-                        else:
-                            self.dataset_dsids[merge_dataset] = [dsid]
-
                     sumw = tfile.Get("sumOfWeights").GetBinContent(4)  # bin 4 is AOD sum of weights
 
                     if dsid == 0:
