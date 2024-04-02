@@ -667,7 +667,12 @@ class Analysis:
                 out = [el for el in per_hist_vars[s] if (el is not None) and isinstance(el, str)]
                 init = "_" if init_ else ""
                 if out:
-                    return init + "_".join([el for el in per_hist_vars[s] if el is not None])
+                    all_el = [el for el in per_hist_vars[s] if el is not None]
+                    if len(set(all_el)) == 1:
+                        all_el = all_el[0]
+                        return init + all_el
+                    else:
+                        return init + "_".join(all_el)
                 else:
                     return ""
 
