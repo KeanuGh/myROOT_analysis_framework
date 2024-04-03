@@ -561,6 +561,7 @@ class Histogram1D(bh.Histogram, family=None):
         out_filename: str | None = None,
         histtype: str = "step",
         show: bool = False,
+        flow: bool = False,
         **kwargs,
     ) -> Histogram1D:
         """
@@ -582,6 +583,7 @@ class Histogram1D(bh.Histogram, family=None):
         :param out_filename: provide filename to print. If not given, nothing is saved
         :param histtype: histogram type to be passed to mplhep
         :param show: whether to display the plot (plt.show())
+        :param flow: whether to plot over/underflow
         :return: matplotlib axis object with plot
         """
         hist = self.copy()
@@ -614,12 +616,13 @@ class Histogram1D(bh.Histogram, family=None):
             _, ax = plt.subplots()
 
         hep.histplot(
-            H=hist.bin_values(),
+            H=hist.bin_values(flow),
             bins=hist.bin_edges,
             ax=ax,
             yerr=yerr,
             w2=hist.sumw2() if w2 else None,
             histtype=histtype,
+            flow="show" if flow else None,
             **kwargs,
         )
 

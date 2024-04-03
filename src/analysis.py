@@ -458,11 +458,11 @@ class Analysis:
         if (kind == "stack") and (self.data_sample in per_hist_vars["datasets"]):
             idx = per_hist_vars["datasets"].index(self.data_sample)
             for v in per_hist_vars.keys():
-                data_plot_args[v] = per_hist_vars[v].pop(idx)
+                data_plot_args[v] = per_hist_vars[v].pop(idx)  # type: ignore
         if (kind == "stack") and (self.signal_sample in per_hist_vars["datasets"]):
             idx = per_hist_vars["datasets"].index(self.signal_sample)
             for v in per_hist_vars:
-                signal_plot_args[v] = per_hist_vars[v].pop(idx)
+                signal_plot_args[v] = per_hist_vars[v].pop(idx)  # type: ignore
 
         # unset options that depend on multiple histograms
         if n_plottables == 1:
@@ -506,6 +506,7 @@ class Analysis:
                 data_hist=data_plot_args["hists"] if data_plot_args else None,
                 sort=sort,
                 yerr=yerr,
+                flow=flow,
                 **kwargs,
             )
 
@@ -664,10 +665,10 @@ class Analysis:
             # naming template for file/histogram name
             def _srep(s: str, init_: bool = True) -> str:
                 """String rep. of combinations of histogram definitions"""
-                out = [el for el in per_hist_vars[s] if (el is not None) and isinstance(el, str)]
+                out = [el for el in per_hist_vars[s] if (el is not None) and isinstance(el, str)]  # type: ignore
                 init = "_" if init_ else ""
                 if out:
-                    all_el = [el for el in per_hist_vars[s] if el is not None]
+                    all_el = [el for el in per_hist_vars[s] if el is not None]  # type: ignore
                     if len(set(all_el)) == 1:
                         all_el = all_el[0]
                         return init + all_el
@@ -694,26 +695,30 @@ class Analysis:
     def _plot_stack(
         self,
         ax: plt.Axes,
-        per_hist_vars: dict,
+        per_hist_vars: PlotOpts,
         signal_hist: Histogram1D | None = None,
         data_hist: Histogram1D | None = None,
         sort: bool = False,
         yerr: ArrayLike | bool = False,
+        flow: bool = False,
         **kwargs,
     ) -> None:
         # Sort lists based on integral of histograms so smallest histograms sit at bottom
         if sort:
             for val in per_hist_vars:
-                per_hist_vars[val] = sorted(
-                    per_hist_vars[val],
-                    key=lambda ls: per_hist_vars["hists"][per_hist_vars[val].index(ls)].integral,
+                per_hist_vars[val] = sorted(  # type: ignore
+                    per_hist_vars[val],  # type: ignore
+                    key=lambda ls: per_hist_vars["hists"][per_hist_vars[val].index(ls)].integral,  # type: ignore
                 )
 
         hist_list = per_hist_vars["hists"]
+        full_stack = reduce((lambda x, y: x + y), hist_list)
+        edges = full_stack.bin_edges
         alpha_list = [0.8] * len(hist_list)
         edgecolour_list = ["k"] * len(hist_list)
+
         hep.histplot(
-            H=[h.bin_values() for h in hist_list],
+            H=[h.bin_values(flow) for h in hist_list],
             bins=hist_list[-1].bin_edges,
             ax=ax,
             color=per_hist_vars["colours"],
@@ -724,46 +729,40 @@ class Analysis:
             stack=True,
             histtype="fill",
             zorder=reversed(range(len(hist_list))),  # mplhep plots in wrong order
+            flow="show" if flow else None,
             **kwargs,
         )
 
         # handle signal seperately
         if signal_hist:
-            bkg_sum = reduce((lambda x, y: x + y), hist_list)
-            sig_stack = signal_hist + bkg_sum
-            sig_stack.plot(ax=ax, yerr=None, color="r", label=self[self.signal_sample].label)
+            full_stack += signal_hist
+            full_stack.plot(ax=ax, yerr=None, color="r", label=self[self.signal_sample].label)
 
-        edges = hist_list[0].bin_edges
         if yerr is True:
-            # MC error propagation
-            yerr = np.array([hist.error() for hist in hist_list] + [signal_hist.error()])
-            yerr = np.sum(yerr, axis=0)
+            full_stack_vals = full_stack.bin_values(flow)
+            full_stack_errs = full_stack.error(flow)
+            err_top = full_stack_vals + (full_stack_errs / 2)
+            err_bottom = full_stack_vals - (full_stack_errs / 2)
 
-        # top of histogram stack
-        stack = np.array([hist.bin_values() for hist in hist_list] + [signal_hist.bin_values()])
-        stack = np.sum(stack, axis=0)
-        err_top = stack + (yerr / 2)
-        err_bottom = stack - (yerr / 2)
-
-        # add error as clear hatch
-        ax.fill_between(
-            x=edges,
-            y1=np.append(err_top, err_top[-1]),
-            y2=np.append(err_bottom, err_bottom[-1]),
-            alpha=0.3,
-            color="grey",
-            hatch="/",
-            label="MC error",
-            step="post",
-        )
+            # add error as clear hatch
+            ax.fill_between(
+                x=edges,
+                y1=np.append(err_top, err_top[-1]),
+                y2=np.append(err_bottom, err_bottom[-1]),
+                alpha=0.3,
+                color="grey",
+                hatch="/",
+                label="MC error",
+                step="post",
+            )
 
         # handle data separately
         if data_hist:
             ax.errorbar(
                 data_hist.bin_centres,
-                data_hist.bin_values(),
+                data_hist.bin_values(flow),
                 xerr=data_hist.bin_widths / 2,
-                yerr=data_hist.error(),
+                yerr=data_hist.error(flow),
                 linestyle="None",
                 color="black",
                 marker=".",

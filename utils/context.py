@@ -79,7 +79,6 @@ def redirect_stdout(in_stream: str | TextIO = "stdout"):
     Capture C/C++ standard output
 
     :param in_stream: either "stdout", "stderr" or a TextIO object
-    :return:
     """
     out_stream = io.StringIO()
     if in_stream == "stdout":

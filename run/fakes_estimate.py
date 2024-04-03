@@ -7,7 +7,8 @@ import numpy as np
 from src.analysis import Analysis
 from src.cutfile import Cut
 from src.dataset import ProfileOpts
-from src.histogram import Histogram1D
+from src.histogram import Histogram1D, TH1_bin_edges
+from utils.plotting_tools import get_axis_labels
 from utils.variable_names import variable_data
 
 DTA_PATH = Path("/data/DTA_outputs/2024-02-22/")
@@ -227,13 +228,20 @@ if __name__ == "__main__":
         "MatchedTruthParticle_isJet",
         "nJets",
     }
-    measurement_vars = [
-        "TauEta",
-        "TauPhi",
+    measurement_vars_mass = [
         "TauPt",
         "MTW",
-        "nJets",
+        "MET_met",
     ]
+    measurement_vars_unitless = [
+        "TauEta",
+        "TauPhi",
+        "nJets",
+        "TauNCoreTracks",
+        "TauRNNJetScore",
+        "TauBDTEleScore",
+    ]
+    measurement_vars = measurement_vars_unitless + measurement_vars_mass
     profile_vars = [
         "TauPt_res",
         "TauPt_diff",
@@ -381,10 +389,10 @@ if __name__ == "__main__":
         # ----------------------------------------------------------------------------
         analysis.plot(
             val=f"{fakes_source}_FF",
-            logx=True,
             xlabel=r"$p_T^\tau$ [GeV]" if fakes_source == "TauPt" else r"$m_T^W$ [GeV]",
             yerr=False,
             selection=None,
+            logx=False,
             logy=False,
             ylabel="Fake factor",
             filename=f"{fakes_source}_FF.png",
@@ -415,7 +423,7 @@ if __name__ == "__main__":
             )
 
         # mass variables
-        for v in ["TauPt", "MTW"]:
+        for v in measurement_vars_mass:
             analysis.plot(
                 val=FF_vars(v),
                 logx=True,
@@ -433,7 +441,7 @@ if __name__ == "__main__":
                 filename=f"{v}_fakes_stack_{fakes_source}_liny.png",
             )
         # massless
-        for v in ["TauEta", "TauPhi", "nJets"]:
+        for v in measurement_vars_unitless:
             analysis.plot(
                 val=FF_vars(v),
                 **default_args,
@@ -474,7 +482,7 @@ if __name__ == "__main__":
         )
 
     # mass variables
-    for v in ["TauPt", "MTW"]:
+    for v in measurement_vars_mass:
         analysis.plot(
             val=[
                 f"data_{v}_SR_passID_cut",
@@ -500,7 +508,7 @@ if __name__ == "__main__":
             filename=f"FF_compare_{v}_liny.png",
         )
     # massless
-    for v in ["TauEta", "TauPhi", "nJets"]:
+    for v in measurement_vars_unitless:
         analysis.plot(
             val=[
                 f"data_{v}_SR_passID_cut",
@@ -539,11 +547,7 @@ if __name__ == "__main__":
     }
 
     # mass-like variables
-    for var in [
-        "MET_met",
-        "TauPt",
-        "MTW",
-    ]:
+    for var in measurement_vars_mass:
         analysis.plot(
             val=var,
             **default_args,
@@ -560,16 +564,7 @@ if __name__ == "__main__":
         )
 
     # unitless variables
-    for var in [
-        "TauEta",
-        "TauPhi",
-        # "TauPt_div_MET",
-        # "DeltaPhi_tau_met",
-        "TauRNNJetScore",
-        "TauBDTEleScore",
-        "TauNCoreTracks",
-        "nJets",
-    ]:
+    for var in measurement_vars_unitless:
         analysis.plot(
             val=var,
             **default_args,
@@ -583,6 +578,89 @@ if __name__ == "__main__":
             logy=False,
             logx=False,
             filename=f"{var}_stack_no_fakes_liny.png",
+        )
+
+    # Fakes distribution across kinematic variable for signal MC
+    # -----------------------------------------------------------------------
+    for var in measurement_vars:
+        xlabel = get_axis_labels(var)[0]
+        sel = "SR_passID"
+        mc = "wtaunu"
+
+        # for all MC
+        wtaunu_el_fakes = analysis.sum_hists(
+            [f"{s}_{var}_MatchedTruthParticle_isElectron_{sel}_cut_PROFILE" for s in mc_samples],
+            f"all_mc_{var}_MatchedTruthParticle_isElectron_{sel}_cut_PROFILE",
+        )
+        wtaunu_mu_fakes = analysis.sum_hists(
+            [f"{s}_{var}_MatchedTruthParticle_isMuon_{sel}_cut_PROFILE" for s in mc_samples],
+            f"all_mc_{var}_MatchedTruthParticle_isMuon_{sel}_cut_PROFILE",
+        )
+        wtaunu_ph_fakes = analysis.sum_hists(
+            [f"{s}_{var}_MatchedTruthParticle_isPhoton_{sel}_cut_PROFILE" for s in mc_samples],
+            f"all_mc_{var}_MatchedTruthParticle_isPhoton_{sel}_cut_PROFILE",
+        )
+        wtaunu_jet_fakes = analysis.sum_hists(
+            [f"{s}_{var}_MatchedTruthParticle_isJet_{sel}_cut_PROFILE" for s in mc_samples],
+            f"all_mc_{var}_MatchedTruthParticle_isJet_{sel}_cut_PROFILE",
+        )
+        wtaunu_true_taus = analysis.sum_hists(
+            [f"{s}_{var}_MatchedTruthParticle_isTau_{sel}_cut_PROFILE" for s in mc_samples],
+            f"all_mc_{var}_MatchedTruthParticle_isTau_{sel}_cut_PROFILE",
+        )
+        analysis.plot(
+            [wtaunu_jet_fakes, wtaunu_ph_fakes, wtaunu_mu_fakes, wtaunu_el_fakes, wtaunu_true_taus],
+            label=[
+                "Jet Fakes",
+                "Photon Fakes",
+                "Muon Fakes",
+                "Electron Fakes",
+                "True taus",
+            ],
+            sort=False,
+            yerr=False,
+            colour=list(plt.rcParams["axes.prop_cycle"].by_key()["color"])[:5],
+            title=f"Fake fractions for {var} in {sel} for all MC in SR",
+            y_axlim=(0, 1),
+            kind="stack",
+            xlabel=xlabel,
+            ylabel="Fraction of fake matched taus in signal MC",
+            filename=f"all_mc_{var}_{sel}_fake_fractions.png",
+        )
+
+        # for all MC
+        el_fakes = analysis.histograms[
+            f"{mc}_{var}_MatchedTruthParticle_isElectron_{sel}_cut_PROFILE"
+        ]
+        mu_fakes = analysis.histograms[f"{mc}_{var}_MatchedTruthParticle_isMuon_{sel}_cut_PROFILE"]
+        ph_fakes = analysis.histograms[
+            f"{mc}_{var}_MatchedTruthParticle_isPhoton_{sel}_cut_PROFILE"
+        ]
+        jet_fakes = analysis.histograms[f"{mc}_{var}_MatchedTruthParticle_isJet_{sel}_cut_PROFILE"]
+        true_taus = analysis.histograms[f"{mc}_{var}_MatchedTruthParticle_isTau_{sel}_cut_PROFILE"]
+
+        sel_hist = analysis.get_hist(var, "wtaunu", sel, TH1=True)
+        nbins = sel_hist.GetNbinsX()
+        bin_edges = TH1_bin_edges(sel_hist)
+
+        analysis.plot(
+            [jet_fakes, ph_fakes, mu_fakes, el_fakes, true_taus],
+            label=[
+                "Jet Fakes",
+                "Photon Fakes",
+                "Muon Fakes",
+                "Electron Fakes",
+                "True taus",
+            ],
+            sort=False,
+            yerr=False,
+            colour=list(plt.rcParams["axes.prop_cycle"].by_key()["color"])[:5],
+            title=f"Fake fractions for {var} in {mc} for SR",
+            y_axlim=(0, 1),
+            kind="stack",
+            xlabel=xlabel,
+            ylabel="Fraction of fake matched taus in signal MC",
+            filename=f"{mc}_{var}_{sel}_fake_fractions.png",
         )
 
     # truth hists for mental health
