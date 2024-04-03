@@ -1,5 +1,6 @@
 import copy
 import inspect
+import itertools
 import os
 from dataclasses import dataclass, fields
 from functools import reduce
@@ -491,14 +492,6 @@ class Analysis:
         # STACK PLOT
         # ============================
         if kind == "stack":
-            if yerr is True:
-                # errors are sum of MC errors
-                err = np.array(
-                    [hist.error() for hist in per_hist_vars["hists"]]
-                    + [signal_plot_args["hists"].error()]
-                )
-                err = np.sum(err, axis=0)
-
             self._plot_stack(
                 ax=ax,
                 per_hist_vars=per_hist_vars,
@@ -518,7 +511,13 @@ class Analysis:
                 all_mc_bin_vals = all_mc_hist.bin_values()
 
                 # MC errors
-                if yerr is not False:
+                if yerr is True:
+                    # errors are sum of MC errors
+                    err = np.array(
+                        [hist.error() for hist in per_hist_vars["hists"]]
+                        + [signal_plot_args["hists"].error()]
+                    )
+                    err = np.sum(err, axis=0)
                     err_bottom = (all_mc_bin_vals - err) / all_mc_bin_vals
                     err_top = (all_mc_bin_vals + err) / all_mc_bin_vals
                     ratio_ax.fill_between(
@@ -815,10 +814,24 @@ class Analysis:
             )
 
             if var_dict["colours"][i] is None:
-                if var_dict["datasets"][i]:
+                if all([c is None for c in var_dict["colours"]]):
+                    # just do all at once
+                    var_dict["colours"] = list(itertools.islice(c_iter, len(var_dict["colours"])))
+
+                elif var_dict["datasets"][i] and (len(set(var_dict["datasets"])) > 1):
                     var_dict["colours"][i] = self[var_dict["datasets"][i]].colour
+
                 else:
-                    var_dict["colours"][i] = next(c_iter)
+                    # make sure colours don't repeat
+                    c = next(c_iter)
+                    while c in var_dict["colours"]:
+                        try:
+                            c = next(c_iter)
+                        except StopIteration as e:
+                            raise StopIteration(
+                                "Run out of colours! Try a larger colour prop_cycle"
+                            ) from e
+                    var_dict["colours"][i] = c
 
             if var_dict["labels"][i] is None:
                 if var_dict["datasets"][i]:

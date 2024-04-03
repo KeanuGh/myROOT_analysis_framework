@@ -689,9 +689,11 @@ if __name__ == "__main__":
         val="TauPt_res",
         dataset="wtaunu",
         xlabel=r"$(p_T^\mathrm{true} - p_T^\mathrm{reco}) / p_T^\mathrm{true}$",
-        title=r"Tau $p_T$ resolution in $W\rightarrow\tau\nu$ | mc16d | "
-        + f"{analysis.global_lumi / 1000:.3g}"
-        + r"fb$^{-1}$",
+        title=(
+            r"Tau $p_T$ resolution in $W\rightarrow\tau\nu$ | mc16d | "
+            + f"{analysis.global_lumi / 1000:.3g}"
+            + r"fb$^{-1}$"
+        ),
         filename="wtaunu_taupt_resolution.png",
         logy=False,
         logx=False,
@@ -700,9 +702,11 @@ if __name__ == "__main__":
         val="TauPt_diff",
         dataset="wtaunu",
         xlabel=r"$p_T^\mathrm{true} - p_T^\mathrm{reco}$ [GeV]",
-        title=r"Tau $p_T$ resolution in $W\rightarrow\tau\nu$ | mc16d | "
-        + f"{analysis.global_lumi / 1000:.3g}"
-        + r"fb$^{-1}$",
+        title=(
+            r"Tau $p_T$ resolution in $W\rightarrow\tau\nu$ | mc16d | "
+            + f"{analysis.global_lumi / 1000:.3g}"
+            + r"fb$^{-1}$"
+        ),
         filename="wtaunu_taupt_truthrecodiff.png",
         logy=False,
         logx=False,
@@ -712,9 +716,11 @@ if __name__ == "__main__":
         dataset="wtaunu",
         ylabel=r"Mean $(p_T^\mathrm{true} - p_T^\mathrm{reco}) / p_T^\mathrm{true}$",
         xlabel=r"$m_W^T$ [GeV]",
-        title=r"Tau $p_T$ resolution in $W\rightarrow\tau\nu$ | mc16d | "
-        + f"{analysis.global_lumi / 1000:.3g}"
-        + r"fb$^{-1}$",
+        title=(
+            r"Tau $p_T$ resolution in $W\rightarrow\tau\nu$ | mc16d | "
+            + f"{analysis.global_lumi / 1000:.3g}"
+            + r"fb$^{-1}$"
+        ),
         y_axlim=(-10, 10),
         filename="wtaunu_mtw_taupt_profile.png",
         logy=False,
@@ -730,9 +736,11 @@ if __name__ == "__main__":
         dataset="wtaunu",
         label=["SR_passID", "SR_failID", "CR_passID", "CR_failID"],
         xlabel=r"$(p_T^\mathrm{true} - p_T^\mathrm{reco}) / p_T^\mathrm{true}$",
-        title=r"Tau $p_T$ resolution in $W\rightarrow\tau\nu$ | mc16d | "
-        + f"{analysis.global_lumi / 1000:.3g}"
-        + r"fb$^{-1}$",
+        title=(
+            r"Tau $p_T$ resolution in $W\rightarrow\tau\nu$ | mc16d | "
+            + f"{analysis.global_lumi / 1000:.3g}"
+            + r"fb$^{-1}$"
+        ),
         ratio_plot=False,
         filename="wtaunu_taupt_resolution_selections.png",
         logy=False,
@@ -748,9 +756,11 @@ if __name__ == "__main__":
         dataset="wtaunu",
         label=["SR_passID", "SR_failID", "CR_passID", "CR_failID"],
         xlabel=r"$p_T^\mathrm{true} - p_T^\mathrm{reco}$ [GeV]",
-        title=r"Tau $p_T$ resolution in $W\rightarrow\tau\nu$ | mc16d | "
-        + f"{analysis.global_lumi / 1000:.3g}"
-        + r"fb$^{-1}$",
+        title=(
+            r"Tau $p_T$ resolution in $W\rightarrow\tau\nu$ | mc16d | "
+            + f"{analysis.global_lumi / 1000:.3g}"
+            + r"fb$^{-1}$"
+        ),
         ratio_plot=False,
         filename="wtaunu_taupt_truthrecodiff_selections.png",
         logy=False,
@@ -767,9 +777,11 @@ if __name__ == "__main__":
         label=["SR_passID", "SR_failID", "CR_passID", "CR_failID"],
         ylabel=r"Mean $(p_T^\mathrm{true} - p_T^\mathrm{reco}) / p_T^\mathrm{true}$",
         xlabel=r"$m_W^T$ [GeV]",
-        title=r"Tau $p_T$ resolution in $W\rightarrow\tau\nu$ | mc16d | "
-        + f"{analysis.global_lumi / 1000:.3g}"
-        + r"fb$^{-1}$",
+        title=(
+            r"Tau $p_T$ resolution in $W\rightarrow\tau\nu$ | mc16d | "
+            + f"{analysis.global_lumi / 1000:.3g}"
+            + r"fb$^{-1}$"
+        ),
         y_axlim=(-10, 10),
         ratio_plot=False,
         filename="wtaunu_mtw_taupt_profile_selections.png",
