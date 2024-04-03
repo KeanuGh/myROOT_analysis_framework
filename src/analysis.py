@@ -493,11 +493,11 @@ class Analysis:
         if kind == "stack":
             if yerr is True:
                 # errors are sum of MC errors
-                yerr = np.array(
+                err = np.array(
                     [hist.error() for hist in per_hist_vars["hists"]]
                     + [signal_plot_args["hists"].error()]
                 )
-                yerr = np.sum(yerr, axis=0)
+                err = np.sum(err, axis=0)
 
             self._plot_stack(
                 ax=ax,
@@ -519,8 +519,8 @@ class Analysis:
 
                 # MC errors
                 if yerr is not False:
-                    err_bottom = (all_mc_bin_vals - yerr) / all_mc_bin_vals
-                    err_top = (all_mc_bin_vals + yerr) / all_mc_bin_vals
+                    err_bottom = (all_mc_bin_vals - err) / all_mc_bin_vals
+                    err_top = (all_mc_bin_vals + err) / all_mc_bin_vals
                     ratio_ax.fill_between(
                         x=per_hist_vars["hists"][0].bin_edges,
                         y1=np.append(err_top, err_top[-1]),
