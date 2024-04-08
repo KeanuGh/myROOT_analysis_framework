@@ -1,16 +1,16 @@
 from src.cutfile import Cut
-from src.cutflow import RCutflow, CutflowItem
+from src.cutflow import Cutflow, CutflowItem
 
 
 class TestCutflow:
-    cutflow1 = RCutflow()
+    cutflow1 = Cutflow()
     cutflow1._cutflow = [
         CutflowItem(npass=100, eff=100, ceff=100, cut=Cut("1", "1", set(), set())),
         CutflowItem(npass=50, eff=50, ceff=50, cut=Cut("2", "2", set(), set())),
         CutflowItem(npass=10, eff=10, ceff=20, cut=Cut("3", "3", set(), set())),
     ]
 
-    cutflow2 = RCutflow()
+    cutflow2 = Cutflow()
     cutflow2._cutflow = [
         CutflowItem(npass=200, eff=100, ceff=100, cut=Cut("1", "1", set(), set())),
         CutflowItem(npass=150, eff=75, ceff=75, cut=Cut("2", "2", set(), set())),

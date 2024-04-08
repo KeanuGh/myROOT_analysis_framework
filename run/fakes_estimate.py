@@ -405,8 +405,7 @@ if __name__ == "__main__":
             "dataset": all_samples + [None],
             "label": [analysis[ds].label for ds in all_samples] + ["Multijet"],
             "colour": [analysis[ds].colour for ds in all_samples] + [fakes_colour],
-            "title": f"{fakes_source} fakes binning | data17 | mc16d | {analysis.global_lumi / 1000:.3g}"
-            + r"fb$^{-1}$",
+            "title": f"{fakes_source} fakes binning | data17 | mc16d | {analysis.global_lumi / 1000:.3g}fb$^{{-1}}$",
             "yerr": True,
             "suffix": "fake_scaled_log",
             "ratio_plot": True,
@@ -463,7 +462,7 @@ if __name__ == "__main__":
     # ----------------------------------------------------------------------------
     # log axes
     default_args = {
-        "title": f"data17 | mc16d | {analysis.global_lumi / 1000:.3g}" + r"fb$^{-1}$",
+        "title": f"data17 | mc16d | {analysis.global_lumi / 1000:.3g}fb$^{{-1}}$",
         "label": ["Data SR", "MC + TauPt Fakes", "MC + MTW Fakes"],
         "colour": ["k", "b", "r"],
         "yerr": True,
@@ -538,7 +537,7 @@ if __name__ == "__main__":
     # ----------------------------------------------------------------------------
     default_args = {
         "dataset": all_samples,
-        "title": f"data17 | mc16d | {analysis.global_lumi / 1000:.3g}" + r"fb$^{-1}$",
+        "title": f"data17 | mc16d | {analysis.global_lumi / 1000:.3g}fb$^{{-1}}$",
         "yerr": True,
         "selection": "SR_passID",
         "ratio_plot": True,
@@ -691,12 +690,9 @@ if __name__ == "__main__":
         xlabel=r"$(p_T^\mathrm{true} - p_T^\mathrm{reco}) / p_T^\mathrm{true}$",
         title=(
             r"Tau $p_T$ resolution in $W\rightarrow\tau\nu$ | mc16d | "
-            + f"{analysis.global_lumi / 1000:.3g}"
-            + r"fb$^{-1}$"
+            + f"{analysis.global_lumi / 1000:.3g}fb$^{{-1}}$"
         ),
         filename="wtaunu_taupt_resolution.png",
-        logy=False,
-        logx=False,
     )
     analysis.plot(
         val="TauPt_diff",
@@ -704,12 +700,9 @@ if __name__ == "__main__":
         xlabel=r"$p_T^\mathrm{true} - p_T^\mathrm{reco}$ [GeV]",
         title=(
             r"Tau $p_T$ resolution in $W\rightarrow\tau\nu$ | mc16d | "
-            + f"{analysis.global_lumi / 1000:.3g}"
-            + r"fb$^{-1}$"
+            + f"{analysis.global_lumi / 1000:.3g}fb$^{{-1}}$"
         ),
         filename="wtaunu_taupt_truthrecodiff.png",
-        logy=False,
-        logx=False,
     )
     analysis.plot(
         val="MTW_TauPt_res_SR_passID_cut_PROFILE",
@@ -718,13 +711,10 @@ if __name__ == "__main__":
         xlabel=r"$m_W^T$ [GeV]",
         title=(
             r"Tau $p_T$ resolution in $W\rightarrow\tau\nu$ | mc16d | "
-            + f"{analysis.global_lumi / 1000:.3g}"
-            + r"fb$^{-1}$"
+            + f"{analysis.global_lumi / 1000:.3g}fb$^{{-1}}$"
         ),
         y_axlim=(-10, 10),
         filename="wtaunu_mtw_taupt_profile.png",
-        logy=False,
-        logx=False,
     )
     analysis.plot(
         val=[
@@ -738,13 +728,10 @@ if __name__ == "__main__":
         xlabel=r"$(p_T^\mathrm{true} - p_T^\mathrm{reco}) / p_T^\mathrm{true}$",
         title=(
             r"Tau $p_T$ resolution in $W\rightarrow\tau\nu$ | mc16d | "
-            + f"{analysis.global_lumi / 1000:.3g}"
-            + r"fb$^{-1}$"
+            + f"{analysis.global_lumi / 1000:.3g}fb$^{{-1}}$"
         ),
         ratio_plot=False,
         filename="wtaunu_taupt_resolution_selections.png",
-        logy=False,
-        logx=False,
     )
     analysis.plot(
         val=[
@@ -758,13 +745,10 @@ if __name__ == "__main__":
         xlabel=r"$p_T^\mathrm{true} - p_T^\mathrm{reco}$ [GeV]",
         title=(
             r"Tau $p_T$ resolution in $W\rightarrow\tau\nu$ | mc16d | "
-            + f"{analysis.global_lumi / 1000:.3g}"
-            + r"fb$^{-1}$"
+            + f"{analysis.global_lumi / 1000:.3g}fb$^{{-1}}$"
         ),
         ratio_plot=False,
         filename="wtaunu_taupt_truthrecodiff_selections.png",
-        logy=False,
-        logx=False,
     )
     analysis.plot(
         val=[
@@ -779,14 +763,11 @@ if __name__ == "__main__":
         xlabel=r"$m_W^T$ [GeV]",
         title=(
             r"Tau $p_T$ resolution in $W\rightarrow\tau\nu$ | mc16d | "
-            + f"{analysis.global_lumi / 1000:.3g}"
-            + r"fb$^{-1}$"
+            + f"{analysis.global_lumi / 1000:.3g}fb$^{{-1}}$"
         ),
         y_axlim=(-10, 10),
         ratio_plot=False,
         filename="wtaunu_mtw_taupt_profile_selections.png",
-        logy=False,
-        logx=False,
     )
 
     # analysis.histogram_printout()

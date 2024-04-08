@@ -19,6 +19,10 @@ from src.logger import get_logger
 
 @dataclass(slots=True)
 class CutflowItem:
+    """
+    Represents a single cut of a cutflow
+    """
+
     npass: int
     eff: float
     ceff: float
@@ -26,7 +30,11 @@ class CutflowItem:
 
 
 @dataclass(slots=True)
-class RCutflow:
+class Cutflow:
+    """
+    Cutflow object. `_cutflow` attribute contains list of cutflow items that defines a cutflow
+    """
+
     _cutflow: List[CutflowItem] = field(init=False, default_factory=list)
     logger: Logger = field(default_factory=get_logger)
 
@@ -39,10 +47,10 @@ class RCutflow:
     def __len__(self) -> int:
         return len(self._cutflow)
 
-    def __add__(self, other: RCutflow):
+    def __add__(self, other: Cutflow):
         return deepcopy(self).__iadd__(other)
 
-    def __iadd__(self, other: RCutflow):
+    def __iadd__(self, other: Cutflow):
         """Sum individual cutflow values (the only important part), leave the rest alone"""
 
         # cuts must be identical if cutflows are to be merged
@@ -83,8 +91,9 @@ class RCutflow:
 
     @property
     def total_events(self) -> int:
+        """Return total number of events passed to cutflow"""
         if self._cutflow is None:
-            raise AttributeError("Must generated cutflow in order to obtain number of events")
+            raise AttributeError("Must have generated cutflow in order to obtain number of events")
         return self._cutflow[0].npass
 
     def gen_cutflow(self, rdf: ROOT.RDataFrame, cuts: List[Cut]) -> None:
@@ -96,8 +105,15 @@ class RCutflow:
         """
         report = rdf.Report()
 
-        full_cuts = [f"{cutname}: {report.At(cutname).GetPass()}" for cutname in list(rdf.GetFilterNames())]
-        self.logger.debug("Full report (internal):\n{}".format("\n".join(full_cuts)))
+        self.logger.debug(
+            "Full report (internal):\n%s",
+            "\n".join(
+                [
+                    f"{cutname}: {report.At(cutname).GetPass()}"
+                    for cutname in list(rdf.GetFilterNames())
+                ]
+            ),
+        )
 
         self._cutflow = [
             CutflowItem(
@@ -127,6 +143,7 @@ class RCutflow:
         self._cutflow = cutflow_from_hist_and_cuts(hist, cuts)
 
     def print(self, latex_path: Path | None = None) -> None:
+        """Print cutflow table to console or as latex table to latex file"""
         if latex_path:
             cut_list_truth = [
                 [

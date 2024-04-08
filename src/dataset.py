@@ -13,7 +13,7 @@ import pandas as pd  # type: ignore
 from numpy.typing import ArrayLike
 
 from src.cutfile import Cut
-from src.cutflow import RCutflow
+from src.cutflow import Cutflow
 from src.histogram import Histogram1D
 from src.logger import get_logger
 from utils import plotting_tools
@@ -74,15 +74,15 @@ class Dataset:
     is_signal: bool = False
     is_data: bool = False
     out_file: Path = field(default="")
-    histograms: dict[str, ROOT.TH1 | ROOT.TProfile] = field(init=False, default_factory=dict)
-    cutflows: dict[str, RCutflow] = field(init=False, default_factory=dict)
+    histograms: dict[str, ROOT.TH1] = field(init=False, default_factory=dict)
+    cutflows: dict[str, Cutflow] = field(init=False, default_factory=dict)
     filtered_df: dict[str, ROOT.RDataFrame] = field(init=False, default_factory=dict)
 
     def __post_init__(self) -> None:
         if not self.out_file:
             self.out_file = Path(self.name + ".root")
 
-        # generate filtered dataframe(s) for cuts if an RDataframe and cuts are passed
+        # generate filtered dataframe(s) for cuts if a Dataframe and cuts are passed
         if (self.df is not None) and (self.selections is not None):
 
             def __sanitise_str(string: str) -> str:
@@ -150,7 +150,7 @@ class Dataset:
             raise ValueError("Must generate or load histograms before resetting cutflow")
 
         for cutset_name in self.selections:
-            self.cutflows[cutset_name] = RCutflow(logger=self.logger)
+            self.cutflows[cutset_name] = Cutflow(logger=self.logger)
             self.cutflows[cutset_name].import_cutflow(
                 self.histograms["cutflow" + (("_" + cutset_name) if cutset_name else "")],
                 self.selections[cutset_name],
@@ -200,7 +200,7 @@ class Dataset:
         """Generate cutflow, optionally with specific cuts applied"""
         for cuts_name, cuts in self.selections.items():
             self.logger.info(f"Generating cutflow {cuts_name}...")
-            cutflow = RCutflow(logger=self.logger)
+            cutflow = Cutflow(logger=self.logger)
             cutflow.gen_cutflow(self.filtered_df[cuts_name], cuts)
 
             self.cutflows[cuts_name] = cutflow

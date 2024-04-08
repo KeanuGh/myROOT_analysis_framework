@@ -928,6 +928,9 @@ class Analysis:
             raise ValueError("Datasets do not have the same cuts")
         return True
 
+    # ===============================
+    # ========== ANALYSES ===========
+    # ===============================
     def do_fakes_estimate(
         self,
         fakes_source_var: str,
