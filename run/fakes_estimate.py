@@ -610,10 +610,10 @@ if __name__ == "__main__":
         analysis.plot(
             [wtaunu_jet_fakes, wtaunu_ph_fakes, wtaunu_mu_fakes, wtaunu_el_fakes, wtaunu_true_taus],
             label=[
-                "Jet Fakes",
-                "Photon Fakes",
-                "Muon Fakes",
-                "Electron Fakes",
+                "Jet-matched fake taus",
+                "Photon-matched fake taus",
+                "Muon-matched fake taus",
+                "electron-matched fake taus",
                 "True taus",
             ],
             sort=False,

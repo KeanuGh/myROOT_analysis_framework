@@ -1,7 +1,7 @@
 import os
 from glob import glob
-from warnings import warn
 from pathlib import Path
+from warnings import warn
 
 
 def is_dir_empty(dirpath: str) -> bool:
@@ -40,16 +40,16 @@ def multi_glob(paths: Path | list[Path] | str | list[str]) -> list[str]:
     """Return list of files from list of paths with wildcards"""
     if isinstance(paths, (str, Path)):
         paths = [paths]
-    
-    files = []
+
+    all_files = []
     for path in paths:
         f = glob(str(path))
         if not f:
             warn(f"Path passed with no files: {path}")
 
-        files += glob(str(path))
-    
-    return files
+        all_files += f
+
+    return all_files
 
 
 # # FIXME

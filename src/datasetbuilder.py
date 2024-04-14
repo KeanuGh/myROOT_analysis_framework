@@ -62,6 +62,7 @@ class DatasetBuilder:
     is_data: bool = False
     is_signal: bool = False
     import_missing_columns_as_nan: bool = False
+
     _subsamples: set[str] = field(init=False, default_factory=set)
     _vars_to_calc: set[str] = field(init=False, default_factory=set)
     _all_vars: set[str] = field(init=False, default_factory=set)
@@ -189,9 +190,7 @@ class DatasetBuilder:
     # ===== DATAFRAME FUNCTIONS =====
     # ==============================
     def __build_dataframe_dta(
-        self,
-        sample_paths: dict[str, list[Path] | Path],
-        tree_dict: dict[str, set[str]],
+        self, sample_paths: dict[str, list[Path] | Path], tree_dict: dict[str, set[str]]
     ) -> ROOT.RDataFrame:
         """Build DataFrame from given files and TTree/branch combinations from DTA output"""
 
@@ -244,7 +243,7 @@ class DatasetBuilder:
         # create weights
         if self.is_data:
             # for consistency's sake
-            Rdf = Rdf.Define("reco_weight", "1").Define("truth_weight", "1")
+            Rdf = Rdf.Define("reco_weight", "1.0").Define("truth_weight", "1.0")
         else:
             Rdf = Rdf.Define(
                 "truth_weight",
@@ -303,10 +302,7 @@ class DatasetBuilder:
             f"time to build dataframe: {time.strftime('%H:%M:%S', time.gmtime(time.time() - t1))}"
         )
 
-        filternames = list(Rdf.GetFilterNames())
-        self.logger.debug("Filter names:")
-        for name in filternames:
-            self.logger.debug(f"\t{name}")
+        self.logger.debug("Filter names:\n%s", "\n\t".join(list(Rdf.GetFilterNames())))
 
         return Rdf
 

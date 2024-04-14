@@ -85,7 +85,7 @@ class Dataset:
         # generate filtered dataframe(s) for cuts if a Dataframe and cuts are passed
         if (self.df is not None) and (self.selections is not None):
 
-            def __sanitise_str(string: str) -> str:
+            def _sanitise_str(string: str) -> str:
                 """sanitise latex-like string to stop ROOT from interpreting them as escape sequences"""
                 return string.replace("\\", "\\\\")
 
@@ -106,14 +106,14 @@ class Dataset:
                 # take the first n shared cuts from the first list of cuts as the base filter
                 shared_cuts = self.selections[list(self.selections.keys())[0]][:n_shared_cuts]
                 for cut in shared_cuts:
-                    base_filter = base_filter.Filter(cut.cutstr, __sanitise_str(cut.name))
+                    base_filter = base_filter.Filter(cut.cutstr, _sanitise_str(cut.name))
 
             for cuts_name, cuts in self.selections.items():
                 # add all cuts
                 # take the base filter for the first cut to make sure all filters share a base dataframe
                 try:
                     self.filtered_df[cuts_name] = base_filter.Filter(
-                        cuts[n_shared_cuts].cutstr, __sanitise_str(cuts[n_shared_cuts].name)
+                        cuts[n_shared_cuts].cutstr, _sanitise_str(cuts[n_shared_cuts].name)
                     )
                 except IndexError as e:
                     raise IndexError(
@@ -122,7 +122,7 @@ class Dataset:
 
                 for cut in cuts[n_shared_cuts + 1 :]:
                     self.filtered_df[cuts_name] = self.filtered_df[cuts_name].Filter(
-                        cut.cutstr, __sanitise_str(cut.name)
+                        cut.cutstr, _sanitise_str(cut.name)
                     )
 
     def __len__(self) -> int:
@@ -387,21 +387,21 @@ class Dataset:
 
         # build profiles
         if self.profiles:
-            for profile_name, options in self.profiles.items():
-                binning_var = options.x
+            for profile_name, profile_opts in self.profiles.items():
+                binning_var = profile_opts.x
                 bin_args = self.get_binnings(binning_var)
                 profile_args = [
                     ROOT.RDF.TProfile1DModel(
                         profile_name + "_PROFILE",
                         profile_name + "_PROFILE",
                         *plotting_tools.get_TH1_bins(**bin_args),
-                        options.option,
+                        profile_opts.option,
                     ),
-                    options.x,
-                    options.y,
+                    profile_opts.x,
+                    profile_opts.y,
                 ]
-                if options.weight:
-                    profile_args.append(options.weight)
+                if profile_opts.weight:
+                    profile_args.append(profile_opts.weight)
                 th1_histograms[profile_name + "_PROFILE"] = self.df.Profile1D(*profile_args)
 
                 for cutflow_name, filtered_df in self.filtered_df.items():
@@ -416,7 +416,7 @@ class Dataset:
                         cut_profile_name,
                         cut_profile_name,
                         *plotting_tools.get_TH1_bins(**bin_args),
-                        options.option,
+                        profile_opts.option,
                     )
                     th1_histograms[cut_profile_name] = filtered_df.Profile1D(*profile_args)
 
