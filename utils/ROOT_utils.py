@@ -13,6 +13,7 @@ import pandas as pd  # type: ignore
 
 # ROOT settings
 def load_ROOT_settings(set_batch: bool = True, th1_dir: bool = False, optstat: int = 1111):
+    """Load ROOT settings to be used by this analysis"""
     ROOT.gROOT.SetBatch(set_batch)  # Prevents TCanvas popups
     ROOT.PyConfig.StartGUIThread = False  # disables polling for ROOT GUI events
     ROOT.TH1.AddDirectory(th1_dir)  # stops TH1s from being saved and prevents overwrite warnings
@@ -21,8 +22,9 @@ def load_ROOT_settings(set_batch: bool = True, th1_dir: bool = False, optstat: i
     ROOT.gStyle.SetOptStat(optstat)  # statsbox default options
 
     # load custom C++ functions
-    ROOT.gSystem.Load(f"{Path(__file__).parent}/rootfuncs.h")
-    ROOT.gInterpreter.ProcessLine(f'#include "{Path(__file__).parent}/rootfuncs.h"')
+    func_file = str(Path(__file__).parent / "rootfuncs.h")
+    ROOT.gSystem.Load(func_file)
+    ROOT.gInterpreter.ProcessLine(f'#include "{func_file}"')
 
 
 # this dictionary decides which ROOT constructor needs to be called based on hist type and dimension

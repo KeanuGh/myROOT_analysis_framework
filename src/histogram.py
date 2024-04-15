@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import copy
 import logging
-from typing import Any, overload, Type
+from typing import Any, overload
 
 import ROOT
 import boost_histogram as bh
@@ -38,7 +38,17 @@ class Histogram1D(bh.Histogram, family=None):
     @overload
     def __init__(
         self,
-        th1: Type[ROOT.TH1],
+        th1: ROOT.TH1,
+        logger: logging.Logger | None = None,
+        name: str = "",
+        title: str = "",
+    ) -> None:
+        ...
+
+    @overload
+    def __init__(
+        self,
+        var: ROOT.TH1,
         logger: logging.Logger | None = None,
         name: str = "",
         title: str = "",
@@ -89,7 +99,7 @@ class Histogram1D(bh.Histogram, family=None):
         logger: logging.Logger | None = None,
         name: str = "",
         title: str = "",
-        th1: Type[ROOT.TH1] | None = None,
+        th1: ROOT.TH1 | None = None,
         **kwargs,
     ) -> None:
         """
@@ -102,13 +112,16 @@ class Histogram1D(bh.Histogram, family=None):
         :param logbins: whether logarithmic binnings
         :param logger: logger object to pass messages to. Creates new logger object that logs to console if None
         :param name: name of histogram
-        :param title: histogram title
+        :param title: title of histogram
         :param th1: create a new histogram from a TH1
         :param kwargs: keyword arguments to pass to boost_histogram.Histogram()
         """
         if logger is None:
             logger = get_logger()
         self.logger = logger
+
+        if isinstance(var, ROOT.TH1):
+            th1 = var
 
         if th1:
             # create from TH1
@@ -126,9 +139,10 @@ class Histogram1D(bh.Histogram, family=None):
                 self.name = th1.GetName()
 
             # fill
-            for idx, _ in np.ndenumerate(self.view(flow=True)):
-                self.view(flow=True).value[idx] = th1.GetBinContent(*idx)  # bin value
-                self.view(flow=True).variance[idx] = th1.GetBinError(*idx) ** 2
+            if self.TH1.GetEntries() > 0:
+                for idx, _ in np.ndenumerate(self.view(flow=True)):
+                    self.view(flow=True).value[idx] = th1.GetBinContent(*idx)  # bin value
+                    self.view(flow=True).variance[idx] = th1.GetBinError(*idx) ** 2
 
             if var is not None:
                 self.Fill(var, weight=weight)

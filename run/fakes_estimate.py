@@ -296,11 +296,6 @@ if __name__ == "__main__":
                 "TauPt_diff": np.linspace(-300, 300, 51),
                 "badJet": (2, 0, 2),
             },
-            "noID": {
-                "MTW": np.geomspace(1, 1000, 51),
-                "TauPt": np.geomspace(1, 1000, 51),
-                "MET_met": np.geomspace(1, 1000, 51),
-            },
             "CR_failID": {
                 "MET_met": np.geomspace(1, 100, 51),
             },
@@ -330,133 +325,194 @@ if __name__ == "__main__":
 
     # FAKES ESTIMATE
     # ========================================================================
-    for fakes_source in ["TauPt", "MTW"]:
-        analysis.do_fakes_estimate(fakes_source, measurement_vars)
+    for fakes_filter, fakes_filter_name in [
+        ("TauNCoreTracks == 1", "1prong"),
+        ("TauNCoreTracks == 3", "3prong"),
+        ("", ""),
+    ]:
+        # define new selection for 1- or 3- tau prongs
+        if fakes_filter:
+            for selection in [
+                "CR_passID",
+                "CR_failID",
+                "SR_passID",
+                "SR_failID",
+                "CR_passID_trueTau",
+                "CR_failID_trueTau",
+                "SR_passID_trueTau",
+                "SR_failID_trueTau",
+            ]:
+                for ds in analysis.datasets:
+                    analysis[ds].define_selection(
+                        fakes_filter, fakes_filter_name + "_" + selection, selection
+                    )
+        if fakes_filter_name:
+            prefix = fakes_filter_name + "_"
+        else:
+            prefix = ""
 
-        # Intermediates
-        # ----------------------------------------------------------------------------
-        CR_passID_data = analysis.get_hist(fakes_source, "data", "CR_passID", TH1=True)
-        CR_failID_data = analysis.get_hist(fakes_source, "data", "CR_failID", TH1=True)
-        SR_failID_data = analysis.get_hist(fakes_source, "data", "SR_failID", TH1=True)
-        CR_passID_mc = analysis.sum_hists(
-            [f"{ds}_{fakes_source}_CR_passID_trueTau_cut" for ds in mc_samples]
-        )
-        CR_failID_mc = analysis.sum_hists(
-            [f"{ds}_{fakes_source}_CR_failID_trueTau_cut" for ds in mc_samples]
-        )
-        SR_failID_mc = analysis.sum_hists(
-            [f"{ds}_{fakes_source}_SR_failID_trueTau_cut" for ds in mc_samples]
-        )
-        analysis.plot(
-            [CR_passID_data, CR_failID_data, CR_passID_mc, CR_failID_mc],
-            label=["CR_passID_data", "CR_failID_data", "CR_passID_mc", "CR_failID_mc"],
-            yerr=False,
-            logy=True,
-            xlabel=fakes_source,
-            ratio_plot=False,
-            filename=f"FF_histograms_{fakes_source}.png",
-        )
-        analysis.plot(
-            [CR_failID_data - CR_failID_mc, CR_passID_data - CR_passID_mc],
-            label=["CR_failID_data - CR_failID_mc", "CR_passID_data - CR_passID_mc"],
-            yerr=False,
-            logy=True,
-            xlabel=fakes_source,
-            ratio_plot=True,
-            filename=f"FF_histograms_diff_{fakes_source}.png",
-            ratio_label="Fake Factor",
-        )
-        analysis.plot(
-            [SR_failID_data, SR_failID_mc],
-            label=["SR_failID_data", "SR_failID_mc"],
-            yerr=False,
-            logy=True,
-            xlabel=fakes_source,
-            ratio_plot=False,
-            filename=f"FF_calculation_{fakes_source}.png",
-        )
-        analysis.plot(
-            SR_failID_data - SR_failID_mc,
-            label=["SR_failID_data - SR_failID_mc"],
-            yerr=False,
-            logy=True,
-            xlabel=fakes_source,
-            ratio_plot=False,
-            filename=f"FF_calculation_delta_SR_fail_{fakes_source}.png",
-        )
+        for fakes_source in ["TauPt", "MTW"]:
+            analysis.do_fakes_estimate(
+                fakes_source,
+                measurement_vars,
+                f"{prefix}CR_passID",
+                f"{prefix}CR_failID",
+                f"{prefix}SR_passID",
+                f"{prefix}SR_failID",
+                f"{prefix}CR_passID_trueTau",
+                f"{prefix}CR_failID_trueTau",
+                f"{prefix}SR_passID_trueTau",
+                f"{prefix}SR_failID_trueTau",
+                name=fakes_filter_name,
+                save_intermediates=True,
+            )
 
-        # Fake factors
-        # ----------------------------------------------------------------------------
+            # Intermediates
+            # ----------------------------------------------------------------------------
+            CR_passID_data = analysis.get_hist(fakes_source, "data", f"{prefix}CR_passID")
+            CR_failID_data = analysis.get_hist(fakes_source, "data", f"{prefix}CR_failID")
+            SR_failID_data = analysis.get_hist(fakes_source, "data", f"{prefix}SR_failID")
+            CR_passID_mc = analysis.get_hist(
+                f"{prefix}all_mc_{fakes_source}_{prefix}CR_passID_trueTau"
+            )
+            CR_failID_mc = analysis.get_hist(
+                f"{prefix}all_mc_{fakes_source}_{prefix}CR_failID_trueTau"
+            )
+            SR_failID_mc = analysis.get_hist(
+                f"{prefix}all_mc_{fakes_source}_{prefix}SR_failID_trueTau"
+            )
+
+            analysis.plot(
+                [CR_passID_data, CR_failID_data, CR_passID_mc, CR_failID_mc],
+                label=["CR_passID_data", "CR_failID_data", "CR_passID_mc", "CR_failID_mc"],
+                yerr=False,
+                logy=True,
+                xlabel=fakes_source,
+                ratio_plot=False,
+                filename=f"{prefix}FF_histograms_{fakes_source}.png",
+            )
+            analysis.plot(
+                [CR_failID_data - CR_failID_mc, CR_passID_data - CR_passID_mc],
+                label=["CR_failID_data - CR_failID_mc", "CR_passID_data - CR_passID_mc"],
+                yerr=False,
+                logy=True,
+                xlabel=fakes_source,
+                ratio_plot=True,
+                filename=f"{prefix}FF_histograms_diff_{fakes_source}.png",
+                ratio_label="Fake Factor",
+            )
+            analysis.plot(
+                [SR_failID_data, SR_failID_mc],
+                label=["SR_failID_data", "SR_failID_mc"],
+                yerr=False,
+                logy=True,
+                xlabel=fakes_source,
+                ratio_plot=False,
+                filename=f"{prefix}FF_calculation_{fakes_source}.png",
+            )
+            analysis.plot(
+                SR_failID_data - SR_failID_mc,
+                label=["SR_failID_data - SR_failID_mc"],
+                yerr=False,
+                logy=True,
+                xlabel=fakes_source,
+                ratio_plot=False,
+                filename=f"{prefix}FF_calculation_delta_SR_fail_{fakes_source}.png",
+            )
+
+            # Fake factors
+            # ----------------------------------------------------------------------------
+            analysis.plot(
+                val=f"{prefix}{fakes_source}_FF",
+                xlabel=r"$p_T^\tau$ [GeV]" if fakes_source == "TauPt" else r"$m_T^W$ [GeV]",
+                yerr=False,
+                selection=None,
+                logx=False,
+                logy=False,
+                ylabel="Fake factor",
+                filename=f"{prefix}{fakes_source}_FF.png",
+            )
+
+            # Stacks with Fakes background
+            # ----------------------------------------------------------------------------
+            # log axes
+            default_args = {
+                "dataset": all_samples + [None],
+                "label": [analysis[ds].label for ds in all_samples] + ["Multijet"],
+                "colour": [analysis[ds].colour for ds in all_samples] + [fakes_colour],
+                "title": f"{fakes_source} fakes binning | data17 | mc16d | {analysis.global_lumi / 1000:.3g}fb$^{{-1}}$",
+                "yerr": True,
+                "suffix": "fake_scaled_log",
+                "ratio_plot": True,
+                "ratio_axlim": (0.8, 1.2),
+                "kind": "stack",
+            }
+
+            def FF_vars(s: str) -> list[str]:
+                """List of variable names for each sample"""
+                return (
+                    [f"data_{s}_{prefix}SR_passID"]
+                    + [f"{ds_}_{s}_{prefix}SR_passID_trueTau" for ds_ in mc_samples]
+                    + [f"{prefix}{s}_fakes_bkg_{fakes_source}_src"]
+                )
+
+            # make sure the histogram exists
+            if fakes_filter:
+                for v in measurement_vars:
+                    analysis.gen_histogram(v, analysis.data_sample, prefix + "SR_passID")
+                    for d in analysis.mc_samples:
+                        analysis.gen_histogram(v, d, prefix + "SR_passID_trueTau")
+
+            # mass variables
+            for v in measurement_vars_mass:
+                analysis.plot(
+                    val=FF_vars(v),
+                    logx=True,
+                    logy=True,
+                    **default_args,
+                    xlabel=variable_data[v]["name"] + " [GeV]",
+                    filename=f"{prefix}{v}_fakes_stack_{fakes_source}_log.png",
+                )
+                analysis.plot(
+                    val=FF_vars(v),
+                    logx=False,
+                    logy=False,
+                    **default_args,
+                    xlabel=variable_data[v]["name"] + " [GeV]",
+                    filename=f"{prefix}{v}_fakes_stack_{fakes_source}_liny.png",
+                )
+            # massless
+            for v in measurement_vars_unitless:
+                analysis.plot(
+                    val=FF_vars(v),
+                    **default_args,
+                    logy=True,
+                    logx=False,
+                    xlabel=variable_data[v]["name"],
+                    filename=f"{prefix}{v}_fakes_stack_{fakes_source}_log.png",
+                )
+                analysis.plot(
+                    val=FF_vars(v),
+                    **default_args,
+                    logy=False,
+                    logx=False,
+                    xlabel=variable_data[v]["name"],
+                    filename=f"{prefix}{v}_fakes_stack_{fakes_source}_liny.png",
+                )
+
+    # compare fake factors
+    for fakes_source in ["MTW", "TauPt"]:
         analysis.plot(
-            val=f"{fakes_source}_FF",
+            val=[f"1prong_{fakes_source}_FF", f"3prong_{fakes_source}_FF"],
+            label=["1-prong", "3-prong"],
             xlabel=r"$p_T^\tau$ [GeV]" if fakes_source == "TauPt" else r"$m_T^W$ [GeV]",
             yerr=False,
             selection=None,
             logx=False,
             logy=False,
             ylabel="Fake factor",
-            filename=f"{fakes_source}_FF.png",
+            filename=f"{fakes_source}_FF_compare.png",
         )
-
-        # Stacks with Fakes background
-        # ----------------------------------------------------------------------------
-        # log axes
-        default_args = {
-            "dataset": all_samples + [None],
-            "label": [analysis[ds].label for ds in all_samples] + ["Multijet"],
-            "colour": [analysis[ds].colour for ds in all_samples] + [fakes_colour],
-            "title": f"{fakes_source} fakes binning | data17 | mc16d | {analysis.global_lumi / 1000:.3g}fb$^{{-1}}$",
-            "yerr": True,
-            "suffix": "fake_scaled_log",
-            "ratio_plot": True,
-            "ratio_axlim": (0.8, 1.2),
-            "kind": "stack",
-        }
-
-        def FF_vars(s: str) -> list[str]:
-            """List of variable names for each sample"""
-            return (
-                [f"data_{s}_SR_passID_cut"]
-                + [f"{ds_}_{s}_SR_passID_trueTau_cut" for ds_ in mc_samples]
-                + [f"{s}_fakes_bkg_{fakes_source}_src"]
-            )
-
-        # mass variables
-        for v in measurement_vars_mass:
-            analysis.plot(
-                val=FF_vars(v),
-                logx=True,
-                logy=True,
-                **default_args,
-                xlabel=variable_data[v]["name"] + " [GeV]",
-                filename=f"{v}_fakes_stack_{fakes_source}_log.png",
-            )
-            analysis.plot(
-                val=FF_vars(v),
-                logx=False,
-                logy=False,
-                **default_args,
-                xlabel=variable_data[v]["name"] + " [GeV]",
-                filename=f"{v}_fakes_stack_{fakes_source}_liny.png",
-            )
-        # massless
-        for v in measurement_vars_unitless:
-            analysis.plot(
-                val=FF_vars(v),
-                **default_args,
-                logy=True,
-                logx=False,
-                xlabel=variable_data[v]["name"],
-                filename=f"{v}_fakes_stack_{fakes_source}_log.png",
-            )
-            analysis.plot(
-                val=FF_vars(v),
-                **default_args,
-                logy=False,
-                logx=False,
-                xlabel=variable_data[v]["name"],
-                filename=f"{v}_fakes_stack_{fakes_source}_liny.png",
-            )
 
     # Direct data scaling comparison
     # ----------------------------------------------------------------------------
@@ -477,14 +533,14 @@ if __name__ == "__main__":
             th1=analysis.sum_hists(
                 [analysis.get_hist_name(s, ds_, "SR_passID_trueTau") for ds_ in mc_samples]
             )
-            + analysis.get_hist(f"{s}_fakes_bkg_{t}_src", TH1=True)
+            + analysis.get_hist(f"{s}_fakes_bkg_{t}_src")
         )
 
     # mass variables
     for v in measurement_vars_mass:
         analysis.plot(
             val=[
-                f"data_{v}_SR_passID_cut",
+                f"data_{v}_SR_passID",
                 FF_full_bkg(v, "TauPt"),
                 FF_full_bkg(v, "MTW"),
             ],
@@ -496,7 +552,7 @@ if __name__ == "__main__":
         )
         analysis.plot(
             val=[
-                f"data_{v}_SR_passID_cut",
+                f"data_{v}_SR_passID",
                 FF_full_bkg(v, "TauPt"),
                 FF_full_bkg(v, "MTW"),
             ],
@@ -510,7 +566,7 @@ if __name__ == "__main__":
     for v in measurement_vars_unitless:
         analysis.plot(
             val=[
-                f"data_{v}_SR_passID_cut",
+                f"data_{v}_SR_passID",
                 FF_full_bkg(v, "TauPt"),
                 FF_full_bkg(v, "MTW"),
             ],
@@ -522,7 +578,7 @@ if __name__ == "__main__":
         )
         analysis.plot(
             val=[
-                f"data_{v}_SR_passID_cut",
+                f"data_{v}_SR_passID",
                 FF_full_bkg(v, "TauPt"),
                 FF_full_bkg(v, "MTW"),
             ],
@@ -588,24 +644,24 @@ if __name__ == "__main__":
 
         # for all MC
         wtaunu_el_fakes = analysis.sum_hists(
-            [f"{s}_{var}_MatchedTruthParticle_isElectron_{sel}_cut_PROFILE" for s in mc_samples],
-            f"all_mc_{var}_MatchedTruthParticle_isElectron_{sel}_cut_PROFILE",
+            [f"{s}_{var}_MatchedTruthParticle_isElectron_{sel}_PROFILE" for s in mc_samples],
+            f"all_mc_{var}_MatchedTruthParticle_isElectron_{sel}_PROFILE",
         )
         wtaunu_mu_fakes = analysis.sum_hists(
-            [f"{s}_{var}_MatchedTruthParticle_isMuon_{sel}_cut_PROFILE" for s in mc_samples],
-            f"all_mc_{var}_MatchedTruthParticle_isMuon_{sel}_cut_PROFILE",
+            [f"{s}_{var}_MatchedTruthParticle_isMuon_{sel}_PROFILE" for s in mc_samples],
+            f"all_mc_{var}_MatchedTruthParticle_isMuon_{sel}_PROFILE",
         )
         wtaunu_ph_fakes = analysis.sum_hists(
-            [f"{s}_{var}_MatchedTruthParticle_isPhoton_{sel}_cut_PROFILE" for s in mc_samples],
-            f"all_mc_{var}_MatchedTruthParticle_isPhoton_{sel}_cut_PROFILE",
+            [f"{s}_{var}_MatchedTruthParticle_isPhoton_{sel}_PROFILE" for s in mc_samples],
+            f"all_mc_{var}_MatchedTruthParticle_isPhoton_{sel}_PROFILE",
         )
         wtaunu_jet_fakes = analysis.sum_hists(
-            [f"{s}_{var}_MatchedTruthParticle_isJet_{sel}_cut_PROFILE" for s in mc_samples],
-            f"all_mc_{var}_MatchedTruthParticle_isJet_{sel}_cut_PROFILE",
+            [f"{s}_{var}_MatchedTruthParticle_isJet_{sel}_PROFILE" for s in mc_samples],
+            f"all_mc_{var}_MatchedTruthParticle_isJet_{sel}_PROFILE",
         )
         wtaunu_true_taus = analysis.sum_hists(
-            [f"{s}_{var}_MatchedTruthParticle_isTau_{sel}_cut_PROFILE" for s in mc_samples],
-            f"all_mc_{var}_MatchedTruthParticle_isTau_{sel}_cut_PROFILE",
+            [f"{s}_{var}_MatchedTruthParticle_isTau_{sel}_PROFILE" for s in mc_samples],
+            f"all_mc_{var}_MatchedTruthParticle_isTau_{sel}_PROFILE",
         )
         analysis.plot(
             [wtaunu_jet_fakes, wtaunu_ph_fakes, wtaunu_mu_fakes, wtaunu_el_fakes, wtaunu_true_taus],
@@ -628,15 +684,11 @@ if __name__ == "__main__":
         )
 
         # for all MC
-        el_fakes = analysis.histograms[
-            f"{mc}_{var}_MatchedTruthParticle_isElectron_{sel}_cut_PROFILE"
-        ]
-        mu_fakes = analysis.histograms[f"{mc}_{var}_MatchedTruthParticle_isMuon_{sel}_cut_PROFILE"]
-        ph_fakes = analysis.histograms[
-            f"{mc}_{var}_MatchedTruthParticle_isPhoton_{sel}_cut_PROFILE"
-        ]
-        jet_fakes = analysis.histograms[f"{mc}_{var}_MatchedTruthParticle_isJet_{sel}_cut_PROFILE"]
-        true_taus = analysis.histograms[f"{mc}_{var}_MatchedTruthParticle_isTau_{sel}_cut_PROFILE"]
+        el_fakes = analysis.histograms[f"{mc}_{var}_MatchedTruthParticle_isElectron_{sel}_PROFILE"]
+        mu_fakes = analysis.histograms[f"{mc}_{var}_MatchedTruthParticle_isMuon_{sel}_PROFILE"]
+        ph_fakes = analysis.histograms[f"{mc}_{var}_MatchedTruthParticle_isPhoton_{sel}_PROFILE"]
+        jet_fakes = analysis.histograms[f"{mc}_{var}_MatchedTruthParticle_isJet_{sel}_PROFILE"]
+        true_taus = analysis.histograms[f"{mc}_{var}_MatchedTruthParticle_isTau_{sel}_PROFILE"]
 
         sel_hist = analysis.get_hist(var, "wtaunu", sel, TH1=True)
         nbins = sel_hist.GetNbinsX()
@@ -705,7 +757,7 @@ if __name__ == "__main__":
         filename="wtaunu_taupt_truthrecodiff.png",
     )
     analysis.plot(
-        val="MTW_TauPt_res_SR_passID_cut_PROFILE",
+        val="MTW_TauPt_res_SR_passID_PROFILE",
         dataset="wtaunu",
         ylabel=r"Mean $(p_T^\mathrm{true} - p_T^\mathrm{reco}) / p_T^\mathrm{true}$",
         xlabel=r"$m_W^T$ [GeV]",
@@ -718,10 +770,10 @@ if __name__ == "__main__":
     )
     analysis.plot(
         val=[
-            "TauPt_res_SR_passID_trueTau_cut",
-            "TauPt_res_SR_failID_trueTau_cut",
-            "TauPt_res_CR_passID_trueTau_cut",
-            "TauPt_res_CR_failID_trueTau_cut",
+            "TauPt_res_SR_passID_trueTau",
+            "TauPt_res_SR_failID_trueTau",
+            "TauPt_res_CR_passID_trueTau",
+            "TauPt_res_CR_failID_trueTau",
         ],
         dataset="wtaunu",
         label=["SR_passID", "SR_failID", "CR_passID", "CR_failID"],
@@ -735,10 +787,10 @@ if __name__ == "__main__":
     )
     analysis.plot(
         val=[
-            "TauPt_diff_SR_passID_trueTau_cut",
-            "TauPt_diff_SR_failID_trueTau_cut",
-            "TauPt_diff_CR_passID_trueTau_cut",
-            "TauPt_diff_CR_failID_trueTau_cut",
+            "TauPt_diff_SR_passID_trueTau",
+            "TauPt_diff_SR_failID_trueTau",
+            "TauPt_diff_CR_passID_trueTau",
+            "TauPt_diff_CR_failID_trueTau",
         ],
         dataset="wtaunu",
         label=["SR_passID", "SR_failID", "CR_passID", "CR_failID"],
@@ -752,10 +804,10 @@ if __name__ == "__main__":
     )
     analysis.plot(
         val=[
-            "MTW_TauPt_res_SR_passID_trueTau_cut_PROFILE",
-            "MTW_TauPt_res_SR_failID_trueTau_cut_PROFILE",
-            "MTW_TauPt_res_CR_passID_trueTau_cut_PROFILE",
-            "MTW_TauPt_res_CR_failID_trueTau_cut_PROFILE",
+            "MTW_TauPt_res_SR_passID_trueTau_PROFILE",
+            "MTW_TauPt_res_SR_failID_trueTau_PROFILE",
+            "MTW_TauPt_res_CR_passID_trueTau_PROFILE",
+            "MTW_TauPt_res_CR_failID_trueTau_PROFILE",
         ],
         dataset="wtaunu",
         label=["SR_passID", "SR_failID", "CR_passID", "CR_failID"],

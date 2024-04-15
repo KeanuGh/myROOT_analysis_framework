@@ -300,7 +300,7 @@ class Analysis:
                 dataset.import_dataframes(self.paths.root_dir / f"{self.name}.root")
                 dataset.reset_cutflows()
             else:
-                dataset.gen_histograms(to_file=histogram_file)
+                dataset.gen_all_histograms(to_file=histogram_file)
 
             # integrate into own histogram dictionary
             for hist_name, hist in dataset.histograms.items():
@@ -847,7 +847,7 @@ class Analysis:
         self,
         val: str | Histogram1D | ROOT.TH1,
         dataset: str | None = None,
-        selection: str | None | bool = None,
+        selection: str | None = None,
     ) -> Histogram1D:
         """Get Histogram1D object from val argument in plot"""
         if isinstance(val, Histogram1D):
@@ -855,17 +855,63 @@ class Analysis:
         if isinstance(val, ROOT.TH1):
             return Histogram1D(th1=val)
         else:
-            return self.get_hist(val, dataset, selection)
+            return self.get_hist(val, dataset, selection, TH1=False)
+
+    # ===============================
+    # ===== HISTOGRAM HANDLING ======
+    # ===============================
+    def gen_histogram(
+        self,
+        variable: str,
+        dataset: str,
+        selection: str | None = None,
+        name: str = "",
+        title: str = "",
+        histtype: str = "TH1F",
+        save: bool = True,
+    ) -> ROOT.TH1:
+        """
+        Generate histogram on-the-fly from given options
+
+        :param variable: variable in dataset to plot. Binning will be taken from internal binning dictionary
+        :param dataset: dataset to fetch data from
+        :param selection: selection to be applied to data
+        :param name: name of histogram
+        :param title: title of histogram
+        :param histtype: TH1 type name
+        :param save: whether to save in internal histogram dictionary
+        :return: generated histogram
+        """
+        h = self[dataset].gen_histogram(variable, selection, name, title, histtype)
+
+        if save:
+            self.histograms[f"{dataset}_{variable}_{selection}"] = h
+
+        return h
 
     def get_hist(
         self,
         variable: str,
         dataset: str | None = None,
-        selection: str | None | bool = None,
-        TH1: bool = False,
+        selection: str | None = None,
+        allow_generation: bool = False,
+        TH1: bool = True,
     ) -> Histogram1D | ROOT.TH1:
         """Get TH1 histogram from histogram dict or internal dataset"""
-        hist_name_internal = self.get_hist_name(variable, dataset, selection)
+        if allow_generation:
+            try:
+                hist_name_internal = self.get_hist_name(variable, dataset, selection)
+            except ValueError:
+                self.logger.info(
+                    f"Generating histogram for {variable} in {dataset} with selection: {selection}.."
+                )
+                h = self[dataset].gen_histogram(variable, selection)
+                self.histograms[f"{dataset}_{variable}_{selection}"] = h
+                self[dataset].histograms[f"{variable}_{selection}"] = h
+                return h
+        else:
+            hist_name_internal = self.get_hist_name(variable, dataset, selection)
+
         if TH1:
             return self.histograms[hist_name_internal]
         else:
@@ -875,22 +921,22 @@ class Analysis:
         self,
         variable: str,
         dataset: str | None = None,
-        selection: str | None | bool = None,
+        selection: str | None = None,
     ) -> str:
         """Get name of histogram saved in histogram dict"""
         if variable in self.histograms:
             return variable
 
-        elif selection and f"{variable}_{selection}_cut" in self.histograms:
-            return f"{variable}_{selection}_cut"
+        elif selection and f"{variable}_{selection}" in self.histograms:
+            return f"{variable}_{selection}"
 
         elif dataset is None:
             raise ValueError(
                 f"No variable '{variable}' for selection '{selection}' found in analysis: {self.name}"
             )
 
-        elif selection and f"{variable}_{selection}_cut" in self[dataset].histograms:
-            return f"{dataset}_{variable}_{selection}_cut"
+        elif selection and f"{variable}_{selection}" in self[dataset].histograms:
+            return f"{dataset}_{variable}_{selection}"
 
         elif selection:
             raise ValueError(f"No selection {selection} found for {variable} in {dataset}")
@@ -900,22 +946,30 @@ class Analysis:
 
         else:
             raise ValueError(
-                f"No histogram for {variable} in {dataset}."
+                f"No histogram for {variable} in {dataset} for selection {selection}."
                 "\nHistograms in analysis:"
                 + "\n".join(self.histograms.keys())
                 + "\n Histograms in dataset: "
                 + "\n".join(self[dataset].histograms.keys())
             )
 
-    def sum_hists(self, hists: list[str], inplace_name: str | None = None) -> ROOT.TH1 | None:
+    def sum_hists(
+        self, hists: list[str | ROOT.TH1], inplace_name: str | None = None
+    ) -> ROOT.TH1 | None:
         """
         Sum together internal histograms.
         Optionally pass inplace_name to save automatically to internal histogram dictionary
         """
-        h = self.histograms[hists[0]].Clone()
-        for hist_name in hists[1:]:
-            hist = self.histograms[hist_name]
-            h.Add(hist)
+        if isinstance(hists[0], str):
+            h = self.histograms[hists[0]].Clone()
+        else:
+            h = hists[0].Clone()
+
+        for hist_to_sum in hists[1:]:
+            if isinstance(hist_to_sum, ROOT.TH1):
+                h.Add(hist_to_sum)
+            else:
+                h.Add(self.get_hist(hist_to_sum))
 
         if inplace_name:
             self.histograms[inplace_name] = h
@@ -943,43 +997,96 @@ class Analysis:
         CR_failID_mc: str = "CR_failID_trueTau",
         SR_passID_mc: str = "SR_passID_trueTau",
         SR_failID_mc: str = "SR_failID_trueTau",
+        name: str = "",
+        save_intermediates: bool = False,
     ) -> None:
-        """Perform fakes estimate"""
-        ff_var = fakes_source_var
+        """
+        Perform fakes estimate
 
-        self.logger.info("Calculating fake factors for %s...", ff_var)
+        :param fakes_source_var: variable to perform fakes estimate binning in
+        :param fakes_target_vars: variables to apply fakes estimate to
+        :param CR_passID_data: Control region passing ID in data
+        :param CR_failID_data: Control region failing ID in data
+        :param SR_passID_data: Signal region passing ID in data
+        :param SR_failID_data: Signal region failing ID in data
+        :param CR_passID_mc: Control region passing ID in mc
+        :param CR_failID_mc: Control region failing ID in mc
+        :param SR_passID_mc: Signal region passing ID in mc
+        :param SR_failID_mc: Signal region failing ID in mc
+        :param name: prefix to histogram naming for estimation
+        :param save_intermediates: Whether to save intermediate fakes calculation histograms
+        """
+        ff_var = fakes_source_var
+        if name:
+            prefix = name + "_"
+        else:
+            prefix = ""
+
+        if not self.data_sample:
+            raise ValueError(
+                "No data sample in analysis! "
+                "How are you going to perform a data-driven fakes estimate?"
+            )
+
+        info_msg = "Calculating fake factors for %s"
+        if name:
+            info_msg += " with name: '%s'"
+            msg_args = (ff_var, name)
+        else:
+            msg_args = (ff_var,)
+        info_msg += "..."
+        self.logger.info(info_msg, *msg_args)
 
         # data histograms
-        hCR_passID_data = self.get_hist(ff_var, "data", CR_passID_data, TH1=True)
-        hCR_failID_data = self.get_hist(ff_var, "data", CR_failID_data, TH1=True)
-        hSR_failID_data = self.get_hist(ff_var, "data", SR_failID_data, TH1=True)
+        hCR_passID_data = self.get_hist(
+            ff_var, self.data_sample, CR_passID_data, allow_generation=True
+        )
+        hCR_failID_data = self.get_hist(
+            ff_var, self.data_sample, CR_failID_data, allow_generation=True
+        )
+        hSR_failID_data = self.get_hist(
+            ff_var, self.data_sample, SR_failID_data, allow_generation=True
+        )
 
         # mc truth matched histograms
-        mc_ds = self.mc_samples
-        hCR_passID_mc = self.sum_hists([f"{ds}_{ff_var}_{CR_passID_mc}_cut" for ds in mc_ds])
-        hCR_failID_mc = self.sum_hists([f"{ds}_{ff_var}_{CR_failID_mc}_cut" for ds in mc_ds])
-        hSR_failID_mc = self.sum_hists([f"{ds}_{ff_var}_{SR_failID_mc}_cut" for ds in mc_ds])
-        self.histograms[f"all_mc_{ff_var}_{CR_passID_mc}_cut"] = hCR_passID_mc
-        self.histograms[f"all_mc_{ff_var}_{CR_failID_mc}_cut"] = hCR_failID_mc
-        self.histograms[f"all_mc_{ff_var}_{SR_failID_mc}_cut"] = hSR_failID_mc
+        hCR_passID_mc = self.sum_hists(
+            [
+                self.get_hist(ff_var, mc_ds, CR_failID_mc, allow_generation=True)
+                for mc_ds in self.mc_samples
+            ]
+        )
+        hCR_failID_mc = self.sum_hists(
+            [
+                self.get_hist(ff_var, mc_ds, CR_passID_mc, allow_generation=True)
+                for mc_ds in self.mc_samples
+            ]
+        )
+        hSR_failID_mc = self.sum_hists(
+            [
+                self.get_hist(ff_var, mc_ds, SR_passID_mc, allow_generation=True)
+                for mc_ds in self.mc_samples
+            ]
+        )
 
         # FF calculation
-        h_FF = (hCR_passID_data - hCR_passID_mc) / (hCR_failID_data - hCR_failID_mc)
-        h_FF.SetName(f"{ff_var}_FF")
-        h_SR_data_fakes = (hSR_failID_data - hSR_failID_mc) * h_FF
+        numerator = hCR_passID_data - hCR_passID_mc
+        denominator = hCR_failID_data - hCR_failID_mc
+        fakes_data_est = hSR_failID_data - hSR_failID_mc
 
-        self.histograms[f"{ff_var}_FF"] = h_FF
-        self.histograms[f"{ff_var}_fakes_bkg_{ff_var}_src"] = h_SR_data_fakes
+        h_FF = numerator / denominator
+        h_FF.SetName(f"{prefix}{ff_var}_FF")
+        h_SR_data_fakes = fakes_data_est * h_FF
+
+        self.histograms[f"{prefix}{ff_var}_FF"] = h_FF
+        self.histograms[f"{prefix}{ff_var}_fakes_bkg_{ff_var}"] = h_SR_data_fakes
 
         # define ff_weights in MC
         ROOT.gInterpreter.Declare(
-            f"TH1F* FF_hist_{ff_var} = reinterpret_cast<TH1F*>({ROOT.addressof(h_FF)});"
+            f"TH1F* FF_hist_{prefix}{ff_var} = reinterpret_cast<TH1F*>({ROOT.addressof(h_FF)});"
         )
-        ff_weight = (
-            f"reco_weight * FF_hist_{ff_var}->GetBinContent(FF_hist_{ff_var}->FindBin({ff_var}))"
-        )
-        ff_weight_col = f"FF_weight_{ff_var}"
-        for mc in mc_ds:
+        ff_weight = f"reco_weight * FF_hist_{prefix}{ff_var}->GetBinContent(FF_hist_{prefix}{ff_var}->FindBin({ff_var}))"
+        ff_weight_col = f"FF_weight_{prefix}{ff_var}"
+        for mc in self.mc_samples:
             self[mc].filtered_df[SR_passID_mc] = (
                 self[mc].filtered_df[SR_passID_mc].Define(ff_weight_col, ff_weight)
             )
@@ -988,13 +1095,13 @@ class Analysis:
         mc_ff_hists: dict[str, dict[str, ROOT.RDF.RResultsPtr]] = dict()
         for target_var in fakes_target_vars:
             # define target histogram
-            h_name = f"{target_var}_fakes_bkg_{ff_var}_src"
+            h_name = f"{prefix}{target_var}_fakes_bkg_{ff_var}_src"
             h_bins = self[self.data_sample].get_binnings(target_var, SR_passID_data)
             h_target_var_ff = ROOT.TH1F(h_name, h_name, *plotting_tools.get_TH1_bins(**h_bins))
 
             # need to fill histograms for each MC sample
             ptrs: dict[str, ROOT.RDF.RResultsPtr] = {}
-            for mc in mc_ds:
+            for mc in self.mc_samples:
                 ptrs[mc] = (
                     self[mc]
                     .filtered_df[SR_passID_mc]
@@ -1004,10 +1111,25 @@ class Analysis:
 
         # rerun over dataframes (must be its own loop to avoid separating the runs)
         for target_var, hists in mc_ff_hists.items():
-            self.logger.info(f"Calculating fake background estimate for '%s'...", target_var)
-            self.histograms[f"{target_var}_fakes_bkg_{ff_var}_src"] = reduce(
+            info_msg = "Calculating fake background estimate for %s"
+            if name:
+                info_msg += " with name: '%s'"
+                msg_args = (target_var, name)
+            else:
+                msg_args = (target_var,)
+            info_msg += "..."
+            self.logger.info(info_msg, *msg_args)
+            self.histograms[f"{prefix}{target_var}_fakes_bkg_{ff_var}_src"] = reduce(
                 lambda x, y: x + y, [ptr.GetValue() for ptr in mc_ff_hists[target_var].values()]
             )
+
+        if save_intermediates:
+            self.histograms[f"{prefix}all_mc_{ff_var}_{CR_passID_mc}"] = hCR_passID_mc
+            self.histograms[f"{prefix}all_mc_{ff_var}_{CR_failID_mc}"] = hCR_failID_mc
+            self.histograms[f"{prefix}all_mc_{ff_var}_{SR_failID_mc}"] = hSR_failID_mc
+            self.histograms[f"{prefix}{ff_var}_FF_numerator"] = numerator
+            self.histograms[f"{prefix}{ff_var}_FF_denominator"] = denominator
+            self.histograms[f"{prefix}{ff_var}_FF_fakes_data_est"] = fakes_data_est
 
         self.logger.info("Completed fakes estimate")
 
@@ -1043,6 +1165,7 @@ class Analysis:
         for dataset in self.datasets.values():
             for selection in dataset.filtered_df:
                 self.logger.info(f"Snapshoting '{selection}' selection in {dataset.name}...")
+                # point dataframes to snapshot instead to avoid having to rerun on all the data later
                 dataset.filtered_df[selection] = dataset.filtered_df[selection].Snapshot(
                     f"{dataset.name}/{selection}", str(filepath), list(dataset.all_vars), opts
                 )

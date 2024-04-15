@@ -56,7 +56,7 @@ class DatasetBuilder:
     ttree: str | set[str]
     year: int = 2017
     lumi: float = 139.0
-    label: str = "data"
+    label: str = ""
     logger: logging.Logger = field(default_factory=get_logger)
     hard_cut: str | dict[str, str] = ""
     is_data: bool = False
@@ -302,7 +302,7 @@ class DatasetBuilder:
             f"time to build dataframe: {time.strftime('%H:%M:%S', time.gmtime(time.time() - t1))}"
         )
 
-        self.logger.debug("Filter names:\n%s", "\n\t".join(list(Rdf.GetFilterNames())))
+        self.logger.debug("Filter names:\n%s", "\n\t".join(list(map(str, Rdf.GetFilterNames()))))
 
         return Rdf
 

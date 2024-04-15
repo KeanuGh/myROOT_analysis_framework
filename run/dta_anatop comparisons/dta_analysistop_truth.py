@@ -57,7 +57,7 @@ if __name__ == "__main__":
     )
     # my_analysis.merge_datasets('wtaunu_mu_dta', 'wtaunu_e_dta', verify=True)
     my_analysis.merge_datasets("wtaunu_analysistop", "wtaunu_analysistop_peak")
-    my_analysis["wtaunu_analysistop"].gen_histograms()
+    my_analysis["wtaunu_analysistop"].gen_all_histograms()
     my_analysis["wtaunu_analysistop"].dsid_metadata_printout()
 
     # calculate boson E

@@ -57,23 +57,23 @@ class Dataset:
                       If set to true `df` will be a dummy emptry RDataframe and histograms are used instead.
     :param is_signal: flag to set if dataset represents signal MC
     :param is_data: flag to set if dataset is NOT MC. This and `is_signal` shouldn't be set at the same time
-    :param out_file: file to save histograms to. Will default to "{name].root".
+    :param out_file: file to save histograms to. Will default to "{name}.root".
     """
 
-    name: str = ""
-    df: pd.DataFrame | ROOT.RDataFrame = None
+    name: str
+    df: ROOT.RDataFrame = None
     selections: dict[str, list[Cut]] = field(default_factory=list)
     all_vars: set[str] = field(default_factory=set)
     profiles: dict[str, ProfileOpts] = field(default_factory=dict)
     lumi: float = 139.0
-    label: str = "data"
+    label: str = ""
     logger: logging.Logger = field(default_factory=get_logger)
     binnings: dict[str, dict[str, list[float]]] = field(default_factory=dict)
     colour: str | tuple = field(default_factory=str)
     is_merged: bool = False
     is_signal: bool = False
     is_data: bool = False
-    out_file: Path = field(default="")
+    out_file: Path = ""
     histograms: dict[str, ROOT.TH1] = field(init=False, default_factory=dict)
     cutflows: dict[str, Cutflow] = field(init=False, default_factory=dict)
     filtered_df: dict[str, ROOT.RDataFrame] = field(init=False, default_factory=dict)
@@ -128,7 +128,6 @@ class Dataset:
     def __len__(self) -> int:
         if (self.histograms is not None) and ("cutflow" in self.histograms):
             return int(self.histograms["cutflow"].GetBinContent(1))
-
         else:
             raise ValueError("Must have run cutflow before getting number of events")
 
@@ -204,6 +203,47 @@ class Dataset:
             cutflow.gen_cutflow(self.filtered_df[cuts_name], cuts)
 
             self.cutflows[cuts_name] = cutflow
+
+    def define_selection(
+        self,
+        filter_str: str,
+        name: str | None = None,
+        from_selection: str | None = None,
+        inplace: bool = True,
+        propagate_binnings: bool = True,
+    ) -> ROOT.RDataFrame | None:
+        """
+        Return RDataFrame with given filter applied. Alternatively apply to already existing selection with `from_selection`.
+
+        :param filter_str: Filter string (eg `var1 < 10`)
+        :param name: name of new selection
+        :param from_selection: Name of selection to apply to if already existing in dataset.
+        :param inplace: False to return filtered RDataFrame rather than save into `filtered_df` dictionary
+        :param propagate_binnings: Whether to propagate binning definitions from selection if passed
+        :return: filtered RDataFrame if `inplace = False`
+        """
+        if inplace and not name:
+            raise ValueError("Must pass a filter name if saving selection")
+
+        if from_selection:
+            try:
+                df = self.filtered_df[from_selection].Filter(filter_str)
+            except KeyError as e:
+                raise KeyError(f"No selection '{from_selection}' in dataset '{self.name}'") from e
+
+            # propagate binnings
+            if propagate_binnings and (from_selection in self.binnings):
+                self.binnings[name] = dict()
+                for var, binning in self.binnings[from_selection].items():
+                    self.binnings[name][var] = binning
+
+        else:
+            df = self.df.Filter(filter_str)
+
+        if inplace:
+            self.filtered_df[name] = df
+        else:
+            return df
 
     # ===========================================
     # =========== PLOTING FUNCTION(S) ===========
@@ -298,6 +338,18 @@ class Dataset:
     # ===========================================
     # ============== HISTOGRAMMING ==============
     # ===========================================
+    @staticmethod
+    def _match_weight(var_) -> str:
+        """match variable to weight"""
+        match variable_data[var_]:
+            case {"tag": VarTag.TRUTH}:
+                return "truth_weight"
+            case {"tag": VarTag.RECO}:
+                return "reco_weight"
+            case {"tag": VarTag.META}:
+                return ""
+            case _:
+                raise ValueError(f"Unknown variable tag for variable {var_}")
 
     @staticmethod
     def __match_bin_args(var: str) -> dict:
@@ -322,16 +374,62 @@ class Dataset:
             case _:
                 return {"bins": (30, 0, 30), "logbins": False}
 
-    def gen_histograms(self, to_file: bool | str | Path = True) -> dict[str, ROOT.TH1]:
+    def define_th1(
+        self, variable: str, name: str = "", title: str = "", histtype="TH1F"
+    ) -> ROOT.TH1F:
+        """Define histogram from variable with correct binnings"""
+        allowed_histtypes = [
+            "TH1F",
+            "TH1D",
+            "TH1I",
+            "TH1C",
+            "TH1L",
+            "TH1S",
+        ]
+        if histtype.upper() not in allowed_histtypes:
+            raise ValueError(
+                f"Unknown histogram type: {histtype}. Allowed histogram types: {allowed_histtypes}."
+            )
+        if variable not in self.all_vars:
+            raise ValueError(f"No known variable {variable} in dataset {self.name}")
+
+        bin_args = self.get_binnings(variable)
+        return ROOT.__getattr__(histtype)(
+            name if name else variable,
+            title if title else name if name else variable,
+            *plotting_tools.get_TH1_bins(**bin_args),
+        )
+
+    def gen_histogram(
+        self,
+        variable: str,
+        selection: str | None = None,
+        name: str = "",
+        title: str = "",
+        histtype: str = "TH1F",
+    ) -> ROOT.TH1F:
+        """Return TH1 histogram from selection for variable. Binning taken from internal binnings dictionary"""
+        th1 = self.define_th1(variable=variable, name=name, title=title, histtype=histtype)
+        weight = self._match_weight(variable)
+        fill_cols = [variable, weight] if weight else [variable]
+
+        if selection:
+            h_ptr = self.filtered_df[selection].Fill(th1, fill_cols)
+        else:
+            h_ptr = self.df.Fill(th1, fill_cols)
+
+        return h_ptr.GetValue()
+
+    def gen_all_histograms(self, to_file: bool | str | Path = True) -> dict[str, ROOT.TH1]:
         """Generate histograms for all variables and cuts."""
 
         output_histogram_variables = self.all_vars
         n_cutflows = len(self.selections)
         if self.logger.getEffectiveLevel() < 20:
             # print debug information with filter names
-            for cutflow_name, filtered_df in self.filtered_df.items():
+            for selection, filtered_df in self.filtered_df.items():
                 if n_cutflows > 1:
-                    self.logger.debug(f"Cutflow {cutflow_name}:")
+                    self.logger.debug(f"Cutflow {selection}:")
                 else:
                     self.logger.debug(f"Cuts applied: ")
                 filternames = list(filtered_df.GetFilterNames())
@@ -346,43 +444,19 @@ class Dataset:
         #     wgt_th1 = ROOT.TH1F(weight_str, weight_str, 100, -1000, 1000)
         #     th1_histograms[weight_str] = self.df.Fill(wgt_th1, [weight_str])
 
-        def match_weight(var) -> str:
-            """match variable to weight"""
-            match variable_data[var]:
-                case {"tag": VarTag.TRUTH}:
-                    return "truth_weight"
-                case {"tag": VarTag.RECO}:
-                    return "reco_weight"
-                case {"tag": VarTag.META}:
-                    return ""
-                case _:
-                    raise ValueError(f"Unknown variable tag for variable {var}")
-
         # build histograms
         for variable_name in output_histogram_variables:
             # which binning?
-            bin_args = self.get_binnings(variable_name)
-            weight = match_weight(variable_name)
+            weight = self._match_weight(variable_name)
             fill_cols = [variable_name, weight] if weight else [variable_name]
 
-            th1 = ROOT.TH1F(
-                variable_name,
-                variable_name,
-                *plotting_tools.get_TH1_bins(**bin_args),
-            )
+            th1 = self.define_th1(variable_name)
             th1_histograms[variable_name] = self.df.Fill(th1, fill_cols)
 
-            for cutflow_name, filtered_df in self.filtered_df.items():
+            for selection, filtered_df in self.filtered_df.items():
                 # which binning?
-                bin_args = self.get_binnings(variable_name, cutflow_name)
-                cut_hist_name = (
-                    variable_name + (("_" + cutflow_name) if cutflow_name else "") + "_cut"
-                )
-                cut_th1 = ROOT.TH1F(
-                    cut_hist_name,
-                    variable_name,
-                    *plotting_tools.get_TH1_bins(**bin_args),
-                )
+                cut_hist_name = variable_name + (("_" + selection) if selection else "")
+                cut_th1 = self.define_th1(variable_name, name=variable_name + "_" + selection)
                 th1_histograms[cut_hist_name] = filtered_df.Fill(cut_th1, fill_cols)
 
         # build profiles
@@ -404,13 +478,11 @@ class Dataset:
                     profile_args.append(profile_opts.weight)
                 th1_histograms[profile_name + "_PROFILE"] = self.df.Profile1D(*profile_args)
 
-                for cutflow_name, filtered_df in self.filtered_df.items():
+                for selection, filtered_df in self.filtered_df.items():
                     # which binning?
-                    bin_args = self.get_binnings(binning_var, cutflow_name)
+                    bin_args = self.get_binnings(binning_var, selection)
                     cut_profile_name = (
-                        profile_name
-                        + (("_" + cutflow_name) if cutflow_name else "")
-                        + "_cut_PROFILE"
+                        profile_name + (("_" + selection) if selection else "") + "_PROFILE"
                     )
                     profile_args[0] = ROOT.RDF.TProfile1DModel(
                         cut_profile_name,
@@ -431,10 +503,10 @@ class Dataset:
 
         # generate cutflow
         self.gen_cutflows()
-        for cutflow_name, cutflow in self.cutflows.items():
+        for selection, cutflow in self.cutflows.items():
             self.histograms[
-                "cutflow" + (("_" + cutflow_name) if cutflow_name else "")
-            ] = cutflow.gen_histogram(name=cutflow_name)
+                "cutflow" + (("_" + selection) if selection else "")
+            ] = cutflow.gen_histogram(name=selection)
         self.cutflow_printout()
 
         self.logger.info(f"Producted {len(self.histograms)} histograms.")
