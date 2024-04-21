@@ -8,7 +8,7 @@ from typing import Final
 import ROOT  # type: ignore
 import pandas as pd  # type: ignore
 
-from src.cutfile import Cut
+from src.cutting import Cut
 from src.dataset import Dataset
 from src.logger import get_logger
 from utils.file_utils import multi_glob
@@ -117,7 +117,7 @@ class DatasetBuilder:
         all_vars: set[str] = set()
         for cut_list in cuts.values():
             for cut in cut_list:
-                all_vars |= cut.var
+                all_vars |= cut.included_variables
         all_vars |= extract_vars | hard_cut_vars
         self._vars_to_calc |= {var for var in all_vars if var in derived_vars}
         # add all variables to all ttrees

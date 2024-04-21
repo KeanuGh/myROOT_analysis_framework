@@ -1,11 +1,12 @@
 from pathlib import Path
 from typing import Dict
 
+import ROOT
 import matplotlib.pyplot as plt
 import numpy as np
 
 from src.analysis import Analysis
-from src.cutfile import Cut
+from src.cutting import Cut
 from src.dataset import ProfileOpts
 from src.histogram import Histogram1D, TH1_bin_edges
 from utils.plotting_tools import get_axis_labels
@@ -267,7 +268,7 @@ if __name__ == "__main__":
     analysis = Analysis(
         datasets,
         year=2017,
-        # regen_histograms=True,
+        regen_histograms=True,
         # regen_metadata=True,
         ttree="T_s1thv_NOMINAL",
         cuts=selections,
@@ -314,6 +315,11 @@ if __name__ == "__main__":
     mc_samples = analysis.mc_samples
     analysis.full_cutflow_printout(datasets=all_samples)
     analysis.print_metadata_table(datasets=mc_samples)
+    for dataset in analysis:
+        ROOT.RDF.SaveGraph(
+            dataset.filters["SR_passID"],
+            f"{analysis.paths.output_dir}/{dataset.name}_SR_graph.dot",
+        )
 
     # set colours for samples
     c_iter = iter(plt.rcParams["axes.prop_cycle"].by_key()["color"])

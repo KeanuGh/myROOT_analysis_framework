@@ -12,8 +12,7 @@ import numpy as np
 import pandas as pd  # type: ignore
 from numpy.typing import ArrayLike
 
-from src.cutfile import Cut
-from src.cutflow import Cutflow
+from src.cutting import Cut, Cutflow, FilterNode, FilterTree
 from src.histogram import Histogram1D
 from src.logger import get_logger
 from utils import plotting_tools
@@ -76,7 +75,7 @@ class Dataset:
     out_file: Path = ""
     histograms: dict[str, ROOT.TH1] = field(init=False, default_factory=dict)
     cutflows: dict[str, Cutflow] = field(init=False, default_factory=dict)
-    filtered_df: dict[str, ROOT.RDataFrame] = field(init=False, default_factory=dict)
+    filters: dict[str, FilterNode] = field(init=False, default_factory=dict)
 
     def __post_init__(self) -> None:
         if not self.out_file:
@@ -84,46 +83,13 @@ class Dataset:
 
         # generate filtered dataframe(s) for cuts if a Dataframe and cuts are passed
         if (self.df is not None) and (self.selections is not None):
+            filter_tree = FilterTree(self.df)
+            filter_tree.generate_tree(self.selections)
+            self.filters = filter_tree.leaves
 
-            def _sanitise_str(string: str) -> str:
-                """sanitise latex-like string to stop ROOT from interpreting them as escape sequences"""
-                return string.replace("\\", "\\\\")
-
-            # find the minimum shared cuts between each cutflow in order to avoid having to repeat computations
-            n_shared_cuts = 0
-            if len(self.selections) > 1:
-                max_shared_cuts = min(len(selections) for selections in self.selections.values())
-                for i in range(max_shared_cuts):
-                    first_element = self.selections[list(self.selections.keys())[0]][i]
-
-                    if not all(cuts[i] == first_element for cuts in self.selections.values()):
-                        n_shared_cuts = i
-                        break
-
-            # Base "Filter" that passes everything for inclusive label
-            base_filter = self.df.Filter("true", "Inclusive")
-            if n_shared_cuts > 0:
-                # take the first n shared cuts from the first list of cuts as the base filter
-                shared_cuts = self.selections[list(self.selections.keys())[0]][:n_shared_cuts]
-                for cut in shared_cuts:
-                    base_filter = base_filter.Filter(cut.cutstr, _sanitise_str(cut.name))
-
-            for cuts_name, cuts in self.selections.items():
-                # add all cuts
-                # take the base filter for the first cut to make sure all filters share a base dataframe
-                try:
-                    self.filtered_df[cuts_name] = base_filter.Filter(
-                        cuts[n_shared_cuts].cutstr, _sanitise_str(cuts[n_shared_cuts].name)
-                    )
-                except IndexError as e:
-                    raise IndexError(
-                        f"Two or more identical cutflows were found in dataset {self.name}. Check passed cuts"
-                    ) from e
-
-                for cut in cuts[n_shared_cuts + 1 :]:
-                    self.filtered_df[cuts_name] = self.filtered_df[cuts_name].Filter(
-                        cut.cutstr, _sanitise_str(cut.name)
-                    )
+            if self.logger.getEffectiveLevel() < 20:
+                self.logger.debug("Filter tree: ")
+                self.logger.debug(filter_tree.tree_string_repr())
 
     def __len__(self) -> int:
         if (self.histograms is not None) and ("cutflow" in self.histograms):
@@ -162,7 +128,7 @@ class Dataset:
         These can be obtained from the imported cutflow histogram instead.
         """
         for selection in self.selections.keys():
-            self.filtered_df[selection] = ROOT.RDataFrame(f"{self.name}/{selection}", str(in_file))
+            self.filters[selection].df = ROOT.RDataFrame(f"{self.name}/{selection}", str(in_file))
         self.logger.info(f"Selection RDataFrames successfully imported from {in_file}")
 
     # ===============================
@@ -200,50 +166,29 @@ class Dataset:
         for cuts_name, cuts in self.selections.items():
             self.logger.info(f"Generating cutflow {cuts_name}...")
             cutflow = Cutflow(logger=self.logger)
-            cutflow.gen_cutflow(self.filtered_df[cuts_name], cuts)
+            cutflow.gen_cutflow(self.filters[cuts_name])
 
             self.cutflows[cuts_name] = cutflow
 
-    def define_selection(
-        self,
-        filter_str: str,
-        name: str | None = None,
-        from_selection: str | None = None,
-        inplace: bool = True,
-        propagate_binnings: bool = True,
-    ) -> ROOT.RDataFrame | None:
+    def define_selection(self, filter_str: str, name: str, selection: str) -> None:
         """
-        Return RDataFrame with given filter applied. Alternatively apply to already existing selection with `from_selection`.
+        Define filter applied from selection.
 
         :param filter_str: Filter string (eg `var1 < 10`)
         :param name: name of new selection
-        :param from_selection: Name of selection to apply to if already existing in dataset.
-        :param inplace: False to return filtered RDataFrame rather than save into `filtered_df` dictionary
-        :param propagate_binnings: Whether to propagate binning definitions from selection if passed
+        :param selection: Name of selection to apply to if already existing in dataset.
         :return: filtered RDataFrame if `inplace = False`
         """
-        if inplace and not name:
-            raise ValueError("Must pass a filter name if saving selection")
+        if selection not in self.filters:
+            raise KeyError(f"No selection '{selection}' in dataset '{self.name}'")
 
-        if from_selection:
-            try:
-                df = self.filtered_df[from_selection].Filter(filter_str)
-            except KeyError as e:
-                raise KeyError(f"No selection '{from_selection}' in dataset '{self.name}'") from e
+        self.filters[name] = self.filters[selection].create_child(Cut(name=name, cutstr=filter_str))
 
-            # propagate binnings
-            if propagate_binnings and (from_selection in self.binnings):
-                self.binnings[name] = dict()
-                for var, binning in self.binnings[from_selection].items():
-                    self.binnings[name][var] = binning
-
-        else:
-            df = self.df.Filter(filter_str)
-
-        if inplace:
-            self.filtered_df[name] = df
-        else:
-            return df
+        # propagate binnings
+        if selection in self.binnings:
+            self.binnings[name] = dict()
+            for var, binning in self.binnings[selection].items():
+                self.binnings[name][var] = binning
 
     # ===========================================
     # =========== PLOTING FUNCTION(S) ===========
@@ -257,7 +202,7 @@ class Dataset:
         yerr: ArrayLike | bool = False,
         normalise: float | bool = False,
         logbins: bool = False,
-        cut: bool | str = False,
+        selection: bool | str = False,
         name: str = "",
         title: str = "",
         **kwargs,
@@ -281,22 +226,22 @@ class Dataset:
                           - True for normalisation of unity
                           - False (default) for no normalisation
         :param logbins: whether logarithmic binnings
-        :param cut: use cuts for histogramming.
-                    Pass either name of a cutflow or True for when there is only one cutflow
+        :param selection: use selection for histogramming.
+                          Pass either name of a selection or True for when there is only one selection
         :param name: histogram name
         :param title: histgoram title
         :param kwargs: keyword arguments to pass to mplhep.histplot()
         :return: Histogram
         """
-        if cut is True:
-            if len(self.filtered_df) > 1:
+        if selection is True:
+            if len(self.filters) > 1:
                 raise ValueError("More than one cutflow is present. Must specify.")
-            cut = self.selections[list(self.selections.keys())[0]]
-        if isinstance(cut, str):
-            if cut in self.cutflows.keys():
-                histname = var + "_" + cut
+            selection = self.selections[list(self.selections.keys())[0]]
+        if isinstance(selection, str):
+            if selection in self.cutflows.keys():
+                histname = var + "_" + selection
             else:
-                raise ValueError(f"Unknown cutflow '{cut}'")
+                raise ValueError(f"Unknown selection '{selection}'")
         else:
             histname = var
 
@@ -323,8 +268,8 @@ class Dataset:
 
             th1 = ROOT.TH1F(name, title, *plotting_tools.get_TH1_bins(bins, logbins=logbins))
 
-            if cut:
-                th1 = self.filtered_df[cut].Fill(th1, fill_args).GetPtr()
+            if selection:
+                th1 = self.filters[selection].df.Fill(th1, fill_args).GetPtr()
             else:
                 th1 = self.df.Fill(th1, fill_args).GetPtr()
 
@@ -414,7 +359,7 @@ class Dataset:
         fill_cols = [variable, weight] if weight else [variable]
 
         if selection:
-            h_ptr = self.filtered_df[selection].Fill(th1, fill_cols)
+            h_ptr = self.filters[selection].df.Fill(th1, fill_cols)
         else:
             h_ptr = self.df.Fill(th1, fill_cols)
 
@@ -426,15 +371,20 @@ class Dataset:
         output_histogram_variables = self.all_vars
         n_cutflows = len(self.selections)
         if self.logger.getEffectiveLevel() < 20:
+            # variable MUST be in scope! (why is ROOT like this)
+            verbosity = ROOT.Experimental.RLogScopedVerbosity(
+                ROOT.Detail.RDF.RDFLogChannel(), ROOT.Experimental.ELogLevel.kinfo
+            )
+
             # print debug information with filter names
-            for selection, filtered_df in self.filtered_df.items():
+            for selection, filter_node in self.filters.items():
                 if n_cutflows > 1:
                     self.logger.debug(f"Cutflow {selection}:")
                 else:
                     self.logger.debug(f"Cuts applied: ")
-                filternames = list(filtered_df.GetFilterNames())
+                filternames = list(filter_node.df.GetFilterNames())
                 for name in filternames:
-                    self.logger.debug(f"\t{name}")
+                    self.logger.debug(f"\t%s", name)
 
         # to contain smart pointers to TH1s
         th1_histograms: dict[str, ROOT.RResultsPtr] = dict()
@@ -453,11 +403,11 @@ class Dataset:
             th1 = self.define_th1(variable_name)
             th1_histograms[variable_name] = self.df.Fill(th1, fill_cols)
 
-            for selection, filtered_df in self.filtered_df.items():
+            for selection, filter_node in self.filters.items():
                 # which binning?
                 cut_hist_name = variable_name + (("_" + selection) if selection else "")
                 cut_th1 = self.define_th1(variable_name, name=variable_name + "_" + selection)
-                th1_histograms[cut_hist_name] = filtered_df.Fill(cut_th1, fill_cols)
+                th1_histograms[cut_hist_name] = filter_node.df.Fill(cut_th1, fill_cols)
 
         # build profiles
         if self.profiles:
@@ -478,7 +428,7 @@ class Dataset:
                     profile_args.append(profile_opts.weight)
                 th1_histograms[profile_name + "_PROFILE"] = self.df.Profile1D(*profile_args)
 
-                for selection, filtered_df in self.filtered_df.items():
+                for selection, filter_node in self.filters.items():
                     # which binning?
                     bin_args = self.get_binnings(binning_var, selection)
                     cut_profile_name = (
@@ -490,7 +440,7 @@ class Dataset:
                         *plotting_tools.get_TH1_bins(**bin_args),
                         profile_opts.option,
                     )
-                    th1_histograms[cut_profile_name] = filtered_df.Profile1D(*profile_args)
+                    th1_histograms[cut_profile_name] = filter_node.df.Profile1D(*profile_args)
 
         # generate histograms
         t = time.time()

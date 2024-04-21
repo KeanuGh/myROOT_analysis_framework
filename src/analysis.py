@@ -2,7 +2,7 @@ import copy
 import inspect
 import itertools
 import os
-from dataclasses import dataclass, fields
+from dataclasses import dataclass, field, fields
 from functools import reduce
 from pathlib import Path
 from typing import Callable, Any, Sequence, Generator, TypedDict
@@ -24,31 +24,6 @@ from utils import plotting_tools, variable_names
 from utils.context import handle_dataset_arg
 
 
-@dataclass(slots=True)
-class FakesOpts:
-    """
-    Options for basic fakes estimation
-
-    :param fakes_source_var: variable from which to calculate fake factors from
-    :param apply_fakes_to: fakes histograms will be calculated in these variables from source
-    :param CR_passID_data: selection name for control region pass-ID for data (must exist in analysis)
-    :param CR_failID_data: selection name for control region fail-ID for data (must exist in analysis)
-    :param CR_failID_data: selection name for signal region fail-ID for data (must exist in analysis)
-    :param CR_passID_mc: selection name for control region pass-ID for "true" tau MC (must exist in analysis)
-    :param CR_failID_mc: selection name for control region fail-ID for "true" tau MC (must exist in analysis)
-    :param CR_failID_mc: selection name for signal region fail-ID for "true" tau MC (must exist in analysis)
-    """
-
-    fakes_source_var: str
-    apply_fakes_to: set[str]
-    CR_passID_data: str = "CR_passID"
-    CR_failID_data: str = "CR_failID"
-    SR_failID_data: str = "SR_failID"
-    CR_passID_mc: str = "CR_passID_trueTau"
-    CR_failID_mc: str = "CR_failID_trueTau"
-    SR_failID_mc: str = "SR_failID_trueTau"
-
-
 class PlotOpts(TypedDict):
     """Per-histogram options for plotting"""
 
@@ -64,24 +39,28 @@ class PlotOpts(TypedDict):
 class AnalysisPath:
     """
     Container class for paths needed by analyses
-
-    :param plot_dir: directory to save plots to
-    :param latex_dir: directory to save latex tables to
-    :param root_dir: directory to save root files to
-    :param log_dir: directory to save log files to
     """
 
-    plot_dir: Path
-    latex_dir: Path
-    root_dir: Path
-    log_dir: Path
+    output_dir: Path
+
+    plot_dir: Path = field(init=False, default_factory=Path)
+    latex_dir: Path = field(init=False, default_factory=Path)
+    root_dir: Path = field(init=False, default_factory=Path)
+    log_dir: Path = field(init=False, default_factory=Path)
+
+    def __post_init__(self):
+        self.output_dir = Path(self.output_dir)
+        self.plot_dir = Path(self.output_dir) / "plots"
+        self.root_dir = Path(self.output_dir) / "root"
+        self.latex_dir = Path(self.output_dir) / "LaTeX"
+        self.log_dir = Path(self.output_dir) / "logs"
 
     def create_paths(self):
         """Create paths needed by analyses"""
-        for field in fields(self):
-            if not issubclass(field.type, Path):
+        for field_ in fields(self):
+            if not issubclass(field_.type, Path):
                 raise ValueError(f"Non-Path attribute in {self}!")
-            getattr(self, field.name).mkdir(parents=True, exist_ok=True)
+            getattr(self, field_.name).mkdir(parents=True, exist_ok=True)
 
 
 class Analysis:
@@ -150,14 +129,8 @@ class Analysis:
         # ===========================
         if not output_dir:
             # root in the directory above this one
-            output_dir = Path(__file__).absolute().parent.parent
-        self._output_dir = Path(output_dir) / "outputs" / analysis_label  # where outputs go
-        self.paths = AnalysisPath(
-            plot_dir=Path(self._output_dir) / "plots",
-            root_dir=Path(self._output_dir) / "root",
-            latex_dir=Path(self._output_dir) / "LaTeX",  # where to print latex cutflow table(s)
-            log_dir=Path(self._output_dir) / "logs",
-        )
+            output_dir = Path(__file__).absolute().parent.parent / "outputs" / analysis_label
+        self.paths = AnalysisPath(output_dir)
         self.paths.create_paths()
 
         # LOGGING
@@ -223,8 +196,8 @@ class Analysis:
         # BUILD DATASETS
         # ===============================
         self.mc_samples: list[str] = []
-        self.data_sample: str = ""
-        self.signal_sample: str = ""
+        self.data_sample: str | None = None
+        self.signal_sample: str | None = None
         self.datasets: dict[str, Dataset] = dict()
         for dataset_name, data_args in data_dict.items():
             self.logger.info("")
@@ -233,11 +206,11 @@ class Analysis:
             self.logger.info("=" * (42 + len(dataset_name)))
 
             if "is_data" in data_args:
-                if self.data_sample != "":
+                if self.data_sample is not None:
                     raise ValueError("Can't have more than one data sample!")
                 self.data_sample = dataset_name
             elif "is_signal" in data_args:
-                if self.signal_sample != "":
+                if self.signal_sample is not None:
                     raise ValueError("Can't have more than one signal sample!")
                 self.signal_sample = dataset_name
                 self.mc_samples.append(dataset_name)
@@ -898,10 +871,10 @@ class Analysis:
         TH1: bool = True,
     ) -> Histogram1D | ROOT.TH1:
         """Get TH1 histogram from histogram dict or internal dataset"""
-        if allow_generation:
-            try:
-                hist_name_internal = self.get_hist_name(variable, dataset, selection)
-            except ValueError:
+        try:
+            hist_name_internal = self.get_hist_name(variable, dataset, selection)
+        except ValueError as e:
+            if allow_generation:
                 self.logger.info(
                     f"Generating histogram for {variable} in {dataset} with selection: {selection}.."
                 )
@@ -909,8 +882,11 @@ class Analysis:
                 self.histograms[f"{dataset}_{variable}_{selection}"] = h
                 self[dataset].histograms[f"{variable}_{selection}"] = h
                 return h
-        else:
-            hist_name_internal = self.get_hist_name(variable, dataset, selection)
+            else:
+                raise ValueError(
+                    "No histogram found. "
+                    "Set `allow_generation=True` to generate histograms that does not yet exist."
+                ) from e
 
         if TH1:
             return self.histograms[hist_name_internal]
@@ -1087,8 +1063,8 @@ class Analysis:
         ff_weight = f"reco_weight * FF_hist_{prefix}{ff_var}->GetBinContent(FF_hist_{prefix}{ff_var}->FindBin({ff_var}))"
         ff_weight_col = f"FF_weight_{prefix}{ff_var}"
         for mc in self.mc_samples:
-            self[mc].filtered_df[SR_passID_mc] = (
-                self[mc].filtered_df[SR_passID_mc].Define(ff_weight_col, ff_weight)
+            self[mc].filters[SR_passID_mc] = (
+                self[mc].filters[SR_passID_mc].df.Define(ff_weight_col, ff_weight)
             )
 
         # background estimation in target variables
@@ -1104,8 +1080,8 @@ class Analysis:
             for mc in self.mc_samples:
                 ptrs[mc] = (
                     self[mc]
-                    .filtered_df[SR_passID_mc]
-                    .Fill(h_target_var_ff, [target_var, ff_weight_col])
+                    .filters[SR_passID_mc]
+                    .df.Fill(h_target_var_ff, [target_var, ff_weight_col])
                 )
             mc_ff_hists[target_var] = ptrs
 
@@ -1163,10 +1139,10 @@ class Analysis:
         opts.fOverwriteIfExists = True
 
         for dataset in self.datasets.values():
-            for selection in dataset.filtered_df:
+            for selection in dataset.filters:
                 self.logger.info(f"Snapshoting '{selection}' selection in {dataset.name}...")
                 # point dataframes to snapshot instead to avoid having to rerun on all the data later
-                dataset.filtered_df[selection] = dataset.filtered_df[selection].Snapshot(
+                dataset.filters[selection].df = dataset.filters[selection].df.Snapshot(
                     f"{dataset.name}/{selection}", str(filepath), list(dataset.all_vars), opts
                 )
         self.logger.info(f"Full snapshot sucessfully saved.")
