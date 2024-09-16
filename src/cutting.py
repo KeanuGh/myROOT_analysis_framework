@@ -51,9 +51,8 @@ class Cut:
         if len(self.included_variables) == 1:
             self.is_reco = variable_data[next(iter(self.included_variables))]["tag"] == VarTag.RECO
 
-        elif (
-            len(self.included_variables) > 1
-        ):  # make sure all variables have the same tag (truth or reco)
+        elif len(self.included_variables) > 1:
+            # make sure all variables have the same tag (truth or reco)
             tags = {variable_data[v]["tag"] for v in self.included_variables}
             if VarTag.META in tags:
                 raise Exception(f"Meta variable cut {self.name}")
@@ -346,15 +345,16 @@ class Cutflow:
         """
         report = filter_node.df.Report()
 
-        self.logger.debug(
-            "Full report (internal):\n%s",
-            "\n".join(
-                [
-                    f"{cutname}: {report.At(cutname).GetPass()}"
-                    for cutname in list(filter_node.df.GetFilterNames())
-                ]
-            ),
-        )
+        if self.logger.level <= logging.DEBUG:
+            self.logger.debug(
+                "Full report (internal):\n%s",
+                "\n".join(
+                    [
+                        f"{cutname}: {report.At(cutname).GetPass()}"
+                        for cutname in list(filter_node.df.GetFilterNames())
+                    ]
+                ),
+            )
 
         self._cutflow = [
             CutflowItem(

@@ -68,7 +68,7 @@ class Dataset:
     label: str = ""
     logger: logging.Logger = field(default_factory=get_logger)
     binnings: dict[str, dict[str, list[float]]] = field(default_factory=dict)
-    colour: str | tuple = field(default_factory=str)
+    colour: str | tuple[int, int, int] = field(default_factory=str)
     is_merged: bool = False
     is_signal: bool = False
     is_data: bool = False

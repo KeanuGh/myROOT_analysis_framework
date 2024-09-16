@@ -637,7 +637,9 @@ class Analysis:
             # naming template for file/histogram name
             def _srep(s: str, init_: bool = True) -> str:
                 """String rep. of combinations of histogram definitions"""
-                out = [el for el in per_hist_vars[s] if (el is not None) and isinstance(el, str)]  # type: ignore
+                out = [
+                    el for el in per_hist_vars[s] if (el is not None) and isinstance(el, str)
+                ]  # type: ignore
                 init = "_" if init_ else ""
                 if out:
                     all_el = [el for el in per_hist_vars[s] if el is not None]  # type: ignore
@@ -680,7 +682,8 @@ class Analysis:
             for val in per_hist_vars:
                 per_hist_vars[val] = sorted(  # type: ignore
                     per_hist_vars[val],  # type: ignore
-                    key=lambda ls: per_hist_vars["hists"][per_hist_vars[val].index(ls)].integral,  # type: ignore
+                    key=lambda ls: per_hist_vars["hists"][per_hist_vars[val].index(ls)].integral,
+                    # type: ignore
                 )
 
         hist_list = per_hist_vars["hists"]
@@ -885,7 +888,7 @@ class Analysis:
             else:
                 raise ValueError(
                     "No histogram found. "
-                    "Set `allow_generation=True` to generate histograms that does not yet exist."
+                    "Set `allow_generation=True` to generate histograms that do not yet exist."
                 ) from e
 
         if TH1:

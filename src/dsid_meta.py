@@ -76,33 +76,24 @@ class DatasetMetadata:
 
         def __read_pmg(file: Path) -> pd.DataFrame:
             """Return DataFrame from database file"""
+            col_types = {
+                "DSID": int,
+                "physics_short": str,
+                "crossSection": float,
+                "genFiltEff": float,
+                "kFactor": float,
+                "relUncertUP": float,
+                "relUnvertDOWN": float,
+                "generator_name": str,
+                "etag": str,
+            }
             return pd.read_csv(
                 file,
                 delim_whitespace=True,
                 header=0,
                 index_col=0,
-                names=[
-                    "DSID",
-                    "physics_short",
-                    "crossSection",
-                    "genFiltEff",
-                    "kFactor",
-                    "relUncertUP",
-                    "relUncertDOWN",
-                    "generator_name",
-                    "etag",
-                ],
-                dtype={
-                    "DSID": int,
-                    "physics_short": str,
-                    "crossSection": float,
-                    "genFiltEff": float,
-                    "kFactor": float,
-                    "relUncertUP": float,
-                    "relUnvertDOWN": float,
-                    "generator_name": str,
-                    "etag": str,
-                },
+                names=list(col_types.keys()),
+                dtype=col_types,
             )
 
         try:

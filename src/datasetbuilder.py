@@ -251,7 +251,7 @@ class DatasetBuilder:
                 f"/ dsid_sumw[mcChannel]",
             ).Define(
                 "reco_weight",
-                f"(weight * {self.lumi} * dsid_pmgf[mcChannel])" f"/ dsid_sumw[mcChannel]",
+                f"(weight * {self.lumi} * dsid_pmgf[mcChannel]) / dsid_sumw[mcChannel]",
             )
 
         # rescale energy columns to GeV
