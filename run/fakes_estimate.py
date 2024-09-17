@@ -12,7 +12,7 @@ from src.histogram import Histogram1D, TH1_bin_edges
 from utils.plotting_tools import get_axis_labels
 from utils.variable_names import variable_data
 
-DTA_PATH = Path("/data/DTA_outputs/2024-02-22/")
+DTA_PATH = Path("/data/DTA_outputs/2024-08-28/")
 # DTA_PATH = Path("/eos/home-k/kghorban/DTA_OUT/2024-02-05/")
 CUTFILE_DIR = Path("/afs/cern.ch/user/k/kghorban/framework/options/DTA_cuts/reco")
 
@@ -317,7 +317,7 @@ if __name__ == "__main__":
     analysis.print_metadata_table(datasets=mc_samples)
     for dataset in analysis:
         ROOT.RDF.SaveGraph(
-            dataset.filters["SR_passID"],
+            dataset.filters["SR_passID"].df,
             f"{analysis.paths.output_dir}/{dataset.name}_SR_graph.dot",
         )
 

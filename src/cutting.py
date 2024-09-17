@@ -344,16 +344,12 @@ class Cutflow:
         :param filter_node: node of filtered root dataframe
         """
         report = filter_node.df.Report()
+        cuts = filter_node.get_cuts()
 
         if self.logger.level <= logging.DEBUG:
             self.logger.debug(
                 "Full report (internal):\n%s",
-                "\n".join(
-                    [
-                        f"{cutname}: {report.At(cutname).GetPass()}"
-                        for cutname in list(filter_node.df.GetFilterNames())
-                    ]
-                ),
+                "\n".join([f"{cut.name}: {report.At(cut.name).GetPass()}" for cut in cuts]),
             )
 
         self._cutflow = [
@@ -363,7 +359,7 @@ class Cutflow:
                 ceff=0.0,  # calculate this next
                 cut=cut,
             )
-            for cut in filter_node.get_cuts()
+            for cut in cuts
         ]
         for i in range(1, len(self._cutflow)):
             try:

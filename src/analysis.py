@@ -78,7 +78,6 @@ class Analysis:
         "logger",
         "datasets",
         "global_lumi",
-        "_output_dir",
         "cmap",
         "year",
         "metadata",
@@ -160,7 +159,7 @@ class Analysis:
         # HANDLE METADATA
         # ============================
         self.metadata = DatasetMetadata(logger=self.logger)
-        dsid_metadata_cache = self._output_dir / "dsid_meta_cache.json"
+        dsid_metadata_cache = output_dir / "dsid_meta_cache.json"
 
         if (not dsid_metadata_cache.is_file()) or regen_metadata:
             # fetch and save metadata
@@ -1066,7 +1065,7 @@ class Analysis:
         ff_weight = f"reco_weight * FF_hist_{prefix}{ff_var}->GetBinContent(FF_hist_{prefix}{ff_var}->FindBin({ff_var}))"
         ff_weight_col = f"FF_weight_{prefix}{ff_var}"
         for mc in self.mc_samples:
-            self[mc].filters[SR_passID_mc] = (
+            self[mc].filters[SR_passID_mc].df = (
                 self[mc].filters[SR_passID_mc].df.Define(ff_weight_col, ff_weight)
             )
 

@@ -373,7 +373,7 @@ class Dataset:
         if self.logger.getEffectiveLevel() < 20:
             # variable MUST be in scope! (why is ROOT like this)
             verbosity = ROOT.Experimental.RLogScopedVerbosity(
-                ROOT.Detail.RDF.RDFLogChannel(), ROOT.Experimental.ELogLevel.kinfo
+                ROOT.Detail.RDF.RDFLogChannel(), ROOT.Experimental.ELogLevel.kInfo
             )
 
             # print debug information with filter names
