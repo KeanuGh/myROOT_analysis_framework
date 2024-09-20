@@ -1036,6 +1036,16 @@ variable_data: Dict[str, Branch] = {
         "units": "",
         "tag": VarTag.TRUTH,
     },
+    "TruthTau_nNeutralTracks": {
+        "name": r"Number of Neutral Truth Tau Tracks",
+        "units": "",
+        "tag": VarTag.TRUTH,
+    },
+    "TruthTau_nChargedTracks": {
+        "name": r"Number of Charged Truth Tau Tracks",
+        "units": "",
+        "tag": VarTag.TRUTH,
+    },
     "VisTruthTauPhi": {
         "name": r"Visible truth tau products $\phi$",
         "units": "",

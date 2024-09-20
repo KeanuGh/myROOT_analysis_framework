@@ -272,7 +272,15 @@ class Analysis:
                 dataset.import_dataframes(self.paths.root_dir / f"{self.name}.root")
                 dataset.reset_cutflows()
             else:
-                dataset.gen_all_histograms(to_file=histogram_file)
+                dataset.histograms = dataset.gen_all_histograms(dataset.df)
+                if builder.do_systematics:
+                    for systematic, systematics_df in dataset.systematics_df.items():
+                        dataset.histograms_systematics[systematic] = dataset.gen_all_histograms(
+                            systematics_df, sys_name=systematic, do_prints=False
+                        )
+            # generate cutflow
+            dataset.gen_cutflows()
+            dataset.export_histograms(f"{dataset_name}_histograms.root")
 
             # integrate into own histogram dictionary
             for hist_name, hist in dataset.histograms.items():
@@ -1147,6 +1155,18 @@ class Analysis:
                 dataset.filters[selection].df = dataset.filters[selection].df.Snapshot(
                     f"{dataset.name}/{selection}", str(filepath), list(dataset.all_vars), opts
                 )
+            if dataset.filters_systematics:
+                for sys_name, sys_selections in dataset.filters_systematics.items():
+                    for selection in sys_selections:
+                        dataset.filters_systematics[sys_name][
+                            selection
+                        ].df = dataset.filters_systematics[sys_name][selection].df.Snapshot(
+                            f"{dataset.name}/{sys_name}/{selection}",
+                            str(filepath),
+                            list(dataset.all_vars),
+                            opts,
+                        )
+
         self.logger.info(f"Full snapshot sucessfully saved.")
 
     def full_cutflow_printout(

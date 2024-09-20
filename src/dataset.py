@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import logging
 import time
-from collections import OrderedDict
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -61,6 +60,7 @@ class Dataset:
 
     name: str
     df: ROOT.RDataFrame = None
+    systematics_df: dict[str, ROOT.RDataFrame] = field(default_factory=dict)
     selections: dict[str, list[Cut]] = field(default_factory=list)
     all_vars: set[str] = field(default_factory=set)
     profiles: dict[str, ProfileOpts] = field(default_factory=dict)
@@ -74,8 +74,10 @@ class Dataset:
     is_data: bool = False
     out_file: Path = ""
     histograms: dict[str, ROOT.TH1] = field(init=False, default_factory=dict)
+    histograms_systematics: dict[str, ROOT.TH1] = field(init=False, default_factory=dict)
     cutflows: dict[str, Cutflow] = field(init=False, default_factory=dict)
     filters: dict[str, FilterNode] = field(init=False, default_factory=dict)
+    filters_systematics: dict[str, dict[str, FilterNode]] = field(init=False, default_factory=dict)
 
     def __post_init__(self) -> None:
         if not self.out_file:
@@ -83,13 +85,12 @@ class Dataset:
 
         # generate filtered dataframe(s) for cuts if a Dataframe and cuts are passed
         if (self.df is not None) and (self.selections is not None):
-            filter_tree = FilterTree(self.df)
-            filter_tree.generate_tree(self.selections)
-            self.filters = filter_tree.leaves
+            self.logger.debug("Generating filters for nominal tree...")
+            self.filters = self.gen_filters(self.df)
 
-            if self.logger.getEffectiveLevel() < 20:
-                self.logger.debug("Filter tree: ")
-                self.logger.debug(filter_tree.tree_string_repr())
+            for systematic, df_sys in self.systematics_df.items():
+                self.logger.debug(f"Generating filters for systematic tree: '{systematic}'...")
+                self.filters_systematics[systematic] = self.gen_filters(df_sys)
 
     def __len__(self) -> int:
         if (self.histograms is not None) and ("cutflow" in self.histograms):
@@ -129,7 +130,47 @@ class Dataset:
         """
         for selection in self.selections.keys():
             self.filters[selection].df = ROOT.RDataFrame(f"{self.name}/{selection}", str(in_file))
-        self.logger.info(f"Selection RDataFrames successfully imported from {in_file}")
+
+        # import systematics
+        with ROOT.TFile(str(in_file), "read") as d:
+            dataset_dir = d.Get(self.name)
+            if dataset_dir.GetClassName() != "TDirectoryFile":
+                raise ValueError(f"No directory '{self.name}' in file: {in_file}")
+
+            # look for systematics directories
+            for sys_dir in dataset_dir.GetListOfKeys():
+                if sys_dir.GetClassName() != "TDirectoryFile":
+                    continue
+
+                # pull filter dataframes for each systematic
+                sys_name = sys_dir.GetName()
+                self.logger.debug(f"Found systematic: {sys_name}")
+                for ttree in sys_name.GetListOfKeys():
+                    if ttree.GetClassName() != "TTree":
+                        raise TypeError(
+                            f"Non-TTree class of type {ttree.GetClassName()} found in "
+                            f"'{self.name}/{sys_name}' subdirectory of file: {in_file}"
+                        )
+                    selection_tree_name = ttree.GetName()
+
+                    self.filters_systematics[sys_name][selection_tree_name].df = ROOT.RDataFrame(
+                        f"{self.name}/{sys_name}/{selection_tree_name.GetName()}", str(in_file)
+                    )
+
+        self.logger.info(
+            f"Selection (and systematic) RDataFrames successfully imported from {in_file}"
+        )
+
+    def gen_filters(self, df: ROOT.RDataFrame) -> dict[str, FilterNode]:
+        """Generate end nodes of filter tree from selections for given dataframe"""
+        filter_tree = FilterTree(df)
+        filter_tree.generate_tree(self.selections)
+
+        if self.logger.getEffectiveLevel() < 20:
+            self.logger.debug("Filter tree: ")
+            self.logger.debug(filter_tree.tree_string_repr())
+
+        return filter_tree.leaves
 
     # ===============================
     # ========= PRINTOUTS ===========
@@ -161,14 +202,47 @@ class Dataset:
     # ===============================
     # ========== CUTTING ============
     # ===============================
-    def gen_cutflows(self) -> None:
+    def gen_cutflows(self, do_print: bool = True) -> None:
         """Generate cutflow, optionally with specific cuts applied"""
+
+        # NOMINAL
+        # ------------------------
         for cuts_name, cuts in self.selections.items():
-            self.logger.info(f"Generating cutflow {cuts_name}...")
+            self.logger.info(
+                f"Generating cutflow in dataset '{self.name}' for selection '{cuts_name}'..."
+            )
             cutflow = Cutflow(logger=self.logger)
             cutflow.gen_cutflow(self.filters[cuts_name])
 
             self.cutflows[cuts_name] = cutflow
+
+        # save
+        for selection, cutflow in self.cutflows.items():
+            self.histograms[
+                "cutflow" + (("_" + selection) if selection else "")
+            ] = cutflow.gen_histogram(name=selection)
+
+        # SYSTEMATICS
+        # ------------------------
+        if self.filters_systematics:
+            for systematic in self.filters_systematics.keys():
+                for cuts_name, cuts in self.selections.items():
+                    self.logger.info(
+                        f"Generating cutflow in dataset '{self.name}' "
+                        f"for selection '{cuts_name}' with systematic '{systematic}'..."
+                    )
+                    cutflow = Cutflow(logger=self.logger)
+                    cutflow.gen_cutflow(self.filters_systematics[systematic][cuts_name])
+
+                    self.cutflows[f"{systematic}_{cuts_name}"] = cutflow
+
+                for selection, cutflow in self.cutflows.items():
+                    self.histograms_systematics[
+                        "cutflow" + "_" + systematic + (("_" + selection) if selection else "")
+                    ] = cutflow.gen_histogram(name=selection)
+
+        if do_print:
+            self.cutflow_printout()
 
     def define_selection(self, filter_str: str, name: str, selection: str) -> None:
         """
@@ -365,12 +439,21 @@ class Dataset:
 
         return h_ptr.GetValue()
 
-    def gen_all_histograms(self, to_file: bool | str | Path = True) -> dict[str, ROOT.TH1]:
+    def gen_all_histograms(
+        self,
+        dataframe: ROOT.RDataFrame | None = None,
+        sys_name: str = "NOMINAL",
+        do_prints: bool = True,
+    ) -> dict[str, ROOT.TH1]:
         """Generate histograms for all variables and cuts."""
 
+        if dataframe is None:
+            dataframe = self.df
+
+        histograms_dict = dict()  # to store outputs
         output_histogram_variables = self.all_vars
         n_cutflows = len(self.selections)
-        if self.logger.getEffectiveLevel() < 20:
+        if self.logger.getEffectiveLevel() < 20 and do_prints:
             # variable MUST be in scope! (why is ROOT like this)
             verbosity = ROOT.Experimental.RLogScopedVerbosity(
                 ROOT.Detail.RDF.RDFLogChannel(), ROOT.Experimental.ELogLevel.kInfo
@@ -392,21 +475,24 @@ class Dataset:
         # # histogram weights
         # for weight_str in ["truth_weight", "reco_weight"]:
         #     wgt_th1 = ROOT.TH1F(weight_str, weight_str, 100, -1000, 1000)
-        #     th1_histograms[weight_str] = self.df.Fill(wgt_th1, [weight_str])
+        #     th1_histograms[weight_str] = dataframe.Fill(wgt_th1, [weight_str])
 
         # build histograms
         for variable_name in output_histogram_variables:
             # which binning?
             weight = self._match_weight(variable_name)
             fill_cols = [variable_name, weight] if weight else [variable_name]
+            hist_name = f"{sys_name}_{variable_name}"
 
-            th1 = self.define_th1(variable_name)
-            th1_histograms[variable_name] = self.df.Fill(th1, fill_cols)
+            th1 = self.define_th1(variable_name, hist_name, hist_name)
+            th1_histograms[hist_name] = dataframe.Fill(th1, fill_cols)
 
             for selection, filter_node in self.filters.items():
                 # which binning?
-                cut_hist_name = variable_name + (("_" + selection) if selection else "")
-                cut_th1 = self.define_th1(variable_name, name=variable_name + "_" + selection)
+                if not selection:
+                    continue
+                cut_hist_name = f"{sys_name}_{variable_name}_{selection}"
+                cut_th1 = self.define_th1(variable_name, cut_hist_name, cut_hist_name)
                 th1_histograms[cut_hist_name] = filter_node.df.Fill(cut_th1, fill_cols)
 
         # build profiles
@@ -414,10 +500,11 @@ class Dataset:
             for profile_name, profile_opts in self.profiles.items():
                 binning_var = profile_opts.x
                 bin_args = self.get_binnings(binning_var)
+                hist_name = f"{sys_name}_{profile_name}_PROFILE"
                 profile_args = [
                     ROOT.RDF.TProfile1DModel(
-                        profile_name + "_PROFILE",
-                        profile_name + "_PROFILE",
+                        hist_name,
+                        hist_name,
                         *plotting_tools.get_TH1_bins(**bin_args),
                         profile_opts.option,
                     ),
@@ -426,14 +513,14 @@ class Dataset:
                 ]
                 if profile_opts.weight:
                     profile_args.append(profile_opts.weight)
-                th1_histograms[profile_name + "_PROFILE"] = self.df.Profile1D(*profile_args)
+                th1_histograms[hist_name] = dataframe.Profile1D(*profile_args)
 
                 for selection, filter_node in self.filters.items():
+                    if not selection:
+                        continue
                     # which binning?
                     bin_args = self.get_binnings(binning_var, selection)
-                    cut_profile_name = (
-                        profile_name + (("_" + selection) if selection else "") + "_PROFILE"
-                    )
+                    cut_profile_name = f"{sys_name}_{profile_name}_{selection}_PROFILE"
                     profile_args[0] = ROOT.RDF.TProfile1DModel(
                         cut_profile_name,
                         cut_profile_name,
@@ -444,29 +531,18 @@ class Dataset:
 
         # generate histograms
         t = time.time()
-        self.logger.info(f"Producing {len(th1_histograms)} histograms for {self.name}...")
-        for hist_name, hist in th1_histograms.items():
-            self.histograms[hist_name] = hist.GetValue()
         self.logger.info(
-            f"Took {time.time() - t:.3f}s to produce {len(self.histograms)} histograms over {self.df.GetNRuns()} run(s)."
+            f"Producing {len(th1_histograms)} histograms for {sys_name} in {self.name}..."
+        )
+        for hist_name, hist in th1_histograms.items():
+            histograms_dict[hist_name] = hist.GetValue()
+        self.logger.info(
+            f"Took {time.time() - t:.3f}s to produce {len(histograms_dict)} histograms over {dataframe.GetNRuns()} run(s)."
         )
 
-        # generate cutflow
-        self.gen_cutflows()
-        for selection, cutflow in self.cutflows.items():
-            self.histograms[
-                "cutflow" + (("_" + selection) if selection else "")
-            ] = cutflow.gen_histogram(name=selection)
-        self.cutflow_printout()
+        self.logger.info(f"Producted {len(histograms_dict)} histograms.")
 
-        self.logger.info(f"Producted {len(self.histograms)} histograms.")
-
-        if to_file:
-            if to_file is True:
-                to_file = Path(self.name + "_histograms.root")
-            self.export_histograms(filepath=to_file)
-
-        return self.histograms
+        return histograms_dict
 
     def export_histograms(
         self,
@@ -482,26 +558,59 @@ class Dataset:
                 file.WriteObject(
                     hist.TH1 if isinstance(hist, Histogram1D) else hist, name, write_option
                 )
+            for sys_name, hist in self.histograms_systematics.items():
+                sys_dir = file.mkdir(sys_name)
+                sys_dir.cd()
+                sys_dir.WriteObject(
+                    hist.TH1 if isinstance(hist, Histogram1D) else hist, name, write_option
+                )
         self.logger.info(f"Written {len(self.histograms)} histograms to {filepath}")
 
     def import_histograms(self, in_file: Path | str) -> None:
         """Import histograms from root file into histogram dictionary"""
-        histograms: OrderedDict[str, ROOT.TH1] = OrderedDict()
+        histograms: dict[str, ROOT.TH1] = dict()
+        histograms_sys: dict[str, ROOT.TH1] = dict()
+        sys_list: list[str] = []
 
         with ROOT.TFile(str(in_file), "read") as file:
             for obj in file.GetListOfKeys():
                 obj_class = obj.GetClassName()
-                if ("TH1" not in obj_class) and ("Profile" not in obj_class):
+
+                # get list of systematics
+                if obj_class == "TDirectoryFile":
+                    sys_list.append(obj.GetName())
+
+                elif ("TH1" not in obj_class) and ("Profile" not in obj_class):
                     self.logger.warning(f"Non-TH1 object {obj_class} found in file")
                     continue
 
                 th1 = obj.ReadObj()
                 histograms[th1.GetName()] = th1
 
+            # extract systematics historgrams
+            for sys_name in sys_list:
+                self.logger.info(f"Extracting systematics: {sys_name}...")
+                sys_dir = file.Get(sys_name)
+                if sys_dir.GetClassName() != "TDirectoryFile":
+                    raise ValueError(f"No directory '{sys_name}' in file: {in_file}")
+
+                for obj in sys_dir.GetListOfKeys():
+                    if ("TH1" not in obj_class) and ("Profile" not in obj_class):
+                        self.logger.warning(f"Non-TH1 object {obj_class} found in file")
+                        continue
+
+                    th1 = obj.ReadObj()
+                    histograms_sys[th1.GetName()] = th1
+
         self.histograms = histograms
+        self.histograms_systematics = histograms_sys
         self.logger.info(
-            f"Successfully mported {len(self.histograms)} histogram(s) from file {in_file}"
+            f"Successfully imported {len(self.histograms)} histogram(s) from file {in_file}"
         )
+        if histograms_sys:
+            self.logger.info(
+                f"Successfully imported {len(self.histograms_systematics)} systematics histogram(s) from file {in_file}"
+            )
 
     def get_binnings(self, variable_name: str, selection: str | None = None) -> dict:
         """Get correct binnings for variable"""

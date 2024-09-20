@@ -195,3 +195,9 @@ def init_rdataframe(
             getattr(ROOT, chain_name).Add(f"{path}?#{tree}")
 
     return ROOT.RDataFrame(getattr(ROOT, chain_name))
+
+
+def get_object_names_in_file(file: str | Path, obj_type: str) -> list[str]:
+    """Get names of objects with given type in ROOT file"""
+    with ROOT.TFile(str(file), "r") as f:
+        return [obj.GetName() for obj in f.GetListOfKeys() if obj.GetClassName() == obj_type]

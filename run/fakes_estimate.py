@@ -13,19 +13,12 @@ from utils.plotting_tools import get_axis_labels
 from utils.variable_names import variable_data
 
 DTA_PATH = Path("/data/DTA_outputs/2024-08-28/")
+# DTA_PATH = Path("/data/DTA_outputs/2024-02-22/")
 # DTA_PATH = Path("/eos/home-k/kghorban/DTA_OUT/2024-02-05/")
 CUTFILE_DIR = Path("/afs/cern.ch/user/k/kghorban/framework/options/DTA_cuts/reco")
 
 if __name__ == "__main__":
     datasets: Dict[str, Dict] = {
-        # DATA
-        # ====================================================================
-        "data": {
-            # "data_path": DTA_PATH / "*data17*/*.root",
-            "data_path": Path("/data/DTA_outputs/2024-03-05/*data17*/*.root"),
-            "label": "data",
-            "is_data": True,
-        },
         # SIGNAL
         # ====================================================================
         "wtaunu": {
@@ -97,6 +90,14 @@ if __name__ == "__main__":
                 DTA_PATH / "*Sh_2211_WlvZbb*/*.root",
             ],
             "label": "Diboson",
+        },
+        # DATA
+        # ====================================================================
+        "data": {
+            # "data_path": DTA_PATH / "*data17*/*.root",
+            "data_path": Path("/data/DTA_outputs/2024-03-05/*data17*/*.root"),
+            "label": "data",
+            "is_data": True,
         },
     }
 
@@ -219,6 +220,8 @@ if __name__ == "__main__":
         "TruthTauEta",
         "TruthTauPhi",
         "TauNCoreTracks",
+        # "TruthTau_nChargedTracks",
+        # "TruthTau_nNeutralTracks",
         "TauPt_res",
         "TauPt_diff",
         "MatchedTruthParticlePt",
@@ -269,6 +272,7 @@ if __name__ == "__main__":
         datasets,
         year=2017,
         regen_histograms=True,
+        # do_systematics=True,
         # regen_metadata=True,
         ttree="T_s1thv_NOMINAL",
         cuts=selections,

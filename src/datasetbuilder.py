@@ -11,6 +11,7 @@ import pandas as pd  # type: ignore
 from src.cutting import Cut
 from src.dataset import Dataset
 from src.logger import get_logger
+from utils.ROOT_utils import get_object_names_in_file
 from utils.file_utils import multi_glob
 from utils.var_helpers import derived_vars
 from utils.variable_names import variable_data
@@ -50,10 +51,11 @@ class DatasetBuilder:
     :param is_data: flag for whether dataset is data as opposed to MC
     :param is_signal: whether dataset represents signal sample MC
     :param import_missing_columns_as_nan: whether missing columns are imported as NAN as opposed to throwing an exception
+    :param do_systematics: whether to extract systematic uncertainties from data
     """
 
     name: str
-    ttree: str | set[str]
+    ttree: str | set[str] = field(default_factory=lambda: {"T_s1hv_NOMINAL"})
     year: int = 2017
     lumi: float = 139.0
     label: str = ""
@@ -62,10 +64,11 @@ class DatasetBuilder:
     is_data: bool = False
     is_signal: bool = False
     import_missing_columns_as_nan: bool = False
+    do_systematics: bool = False
 
     _subsamples: set[str] = field(init=False, default_factory=set)
     _vars_to_calc: set[str] = field(init=False, default_factory=set)
-    _all_vars: set[str] = field(init=False, default_factory=set)
+    _vars_to_extract: set[str] = field(init=False, default_factory=set)
     __DEFAULT_SUBSAMPLE_NAME: str = field(init=False, default="default")
 
     def __post_init__(self):
@@ -102,6 +105,10 @@ class DatasetBuilder:
             sample_paths = data_path
         if not isinstance(self.hard_cut, dict):
             self.hard_cut = {self.__DEFAULT_SUBSAMPLE_NAME: self.hard_cut}
+        if self.do_systematics and self.is_data:
+            self.logger.warning("No systematic uncertainties for data!")
+            self.do_systematics = False
+
         self._subsamples = set(sample_paths.keys())
 
         # handle subsamples and hard cuts
@@ -120,16 +127,10 @@ class DatasetBuilder:
                 all_vars |= cut.included_variables
         all_vars |= extract_vars | hard_cut_vars
         self._vars_to_calc |= {var for var in all_vars if var in derived_vars}
-        # add all variables to all ttrees
-        tree_dict = {tree: all_vars for tree in self.ttree}
-        self._all_vars = all_vars | self._vars_to_calc
-
-        # remove calculated vars from tree
-        for tree in tree_dict:
-            tree_dict[tree] -= self._vars_to_calc
+        self._vars_to_extract |= {var for var in all_vars if var not in derived_vars}
 
         # check if vars are contained in label dictionary
-        self.__check_axis_labels(tree_dict, self._vars_to_calc)
+        self.__check_axis_labels(self._vars_to_calc | self._vars_to_extract)
 
         # print debug information
         self.logger.debug("")
@@ -138,9 +139,10 @@ class DatasetBuilder:
         self.logger.debug("Input ROOT file(s):  %s", sample_paths)
         self.logger.debug("Hard cut applied: %s", self.hard_cut)
         self.logger.debug("Defined subsamples: %s", self._subsamples)
-        for tree in tree_dict:
-            self.logger.debug("Variables from %s tree: ", tree)
-            for var in tree_dict[tree]:
+        self.logger.debug("Tree(s) used: %s", self.ttree)
+        if self._vars_to_extract:
+            self.logger.debug("Variables to pull from file: ")
+            for var in self._vars_to_calc:
                 self.logger.debug(f"  - %s", var)
         if self._vars_to_calc:
             self.logger.debug("Calculated Variables: ")
@@ -153,16 +155,35 @@ class DatasetBuilder:
         # ===============================
         df = self.__build_dataframe_dta(
             sample_paths=sample_paths,
-            tree_dict=tree_dict,
+            ttrees=self.ttree,
+            extract_variables=self._vars_to_extract,
+            calculate_variables=self._vars_to_calc,
         )
+        if self.do_systematics:
+            # get dictionary of systematics and trees to merge
+            systematic_trees_dict = self.gen_systematics_map(
+                multi_glob(sample_paths[list(sample_paths)[0]])[0]  # single file
+            )
+            systematics_df = {
+                systematic: self.__build_dataframe_dta(
+                    sample_paths=sample_paths,
+                    ttrees=systematic_trees,
+                    extract_variables=self._vars_to_extract,
+                    calculate_variables=self._vars_to_calc,
+                )
+                for systematic, systematic_trees in systematic_trees_dict.items()
+            }
+        else:
+            systematics_df = dict()
 
         # BUILD DATASET
         # ===============================
         dataset = Dataset(
             name=self.name,
             df=df,
+            systematics_df=systematics_df,
             selections=cuts,
-            all_vars=self._all_vars | {"truth_weight", "reco_weight"},
+            all_vars=self._vars_to_calc | self._vars_to_extract | {"truth_weight", "reco_weight"},
             logger=self.logger,
             lumi=self.lumi,
             label=self.label,
@@ -175,11 +196,10 @@ class DatasetBuilder:
     # ===============================
     # =========== CHECKS ============
     # ===============================
-    def __check_axis_labels(self, tree_dict: dict[str, set[str]], calc_vars: set[str]) -> None:
+    def __check_axis_labels(self, variables: set[str]) -> None:
         """Check whether variables exist in"""
-        vars_ = {var for var_set in tree_dict.values() for var in var_set} | calc_vars
         if unexpected_vars := [
-            unexpected_var for unexpected_var in vars_ if unexpected_var not in variable_data
+            unexpected_var for unexpected_var in variables if unexpected_var not in variable_data
         ]:
             self.logger.warning(
                 f"Variable(s) {unexpected_vars} not contained in labels dictionary. "
@@ -190,55 +210,48 @@ class DatasetBuilder:
     # ===== DATAFRAME FUNCTIONS =====
     # ==============================
     def __build_dataframe_dta(
-        self, sample_paths: dict[str, list[Path] | Path], tree_dict: dict[str, set[str]]
+        self,
+        sample_paths: dict[str, list[Path] | Path],
+        ttrees: set[str],
+        extract_variables: set[str],
+        calculate_variables: set[str],
     ) -> ROOT.RDataFrame:
         """Build DataFrame from given files and TTree/branch combinations from DTA output"""
 
         t1 = time.time()
 
         # add variables necessary to calculate weights etc
-        tree_dict = self.__add_necessary_dta_variables(tree_dict)
-
-        # check all branches being extracted from each tree are the same, or TChain will throw a fit
-        if all(not x == next(iter(tree_dict.values())) for x in tree_dict.values()):
-            raise ValueError(
-                "Can only extract branches with the same name from multiple trees! "
-                "Trying to extract the following branches for each tree:\n\n"
-                + "\n".join(tree + ":\n\t" + "\n\t".join(tree_dict[tree]) for tree in tree_dict)
-            )
-        import_cols = tree_dict[next(iter(tree_dict))]
+        extract_variables = self.__add_necessary_dta_variables(extract_variables)
 
         # make rdataframe
-        self.logger.info(f"Initiating RDataFrame from trees {self.ttree}..")
+        self.logger.info(f"Initiating RDataFrame from trees {ttrees}..")
         spec = ROOT.RDF.Experimental.RDatasetSpec()
         for sample_name, paths in sample_paths.items():
-            for tree in self.ttree:
+            for tree in ttrees:
                 spec.AddSample(ROOT.RDF.Experimental.RSample(sample_name, tree, multi_glob(paths)))
         Rdf = ROOT.RDataFrame(spec)
         ROOT.RDF.Experimental.AddProgressBar(Rdf)
 
         # define sample ID column
-        sample_hash_map_repr = ",".join(
-            f'{{"{sample_name}", {i}}}' for i, sample_name in enumerate(self._subsamples)
-        )
-        ROOT.gInterpreter.Declare(
-            f"std::map<std::string, unsigned int> sampleToId_{self.name}{{{sample_hash_map_repr}}};"
-        )
+        if not hasattr(ROOT, f"sampleToId_{self.name}"):  # check whether map exists for sample
+            sample_hash_map_repr = ",".join(
+                f'{{"{sample_name}", {i}}}' for i, sample_name in enumerate(self._subsamples)
+            )
+            ROOT.gInterpreter.Declare(
+                f"std::map<std::string, unsigned int> sampleToId_{self.name}{{{sample_hash_map_repr}}};"
+            )
         Rdf = Rdf.DefinePerSample(
             "SampleID", f"sampleToId_{self.name}[rdfsampleinfo_.GetSampleName()]"
         )
 
         # check columns exist in dataframe
-        if missing_cols := (set(import_cols) - set(Rdf.GetColumnNames())):
+        if missing_cols := (extract_variables - set(Rdf.GetColumnNames())):
             if self.import_missing_columns_as_nan:
                 self.logger.warning("Importing missing columns as NAN: %s", missing_cols)
-
                 for col in missing_cols:
                     Rdf = Rdf.Define(col, "NAN")
             else:
-                raise ValueError(
-                    "Missing column(s) in RDataFrame: \n\t" + "\n\t".join(missing_cols)
-                )
+                raise ValueError("Missing column(s) in RDataFrame:\n\t" + "\n\t".join(missing_cols))
 
         # create weights
         if self.is_data:
@@ -257,14 +270,14 @@ class DatasetBuilder:
         # rescale energy columns to GeV
         for gev_column in [
             column
-            for column in import_cols
+            for column in extract_variables
             if (column in variable_data) and (variable_data[column]["units"] == "GeV")
         ]:
             Rdf = Rdf.Redefine(gev_column, f"{gev_column} / 1000")
 
         # calculate derived variables
-        if self._vars_to_calc:
-            for derived_var in self._vars_to_calc:
+        if calculate_variables:
+            for derived_var in calculate_variables:
                 self.logger.debug(f"defining variable calculation for: {derived_var}")
                 function = derived_vars[derived_var]["cfunc"]
                 args = derived_vars[derived_var]["var_args"]
@@ -306,12 +319,40 @@ class DatasetBuilder:
 
         return Rdf
 
-    def __add_necessary_dta_variables(self, tree_dict: dict[str, set[str]]) -> dict[str, set[str]]:
+    def __add_necessary_dta_variables(self, variables: set[str]) -> set[str]:
         necc_vars = {
             "passReco",
         }
-
-        for tree in tree_dict:
-            tree_dict[tree] |= necc_vars
+        output_variables = variables | necc_vars
         self.logger.debug(f"Added {necc_vars} to DTA import")
-        return tree_dict
+        return output_variables
+
+    def gen_systematics_map(self, sample_file: str | Path) -> dict[str, set[str]]:
+        """Generating mapping of {systematic: set of trees containing systematic for different nominals}"""
+        # check for systematics branches
+        systematic_trees = set()
+        all_systematics = set()
+
+        # gather all systematics trees
+        nominal_trees = {tree for tree in self.ttree if tree.endswith("_NOMINAL")}
+        for tree in nominal_trees:  # only nominal trees have associarted systematics
+            tree_prefix = tree.rstrip("NOMINAL")
+
+            # assume files have same trees, read from first file
+            systematic_trees |= {
+                treename
+                for treename in get_object_names_in_file(sample_file, "TTree")
+                if treename.startswith(tree_prefix) and treename != tree
+            }
+            all_systematics |= {
+                systematic_tree.lstrip(tree_prefix) for systematic_tree in systematic_trees
+            }
+        # bring together systematic trees to be merged
+        return {
+            systematic: {
+                systematic_tree
+                for systematic_tree in systematic_trees
+                if systematic_tree.endswith(systematic)
+            }
+            for systematic in all_systematics
+        }
