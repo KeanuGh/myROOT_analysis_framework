@@ -1,6 +1,5 @@
 import logging
 import re
-import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Final
@@ -65,6 +64,7 @@ class DatasetBuilder:
     is_signal: bool = False
     import_missing_columns_as_nan: bool = False
     do_systematics: bool = False
+    nominal_tree_name: str = "T_s1thv_NOMINAL"
 
     _subsamples: set[str] = field(init=False, default_factory=set)
     _vars_to_calc: set[str] = field(init=False, default_factory=set)
@@ -103,8 +103,6 @@ class DatasetBuilder:
             sample_paths = {self.__DEFAULT_SUBSAMPLE_NAME: data_path}
         else:
             sample_paths = data_path
-        if not isinstance(self.hard_cut, dict):
-            self.hard_cut = {self.__DEFAULT_SUBSAMPLE_NAME: self.hard_cut}
         if self.do_systematics and self.is_data:
             self.logger.warning("No systematic uncertainties for data!")
             self.do_systematics = False
@@ -112,6 +110,10 @@ class DatasetBuilder:
         self._subsamples = set(sample_paths.keys())
 
         # handle subsamples and hard cuts
+        if not self.hard_cut:
+            self.hard_cut = {}
+        if not isinstance(self.hard_cut, dict):
+            self.hard_cut = {self.__DEFAULT_SUBSAMPLE_NAME: self.hard_cut}
         hard_cut_samples = set(self.hard_cut.keys())
         if not hard_cut_samples.issubset(self._subsamples):
             raise ValueError("Subsamples declared with hard cuts do not exist in data paths!")
@@ -129,6 +131,14 @@ class DatasetBuilder:
         self._vars_to_calc |= {var for var in all_vars if var in derived_vars}
         self._vars_to_extract |= {var for var in all_vars if var not in derived_vars}
 
+        # define sets of systematics
+        systematic_tree_sets = {self.nominal_tree_name: self.ttree}
+        if self.do_systematics:
+            # get dictionary of systematics and trees to merge
+            systematic_tree_sets |= self.gen_systematics_map(
+                multi_glob(sample_paths[list(sample_paths)[0]])[0]  # single file
+            )
+
         # check if vars are contained in label dictionary
         self.__check_axis_labels(self._vars_to_calc | self._vars_to_extract)
 
@@ -137,51 +147,32 @@ class DatasetBuilder:
         self.logger.debug("DEBUG DATASET OPTIONS: ")
         self.logger.debug("----------------------------")
         self.logger.debug("Input ROOT file(s):  %s", sample_paths)
-        self.logger.debug("Hard cut applied: %s", self.hard_cut)
-        self.logger.debug("Defined subsamples: %s", self._subsamples)
-        self.logger.debug("Tree(s) used: %s", self.ttree)
-        if self._vars_to_extract:
-            self.logger.debug("Variables to pull from file: ")
-            for var in self._vars_to_calc:
-                self.logger.debug(f"  - %s", var)
-        if self._vars_to_calc:
-            self.logger.debug("Calculated Variables: ")
-            for var in self._vars_to_calc:
-                self.logger.debug(f"  - %s", var)
+        self.logger.debug("Hard cut(s) applied: %s", self.hard_cut)
+        self.logger.debug("Defined subsamples:\n%s", "\n\t- ".join(self._subsamples))
+        self.logger.debug("Defined systematics:\n%s", "\n\t- ".join(systematic_tree_sets.keys()))
+        self.logger.debug("Defined TTree(s): %s", self.ttree)
+        self.logger.debug("Variables to pull from files:\n%s", "\n\t- ".join(self._vars_to_extract))
+        self.logger.debug("Calculated Variables:\n%s", "\n\t- ".join(self._vars_to_calc))
         self.logger.debug("----------------------------")
         self.logger.debug("")
 
         # BUILD
         # ===============================
-        df = self.__build_dataframe_dta(
-            sample_paths=sample_paths,
-            ttrees=self.ttree,
-            extract_variables=self._vars_to_extract,
-            calculate_variables=self._vars_to_calc,
-        )
-        if self.do_systematics:
-            # get dictionary of systematics and trees to merge
-            systematic_trees_dict = self.gen_systematics_map(
-                multi_glob(sample_paths[list(sample_paths)[0]])[0]  # single file
+        dataframes = {
+            systematic_name: self.__build_dataset(
+                sample_paths=sample_paths,
+                ttrees=tree_set,
+                extract_variables=self._vars_to_extract,
+                calculate_variables=self._vars_to_calc,
             )
-            systematics_df = {
-                systematic: self.__build_dataframe_dta(
-                    sample_paths=sample_paths,
-                    ttrees=systematic_trees,
-                    extract_variables=self._vars_to_extract,
-                    calculate_variables=self._vars_to_calc,
-                )
-                for systematic, systematic_trees in systematic_trees_dict.items()
-            }
-        else:
-            systematics_df = dict()
+            for systematic_name, tree_set in systematic_tree_sets.items()
+        }
 
         # BUILD DATASET
         # ===============================
         dataset = Dataset(
             name=self.name,
-            df=df,
-            systematics_df=systematics_df,
+            rdataframes=dataframes,
             selections=cuts,
             all_vars=self._vars_to_calc | self._vars_to_extract | {"truth_weight", "reco_weight"},
             logger=self.logger,
@@ -209,16 +200,14 @@ class DatasetBuilder:
     # ===============================
     # ===== DATAFRAME FUNCTIONS =====
     # ==============================
-    def __build_dataframe_dta(
+    def __build_dataset(
         self,
         sample_paths: dict[str, list[Path] | Path],
         ttrees: set[str],
         extract_variables: set[str],
         calculate_variables: set[str],
-    ) -> ROOT.RDataFrame:
+    ) -> dict[str, ROOT.RDataFrame]:
         """Build DataFrame from given files and TTree/branch combinations from DTA output"""
-
-        t1 = time.time()
 
         # add variables necessary to calculate weights etc
         extract_variables = self.__add_necessary_dta_variables(extract_variables)
@@ -253,7 +242,7 @@ class DatasetBuilder:
             else:
                 raise ValueError("Missing column(s) in RDataFrame:\n\t" + "\n\t".join(missing_cols))
 
-        # create weights
+        # define weights
         if self.is_data:
             # for consistency's sake
             Rdf = Rdf.Define("reco_weight", "1.0").Define("truth_weight", "1.0")
@@ -311,11 +300,7 @@ class DatasetBuilder:
                 f"Hard cut ({sample_name})" + (f": {hard_cut}" if hard_cut else ""),
             )
 
-        self.logger.info(
-            f"time to build dataframe: {time.strftime('%H:%M:%S', time.gmtime(time.time() - t1))}"
-        )
-
-        self.logger.debug("Filter names:\n%s", "\n\t".join(list(map(str, Rdf.GetFilterNames()))))
+        # self.logger.debug("Filter names:\n%s", "\n\t".join(list(map(str, Rdf.GetFilterNames()))))
 
         return Rdf
 
@@ -335,7 +320,7 @@ class DatasetBuilder:
 
         # gather all systematics trees
         nominal_trees = {tree for tree in self.ttree if tree.endswith("_NOMINAL")}
-        for tree in nominal_trees:  # only nominal trees have associarted systematics
+        for tree in nominal_trees:  # only nominal trees have associated systematics
             tree_prefix = tree.rstrip("NOMINAL")
 
             # assume files have same trees, read from first file
@@ -345,7 +330,7 @@ class DatasetBuilder:
                 if treename.startswith(tree_prefix) and treename != tree
             }
             all_systematics |= {
-                systematic_tree.lstrip(tree_prefix) for systematic_tree in systematic_trees
+                systematic_tree.removeprefix(tree_prefix) for systematic_tree in systematic_trees
             }
         # bring together systematic trees to be merged
         return {

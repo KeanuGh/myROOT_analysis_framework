@@ -1,11 +1,10 @@
 import copy
 import inspect
 import itertools
-import os
 from dataclasses import dataclass, field, fields
 from functools import reduce
 from pathlib import Path
-from typing import Callable, Any, Sequence, Generator, TypedDict
+from typing import Callable, Any, Sequence, Generator, TypedDict, Literal
 
 import ROOT
 import matplotlib.pyplot as plt
@@ -22,6 +21,7 @@ from src.histogram import Histogram1D
 from src.logger import get_logger
 from utils import plotting_tools, variable_names
 from utils.context import handle_dataset_arg
+from utils.file_utils import smart_join
 
 
 class PlotOpts(TypedDict):
@@ -30,6 +30,7 @@ class PlotOpts(TypedDict):
     vals: list[str | Histogram1D | ROOT.TH1]
     hists: list[Histogram1D]
     datasets: list[str]
+    systematics: list[str]
     selections: list[str]
     labels: list[str]
     colours: list[str]
@@ -122,7 +123,6 @@ class Analysis:
         self.name = analysis_label
         if self.name in data_dict:
             raise SyntaxError("Analysis must have different name to any dataset")
-        self.histograms: dict[str, ROOT.TH1] = dict()
 
         # SET OUTPUT DIRECTORIES
         # ===========================
@@ -265,26 +265,15 @@ class Analysis:
                 dataset.logger.debug(f"{dataset_name} log handler returned to analysis.")  # test
 
             # load/gen histograms
-            histogram_file = self.paths.root_dir / f"{dataset_name}_histograms.root"
-            if not indiv_regen_hists and histogram_file.exists():
+            dataset_file = self.paths.root_dir / f"{dataset_name}.root"
+            if not indiv_regen_hists and dataset_file.exists():
                 # just read in previous histogram file if it exists
-                dataset.import_histograms(histogram_file)
-                dataset.import_dataframes(self.paths.root_dir / f"{self.name}.root")
+                dataset.import_dataset(dataset_file)
                 dataset.reset_cutflows()
             else:
-                dataset.histograms = dataset.gen_all_histograms(dataset.df)
-                if builder.do_systematics:
-                    for systematic, systematics_df in dataset.systematics_df.items():
-                        dataset.histograms_systematics[systematic] = dataset.gen_all_histograms(
-                            systematics_df, sys_name=systematic, do_prints=False
-                        )
-            # generate cutflow
-            dataset.gen_cutflows()
-            dataset.export_histograms(f"{dataset_name}_histograms.root")
-
-            # integrate into own histogram dictionary
-            for hist_name, hist in dataset.histograms.items():
-                self.histograms[dataset_name + "_" + hist_name] = hist
+                dataset.gen_all_histograms()
+                dataset.gen_cutflows()
+                dataset.export_dataset(dataset_file)
 
             self[dataset_name] = dataset  # save to analysis
 
@@ -295,9 +284,6 @@ class Analysis:
 
         self.logger.info("=" * (len(analysis_label) + 23))
         self.logger.info(f"ANALYSIS '{analysis_label}' INITIALISED")
-
-        if snapshot and regen_histograms:
-            self.snapshot(self.paths.root_dir / f"{self.name}.root")
 
     @staticmethod
     def _match_params(params: dict[str, Any], func: Callable) -> dict[str, Any]:
@@ -331,10 +317,10 @@ class Analysis:
         yield from self.datasets.values()
 
     def __repr__(self) -> str:
-        return f'Analysis("{self.name}", Datasets:{{{", ".join([f"{name}: {len(d)}" for name, d in self.datasets.items()])}}}'
+        return f'Analysis("{self.name}")'
 
     def __str__(self) -> str:
-        return f'"{self.name}",Datasets:{{{", ".join([f"{name}: {len(d)}" for name, d in self.datasets.items()])}}}'
+        return f'Analysis "{self.name}"'
 
     # ===============================
     # =========== PLOTS =============
@@ -343,6 +329,7 @@ class Analysis:
         self,
         val: str | Histogram1D | ROOT.TH1 | Sequence[str | Histogram1D | ROOT.TH1],
         dataset: str | Sequence[str | None] | None = None,
+        systematic: str | None | Sequence[str | None] = False,
         selection: str | None | Sequence[str | None] = False,
         label: str | None | Sequence[str | None] = None,
         colour: str | None | Sequence[str | None] = None,
@@ -377,6 +364,7 @@ class Analysis:
         :param val: variable name to be plotted. Either a string that exists in all datasets
                     or a list one for each dataset, or histograms themselves
         :param dataset: string or list of strings corresponding to datasets in the analysis
+        :param systematic: string or list of strings corresponding to systematic(s)
         :param selection: string or list of strings corresponding to selection(s) applied to variable
         :param label: list of labels for plot legend corresponding to each line
         :param colour: list of colours for histograms
@@ -425,6 +413,7 @@ class Analysis:
             {
                 "vals": copy.copy(val),
                 "datasets": copy.copy(dataset),
+                "systematics": copy.copy(systematic),
                 "selections": copy.copy(selection),
                 "labels": copy.copy(label),
                 "colours": copy.copy(colour),
@@ -642,14 +631,23 @@ class Analysis:
             filepath = self.paths.plot_dir / filename
         else:
             # naming template for file/histogram name
-            def _srep(s: str, init_: bool = True) -> str:
+            def _srep(
+                s: Literal[
+                    "vals",
+                    "hists",
+                    "datasets",
+                    "systematics",
+                    "selections",
+                    "labels",
+                    "colours",
+                ],
+                init_: bool = True,
+            ) -> str:
                 """String rep. of combinations of histogram definitions"""
-                out = [
-                    el for el in per_hist_vars[s] if (el is not None) and isinstance(el, str)
-                ]  # type: ignore
+                out = [el for el in per_hist_vars[s] if (el is not None) and isinstance(el, str)]
                 init = "_" if init_ else ""
                 if out:
-                    all_el = [el for el in per_hist_vars[s] if el is not None]  # type: ignore
+                    all_el = [el for el in per_hist_vars[s] if el is not None]
                     if len(set(all_el)) == 1:
                         all_el = all_el[0]
                         return init + all_el
@@ -658,16 +656,21 @@ class Analysis:
                 else:
                     return ""
 
-            filename_template = (
-                (f"{prefix}_" if prefix else "")
-                + _srep("vals", init_=False)
-                + _srep("datasets")
-                + _srep("selections")
-                + ("_BIN_SCALED" if scale_by_bin_width else "")
-                + ("_STACKED" if kind == "stack" else "")
-                + (f"_{suffix}" if suffix else "")
+            filename = (
+                smart_join(
+                    [
+                        prefix,
+                        _srep("vals", init_=False),
+                        _srep("datasets"),
+                        _srep("selections"),
+                        "BIN_SCALED" * scale_by_bin_width,
+                        "STACKED" * (kind == "stack"),
+                        suffix,
+                    ]
+                )
+                + ".png"
             )
-            filepath = self.paths.plot_dir / (filename_template + ".png")
+            filepath = self.paths.plot_dir / filename
 
         fig.savefig(filepath, bbox_inches="tight")
         self.logger.info(f"Saved plot to {filepath}")
@@ -686,11 +689,12 @@ class Analysis:
     ) -> None:
         # Sort lists based on integral of histograms so smallest histograms sit at bottom
         if sort:
-            for val in per_hist_vars:
+            for val in per_hist_vars.keys():
                 per_hist_vars[val] = sorted(  # type: ignore
                     per_hist_vars[val],  # type: ignore
-                    key=lambda ls: per_hist_vars["hists"][per_hist_vars[val].index(ls)].integral,
-                    # type: ignore
+                    key=lambda ls: per_hist_vars["hists"][
+                        per_hist_vars[val].index(ls)  # type: ignore
+                    ].integral,
                 )
 
         hist_list = per_hist_vars["hists"]
@@ -790,9 +794,10 @@ class Analysis:
         for i in range(n_plottables):
             hists.append(
                 self._process_val_args(
-                    var_dict["vals"][i],
-                    var_dict["datasets"][i],
-                    var_dict["selections"][i],
+                    val=var_dict["vals"][i],
+                    dataset=var_dict["datasets"][i],
+                    systematic=var_dict["systematics"][i],
+                    selection=var_dict["selections"][i],
                 )
             )
 
@@ -830,6 +835,7 @@ class Analysis:
         self,
         val: str | Histogram1D | ROOT.TH1,
         dataset: str | None = None,
+        systematic: str | None = None,
         selection: str | None = None,
     ) -> Histogram1D:
         """Get Histogram1D object from val argument in plot"""
@@ -837,8 +843,13 @@ class Analysis:
             return val
         if isinstance(val, ROOT.TH1):
             return Histogram1D(th1=val)
+        elif val in self.histograms:
+            # allow getting histogram from a string if it exists internally
+            return self.histograms[val]
         else:
-            return self.get_hist(val, dataset, selection, TH1=False)
+            return self.get_hist(
+                variable=val, dataset=dataset, systematic=systematic, selection=selection, TH1=False
+            )
 
     # ===============================
     # ===== HISTOGRAM HANDLING ======
@@ -847,118 +858,70 @@ class Analysis:
         self,
         variable: str,
         dataset: str,
-        selection: str | None = None,
-        name: str = "",
-        title: str = "",
+        systematic: str = "T_s1hv_NOMINAL",
+        selection: str = "",
         histtype: str = "TH1F",
         save: bool = True,
     ) -> ROOT.TH1:
         """
         Generate histogram on-the-fly from given options
-
-        :param variable: variable in dataset to plot. Binning will be taken from internal binning dictionary
-        :param dataset: dataset to fetch data from
-        :param selection: selection to be applied to data
-        :param name: name of histogram
-        :param title: title of histogram
-        :param histtype: TH1 type name
-        :param save: whether to save in internal histogram dictionary
-        :return: generated histogram
         """
-        h = self[dataset].gen_histogram(variable, selection, name, title, histtype)
+        h = self[dataset].gen_histogram(variable, systematic, selection, histtype)
 
         if save:
-            self.histograms[f"{dataset}_{variable}_{selection}"] = h
+            self.datasets[dataset].histograms[systematic][selection][variable] = h
 
         return h
 
     def get_hist(
         self,
         variable: str,
-        dataset: str | None = None,
-        selection: str | None = None,
+        dataset: str,
+        systematic: str = "T_s1hv_NOMINAL",
+        selection: str = "",
         allow_generation: bool = False,
         TH1: bool = True,
     ) -> Histogram1D | ROOT.TH1:
         """Get TH1 histogram from histogram dict or internal dataset"""
+
         try:
-            hist_name_internal = self.get_hist_name(variable, dataset, selection)
-        except ValueError as e:
+            return self.datasets[dataset].get_hist(
+                variable,
+                systematic=systematic,
+                selection=selection,
+                kind="th1" if TH1 else "boost",
+            )
+        except KeyError as e:
             if allow_generation:
                 self.logger.info(
                     f"Generating histogram for {variable} in {dataset} with selection: {selection}.."
                 )
-                h = self[dataset].gen_histogram(variable, selection)
-                self.histograms[f"{dataset}_{variable}_{selection}"] = h
-                self[dataset].histograms[f"{variable}_{selection}"] = h
+                h = self[dataset].gen_histogram(variable, systematic, selection)
+                self[dataset].histograms[systematic][selection][variable] = h
                 return h
             else:
                 raise ValueError(
-                    "No histogram found. "
-                    "Set `allow_generation=True` to generate histograms that do not yet exist."
+                    "No histogram found for histogram with the following:"
+                    f"\n variable: {variable}"
+                    f"\n dataset: {dataset}"
+                    f"\n systematic: {systematic}"
+                    f"\n selection: {selection}"
+                    "\nSet `allow_generation=True` to generate histograms that do not yet exist."
                 ) from e
 
-        if TH1:
-            return self.histograms[hist_name_internal]
-        else:
-            return Histogram1D(th1=self.histograms[hist_name_internal], logger=self.logger)
-
-    def get_hist_name(
-        self,
-        variable: str,
-        dataset: str | None = None,
-        selection: str | None = None,
-    ) -> str:
-        """Get name of histogram saved in histogram dict"""
-        if variable in self.histograms:
-            return variable
-
-        elif selection and f"{variable}_{selection}" in self.histograms:
-            return f"{variable}_{selection}"
-
-        elif dataset is None:
-            raise ValueError(
-                f"No variable '{variable}' for selection '{selection}' found in analysis: {self.name}"
-            )
-
-        elif selection and f"{variable}_{selection}" in self[dataset].histograms:
-            return f"{dataset}_{variable}_{selection}"
-
-        elif selection:
-            raise ValueError(f"No selection {selection} found for {variable} in {dataset}")
-
-        elif variable in self[dataset].histograms:
-            return dataset + "_" + variable
-
-        else:
-            raise ValueError(
-                f"No histogram for {variable} in {dataset} for selection {selection}."
-                "\nHistograms in analysis:"
-                + "\n".join(self.histograms.keys())
-                + "\n Histograms in dataset: "
-                + "\n".join(self[dataset].histograms.keys())
-            )
-
-    def sum_hists(
-        self, hists: list[str | ROOT.TH1], inplace_name: str | None = None
-    ) -> ROOT.TH1 | None:
+    def sum_hists(self, hists: list[ROOT.TH1], save_as: str | None = None) -> ROOT.TH1 | None:
         """
         Sum together internal histograms.
-        Optionally pass inplace_name to save automatically to internal histogram dictionary
+        Optionally pass save_as to save automatically to internal histogram dictionary
         """
-        if isinstance(hists[0], str):
-            h = self.histograms[hists[0]].Clone()
-        else:
-            h = hists[0].Clone()
+        h = hists[0].Clone()
 
         for hist_to_sum in hists[1:]:
-            if isinstance(hist_to_sum, ROOT.TH1):
-                h.Add(hist_to_sum)
-            else:
-                h.Add(self.get_hist(hist_to_sum))
+            h.Add(hist_to_sum)
 
-        if inplace_name:
-            self.histograms[inplace_name] = h
+        if save_as:
+            self.histograms[save_as] = h
+
         return h
 
     def __verify_same_cuts(self, datasets: list[str]):
@@ -984,6 +947,7 @@ class Analysis:
         SR_passID_mc: str = "SR_passID_trueTau",
         SR_failID_mc: str = "SR_failID_trueTau",
         name: str = "",
+        systematic: str = "T_s1hv_NOMINAL",
         save_intermediates: bool = False,
     ) -> None:
         """
@@ -1000,6 +964,7 @@ class Analysis:
         :param SR_passID_mc: Signal region passing ID in mc
         :param SR_failID_mc: Signal region failing ID in mc
         :param name: prefix to histogram naming for estimation
+        :param systematic: which systematic to apply fakes estimate to
         :param save_intermediates: Whether to save intermediate fakes calculation histograms
         """
         ff_var = fakes_source_var
@@ -1025,31 +990,61 @@ class Analysis:
 
         # data histograms
         hCR_passID_data = self.get_hist(
-            ff_var, self.data_sample, CR_passID_data, allow_generation=True
+            variable=ff_var,
+            dataset=self.data_sample,
+            systematic=systematic,
+            selection=CR_passID_data,
+            allow_generation=True,
         )
         hCR_failID_data = self.get_hist(
-            ff_var, self.data_sample, CR_failID_data, allow_generation=True
+            variable=ff_var,
+            dataset=self.data_sample,
+            systematic=systematic,
+            selection=CR_failID_data,
+            allow_generation=True,
         )
         hSR_failID_data = self.get_hist(
-            ff_var, self.data_sample, SR_failID_data, allow_generation=True
+            variable=ff_var,
+            dataset=self.data_sample,
+            systematic=systematic,
+            selection=SR_failID_data,
+            allow_generation=True,
         )
 
         # mc truth matched histograms
         hCR_passID_mc = self.sum_hists(
             [
-                self.get_hist(ff_var, mc_ds, CR_failID_mc, allow_generation=True)
+                self.get_hist(
+                    variable=ff_var,
+                    dataset=mc_ds,
+                    systematic=systematic,
+                    selection=CR_failID_mc,
+                    allow_generation=True,
+                )
                 for mc_ds in self.mc_samples
             ]
         )
         hCR_failID_mc = self.sum_hists(
             [
-                self.get_hist(ff_var, mc_ds, CR_passID_mc, allow_generation=True)
+                self.get_hist(
+                    variable=ff_var,
+                    dataset=mc_ds,
+                    systematic=systematic,
+                    selection=CR_passID_mc,
+                    allow_generation=True,
+                )
                 for mc_ds in self.mc_samples
             ]
         )
         hSR_failID_mc = self.sum_hists(
             [
-                self.get_hist(ff_var, mc_ds, SR_passID_mc, allow_generation=True)
+                self.get_hist(
+                    variable=ff_var,
+                    dataset=mc_ds,
+                    systematic=systematic,
+                    selection=SR_passID_mc,
+                    allow_generation=True,
+                )
                 for mc_ds in self.mc_samples
             ]
         )
@@ -1073,8 +1068,8 @@ class Analysis:
         ff_weight = f"reco_weight * FF_hist_{prefix}{ff_var}->GetBinContent(FF_hist_{prefix}{ff_var}->FindBin({ff_var}))"
         ff_weight_col = f"FF_weight_{prefix}{ff_var}"
         for mc in self.mc_samples:
-            self[mc].filters[SR_passID_mc].df = (
-                self[mc].filters[SR_passID_mc].df.Define(ff_weight_col, ff_weight)
+            self[mc].filters[systematic][SR_passID_mc].df = (
+                self[mc].filters[systematic][SR_passID_mc].df.Define(ff_weight_col, ff_weight)
             )
 
         # background estimation in target variables
@@ -1129,50 +1124,13 @@ class Analysis:
     @handle_dataset_arg
     def cutflow_printout(self, datasets: str, latex: bool = False) -> None:
         """Prints cutflow table to terminal"""
-        self[datasets].cutflow_printout(self.paths.latex_dir if latex else None)
-
-    def snapshot(self, filepath: Path = "", recreate: bool = True) -> None:
-        """
-        Save snapshot of all datasets to ROOT file, where each tree contains the ntuple representation of the dataset
-        """
-        self.logger.info(f"Saving snapshot of datasets...")
-
-        if not filepath:
-            filepath = self.paths.root_dir / f"{self.name}.root"
-
-        if recreate and os.path.isfile(filepath):
-            self.logger.debug(f"Found file at {filepath}. Removing..")
-            os.remove(filepath)
-
-        opts = ROOT.RDF.RSnapshotOptions()
-        opts.fMode = "UPDATE"
-        opts.fOverwriteIfExists = True
-
-        for dataset in self.datasets.values():
-            for selection in dataset.filters:
-                self.logger.info(f"Snapshoting '{selection}' selection in {dataset.name}...")
-                # point dataframes to snapshot instead to avoid having to rerun on all the data later
-                dataset.filters[selection].df = dataset.filters[selection].df.Snapshot(
-                    f"{dataset.name}/{selection}", str(filepath), list(dataset.all_vars), opts
-                )
-            if dataset.filters_systematics:
-                for sys_name, sys_selections in dataset.filters_systematics.items():
-                    for selection in sys_selections:
-                        dataset.filters_systematics[sys_name][
-                            selection
-                        ].df = dataset.filters_systematics[sys_name][selection].df.Snapshot(
-                            f"{dataset.name}/{sys_name}/{selection}",
-                            str(filepath),
-                            list(dataset.all_vars),
-                            opts,
-                        )
-
-        self.logger.info(f"Full snapshot sucessfully saved.")
+        self[datasets].cutflow_printout(path=self.paths.latex_dir if latex else None)
 
     def full_cutflow_printout(
         self,
         datasets: list[str],
-        cutsets: list[str] | str | None = None,
+        systematic: str = "T_s1thv_NOMINAL",
+        selections: list[str] | str | None = None,
         filename: str | Path | None = None,
     ) -> None:
         """Prints full cutflows for all passed datasets"""
@@ -1180,16 +1138,16 @@ class Analysis:
         self.__verify_same_cuts(datasets)
 
         # for each cut set, create new set of rows in table
-        if isinstance(cutsets, str):
-            cutsets = [cutsets]
-        elif cutsets is None:
-            cutsets = list(self[datasets[0]].selections)
+        if isinstance(selections, str):
+            selections = [selections]
+        elif selections is None:
+            selections = list(self[datasets[0]].selections)
 
         # table build loop
         latex_str = f"\\begin{{tabular}}{{{'l' * (len(datasets) + 1)}}}\n"
 
-        for cutset in cutsets:
-            sanitised_str = self.__sanitise_for_latex(cutset)
+        for selection in selections:
+            sanitised_str = self.__sanitise_for_latex(selection)
             # header
             latex_str += "\\hline\n"
             latex_str += (
@@ -1201,11 +1159,13 @@ class Analysis:
             latex_str += "\\hline\n"
 
             cut_names = [
-                cutflow_item.cut.name for cutflow_item in self[datasets[0]].cutflows[cutset]
+                cutflow_item.cut.name
+                for cutflow_item in self[datasets[0]].cutflows[systematic][selection]
             ]
             for i, cut_name in enumerate(cut_names):
                 passes_list = [
-                    str(int(self[dataset].cutflows[cutset][i].npass)) for dataset in datasets
+                    str(int(self[dataset].cutflows[systematic][selection][i].npass))
+                    for dataset in datasets
                 ]
                 latex_str += f"{cut_name} & {' & '.join(passes_list)}\\\\\n"
 
@@ -1285,34 +1245,6 @@ class Analysis:
 
         with open(filename, "w") as f:
             f.write(latex_str)
-
-    def save_histograms(
-        self,
-        filename: str | Path | None = None,
-        tfile_option: str = "Update",
-        write_option: str = "Overwrite",
-        clear_hists: bool = False,
-    ) -> None:
-        """
-        Saves current histograms into root file
-
-        :param filename: Should end in '.root'. if not given will set as '<analysis_name>_histograms.root'
-        :param tfile_option: TFile option.
-                             See: https://root.cern.ch/doc/master/classTFile.html#ad0377adf2f3d88da1a1f77256a140d60
-        :param write_option: WriteObject() option.
-                             See: https://root.cern.ch/doc/master/classTDirectoryFile.html#ae1bb32dcbb69de7f06a3b5de9d22e852
-        :param clear_hists: clears histograms in dictionary
-        """
-        if not filename:
-            filename = self.paths.root_dir / f"{self.name}_histograms.root"
-
-        self.logger.info(f"Saving {len(self.histograms)} histograms to file {filename}...")
-        with ROOT.TFile(str(filename), tfile_option) as file:
-            for name, histo in self.histograms.items():
-                file.WriteObject(histo, name, write_option)
-
-        if clear_hists:
-            self.histograms = dict()
 
     def histogram_printout(self, to_latex: bool = False) -> None:
         """Printout of histogram metadata"""

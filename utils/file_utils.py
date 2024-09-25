@@ -52,6 +52,12 @@ def multi_glob(paths: Path | list[Path] | str | list[str]) -> list[str]:
     return all_files
 
 
+# didn't know where else to put this
+def smart_join(s: list[str], sep: str = "_") -> str:
+    """Concatenated string with separator, ignoring any blank strings"""
+    return sep.join(filter(None, s))
+
+
 # # FIXME
 # def convert_pkl_to_root(pkl_name: str | None = None, conv_all: bool = False) -> None:
 #     """

@@ -369,10 +369,11 @@ class Cutflow:
 
     def import_cutflow(self, hist: ROOT.TH1I, cuts: List[Cut]) -> None:
         """Import cutflow from histogram and cutfile"""
-        if hist.GetNbinsX() - 1 != len(cuts):
+        if hist.GetNbinsX() != len(cuts):
             raise ValueError(
                 f"Number of cuts passed to cutflow ({len(cuts)}) "
-                f"does not match number of cuts in histogram ({hist.GetNbinsX() - 1})"
+                f"does not match number of cuts in cutflow histogram ({hist.GetNbinsX() - 1}) "
+                f"with name for name: {hist.GetName()}"
             )
 
         # indexing is fucked b/c ROOT histograms are 1-indexed,
