@@ -9,11 +9,10 @@ from typing import Literal
 import ROOT  # type: ignore
 import matplotlib.pyplot as plt  # type: ignore
 import numpy as np
-import pandas as pd  # type: ignore
 from numpy.typing import ArrayLike
 
 from src.cutting import Cut, Cutflow, FilterNode, FilterTree
-from src.histogram import Histogram1D
+from src.histogram import Histogram1D, get_th1_bin_values
 from src.logger import get_logger
 from utils import plotting_tools
 from utils.file_utils import smart_join
@@ -77,6 +76,8 @@ class Dataset:
     is_signal: bool = False
     is_data: bool = False
     out_file: Path = ""
+    sys_list: list = field(init=False, default_factory=list)
+    nominal_name: str = field(init=False, default="")
 
     def __post_init__(self) -> None:
         if not self.out_file:
@@ -87,6 +88,21 @@ class Dataset:
             self.logger.debug("Generating filters trees for dataframes...")
             for sys_name, rdf in self.rdataframes.items():
                 self.filters[sys_name] = self.gen_filters(rdf)
+
+        # get list of systematics and name of nominal channel
+        sys_set = set()
+        for sys_name in self.rdataframes.keys():
+            # skip nominal(s)
+            if ("__1up" not in sys_name) and ("__1down" not in sys_name):
+                if self.nominal_name:
+                    raise ValueError(
+                        f"Nominal '{self.nominal_name}' already found. Got another: '{sys_name}'"
+                    )
+                self.nominal_name = sys_name
+                continue
+            sys_set.add(sys_name.removesuffix("__1up").removesuffix("__1down"))
+        self.sys_list = list(sys_set)
+        self.logger.info(f"Initialised {self.name}")
 
     # Import/Export
     # ===================
@@ -110,7 +126,7 @@ class Dataset:
         # delete file if it exists and we want to overwrite
         if Path(filepath).is_file():
             if overwrite:
-                self.logger.debug(f"File exists at {filepath}. Deleting..")
+                self.logger.debug("File exists at %s. Deleting..", filepath)
                 Path(filepath).unlink()
             else:
                 raise FileExistsError(
@@ -119,7 +135,7 @@ class Dataset:
 
         # save data
         self.logger.info(
-            f"Saving snapshots of {len(self.filters)} systematics in dataset '{self.name}'..."
+            "Saving snapshots of %s systematics in dataset '%s'...", len(self.filters), self.name
         )
         t1 = time.time()
         n_ds = 0
@@ -134,11 +150,11 @@ class Dataset:
                     snapshot_opts,
                 )
                 n_ds += 1
-        self.logger.info(f"Took {time.time() - t1:.2g}s to snapshot {n_ds} RDataframes")
+        self.logger.info("Took %.2gs to snapshot %d RDataframes", time.time() - t1, n_ds)
 
         # save histograms
         n_hists = sum(len(hists) for hists in self.histograms.values())
-        self.logger.info(f"Saving {n_hists} histograms...")
+        self.logger.info(f"Saving %d histograms...", n_hists)
         t1 = time.time()
         with ROOT.TFile(str(filepath), "UPDATE") as file:
             for sys_name, selection_dict in self.histograms.items():
@@ -152,8 +168,8 @@ class Dataset:
 
                     for hist_name, hist in hist_selections.items():
                         ROOT.gDirectory.WriteObject(hist, hist_name, "Overwrite")
-        self.logger.info(f"Written {n_hists} histograms in {time.time() - t1:.2g}s")
-        self.logger.info(f"Saved dataset file to {filepath}")
+        self.logger.info("Written %d histograms in %.2gs", n_hists, time.time() - t1)
+        self.logger.info("Saved dataset file to %s", filepath)
 
     def import_dataset(self, in_file: Path) -> None:
         """
@@ -163,7 +179,7 @@ class Dataset:
         """
 
         # import per systematic
-        self.logger.info(f"Importing dataset '{self.name}' from file: {in_file}...")
+        self.logger.info("Importing dataset '%s' from file: %s...", self.name, in_file)
         n_hists = 0
         n_df = 0
         with ROOT.TFile(str(in_file), "read") as tfile:
@@ -171,13 +187,14 @@ class Dataset:
             for sys_key in tfile.GetListOfKeys():
                 if sys_key.GetClassName() != "TDirectoryFile":
                     self.logger.warning(
-                        f"Non-TDirectoryFile object ({sys_key.GetClassName()}) "
-                        f"in top-level of file: {in_file}"
+                        "Non-TDirectoryFile object (%s) " f"in top-level of file: %s",
+                        sys_key.GetClassName(),
+                        in_file,
                     )
                     continue
 
                 sys_name = str(sys_key.GetName()).removeprefix("data_")
-                self.logger.debug(f"Found systematic: {sys_name}")
+                self.logger.debug("Found systematic: %s", sys_name)
                 sys_dir = tfile.Get(sys_key.GetName())
 
                 # loop over selections
@@ -205,9 +222,13 @@ class Dataset:
 
                     elif sel_obj_class != "TDirectoryFile":
                         self.logger.warning(
-                            f"Non-TTree or TDirectoryFile object ({sel_obj_class}) "
-                            f"with name '{sel_key.getName()}' found "
-                            f"in '{sel_name}' directory of file: {in_file}"
+                            "Non-TTree or TDirectoryFile object (%s) "
+                            "with name '%s' found "
+                            "in '%s' directory of file: %s",
+                            sel_obj_class,
+                            sel_key.getName(),
+                            sel_name,
+                            in_file,
                         )
                         continue
 
@@ -230,8 +251,12 @@ class Dataset:
                             )
 
         self.logger.info(
-            f"{n_hists} histograms and {n_df} RDataFrames successfully "
-            f"imported into dataset '{self.name}' from file: {in_file}"
+            "%d histograms and %d RDataFrames successfully "
+            "imported into dataset '%s' from file: %s",
+            n_hists,
+            n_df,
+            self.name,
+            in_file,
         )
 
     def reset_cutflows(self) -> None:
@@ -284,15 +309,18 @@ class Dataset:
     # ===============================
     # ========== CUTTING ============
     # ===============================
-    def gen_cutflows(self, do_print: bool = True) -> None:
+    def gen_cutflows(self, do_print: bool = False) -> None:
         """Generate cutflows for each systematic-selection"""
 
         for systematic in self.rdataframes.keys():
             self.cutflows[systematic] = dict()
-            for selection, cuts in self.selections.items():
+            for selection in self.selections:
                 self.logger.info(
-                    f"Generating cutflow in dataset '{self.name}' "
-                    f"for selection '{selection}' with systematic '{systematic}'..."
+                    "Generating cutflow in dataset '%s' "
+                    "for selection '%s' with systematic '%s'...",
+                    self.name,
+                    selection,
+                    systematic,
                 )
                 cutflow = Cutflow(logger=self.logger)
                 cutflow.gen_cutflow(self.filters[systematic][selection])
@@ -305,7 +333,7 @@ class Dataset:
         if do_print:
             self.cutflow_printout()
 
-    def define_selection(self, filter_str: str, name: str, systematic: str, selection: str) -> None:
+    def define_selection(self, filter_str: str, name: str, systematic: str, selection: str) -> bool:
         """
         Define filter applied from selection.
 
@@ -315,18 +343,30 @@ class Dataset:
         :param selection: Name of selection to apply to if already existing in dataset.
         :return: filtered RDataFrame if `inplace = False`
         """
-        if selection not in self.filters:
+        if selection not in self.filters[systematic]:
             raise KeyError(f"No selection '{selection}' in dataset '{self.name}'")
+        if name in self.filters[systematic]:
+            self.logger.warning(
+                "Selection %s already exists in dataset '%s'. Skipping definition.", selection, name
+            )
+            return False
 
+        # define new selection in dictionaries
         self.filters[systematic][name] = self.filters[systematic][selection].create_child(
             Cut(name=name, cutstr=filter_str)
         )
+        self.histograms[systematic][name] = dict()
+        self.selections[name] = self.filters[systematic][name].get_cuts()
+        self.cutflows[systematic][name] = Cutflow(logger=self.logger)
+        self.cutflows[systematic][name].gen_cutflow(self.filters[systematic][name])
 
         # propagate binnings
         if selection in self.binnings:
             self.binnings[name] = dict()
             for var, binning in self.binnings[selection].items():
                 self.binnings[name][var] = binning
+
+        return True
 
     # ===========================================
     # =========== PLOTING FUNCTION(S) ===========
@@ -374,10 +414,10 @@ class Dataset:
 
         try:
             hist = self.histograms[systematic][selection][var]
-        except KeyError:
+        except KeyError as e:
             # create histogram if it doesn't exist
             if bins is None:
-                raise ValueError(f"Must pass bins if histogram not in dictionary")
+                raise ValueError("Must pass bins if histogram not in dictionary") from e
 
             th1 = self.gen_histogram(
                 variable=var, systematic=systematic, selection=selection, histtype=histtype
@@ -410,8 +450,25 @@ class Dataset:
             return h
         elif kind == "boost":
             return Histogram1D(th1=h, logger=self.logger)
-        else:
-            raise ValueError(f"Unknown histogram type '{kind}'")
+        raise ValueError(f"Unknown histogram type '{kind}'")
+
+    def get_systematic_uncertainty(
+        self,
+        val: str,
+        selection: str = "",
+    ) -> tuple[np.typing.NDArray[1] | Literal[0], np.typing.NDArray[1] | Literal[0]]:
+        """Get systematic uncertainty for single variable in dataset. Returns 0s if not found"""
+
+        try:
+            sys_up = self.histograms[self.nominal_name][selection][f"{val}_1up_uncert"]
+            sys_down = self.histograms[self.nominal_name][selection][f"{val}_1down_uncert"]
+        except KeyError:
+            self.logger.debug(
+                "No systematic for histogram: v:%s, ds: %s, sel: %s", val, self.name, selection
+            )
+            return 0, 0
+
+        return get_th1_bin_values(sys_down), get_th1_bin_values(sys_up)
 
     @staticmethod
     def _match_weight(var_) -> str:
@@ -440,12 +497,11 @@ class Dataset:
             case {"units": ""}:
                 if "phi" in var.lower():
                     return {"bins": (30, -np.pi, np.pi), "logbins": False}
-                elif "eta" in var.lower():
+                if "eta" in var.lower():
                     return {"bins": (30, -5, 5), "logbins": False}
-                elif "delta_z0_sintheta" in var.lower():
+                if "delta_z0_sintheta" in var.lower():
                     return {"bins": (30, 0, 2 * np.pi), "logbins": False}
-                else:
-                    return {"bins": (30, 0, 30), "logbins": False}
+                return {"bins": (30, 0, 30), "logbins": False}
             case _:
                 return {"bins": (30, 0, 30), "logbins": False}
 
@@ -469,14 +525,7 @@ class Dataset:
         self, variable: str, name: str = "", title: str = "", histtype="TH1F"
     ) -> ROOT.TH1F:
         """Define histogram from variable with correct binnings"""
-        allowed_histtypes = [
-            "TH1F",
-            "TH1D",
-            "TH1I",
-            "TH1C",
-            "TH1L",
-            "TH1S",
-        ]
+        allowed_histtypes = ["TH1F", "TH1D", "TH1I", "TH1C", "TH1L", "TH1S"]
         if histtype.upper() not in allowed_histtypes:
             raise ValueError(
                 f"Unknown histogram type: {histtype}. Allowed histogram types: {allowed_histtypes}."
@@ -509,8 +558,7 @@ class Dataset:
         )
         if profile_opts.weight:
             return profile_model, profile_opts.x, profile_opts.y, profile_opts.weight
-        else:
-            return profile_model, profile_opts.x, profile_opts.y
+        return profile_model, profile_opts.x, profile_opts.y
 
     def gen_histogram(
         self,
@@ -524,8 +572,11 @@ class Dataset:
         fill_cols = [variable, weight] if weight else [variable]
 
         self.logger.debug(
-            f"Generating {variable} histogram in {self.name} "
-            f"for systematic '{systematic}' and selection '{selection}'..."
+            "Generating %s histogram in %s " f"for systematic '%s' and selection '%s'...",
+            variable,
+            self.name,
+            systematic,
+            selection,
         )
         histname = smart_join([self.name, systematic, selection, variable])
         th1 = self.define_th1(variable=variable, name=histname, title=histname, histtype=histtype)
@@ -533,7 +584,7 @@ class Dataset:
         if selection:
             h_ptr = self.filters[systematic][selection].df.Fill(th1, fill_cols)
         else:
-            h_ptr = self.df.Fill(th1, fill_cols)
+            h_ptr = self.rdataframes[systematic].Fill(th1, fill_cols)
 
         return h_ptr.GetValue()
 
@@ -542,7 +593,6 @@ class Dataset:
 
         histograms_dict = dict()  # to store outputs
         output_histogram_variables = self.all_vars
-        n_cutflows = len(self.selections)
         if self.logger.getEffectiveLevel() < 20 and do_prints:
             # variable MUST be in scope! (why is ROOT like this)
             verbosity = ROOT.Experimental.RLogScopedVerbosity(
@@ -560,7 +610,7 @@ class Dataset:
             #         self.logger.debug(f"\t%s", name)
 
         # build histograms
-        for sys_name, rdf in self.rdataframes.items():
+        for sys_name, root_sys_df in self.rdataframes.items():
             # to contain smart pointers to TH1s (instantiate with a "NoSel" for blank selection)
             th1_ptr_map: dict[str, dict[str, ROOT.RResultsPtr]] = dict()
 
@@ -569,9 +619,10 @@ class Dataset:
             #     wgt_th1 = ROOT.TH1F(weight_str, weight_str, 100, -1000, 1000)
             #     th1_ptr_map["NoSel"] = rdf.Fill(wgt_th1, [weight_str])
 
-            # get all systematics (including none!)
+            # gather all selections (including no selection)
             selections = [""] + list(self.filters[sys_name].keys())
-            for selection in selections:
+            rdfs = [root_sys_df] + [node.df for node in self.filters[sys_name].values()]
+            for selection, sel_df in zip(selections, rdfs):
                 th1_ptr_map[selection] = dict()
 
                 # Define histograms from listed variables
@@ -582,13 +633,18 @@ class Dataset:
                     # define histogram
                     hist_name = smart_join([sys_name, selection, variable_name])
                     th1 = self.define_th1(variable_name, hist_name, hist_name)
-                    th1_ptr_map[selection][variable_name] = rdf.Fill(th1, fill_cols)
+                    th1_ptr_map[selection][variable_name] = sel_df.Fill(th1, fill_cols)
+
+                # don't want profiles for systematics
+                if "NOMINAL" not in sys_name:
+                    continue
 
                 # Define profiles
                 for profile_name, profile_opts in self.profiles.items():
                     if profile_name in output_histogram_variables:
                         self.logger.error(
-                            f"Histogram for {profile_name} already exists! Skipping profile creation"
+                            "Histogram for '%s' already exists! Skipping profile creation",
+                            profile_name,
                         )
                         continue
 
@@ -598,12 +654,12 @@ class Dataset:
                         systematic=sys_name,
                         selection=selection,
                     )
-                    th1_ptr_map[selection][profile_name] = rdf.Profile1D(*profile_args)
+                    th1_ptr_map[selection][profile_name] = root_sys_df.Profile1D(*profile_args)
 
             # generate histograms
             t = time.time()
             self.logger.info(
-                f"Producing {len(th1_ptr_map)} histograms for {sys_name} in {self.name}..."
+                "Producing %s histograms for %s in %s...", len(th1_ptr_map), sys_name, self.name
             )
             histograms_dict[sys_name] = dict()
             for selection, hist_ptrs in th1_ptr_map.items():
@@ -611,9 +667,98 @@ class Dataset:
                 for name, hist_ptr in hist_ptrs.items():
                     histograms_dict[sys_name][selection][name] = hist_ptr.GetValue()
             self.logger.info(
-                f"Took {time.time() - t:.3f}s to produce {len(histograms_dict)} histograms over {rdf.GetNRuns()} run(s)."
+                "Took %.3fs to produce %d histograms over %d run(s).",
+                time.time() - t,
+                len(histograms_dict),
+                root_sys_df.GetNRuns(),
             )
 
-        self.logger.info(f"Producted {len(histograms_dict)} histograms.")
-
+        self.logger.info("Producted %d histograms.", len(histograms_dict))
         self.histograms = histograms_dict
+
+        # gen uncertainties
+        self.calculate_systematic_uncertainties()
+
+    def calculate_systematic_uncertainties(self) -> None:
+        """Calculate systematic uncertainties from variables in systematic trees"""
+
+        nominal_name = ""
+        sys_list = []
+
+        self.logger.info("Calculating systematic uncertainties...")
+        # collect systematics
+        for sys_name in self.histograms:
+            # skip nominal(s)
+            if ("__1up" not in sys_name) and ("__1down" not in sys_name):
+                if nominal_name:
+                    raise ValueError(
+                        f"Nominal '{nominal_name}' already found. Got another: '{sys_name}'"
+                    )
+                nominal_name = sys_name
+                continue
+
+            sys_list.append(sys_name)
+
+        if not sys_list:
+            self.logger.info("No systematic uncertainties found. Skipping.")
+            return
+
+        # hold sys: selection: variable: (1up, 1down)
+        sys_pairs: dict[str, dict[str, dict[str, dict[str, ROOT.TH1]]]] = dict()
+
+        # calculate diffs with nominal
+        # SYSTEMATICS LOOP
+        for sys_name in sys_list:
+            sel_dict = self.histograms[sys_name]
+
+            # start collecting systemtics pairs
+            base_sys_name = sys_name.removesuffix("__1up").removesuffix("__1down")
+            if base_sys_name not in sys_pairs:
+                sys_pairs[base_sys_name] = dict()
+
+            # SELECTION LOOP
+            for selection, selection_dict in sel_dict.items():
+                if selection not in sys_pairs[base_sys_name]:
+                    sys_pairs[base_sys_name][selection] = dict()
+
+                # VARIABLE LOOP
+                for variable, sys_hist in selection_dict.items():
+                    if isinstance(sys_hist, ROOT.TProfile):
+                        continue  # don't want profiles
+
+                    nominal_hist = self.histograms[nominal_name][selection][variable]
+
+                    if variable not in sys_pairs[base_sys_name][selection]:
+                        sys_pairs[base_sys_name][selection][variable] = dict()
+
+                    # save individual histograms for diff later + sum for total
+                    if sys_name.endswith("__1up"):
+                        sys_pairs[base_sys_name][selection][variable]["1up"] = sys_hist
+                        full_sys_name = f"{variable}_1up_uncert"
+                    elif sys_name.endswith("__1down"):
+                        sys_pairs[base_sys_name][selection][variable]["1down"] = sys_hist
+                        full_sys_name = f"{variable}_1down_uncert"
+                    else:
+                        raise ValueError(f"Systematic '{sys_name}' isn't 1up or 1down?")
+
+                    # save diff between nominal and systematic
+                    diff_hist = sys_hist - nominal_hist
+                    self.histograms[nominal_name][selection][
+                        f"{variable}_{sys_name}_diff"
+                    ] = diff_hist
+
+                    # sum for full systematics
+                    if full_sys_name not in self.histograms[nominal_name][selection][variable]:
+                        self.histograms[nominal_name][selection][full_sys_name] = diff_hist
+                    else:
+                        self.histograms[nominal_name][selection][full_sys_name] += diff_hist
+
+        # final loop for full uncertainty
+        for sys_name, _ in sys_pairs.items():
+            for selection, __ in _.items():
+                for variable, pair in __.items():
+                    self.histograms[nominal_name][selection][
+                        f"{variable}_{sys_name}_tot_uncert"
+                    ] = (pair["1up"] - pair["1down"])
+
+        self.logger.info("Done.")

@@ -125,7 +125,7 @@ class Histogram1D(bh.Histogram, family=None):
 
         if th1:
             # create from TH1
-            edges = TH1_bin_edges(th1)
+            edges = get_th1_bin_edges(th1)
             super().__init__(bh.axis.Variable(edges), storage=bh.storage.Weight())
 
             # set vars
@@ -205,8 +205,7 @@ class Histogram1D(bh.Histogram, family=None):
                 raise RuntimeError(
                     f"Cannot convert object of type '{type(rdf_dict['x'])}' to 'AsRVec'"
                 ) from e
-            else:
-                raise e
+            raise e
 
         return self
 
@@ -242,22 +241,24 @@ class Histogram1D(bh.Histogram, family=None):
                 + (other.view(flow=True).variance * c0sq)  # type: ignore
             ) / (c1sq * c1sq)
 
-            self.view(flow=True).value = self.view(flow=True).value / other.view(flow=True).value  # type: ignore
+            self.view(flow=True).value = (
+                self.view(flow=True).value / other.view(flow=True).value
+            )  # type: ignore
             self.view(flow=True).variance = variance  # type: ignore
             self.TH1.Divide(other.TH1)
             return self
+
+        # scale TH1 properly
+        if hasattr(other, "__iter__"):
+            if len(other) != self.TH1.GetNbinsX():
+                raise ValueError("Number of bins don't match!")
+            for i, val in enumerate(other):
+                self.TH1.SetBinContent(i + 1, self.TH1.GetBinContent(i + 1) / val)
+                self.TH1.SetBinError(i + 1, self.TH1.GetBinError(i + 1) / val)
         else:
-            # scale TH1 properly
-            if hasattr(other, "__iter__"):
-                if len(other) != self.TH1.GetNbinsX():
-                    raise ValueError("Number of bins don't match!")
-                for i, val in enumerate(other):
-                    self.TH1.SetBinContent(i + 1, self.TH1.GetBinContent(i + 1) / val)
-                    self.TH1.SetBinError(i + 1, self.TH1.GetBinError(i + 1) / val)
-            else:
-                self.TH1.Scale(1 / other)  # type: ignore
-            # let boost-histogram handle return
-            return self._compute_inplace_op("__itruediv__", other)
+            self.TH1.Scale(1 / other)  # type: ignore
+        # let boost-histogram handle return
+        return self._compute_inplace_op("__itruediv__", other)
 
     def __mul__(self, other: bh.Histogram | "np.typing.NDArray[Any]" | float) -> Histogram1D:
         """boost-histogram doesn't allow multiplying weighted histograms so implement that here"""
@@ -271,24 +272,24 @@ class Histogram1D(bh.Histogram, family=None):
             c0 = self.view(flow=True).value  # type: ignore
             c1 = other.view(flow=True).value  # type: ignore
             variance = (
-                self.view(flow=True).variance * c1 * c1 + other.view(flow=True).variance * c0 * c0  # type: ignore
+                self.view(flow=True).variance * c1 * c1 + other.view(flow=True).variance * c0 * c0
             )
 
             self.view(flow=True).value.__imul__(other.view(flow=True).value)  # type: ignore
             self.view(flow=True).variance = variance  # type: ignore
             self.TH1.Multiply(other.TH1)
             return self
+
+        # scale TH1 properly
+        if hasattr(other, "__iter__"):
+            if len(other) != self.TH1.GetNbinsX():
+                raise ValueError("Number of bins don't match!")
+            for i, val in enumerate(other):
+                self.TH1.SetBinContent(i + 1, self.TH1.GetBinContent(i + 1) * val)
+                self.TH1.SetBinError(i + 1, self.TH1.GetBinError(i + 1) * val)
         else:
-            # scale TH1 properly
-            if hasattr(other, "__iter__"):
-                if len(other) != self.TH1.GetNbinsX():
-                    raise ValueError("Number of bins don't match!")
-                for i, val in enumerate(other):
-                    self.TH1.SetBinContent(i + 1, self.TH1.GetBinContent(i + 1) * val)
-                    self.TH1.SetBinError(i + 1, self.TH1.GetBinError(i + 1) * val)
-            else:
-                self.TH1.Scale(other)
-            return self._compute_inplace_op("__imul__", other)
+            self.TH1.Scale(other)
+        return self._compute_inplace_op("__imul__", other)
 
     def __add__(self, other: bh.Histogram | "np.typing.NDArray[Any]" | float) -> Histogram1D:
         """Need to handle adding together TH1s"""
@@ -359,8 +360,7 @@ class Histogram1D(bh.Histogram, family=None):
         """
         if len(bins) == 3 and isinstance(bins, tuple):  # type: ignore
             return bh.axis.Regular(*bins, transform=bh.axis.transform.log if logbins else None)
-        else:
-            return bh.axis.Variable(bins)  # type: ignore
+        return bh.axis.Variable(bins)  # type: ignore
 
     # Variables
     # ===================
@@ -413,7 +413,7 @@ class Histogram1D(bh.Histogram, family=None):
 
     def error(self, flow: bool = False) -> np.typing.NDArray[1, float]:
         """get ROOT error"""
-        return np.array(TH1_bin_error(self.TH1, flow))
+        return np.array(get_th1_bin_errors(self.TH1, flow))
 
     def root_sumw2(self, flow: bool = False) -> np.typing.NDArray[1, float]:
         """get squared sum of weights"""
@@ -510,13 +510,12 @@ class Histogram1D(bh.Histogram, family=None):
         h1 = self.TH1
         if isinstance(other, ROOT.TH1):
             return h1.Chi2Test(other, "WWCHI2/NDF"), h1.Chi2Test(other, "WW")
-        elif isinstance(other, Histogram1D):
+        if isinstance(other, Histogram1D):
             h2 = other.TH1
             return h1.Chi2Test(h2, "WWCHI2/NDF"), h1.Chi2Test(h2, "WW")
-        elif isinstance(other, ROOT.TF1):
+        if isinstance(other, ROOT.TF1):
             return h1.Chisquare(other, "WWCHI2/NDF"), h1.Chisquare(other, "WW")
-        else:
-            raise TypeError(f"{type(other)} is an incorrect type for a chi-square test")
+        raise TypeError(f"{type(other)} is an incorrect type for a chi-square test")
 
     # Conversion
     # ===================
@@ -542,7 +541,7 @@ class Histogram1D(bh.Histogram, family=None):
         last_nz_idx = 0
         first_found = False
         for bin_idx, bin_val in enumerate(self.bin_values()):
-            in_tol = abs(bin_val) > tol
+            in_tol = abs(bin_val) > tol  # type: ignore
             if in_tol and (not first_found):
                 first_nz_idx = bin_idx
                 first_found = True
@@ -620,9 +619,9 @@ class Histogram1D(bh.Histogram, family=None):
         # set error
         if yerr is True:  # default to whatever error is saved in the TH1
             yerr = hist.error()
-        elif yerr == "sumw":
+        elif isinstance(yerr, str) and (yerr == "sumw"):
             yerr = hist.root_sumw2()
-        elif yerr and not isinstance(yerr, bool) and not hasattr(yerr, "__len__"):
+        elif (yerr is not None) and not isinstance(yerr, bool) and not hasattr(yerr, "__len__"):
             raise TypeError(f"yerr should be a bool or iterable of values. Got {yerr}")
 
         if not ax:
@@ -740,8 +739,8 @@ class Histogram1D(bh.Histogram, family=None):
         """
         try:
             np.testing.assert_allclose(np.array(self.bin_edges), np.array(other.bin_edges))
-        except AssertionError:
-            raise ValueError("Bins do not match!")
+        except AssertionError as e:
+            raise ValueError("Bins do not match!") from e
         if not ax:
             _, ax = plt.subplots()
 
@@ -828,7 +827,7 @@ class Histogram1D(bh.Histogram, family=None):
                                 if r"$\chi^2=" in artist.get_children()[0].get_text():
                                     loc = "lower left"
                         stats_box = AnchoredText(
-                            textstr, loc=loc, frameon=False, prop=dict(fontsize="x-small")
+                            textstr, loc=loc, frameon=False, prop={"fontsize": "x-small"}
                         )
                         ax.add_artist(stats_box)
 
@@ -871,11 +870,11 @@ class Histogram1D(bh.Histogram, family=None):
                         ),
                         xycoords="data",
                         textcoords="data",
-                        arrowprops=dict(
-                            arrowstyle="-|>",
-                            connectionstyle="arc3,rad=0",
-                            color=colour if colour else "r",
-                        ),
+                        arrowprops={
+                            "arrowstyle": "-|>",
+                            "connectionstyle": "arc3,rad=0",
+                            "color": colour if colour else "r",
+                        },
                     )
 
         else:
@@ -896,22 +895,20 @@ class Histogram1D(bh.Histogram, family=None):
 
 # some utility functions
 # ==================================================================
-def TH1_bin_edges(h: ROOT.TH1) -> np.typing.NDArray[1, float]:
+def get_th1_bin_edges(h: ROOT.TH1) -> np.typing.NDArray[1, float]:
     """Return bin edges for TH1 object hist"""
     return np.array([h.GetBinLowEdge(i + 1) for i in range(h.GetNbinsX() + 1)])
 
 
-def TH1_bin_values(h: ROOT.TH1, flow: bool = False) -> np.typing.NDArray[1, float]:
+def get_th1_bin_values(h: ROOT.TH1, flow: bool = False) -> np.typing.NDArray[1, float]:
     """Return bin contents for TH1 object hist"""
     if flow:
         return np.array([h.GetBinContent(i) for i in range(h.GetNbinsX() + 2)])
-    else:
-        return np.array([h.GetBinContent(i + 1) for i in range(h.GetNbinsX())])
+    return np.array([h.GetBinContent(i + 1) for i in range(h.GetNbinsX())])
 
 
-def TH1_bin_error(h: ROOT.TH1, flow: bool = False) -> np.typing.NDArray[1, float]:
+def get_th1_bin_errors(h: ROOT.TH1, flow: bool = False) -> np.typing.NDArray[1, float]:
     """Return bin error for TH1 object hist"""
     if flow:
         return np.array([h.GetBinError(i) for i in range(h.GetNbinsX() + 2)])
-    else:
-        return np.array([h.GetBinError(i + 1) for i in range(h.GetNbinsX())])
+    return np.array([h.GetBinError(i + 1) for i in range(h.GetNbinsX())])

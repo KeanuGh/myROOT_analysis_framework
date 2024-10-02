@@ -5,7 +5,6 @@ from pathlib import Path
 from typing import Final
 
 import ROOT  # type: ignore
-import pandas as pd  # type: ignore
 
 from src.cutting import Cut
 from src.dataset import Dataset
@@ -69,7 +68,7 @@ class DatasetBuilder:
     _subsamples: set[str] = field(init=False, default_factory=set)
     _vars_to_calc: set[str] = field(init=False, default_factory=set)
     _vars_to_extract: set[str] = field(init=False, default_factory=set)
-    __DEFAULT_SUBSAMPLE_NAME: str = field(init=False, default="default")
+    __DEFAULT_SUBSAMPLE_NAME: Final[str] = field(init=False, default="default")
 
     def __post_init__(self):
         if self.year:
@@ -142,17 +141,21 @@ class DatasetBuilder:
         # check if vars are contained in label dictionary
         self.__check_axis_labels(self._vars_to_calc | self._vars_to_extract)
 
-        # print debug information
+        # print  debug information
         self.logger.debug("")
         self.logger.debug("DEBUG DATASET OPTIONS: ")
         self.logger.debug("----------------------------")
         self.logger.debug("Input ROOT file(s):  %s", sample_paths)
         self.logger.debug("Hard cut(s) applied: %s", self.hard_cut)
-        self.logger.debug("Defined subsamples:\n%s", "\n\t- ".join(self._subsamples))
-        self.logger.debug("Defined systematics:\n%s", "\n\t- ".join(systematic_tree_sets.keys()))
+        self.logger.debug("Defined subsamples:\n\t- %s", "\n\t- ".join(self._subsamples))
+        self.logger.debug(
+            "Defined systematics:\n\t- %s", "\n\t- ".join(systematic_tree_sets.keys())
+        )
         self.logger.debug("Defined TTree(s): %s", self.ttree)
-        self.logger.debug("Variables to pull from files:\n%s", "\n\t- ".join(self._vars_to_extract))
-        self.logger.debug("Calculated Variables:\n%s", "\n\t- ".join(self._vars_to_calc))
+        self.logger.debug(
+            "Variables to pull from files:\n\t- %s", "\n\t- ".join(self._vars_to_extract)
+        )
+        self.logger.debug("Calculated Variables:\n\t- %s", "\n\t- ".join(self._vars_to_calc))
         self.logger.debug("----------------------------")
         self.logger.debug("")
 
@@ -193,8 +196,9 @@ class DatasetBuilder:
             unexpected_var for unexpected_var in variables if unexpected_var not in variable_data
         ]:
             self.logger.warning(
-                f"Variable(s) {unexpected_vars} not contained in labels dictionary. "
-                "Some unexpected behaviour may occur."
+                "Variable(s) '%s' not contained in labels dictionary. "
+                "Some unexpected behaviour may occur.",
+                unexpected_vars,
             )
 
     # ===============================
@@ -213,7 +217,7 @@ class DatasetBuilder:
         extract_variables = self.__add_necessary_dta_variables(extract_variables)
 
         # make rdataframe
-        self.logger.info(f"Initiating RDataFrame from trees {ttrees}..")
+        self.logger.info(f"Initiating RDataFrame from trees: %s..", ttrees)
         spec = ROOT.RDF.Experimental.RDatasetSpec()
         for sample_name, paths in sample_paths.items():
             for tree in ttrees:
@@ -267,7 +271,7 @@ class DatasetBuilder:
         # calculate derived variables
         if calculate_variables:
             for derived_var in calculate_variables:
-                self.logger.debug(f"defining variable calculation for: {derived_var}")
+                self.logger.debug("defining variable calculation for: %s", derived_var)
                 function = derived_vars[derived_var]["cfunc"]
                 args = derived_vars[derived_var]["var_args"]
 
@@ -284,10 +288,7 @@ class DatasetBuilder:
                             Rdf = Rdf.Define(derived_var, "NAN")
                             is_invalid = True
                             break
-                        else:
-                            raise ValueError(
-                                f"Missing argument column for '{derived_var}': '{arg}'"
-                            )
+                        raise ValueError(f"Missing argument column for '{derived_var}': '{arg}'")
 
                 if not is_invalid:
                     func_str = f"{function}({','.join(args)})"
@@ -305,11 +306,9 @@ class DatasetBuilder:
         return Rdf
 
     def __add_necessary_dta_variables(self, variables: set[str]) -> set[str]:
-        necc_vars = {
-            "passReco",
-        }
+        necc_vars = {"passReco"}
         output_variables = variables | necc_vars
-        self.logger.debug(f"Added {necc_vars} to DTA import")
+        self.logger.debug(f"Added %s to DTA import", necc_vars)
         return output_variables
 
     def gen_systematics_map(self, sample_file: str | Path) -> dict[str, set[str]]:
