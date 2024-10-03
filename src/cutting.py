@@ -13,7 +13,7 @@ from copy import deepcopy
 from dataclasses import dataclass, field
 from logging import Logger
 from pathlib import Path
-from typing import List, Generator
+from typing import List, Generator, Final
 
 import ROOT  # type: ignore
 import numpy as np
@@ -24,7 +24,7 @@ from utils.var_helpers import derived_vars
 from utils.variable_names import variable_data, VarTag
 
 # all variables known by this framework
-_all_known_vars: set[str] = set(derived_vars.keys()) | set(variable_data.keys())
+_ALL_KNOWN_VARS: Final[set[str]] = set(derived_vars.keys()) | set(variable_data.keys())
 
 
 @dataclass(slots=True)
@@ -41,7 +41,7 @@ class Cut:
         # check for variables in the cut string
         split_string = set(re.findall(r"\w+|[.,!?;]", self.cutstr))
         # find all known variables in cutstring
-        self.included_variables = _all_known_vars & split_string
+        self.included_variables = _ALL_KNOWN_VARS & split_string
 
         if len(self.included_variables) == 1:
             self.is_reco = variable_data[next(iter(self.included_variables))]["tag"] == VarTag.RECO

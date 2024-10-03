@@ -12,9 +12,9 @@ import numpy as np
 from numpy.typing import ArrayLike
 
 from src.cutting import Cut, Cutflow, FilterNode, FilterTree
-from src.histogram import Histogram1D, get_th1_bin_values
+from src.histogram import Histogram1D
 from src.logger import get_logger
-from utils import plotting_tools
+from utils import ROOT_utils
 from utils.file_utils import smart_join
 from utils.variable_names import variable_data, VarTag
 
@@ -468,7 +468,7 @@ class Dataset:
             )
             return 0, 0
 
-        return get_th1_bin_values(sys_down), get_th1_bin_values(sys_up)
+        return ROOT_utils.get_th1_bin_values(sys_down), ROOT_utils.get_th1_bin_values(sys_up)
 
     @staticmethod
     def _match_weight(var_) -> str:
@@ -537,7 +537,7 @@ class Dataset:
         return ROOT.__getattr__(histtype)(
             name if name else variable,
             title if title else name if name else variable,
-            *plotting_tools.get_TH1_bins(**bin_args),
+            *ROOT_utils.get_TH1_bin_args(**bin_args),
         )
 
     def define_profile(
@@ -553,7 +553,7 @@ class Dataset:
         profile_model = ROOT.RDF.TProfile1DModel(
             profile_name,
             profile_name,
-            *plotting_tools.get_TH1_bins(**bin_args),
+            *ROOT_utils.get_TH1_bin_args(**bin_args),
             profile_opts.option,
         )
         if profile_opts.weight:
@@ -680,7 +680,14 @@ class Dataset:
         self.calculate_systematic_uncertainties()
 
     def calculate_systematic_uncertainties(self) -> None:
-        """Calculate systematic uncertainties from variables in systematic trees"""
+        """
+        Calculate systematic uncertainties from variables in systematic trees
+
+        Calculates:
+            - diff between sys and nominal for each sys: {var}_{sys}_{1up/1down}_diff
+            - diff between up and down for each sys: {var}_{sys}_tot_uncert
+            - percentage sys uncertainty for each sys: {var}_{sys}_pct_uncert
+        """
 
         nominal_name = ""
         sys_list = []

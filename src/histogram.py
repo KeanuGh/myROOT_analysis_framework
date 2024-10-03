@@ -14,14 +14,13 @@ from matplotlib.offsetbox import AnchoredText
 from numpy.typing import ArrayLike
 
 from src.logger import get_logger
+from utils import ROOT_utils
 from utils.AtlasUtils import set_atlas_style
-from utils.ROOT_utils import load_ROOT_settings
 from utils.context import redirect_stdout
-from utils.plotting_tools import get_TH1_bins
 
 # settings
 if ROOT.PyConfig.StartGUIThread:  # prevents a ROOT crash from settings being applied multiple times
-    load_ROOT_settings()
+    ROOT_utils.load_ROOT_settings()
     set_atlas_style()  # set ATLAS plotting style to ROOT plots
     plt.style.use(hep.style.ATLAS)  # set atlas-style plots in matplotilb
     np.seterr(invalid="ignore", divide="ignore")  # ignore division by zero errors
@@ -125,7 +124,7 @@ class Histogram1D(bh.Histogram, family=None):
 
         if th1:
             # create from TH1
-            edges = get_th1_bin_edges(th1)
+            edges = ROOT_utils.get_th1_bin_edges(th1)
             super().__init__(bh.axis.Variable(edges), storage=bh.storage.Weight())
 
             # set vars
@@ -174,7 +173,7 @@ class Histogram1D(bh.Histogram, family=None):
             self.logger.debug(f"Initialising histogram {name}...")
 
             # TH1
-            self.TH1 = ROOT.TH1F(name, title, *get_TH1_bins(bins, logbins=logbins))
+            self.TH1 = ROOT.TH1F(name, title, *ROOT_utils.get_TH1_bin_args(bins, logbins=logbins))
             self.name = name
 
             # get axis
@@ -413,7 +412,7 @@ class Histogram1D(bh.Histogram, family=None):
 
     def error(self, flow: bool = False) -> np.typing.NDArray[1, float]:
         """get ROOT error"""
-        return np.array(get_th1_bin_errors(self.TH1, flow))
+        return np.array(ROOT_utils.get_th1_bin_errors(self.TH1, flow))
 
     def root_sumw2(self, flow: bool = False) -> np.typing.NDArray[1, float]:
         """get squared sum of weights"""
@@ -891,24 +890,3 @@ class Histogram1D(bh.Histogram, family=None):
             self.logger.info(f"image saved in {out_filename}")
 
         return h_ratio
-
-
-# some utility functions
-# ==================================================================
-def get_th1_bin_edges(h: ROOT.TH1) -> np.typing.NDArray[1, float]:
-    """Return bin edges for TH1 object hist"""
-    return np.array([h.GetBinLowEdge(i + 1) for i in range(h.GetNbinsX() + 1)])
-
-
-def get_th1_bin_values(h: ROOT.TH1, flow: bool = False) -> np.typing.NDArray[1, float]:
-    """Return bin contents for TH1 object hist"""
-    if flow:
-        return np.array([h.GetBinContent(i) for i in range(h.GetNbinsX() + 2)])
-    return np.array([h.GetBinContent(i + 1) for i in range(h.GetNbinsX())])
-
-
-def get_th1_bin_errors(h: ROOT.TH1, flow: bool = False) -> np.typing.NDArray[1, float]:
-    """Return bin error for TH1 object hist"""
-    if flow:
-        return np.array([h.GetBinError(i) for i in range(h.GetNbinsX() + 2)])
-    return np.array([h.GetBinError(i + 1) for i in range(h.GetNbinsX())])

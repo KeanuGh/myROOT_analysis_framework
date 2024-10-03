@@ -4,13 +4,12 @@ import itertools
 from dataclasses import dataclass, field
 from functools import reduce
 from pathlib import Path
-from typing import Callable, Any, Sequence, Generator, TypedDict, Literal
+from typing import Callable, Any, Sequence, Generator, Literal
 
 import ROOT
 import matplotlib.pyplot as plt
 import mplhep as hep
 import numpy as np
-from matplotlib import ticker
 from numpy.typing import ArrayLike
 from tabulate import tabulate
 
@@ -19,21 +18,9 @@ from src.datasetbuilder import DatasetBuilder, lumi_year
 from src.dsid_meta import DatasetMetadata
 from src.histogram import Histogram1D
 from src.logger import get_logger
-from utils import plotting_tools, variable_names
+from utils import plotting_tools, ROOT_utils
 from utils.context import handle_dataset_arg
 from utils.file_utils import smart_join
-
-
-class PlotOpts(TypedDict):
-    """Per-histogram options for plotting"""
-
-    vals: list[str | Histogram1D | ROOT.TH1]
-    hists: list[Histogram1D]
-    datasets: list[str]
-    systematics: list[str]
-    selections: list[str]
-    labels: list[str]
-    colours: list[str]
 
 
 @dataclass(slots=True)
@@ -342,6 +329,7 @@ class Analysis:
         stats_box: bool = False,
         x_axlim: tuple[float, float] | None = None,
         y_axlim: tuple[float, float] | None = None,
+        legend_params: dict | None = None,
         ratio_plot: bool = False,
         ratio_fit: bool = False,
         ratio_axlim: float | tuple[float, float] | None = None,
@@ -378,6 +366,7 @@ class Analysis:
         :param stats_box: display stats box
         :param x_axlim: x-axis limits. If None matplolib decides
         :param y_axlim: x-axis limits. If None matplolib decides
+        :param legend_params: dictionary of options for legend drawing. Supports font size, loc, ncol
         :param ratio_plot: If True, adds ratio of the first plot with each subseqent plot below
         :param ratio_fit: If True, fits ratio plot to a 0-degree polynomial and display line, chi-square and p-value
         :param ratio_axlim: pass to yax_lim in rato plotter
@@ -389,7 +378,6 @@ class Analysis:
         :param flow: whether to show over/underflow bins
         :param suffix: suffix to add at end of histogram/file name
         :param prefix: prefix to add at start of histogram/file
-        :param nominal: name of nominal systematic
         :param kwargs: keyword arguments to pass to `mplhep.histplot`
         """
 
@@ -519,7 +507,7 @@ class Analysis:
 
         # AXIS OPTIONS SETTING
         # ============================
-        # limit to 4 rows and reverse order (so more important samples go in front)
+        # legend: limit to 4 rows and reverse order (so more important samples go in front)
         ncols = (
             len(per_hist_vars["hists"])
             + bool(do_stat + do_sys)
@@ -527,75 +515,25 @@ class Analysis:
             + bool(signal_plot_args)
         )
         ncols = max(ncols // 4, 1)  # need at least one column!
+        legend_kwargs = {"ncols": ncols, "loc": "upper right", "fontsize": 10}
+        legend_kwargs.update(legend_params if legend_params is not None else {})  # allow overwrite
         legend_handles, legend_labels = ax.get_legend_handles_labels()
-        ax.legend(
-            reversed(legend_handles),
-            reversed(legend_labels),
-            fontsize=10,
-            loc="upper right",
-            ncols=ncols,
+        ax.legend(reversed(legend_handles), reversed(legend_labels), **legend_kwargs)
+
+        plotting_tools.set_axis_options(
+            per_hist_vars=per_hist_vars,
+            ax=ax,
+            ratio_ax=ratio_ax,
+            ratio_label=ratio_label,
+            scale_by_bin_width=scale_by_bin_width,
+            title=title,
+            xlabel=xlabel,
+            ylabel=ylabel,
+            logx=logx,
+            logy=logy,
+            x_axlim=x_axlim,
+            y_axlim=y_axlim,
         )
-        hep.atlas.label(italic=(True, True, False), ax=ax, loc=0, llabel="Internal", rlabel=title)
-
-        # set axis options
-        # get axis labels from variable names if possible
-        # it'll error out when plotting if the histogram edges aren't equal
-        bin_range = (
-            per_hist_vars["hists"][0].bin_edges[0],
-            per_hist_vars["hists"][0].bin_edges[-1],
-        )
-        if (
-            all(isinstance(val, str) for val in per_hist_vars["vals"])
-            and len(val_name := set(per_hist_vars["vals"])) == 1
-        ):
-            val_name = next(iter(val_name))
-            if val_name in variable_names.variable_data:
-                _xlabel, _ylabel = plotting_tools.get_axis_labels(
-                    val_name, diff_xs=scale_by_bin_width
-                )
-                if not xlabel:
-                    xlabel = _xlabel
-                if not ylabel:
-                    ylabel = _ylabel
-
-        # Main plot yaxis options
-        if y_axlim:
-            ax.set_ylim(*y_axlim)
-        if logy:
-            ax.semilogy()
-        else:
-            # if there are no negative yvalues, set limit at origin
-            ax.set_ylim(bottom=0)
-        if ylabel:
-            ax.set_ylabel(ylabel)
-
-        if x_axlim:
-            ax.set_xlim(*x_axlim)
-        else:
-            ax.set_xlim(*bin_range)
-
-        # set some xaxis options only on bottom xaxis (ie ratio plot if it exists else regular plot)
-        axis_ = ratio_ax if ratio_plot else ax
-        if logx:
-            axis_.semilogx()
-            axis_.xaxis.set_minor_formatter(ticker.LogFormatter())
-            axis_.xaxis.set_major_formatter(ticker.LogFormatter())
-        if xlabel:
-            axis_.set_xlabel(xlabel)
-
-        if ratio_plot:
-            if n_plottables > 2:  # don't show legend if there's only two plots
-                ratio_ax.legend(fontsize=10, loc=1)
-            ratio_ax.set_ylabel(ratio_label)
-
-            if x_axlim:
-                ratio_ax.set_xlim(*x_axlim)
-            else:
-                ratio_ax.set_xlim(*bin_range)
-
-            # just in case (I do not trust matplotlib)
-            ax.set_xticklabels([])
-            ax.set_xlabel("")
 
         # SAVE
         # ============================
@@ -649,7 +587,7 @@ class Analysis:
     def _plot_stack(
         self,
         ax: plt.Axes,
-        per_hist_vars: PlotOpts,
+        per_hist_vars: plotting_tools.PlotOpts,
         ratio_ax: None | plt.Axes = None,
         signal_hist: Histogram1D | None = None,
         data_hist: Histogram1D | None = None,
@@ -806,7 +744,9 @@ class Analysis:
                 display_unity=False,
             )
 
-    def _process_plot_variables(self, var_dict: dict[str, Any]) -> tuple[int, PlotOpts]:
+    def _process_plot_variables(
+        self, var_dict: dict[str, Any]
+    ) -> tuple[int, plotting_tools.PlotOpts]:
         """
         Make sure per-plottable variables in `plot()` are either all the same length,
         or be exactly 1 object to apply to each histogram.
@@ -1010,7 +950,7 @@ class Analysis:
         return self[dataset].get_systematic_uncertainty(val=val, selection=selection)
 
     def get_full_systematic_uncertainty(
-        self, per_hist_vars: PlotOpts
+        self, per_hist_vars: plotting_tools.PlotOpts
     ) -> tuple[np.typing.NDArray[1] | Literal[0], np.typing.NDArray[1] | Literal[0]]:
         """Calculate full systematic uncertainties. Outputs int 0 if no systematics are found"""
 
@@ -1189,7 +1129,7 @@ class Analysis:
             # define target histogram
             h_name = f"{prefix}{target_var}_fakes_bkg_{ff_var}_src"
             h_bins = self[self.data_sample].get_binnings(target_var, SR_passID_data)
-            h_target_var_ff = ROOT.TH1F(h_name, h_name, *plotting_tools.get_TH1_bins(**h_bins))
+            h_target_var_ff = ROOT.TH1F(h_name, h_name, *ROOT_utils.get_TH1_bin_args(**h_bins))
 
             # need to fill histograms for each MC sample
             ptrs: dict[str, ROOT.RDF.RResultsPtr] = {}

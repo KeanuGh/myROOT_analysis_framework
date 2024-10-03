@@ -8,7 +8,7 @@ from typing import Type, Iterable
 import ROOT  # type: ignore
 import boost_histogram as bh
 import numpy as np
-import pandas as pd  # type: ignore
+from numpy.typing import ArrayLike
 
 
 # ROOT settings
@@ -201,3 +201,45 @@ def get_object_names_in_file(file: str | Path, obj_type: str) -> list[str]:
     """Get names of objects with given type in ROOT file"""
     with ROOT.TFile(str(file), "r") as f:
         return [obj.GetName() for obj in f.GetListOfKeys() if obj.GetClassName() == obj_type]
+
+
+def get_TH1_bin_args(
+    bins: list[float] | tuple[int, float, float] | bh.axis.Axis, logbins: bool = False
+) -> tuple[int, list | ArrayLike] | tuple[int, float, float]:
+    """Format bins for TH1 constructor"""
+    if isinstance(bins, bh.axis.Axis):
+        return bins.size, bins.edges
+
+    elif hasattr(bins, "__iter__"):
+        if logbins:
+            if not isinstance(bins, tuple) or (len(bins) != 3):
+                raise ValueError(
+                    "Must pass tuple of (nbins, xmin, xmax) as bins to calculate logarithmic bins"
+                )
+            return bins[0], np.geomspace(bins[1], bins[2], bins[0] + 1)  # type: ignore
+
+        if len(bins) == 3 and isinstance(bins, tuple):
+            return bins
+        else:
+            return len(bins) - 1, np.array(bins)
+
+    raise ValueError("Bins should be list of bin edges or tuple like (nbins, xmin, xmax)")
+
+
+def get_th1_bin_edges(h: ROOT.TH1) -> np.typing.NDArray[float]:
+    """Return bin edges for TH1 object hist"""
+    return np.array([h.GetBinLowEdge(i + 1) for i in range(h.GetNbinsX() + 1)])
+
+
+def get_th1_bin_values(h: ROOT.TH1, flow: bool = False) -> np.typing.NDArray[float]:
+    """Return bin contents for TH1 object hist"""
+    if flow:
+        return np.array([h.GetBinContent(i) for i in range(h.GetNbinsX() + 2)])
+    return np.array([h.GetBinContent(i + 1) for i in range(h.GetNbinsX())])
+
+
+def get_th1_bin_errors(h: ROOT.TH1, flow: bool = False) -> np.typing.NDArray[float]:
+    """Return bin error for TH1 object hist"""
+    if flow:
+        return np.array([h.GetBinError(i) for i in range(h.GetNbinsX() + 2)])
+    return np.array([h.GetBinError(i + 1) for i in range(h.GetNbinsX())])

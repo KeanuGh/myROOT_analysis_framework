@@ -1,112 +1,39 @@
-from dataclasses import dataclass
-from typing import Tuple, Sequence, List, Dict
+from typing import Sequence, TypedDict
 from warnings import warn
 
+import ROOT
 import boost_histogram as bh
 import matplotlib.pyplot as plt  # type: ignore
 import mplhep as hep  # type: ignore
-import numpy as np
 import pandas as pd  # type: ignore
 from matplotlib import ticker
 from matplotlib.colors import LogNorm  # type: ignore
-from numpy.typing import ArrayLike
 
+from src.histogram import Histogram1D
 from utils.variable_names import variable_data
 
 # set plot style
 plt.style.use([hep.style.ATLAS])
 
-default_mass_bins = [
-    130,
-    140.3921,
-    151.6149,
-    163.7349,
-    176.8237,
-    190.9588,
-    206.2239,
-    222.7093,
-    240.5125,
-    259.7389,
-    280.5022,
-    302.9253,
-    327.1409,
-    353.2922,
-    381.5341,
-    412.0336,
-    444.9712,
-    480.5419,
-    518.956,
-    560.4409,
-    605.242,
-    653.6246,
-    705.8748,
-    762.3018,
-    823.2396,
-    889.0486,
-    960.1184,
-    1036.869,
-    1119.756,
-    1209.268,
-    1305.936,
-    1410.332,
-    1523.072,
-    1644.825,
-    1776.311,
-    1918.308,
-    2071.656,
-    2237.263,
-    2416.107,
-    2609.249,
-    2817.83,
-    3043.085,
-    3286.347,
-    3549.055,
-    3832.763,
-    4139.151,
-    4470.031,
-    4827.361,
-    5213.257,
-]
 
+class PlotOpts(TypedDict):
+    """Per-histogram options for plotting"""
 
-@dataclass
-class PlottingOptionItem:
-    bins: Tuple[int, float, float] | List[float]
-    weight_col: str
-
-
-default_plotting_options: Dict[str, PlottingOptionItem]
+    vals: list[str | Histogram1D | ROOT.TH1]
+    hists: list[Histogram1D]
+    datasets: list[str]
+    systematics: list[str]
+    selections: list[str]
+    labels: list[str]
+    colours: list[str]
 
 
 # ===============================
 # ===== HISTOGRAM VARIABLES =====
 # ===============================
-def get_TH1_bins(
-    bins: List[float] | Tuple[int, float, float] | bh.axis.Axis, logbins: bool = False
-) -> Tuple[int, list | ArrayLike] | Tuple[int, float, float]:
-    """Format bins for TH1 constructor"""
-    if isinstance(bins, bh.axis.Axis):
-        return bins.size, bins.edges
-
-    elif hasattr(bins, "__iter__"):
-        if logbins:
-            if not isinstance(bins, tuple) or (len(bins) != 3):
-                raise ValueError(
-                    "Must pass tuple of (nbins, xmin, xmax) as bins to calculate logarithmic bins"
-                )
-            return bins[0], np.geomspace(bins[1], bins[2], bins[0] + 1)  # type: ignore
-
-        if len(bins) == 3 and isinstance(bins, tuple):
-            return bins
-        else:
-            return len(bins) - 1, np.array(bins)
-
-    raise ValueError("Bins should be list of bin edges or tuple like (nbins, xmin, xmax)")
-
-
 def get_axis_labels(
     var_name: str | Sequence[str], lepton: str | None = "lepton", diff_xs: bool = False
-) -> Tuple[str | None, str | None]:
+) -> tuple[str | None, str | None]:
     """Gets label for corresponding variable in axis labels dictionary"""
     if not isinstance(var_name, str):
         new_varname = ""
@@ -161,7 +88,7 @@ def get_axis_labels(
 
 
 def get_axis(
-    bins: Sequence[float | int] | Tuple[int, float, float], logbins: bool = False
+    bins: Sequence[float | int] | tuple[int, float, float], logbins: bool = False
 ) -> bh.axis.Axis:
     """
     Returns the correct type of boost-histogram axis based on the input bins.
@@ -187,109 +114,80 @@ def get_axis(
 
 
 def set_axis_options(
-    axis: plt.axes,
-    var_name: Sequence[str] | str,
-    xlim: Tuple[float, float] | None = None,
-    ylim: Tuple[float, float] | None = None,
-    strict_xax_lims: bool = False,
-    strict_yax_lims: bool = False,
-    lepton: str = "",
+    per_hist_vars: PlotOpts,
+    ax: plt.Axes,
+    ratio_ax: plt.Axes | None = None,
+    title: str = "",
+    ratio_label: str = "",
+    scale_by_bin_width: bool = False,
     xlabel: str = "",
     ylabel: str = "",
-    title: str = "",
     logx: bool = False,
     logy: bool = False,
-    label: bool = True,
-    diff_xs: bool = False,
-) -> plt.axes:
-    """
-    Sets my default axis options
+    x_axlim: tuple[float, float] | None = None,
+    y_axlim: tuple[float, float] | None = None,
+) -> None:
+    """Set axis options for plot"""
 
-    :param axis: axis to change
-    :param var_name: name of variable being plotted
-    :param xlim: tuple of limits
-    :param ylim: tuple of limits
-    :param strict_xax_lims: whether to force the x-axis limits to the data limits
-    :param strict_yax_lims: whether to force the y-axis limits to the data limits
-    :param lepton: name of lepton for axis label
-    :param xlabel: x label
-    :param ylabel: y label
-    :param title: plot title
-    :param logx: bool whether to set log axis
-    :param logy: whether to set logarithmic bins where appropriate
-    :param label: whether to add ATLAS label
-    :param diff_xs: set yaxis label to differential cross-section
-    :return: changed axis (also works in place)
-    """
-    if logx:
-        axis.semilogx()
-        axis.xaxis.set_minor_formatter(ticker.LogFormatter())
-        axis.xaxis.set_major_formatter(ticker.LogFormatter())
+    # let mplhep handle the easy stuff
+    hep.atlas.label(italic=(True, True, False), ax=ax, loc=0, llabel="Internal", rlabel=title)
 
+    # get axis labels from variable names if possible
+    # it'll error out when plotting if the histogram edges aren't equal
+    bin_range = (
+        per_hist_vars["hists"][0].bin_edges[0],
+        per_hist_vars["hists"][0].bin_edges[-1],
+    )
+    if (
+        all(isinstance(val, str) for val in per_hist_vars["vals"])
+        and len(val_name := set(per_hist_vars["vals"])) == 1
+    ):
+        val_name = next(iter(val_name))
+        if val_name in variable_data:
+            _xlabel, _ylabel = get_axis_labels(val_name, diff_xs=scale_by_bin_width)
+            if not xlabel:
+                xlabel = _xlabel
+            if not ylabel:
+                ylabel = _ylabel
+
+    # Main plot yaxis options
+    if y_axlim:
+        ax.set_ylim(*y_axlim)
     if logy:
-        axis.semilogy()
-
-    # restrict axes to extent of data. if statement is there to skip blank/guide lines
-    # THIS ACTUALLY CUTS OF THE TWO OUTER BINS IN HALF BECAUSE AXIS LINE EXTENTS ARE AT BIN CENTERS
-    if xlim:
-        axis.set_xlim(*xlim)
-    elif strict_xax_lims:
-        try:
-            xmin = min(
-                [
-                    min(line.get_xdata(), default=np.inf)
-                    for line in axis.lines
-                    if len(line.get_xdata()) > 2
-                ],
-            )
-            xmax = max(
-                [
-                    max(line.get_xdata(), default=-np.inf)
-                    for line in axis.lines
-                    if len(line.get_xdata()) > 2
-                ],
-            )
-            axis.set_xlim(xmin, xmax)
-        except ValueError:
-            pass
-
-    if ylim:
-        axis.set_ylim(*ylim)
-    elif strict_yax_lims:
-        try:
-            ymin = np.nanmin(
-                [
-                    np.nanmin(np.ma.masked_invalid(line.get_ydata()))
-                    for line in axis.lines
-                    if len(line.get_xdata()) > 2
-                ],
-            )
-            ymax = np.nanmax(
-                [
-                    np.nanmax(np.ma.masked_invalid(line.get_ydata()))
-                    for line in axis.lines
-                    if len(line.get_xdata()) > 2
-                ],
-            )
-            axis.set_ylim(ymin, ymax)
-        except ValueError as e:
-            raise ValueError("Could not set strict axis limits") from e
-    elif not logy:
-        axis.set_ylim(bottom=0)
-
-    # set axis labels
-    if not (xlabel and ylabel):
-        _xlabel, _ylabel = get_axis_labels(var_name, lepton, diff_xs)
-        axis.set_xlabel(_xlabel)
-        axis.set_ylabel(_ylabel)
-    if xlabel:
-        axis.set_xlabel(xlabel)
+        ax.semilogy()
+    else:
+        # if there are no negative yvalues, set limit at origin
+        ax.set_ylim(bottom=0)
     if ylabel:
-        axis.set_ylabel(ylabel)
-    if label:
-        hep.atlas.label(italic=(True, True, False), ax=axis, loc=0, llabel="Internal", rlabel=title)
+        ax.set_ylabel(ylabel)
 
-    return axis
+    if x_axlim:
+        ax.set_xlim(*x_axlim)
+    else:
+        ax.set_xlim(*bin_range)
+
+    # set some xaxis options only on bottom xaxis (ie ratio plot if it exists else regular plot)
+    axis_ = ratio_ax if (ratio_ax is not None) else ax
+    if logx:
+        axis_.semilogx()
+        axis_.xaxis.set_minor_formatter(ticker.LogFormatter())
+        axis_.xaxis.set_major_formatter(ticker.LogFormatter())
+    if xlabel:
+        axis_.set_xlabel(xlabel)
+
+    if ratio_ax is not None:
+        if len(per_hist_vars["hists"]) > 2:  # don't show legend if there's only two plots
+            ratio_ax.legend(fontsize=10, loc=1)
+        ratio_ax.set_ylabel(ratio_label)
+
+        if x_axlim:
+            ratio_ax.set_xlim(*x_axlim)
+        else:
+            ratio_ax.set_xlim(*bin_range)
+
+        # just in case (I do not trust matplotlib)
+        ax.set_xticklabels([])
+        ax.set_xlabel("")
 
 
 # ===============================
@@ -333,7 +231,7 @@ def histplot_2d(
 
     # setup mesh differently depending on bh storage
     if hasattr(hist_2d.view(), "value"):
-        mesh = ax.pcolormesh(*hist_2d.axes.edges.T, hist_2d.view().value.T, norm=norm)  # type: ignore
+        mesh = ax.pcolormesh(*hist_2d.axes.edges.T, hist_2d.view().value.T, norm=norm)
     else:
         mesh = ax.pcolormesh(*hist_2d.axes.edges.T, hist_2d.view().T, norm=norm)
 

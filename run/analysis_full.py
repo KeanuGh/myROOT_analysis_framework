@@ -8,7 +8,7 @@ import numpy as np
 from src.analysis import Analysis
 from src.cutting import Cut
 from src.dataset import ProfileOpts
-from src.histogram import Histogram1D, get_th1_bin_edges
+from src.histogram import Histogram1D
 from utils.plotting_tools import get_axis_labels
 from utils.variable_names import variable_data
 
@@ -715,6 +715,7 @@ if __name__ == "__main__":
         "do_stat": False,
         "do_sys": False,
         "ratio_plot": False,
+        "legend_params": {"ncols": 1, "fontsize": 8},
     }
 
     # mass variables
@@ -915,7 +916,6 @@ if __name__ == "__main__":
 
         sel_hist = analysis.get_hist(var, "wtaunu", selection=sel, TH1=True)
         nbins = sel_hist.GetNbinsX()
-        bin_edges = get_th1_bin_edges(sel_hist)
 
         analysis.plot(
             [jet_fakes, ph_fakes, mu_fakes, el_fakes, true_taus],
