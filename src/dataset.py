@@ -764,8 +764,16 @@ class Dataset:
         for sys_name, _ in sys_pairs.items():
             for selection, __ in _.items():
                 for variable, pair in __.items():
+                    tot_uncert = pair["1up"] - pair["1down"]
+
+                    # total uncert
                     self.histograms[nominal_name][selection][
                         f"{variable}_{sys_name}_tot_uncert"
-                    ] = (pair["1up"] - pair["1down"])
+                    ] = tot_uncert
+
+                    # percentage uncert
+                    self.histograms[nominal_name][selection][
+                        f"{variable}_{sys_name}_pct_uncert"
+                    ] = (tot_uncert / self.histograms[nominal_name][selection][variable]) * 100
 
         self.logger.info("Done.")
