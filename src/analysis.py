@@ -637,20 +637,19 @@ class Analysis:
 
         # handle errors
         # -------------------------------------------
-        err_top = np.zeros_like(full_stack.values())
-        err_bottom = np.zeros_like(full_stack.values())
+        err_top = full_stack.values()
+        err_bottom = full_stack.values()
         err_label = ""
         if do_stat:
-            full_stack_vals = full_stack.bin_values(flow)
             full_stack_errs = full_stack.error(flow)
-            err_top += full_stack_vals + (full_stack_errs / 2)
-            err_bottom += full_stack_vals - (full_stack_errs / 2)
+            err_top += full_stack_errs / 2
+            err_bottom -= full_stack_errs / 2
             err_label += "Stat. "
 
         if do_sys:
             sys_up, sys_down = self.get_full_systematic_uncertainty(per_hist_vars)
-            err_top += sys_up
-            err_bottom += sys_down
+            err_top = err_top + sys_up
+            err_bottom = err_bottom - sys_down
             err_label += "+ Sys. "
         else:
             sys_up, sys_down = (None, None)
@@ -687,28 +686,28 @@ class Analysis:
             all_mc_bin_vals = all_mc_hist.bin_values()
 
             # MC errors
-            err_bottom = np.empty_like(all_mc_bin_vals)
-            err_top = np.empty_like(all_mc_bin_vals)
+            err_bottom = np.ones_like(all_mc_bin_vals)
+            err_top = np.ones_like(all_mc_bin_vals)
             err_label = ""
 
             # errors
             # --------------------------------------------
             if do_stat:
                 # errors are sum of MC errors
-                stat_err_arr = np.array(
-                    [hist.error() for hist in per_hist_vars["hists"]] + [signal_hist.error()]
+                stat_err_arr = np.sum(
+                    [hist.error() for hist in per_hist_vars["hists"]] + [signal_hist.error()],
+                    axis=0,
                 )
-                stat_err_arr = np.sum(stat_err_arr, axis=0)
-                err_bottom += (all_mc_bin_vals - stat_err_arr) / all_mc_bin_vals
-                err_top += (all_mc_bin_vals + stat_err_arr) / all_mc_bin_vals
+                err_bottom -= stat_err_arr / (2 * all_mc_bin_vals)
+                err_top += stat_err_arr / (2 * all_mc_bin_vals)
                 err_label += "Stat. "
 
             # do systematic errors
             if do_sys:
                 if (sys_up is None) or (sys_down is None):
-                    raise Exception("How did this happen??")
-                err_bottom += sys_down / all_mc_bin_vals
-                err_top += sys_up / all_mc_bin_vals
+                    raise TypeError("How did this happen??")
+                err_bottom = err_bottom - (sys_down / all_mc_bin_vals)
+                err_top = err_top + (sys_up / all_mc_bin_vals)
                 err_label += "+ Sys. "
 
             if do_stat or do_sys:

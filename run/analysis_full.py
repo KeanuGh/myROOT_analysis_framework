@@ -451,7 +451,6 @@ if __name__ == "__main__":
 
     # FAKES ESTIMATE
     # ========================================================================
-    analysis.paths.plot_dir = base_plotting_dir / "fakes"
     for prong_str in ["1prong", "3prong", ""]:
         cut_name = prong_str + "_" if prong_str else ""
 
@@ -493,6 +492,7 @@ if __name__ == "__main__":
                 f"{cut_name}all_mc_{fakes_source}_{cut_name}SR_failID_trueTau"
             )
 
+            analysis.paths.plot_dir = base_plotting_dir / "fakes_intermediates"
             analysis.plot(
                 [CR_passID_data, CR_failID_data, CR_passID_mc, CR_failID_mc],
                 label=["CR_passID_data", "CR_failID_data", "CR_passID_mc", "CR_failID_mc"],
@@ -533,6 +533,7 @@ if __name__ == "__main__":
 
             # Fake factors
             # ----------------------------------------------------------------------------
+            analysis.paths.plot_dir = base_plotting_dir / "fake_factors"
             analysis.plot(
                 val=f"{cut_name}{fakes_source}_FF",
                 xlabel=r"$p_T^\tau$ [GeV]" if fakes_source == "TauPt" else r"$m_T^W$ [GeV]",
@@ -545,6 +546,7 @@ if __name__ == "__main__":
 
             # Stacks with Fakes background
             # ----------------------------------------------------------------------------
+            analysis.paths.plot_dir = base_plotting_dir / "fakes_stacks"
             # log axes
             default_args = {
                 "dataset": all_samples + [None],
@@ -557,7 +559,7 @@ if __name__ == "__main__":
                 "label": [analysis[ds].label for ds in all_samples] + ["Multijet"],
                 "colour": [analysis[ds].colour for ds in all_samples] + [fakes_colour],
                 "title": f"{fakes_source} fakes binning | data17 | mc16d | {analysis.global_lumi / 1000:.3g}fb$^{{-1}}$",
-                "do_stat": True,
+                "do_stat": False,
                 "do_sys": True,
                 "suffix": "fake_scaled_log",
                 "ratio_plot": True,
@@ -607,6 +609,7 @@ if __name__ == "__main__":
                 )
 
     # compare fake factors
+    analysis.paths.plot_dir = base_plotting_dir / "fakes_comparisons"
     for fakes_source in ["MTW", "TauPt"]:
         analysis.plot(
             val=[f"1prong_{fakes_source}_FF", f"3prong_{fakes_source}_FF"],
@@ -628,7 +631,7 @@ if __name__ == "__main__":
         "label": ["Data SR", "MC + TauPt Fakes", "MC + MTW Fakes"],
         "colour": ["k", "b", "r"],
         "do_stat": True,
-        "do_sys": True,
+        "do_sys": False,
         "suffix": "fake_scaled_log",
         "ratio_plot": True,
         "ratio_axlim": (0.8, 1.2),
@@ -790,7 +793,7 @@ if __name__ == "__main__":
         "dataset": all_samples,
         "title": f"data17 | mc16d | {analysis.global_lumi / 1000:.3g}fb$^{{-1}}$",
         "do_stat": True,
-        "do_sys": True,
+        "do_sys": False,
         "selection": "SR_passID",
         "ratio_plot": True,
         "ratio_axlim": (0.8, 1.2),
@@ -878,7 +881,13 @@ if __name__ == "__main__":
             f"all_mc_{var}_MatchedTruthParticle_isTau_{sel}_PROFILE",
         )
         analysis.plot(
-            [wtaunu_jet_fakes, wtaunu_ph_fakes, wtaunu_mu_fakes, wtaunu_el_fakes, wtaunu_true_taus],
+            [
+                wtaunu_jet_fakes,
+                wtaunu_ph_fakes,
+                wtaunu_mu_fakes,
+                wtaunu_el_fakes,
+                wtaunu_true_taus,
+            ],
             label=[
                 "Jet-matched fake taus",
                 "Photon-matched fake taus",

@@ -452,24 +452,6 @@ class Dataset:
             return Histogram1D(th1=h, logger=self.logger)
         raise ValueError(f"Unknown histogram type '{kind}'")
 
-    def get_systematic_uncertainty(
-        self,
-        val: str,
-        selection: str = "",
-    ) -> tuple[np.typing.NDArray[1] | Literal[0], np.typing.NDArray[1] | Literal[0]]:
-        """Get systematic uncertainty for single variable in dataset. Returns 0s if not found"""
-
-        try:
-            sys_up = self.histograms[self.nominal_name][selection][f"{val}_1up_uncert"]
-            sys_down = self.histograms[self.nominal_name][selection][f"{val}_1down_uncert"]
-        except KeyError:
-            self.logger.debug(
-                "No systematic for histogram: v:%s, ds: %s, sel: %s", val, self.name, selection
-            )
-            return 0, 0
-
-        return ROOT_utils.get_th1_bin_values(sys_down), ROOT_utils.get_th1_bin_values(sys_up)
-
     @staticmethod
     def _match_weight(var_) -> str:
         """match variable to weight"""
@@ -678,6 +660,27 @@ class Dataset:
 
         # gen uncertainties
         self.calculate_systematic_uncertainties()
+
+    # ===========================================
+    # ============== UNCERTAINTIES ==============
+    # ===========================================
+    def get_systematic_uncertainty(
+        self,
+        val: str,
+        selection: str = "",
+    ) -> tuple[np.typing.NDArray[1] | Literal[0], np.typing.NDArray[1] | Literal[0]]:
+        """Get systematic uncertainty for single variable in dataset. Returns 0s if not found"""
+
+        try:
+            sys_up = self.histograms[self.nominal_name][selection][f"{val}_1up_uncert"]
+            sys_down = self.histograms[self.nominal_name][selection][f"{val}_1down_uncert"]
+        except KeyError:
+            self.logger.debug(
+                "No systematic for histogram: v:%s, ds: %s, sel: %s", val, self.name, selection
+            )
+            return 0, 0
+
+        return ROOT_utils.get_th1_bin_values(sys_down), ROOT_utils.get_th1_bin_values(sys_up)
 
     def calculate_systematic_uncertainties(self) -> None:
         """
