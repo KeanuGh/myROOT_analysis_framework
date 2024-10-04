@@ -735,8 +735,8 @@ class Dataset:
                 for variable, sys_hist in selection_dict.items():
                     if isinstance(sys_hist, ROOT.TProfile):
                         continue  # don't want profiles
-
-                    nominal_hist = self.histograms[nominal_name][selection][variable]
+                    if variable_data[variable]["tag"] == VarTag.TRUTH:
+                        continue  # no truth systematics
 
                     if variable not in sys_pairs[base_sys_name][selection]:
                         sys_pairs[base_sys_name][selection][variable] = dict()
@@ -752,9 +752,16 @@ class Dataset:
                         raise ValueError(f"Systematic '{sys_name}' isn't 1up or 1down?")
 
                     # save diff between nominal and systematic
+                    nominal_hist = self.histograms[nominal_name][selection][variable]
                     diff_hist = sys_hist - nominal_hist
                     self.histograms[nominal_name][selection][
                         f"{variable}_{sys_name}_diff"
+                    ] = diff_hist
+
+                    # save pct between nominal and systematic
+                    diff_hist = 100 * (sys_hist - nominal_hist) / nominal_hist
+                    self.histograms[nominal_name][selection][
+                        f"{variable}_{sys_name}_pct"
                     ] = diff_hist
 
                     # sum for full systematics
