@@ -14,7 +14,7 @@ from numpy.typing import ArrayLike
 from tabulate import tabulate
 
 from src.dataset import Dataset
-from src.datasetbuilder import DatasetBuilder, lumi_year
+from src.datasetbuilder import DatasetBuilder, LUMI_YEAR
 from src.dsid_meta import DatasetMetadata
 from src.histogram import Histogram1D
 from src.logger import get_logger
@@ -70,6 +70,7 @@ class Analysis:
         "data_sample",
         "signal_sample",
         "binnings",
+        "fakes_colour",
     )
 
     def __init__(
@@ -130,10 +131,10 @@ class Analysis:
         self.year = year
         if self.year:
             try:
-                self.global_lumi = lumi_year[self.year]
+                self.global_lumi = LUMI_YEAR[self.year]
             except KeyError as e:
                 raise KeyError(
-                    f"Unknown data-year: {self.year}. Known data-years: {list(lumi_year.keys())}"
+                    f"Unknown data-year: {self.year}. Known data-years: {list(LUMI_YEAR.keys())}"
                 ) from e
         else:
             self.global_lumi = global_lumi
@@ -256,7 +257,7 @@ class Analysis:
             else:
                 dataset.gen_all_histograms()
                 dataset.gen_cutflows()
-                dataset.export_dataset(dataset_file)
+                # dataset.export_dataset(dataset_file)
 
             self[dataset_name] = dataset  # save to analysis
 
@@ -264,6 +265,16 @@ class Analysis:
             self.logger.info(f"========= DATASET '{dataset_name}' INITIALISED =========")
             self.logger.info("=" * (42 + len(dataset_name)))
             self.logger.info("")
+
+        # set colours for samples
+        c_iter = iter(plt.rcParams["axes.prop_cycle"].by_key()["color"])
+        for ds in self.mc_samples:
+            c = next(c_iter)
+            if not self[ds].colour:
+                self[ds].colour = c
+        if self.data_sample:  # data is always black
+            self[self.data_sample].colour = "k"
+        self.fakes_colour = next(c_iter)
 
         self.logger.info("=" * (len(analysis_label) + 23))
         self.logger.info(f"ANALYSIS '{analysis_label}' INITIALISED")
@@ -940,7 +951,7 @@ class Analysis:
         val: str,
         dataset: str | None = None,
         selection: str = "",
-    ) -> tuple[np.typing.NDArray[1] | Literal[0], np.typing.NDArray[1] | Literal[0]]:
+    ) -> tuple[np.typing.NDArray[float] | Literal[0], np.typing.NDArray[float] | Literal[0]]:
         """Get systematic uncertainty for single variable in dataframe"""
         if not dataset:
             self.logger.debug("No systematic uncertainties for histograms outside a dataset")
@@ -950,7 +961,7 @@ class Analysis:
 
     def get_full_systematic_uncertainty(
         self, per_hist_vars: plotting_tools.PlotOpts
-    ) -> tuple[np.typing.NDArray[1] | Literal[0], np.typing.NDArray[1] | Literal[0]]:
+    ) -> tuple[np.typing.NDArray[float] | Literal[0], np.typing.NDArray[float] | Literal[0]]:
         """Calculate full systematic uncertainties. Outputs int 0 if no systematics are found"""
 
         sys_errs_up = []
@@ -961,12 +972,14 @@ class Analysis:
             per_hist_vars["vals"],
         ):
             sys_err_down, sys_err_up = self.get_systematic_uncertainty(v, ds, sel)
-            if sys_err_down is sys_err_up is 0:
+            if (np.isscalar(sys_err_down) and sys_err_down == 0) and (
+                np.isscalar(sys_err_up) and sys_err_up == 0
+            ):
                 continue  # skip no errors
             sys_errs_down.append(sys_err_down)
             sys_errs_up.append(sys_err_up)
 
-        if len(sys_errs_up) == 0:
+        if (len(sys_errs_up) == 0) or (len(sys_errs_down) == 0):
             self.logger.error("No systematic uncertainties found for any plottables!")
             return 0, 0
 
@@ -1296,7 +1309,9 @@ class Analysis:
         with open(filename, "w") as f:
             f.write(latex_str)
 
-    def histogram_printout(self, to_latex: bool = False) -> None:
+    def histogram_printout(
+        self, to_file: Literal["txt", "latex", False] = False, to_dir: Path | None = None
+    ) -> None:
         """Printout of histogram metadata"""
         rows = []
         header = ["Hist name", "Entries", "Bin sum", "Integral"]
@@ -1304,10 +1319,17 @@ class Analysis:
         for name, h in self.histograms.items():
             rows.append([name, h.GetEntries(), h.Integral(), h.Integral("width")])
 
-        if not to_latex:
-            self.logger.info(tabulate(rows, headers=header))
-        else:
-            filepath = self.paths.latex_dir / f"{self.name}_histograms.tex"
-            with open(filepath, "w") as f:
-                f.write(tabulate(rows, headers=header, tablefmt="latex_raw"))
-                self.logger.info(f"Saved LaTeX histogram table to {filepath}")
+        d = to_dir if to_dir else self.paths.latex_dir
+        match to_file:
+            case False:
+                self.logger.info(tabulate(rows, headers=header))
+            case "txt":
+                filepath = d / f"{self.name}_histograms.txt"
+                with open(filepath, "w") as f:
+                    f.write(tabulate(rows, headers=header))
+                    self.logger.info(f"Saved histogram table to {filepath}")
+            case "latex":
+                filepath = d / f"{self.name}_histograms.tex"
+                with open(filepath, "w") as f:
+                    f.write(tabulate(rows, headers=header, tablefmt="latex_raw"))
+                    self.logger.info(f"Saved LaTeX histogram table to {filepath}")

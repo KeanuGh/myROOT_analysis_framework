@@ -15,7 +15,7 @@ from utils.var_helpers import derived_vars
 from utils.variable_names import variable_data
 
 # total dataset luminosity per year (pb-1)
-lumi_year: Final[dict] = {
+LUMI_YEAR: Final[dict] = {
     2015: 3219.56,
     2016: 32988.1 + 3219.56,
     2017: 44307.4,
@@ -72,7 +72,7 @@ class DatasetBuilder:
 
     def __post_init__(self):
         if self.year:
-            self.lumi = lumi_year[self.year]
+            self.lumi = LUMI_YEAR[self.year]
 
     def build(
         self,
@@ -213,8 +213,7 @@ class DatasetBuilder:
     ) -> dict[str, ROOT.RDataFrame]:
         """Build DataFrame from given files and TTree/branch combinations from DTA output"""
 
-        # add variables necessary to calculate weights etc
-        extract_variables = self.__add_necessary_dta_variables(extract_variables)
+        extract_variables.add("passReco")  # we'll need this later
 
         # make rdataframe
         self.logger.info(f"Initiating RDataFrame from trees: %s..", ttrees)
@@ -236,15 +235,6 @@ class DatasetBuilder:
         Rdf = Rdf.DefinePerSample(
             "SampleID", f"sampleToId_{self.name}[rdfsampleinfo_.GetSampleName()]"
         )
-
-        # check columns exist in dataframe
-        if missing_cols := (extract_variables - set(Rdf.GetColumnNames())):
-            if self.import_missing_columns_as_nan:
-                self.logger.warning("Importing missing columns as NAN: %s", missing_cols)
-                for col in missing_cols:
-                    Rdf = Rdf.Define(col, "NAN")
-            else:
-                raise ValueError("Missing column(s) in RDataFrame:\n\t" + "\n\t".join(missing_cols))
 
         # define weights
         if self.is_data:
@@ -294,6 +284,15 @@ class DatasetBuilder:
                     func_str = f"{function}({','.join(args)})"
                     Rdf = Rdf.Define(derived_var, func_str)
 
+        # check columns exist in dataframe
+        if missing_cols := (extract_variables - set(Rdf.GetColumnNames())):
+            if self.import_missing_columns_as_nan:
+                self.logger.warning("Importing missing columns as NAN: %s", missing_cols)
+                for col in missing_cols:
+                    Rdf = Rdf.Define(col, "NAN")
+            else:
+                raise ValueError("Missing column(s) in RDataFrame:\n\t" + "\n\t".join(missing_cols))
+
         # apply any hard cuts
         for sample_name, hard_cut in self.hard_cut.items():
             Rdf = Rdf.Filter(
@@ -304,12 +303,6 @@ class DatasetBuilder:
         # self.logger.debug("Filter names:\n%s", "\n\t".join(list(map(str, Rdf.GetFilterNames()))))
 
         return Rdf
-
-    def __add_necessary_dta_variables(self, variables: set[str]) -> set[str]:
-        necc_vars = {"passReco"}
-        output_variables = variables | necc_vars
-        self.logger.debug(f"Added %s to DTA import", necc_vars)
-        return output_variables
 
     def gen_systematics_map(self, sample_file: str | Path) -> dict[str, set[str]]:
         """Generating mapping of {systematic: set of trees containing systematic for different nominals}"""
@@ -322,7 +315,6 @@ class DatasetBuilder:
         for tree in nominal_trees:  # only nominal trees have associated systematics
             tree_prefix = tree.rstrip("NOMINAL")
 
-            # assume files have same trees, read from first file
             systematic_trees |= {
                 treename
                 for treename in get_object_names_in_file(sample_file, "TTree")

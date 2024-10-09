@@ -10,6 +10,7 @@ import ROOT  # type: ignore
 import matplotlib.pyplot as plt  # type: ignore
 import numpy as np
 from numpy.typing import ArrayLike
+from tabulate import tabulate
 
 from src.cutting import Cut, Cutflow, FilterNode, FilterTree
 from src.histogram import Histogram1D
@@ -102,7 +103,7 @@ class Dataset:
                 continue
             sys_set.add(sys_name.removesuffix("__1up").removesuffix("__1down"))
         self.sys_list = list(sys_set)
-        self.logger.info(f"Initialised {self.name}")
+        self.logger.info(f"Initialised dataset: {self.name}")
 
     # Import/Export
     # ===================
@@ -306,6 +307,44 @@ class Dataset:
                     path /= Path(f"{self.name}_{systematic}_{selection}_cutflow.tex")
                 self.cutflows[systematic][selection].print(latex_path=path)
 
+    def histogram_printout(
+        self,
+        to_file: Literal["txt", "latex", False] = False,
+        to_dir: Path | None = None,
+    ) -> None:
+        """Printout of histogram metadata"""
+        rows = []
+        header = ["Systematic", "Selection", "Hist name", "Entries", "Bin sum", "Integral"]
+
+        for sys, _ in self.histograms.items():
+            for selection, __ in _.items():
+                for name, hist in __.items():
+                    rows.append(
+                        [
+                            sys,
+                            selection,
+                            name,
+                            hist.GetEntries(),
+                            hist.Integral(),
+                            hist.Integral("width"),
+                        ]
+                    )
+
+        d = to_dir if to_dir else Path(".")
+        match to_file:
+            case False:
+                self.logger.info(tabulate(rows, headers=header))
+            case "txt":
+                filepath = d / f"{self.name}_histograms.txt"
+                with open(filepath, "w") as f:
+                    f.write(tabulate(rows, headers=header))
+                    self.logger.info(f"Saved histogram table to {filepath}")
+            case "latex":
+                filepath = d / f"{self.name}_histograms.tex"
+                with open(filepath, "w") as f:
+                    f.write(tabulate(rows, headers=header, tablefmt="latex_raw"))
+                    self.logger.info(f"Saved LaTeX histogram table to {filepath}")
+
     # ===============================
     # ========== CUTTING ============
     # ===============================
@@ -452,18 +491,21 @@ class Dataset:
             return Histogram1D(th1=h, logger=self.logger)
         raise ValueError(f"Unknown histogram type '{kind}'")
 
-    @staticmethod
-    def _match_weight(var_) -> str:
+    def _match_weight(self, var_) -> str:
         """match variable to weight"""
-        match variable_data[var_]:
-            case {"tag": VarTag.TRUTH}:
-                return "truth_weight"
-            case {"tag": VarTag.RECO}:
-                return "reco_weight"
-            case {"tag": VarTag.META}:
-                return ""
-            case _:
-                raise ValueError(f"Unknown variable tag for variable {var_}")
+        try:
+            match variable_data[var_]:
+                case {"tag": VarTag.TRUTH}:
+                    return "truth_weight"
+                case {"tag": VarTag.RECO}:
+                    return "reco_weight"
+                case {"tag": VarTag.META}:
+                    return ""
+                case _:
+                    raise ValueError(f"Unknown variable tag for variable {var_}")
+        except KeyError:
+            self.logger.error(f"No known variable {var_}, no weights for you!")
+            return ""
 
     @staticmethod
     def __match_bin_args(var: str) -> dict:
@@ -759,7 +801,7 @@ class Dataset:
                     ] = diff_hist
 
                     # save pct between nominal and systematic
-                    diff_hist = 100 * (sys_hist - nominal_hist) / nominal_hist
+                    diff_hist = 100 * diff_hist / nominal_hist
                     self.histograms[nominal_name][selection][
                         f"{variable}_{sys_name}_pct"
                     ] = diff_hist
