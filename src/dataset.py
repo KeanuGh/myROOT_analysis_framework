@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import re
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -153,7 +154,9 @@ class Dataset:
                 n_ds += 1
         self.logger.info("Took %.2gs to snapshot %d RDataframes", time.time() - t1, n_ds)
 
-        # save histograms
+    def export_histograms(self, filepath: str | Path | None = None) -> None:
+        """export histograms to output root file"""
+
         n_hists = sum(len(hists) for hists in self.histograms.values())
         self.logger.info(f"Saving %d histograms...", n_hists)
         t1 = time.time()
@@ -532,6 +535,15 @@ class Dataset:
     def get_binnings(self, variable_name: str, selection: str | None = None) -> dict:
         """Get correct binnings for variable"""
 
+        # look for first matching key in binning dictionary
+        for k in self.binnings.keys():
+            if not selection:
+                continue
+            if re.match(k, selection):
+                selection = k
+                break
+
+        # select bins
         if (
             selection
             and (selection in self.binnings)

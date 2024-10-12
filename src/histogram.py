@@ -604,15 +604,9 @@ class Histogram1D(bh.Histogram, family=None):
             hist /= hist.bin_widths  # type: ignore
 
         # normalise/scale
-        if not normalise:
-            self.logger.debug(f"Plotting histogram {self.name}...")
-        elif normalise is True:
-            self.logger.debug(f"Plotting histogram {self.name} normalised to unity...")
+        if normalise is True:
             hist.normalise()
-        else:
-            self.logger.debug(
-                f"Plotting normalised histogram {self.name} normalised to {normalise}..."
-            )
+        elif normalise:
             hist.normalise_to(normalise)
 
         # set error
