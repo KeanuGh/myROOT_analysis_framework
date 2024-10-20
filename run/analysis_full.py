@@ -315,6 +315,8 @@ measurement_vars_unitless = [
     "TauNCoreTracks",
     "TauRNNJetScore",
     "TauBDTEleScore",
+    "DeltaPhi_tau_met",
+    "TauPt_div_MET",
 ]
 measurement_vars = measurement_vars_unitless + measurement_vars_mass
 profile_vars = [
