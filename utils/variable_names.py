@@ -1066,6 +1066,16 @@ variable_data: Dict[str, Branch] = {
         "units": "GeV",
         "tag": VarTag.TRUTH,
     },
+    "TruthTauPt_div_MET": {
+        "name": r"Truth $p^\tau_T/p^\nu_T$",
+        "units": "",
+        "tag": VarTag.TRUTH,
+    },
+    "TruthDeltaPhi_tau_met": {
+        "name": r"Truth $\Delta\phi(p^\tau_T,E_T^\mathrm{miss})$",
+        "units": "",
+        "tag": VarTag.TRUTH,
+    },
     # DEFAULT & TESTING
     # =======================================================
     "testvartruth": {

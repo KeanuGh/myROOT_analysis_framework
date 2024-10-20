@@ -175,13 +175,29 @@ derived_vars: Dict[str, OtherVar] = {
         "tree": "",
         "cfunc": "calc_div",
     },
+    "TruthTauPt_div_MET": {
+        "var_args": [
+            "TruthTauPt",
+            "TruthNeutrinoPt",
+        ],
+        "tree": "",
+        "cfunc": "calc_div",
+    },
     "DeltaPhi_tau_met": {
         "var_args": [
             "TauPhi",
             "MET_phi",
         ],
         "tree": "",
-        "cfunc": "calc_absdiff",
+        "cfunc": "calc_dphi",
+    },
+    "TruthDeltaPhi_tau_met": {
+        "var_args": [
+            "TruthTauPhi",
+            "TruthNeutrinoPhi",
+        ],
+        "tree": "",
+        "cfunc": "calc_dphi",
     },
     "TauPt_res": {
         "var_args": [
