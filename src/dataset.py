@@ -702,10 +702,15 @@ class Dataset:
                 histograms_dict[sys_name][selection] = dict()
                 for name, hist_ptr in hist_ptrs.items():
                     histograms_dict[sys_name][selection][name] = hist_ptr.GetValue()
+
+            def count(d):
+                """Count number of subvalues in nested dict"""
+                return sum([count(v) if isinstance(v, dict) else 1 for v in d.values()])
+
             self.logger.info(
                 "Took %.3fs to produce %d histograms over %d run(s).",
                 time.time() - t,
-                len(histograms_dict),
+                count(histograms_dict),
                 root_sys_df.GetNRuns(),
             )
 
