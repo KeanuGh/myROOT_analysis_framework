@@ -102,7 +102,7 @@ datasets: Dict[str, Dict] = {
 # ========================================================================
 pass_presel = Cut(
     r"Pass preselection",
-    r"(passReco == 1) && (TauBaselineWP == 1) && (abs(TauCharge) == 1)"
+    r"(passReco == 1) && (TauBaselineWP == 1) && (abs(TauCharge) == 1) && passMetTrigger"
     r"&& ((MatchedTruthParticle_isTau + MatchedTruthParticle_isElectron + MatchedTruthParticle_isMuon + MatchedTruthParticle_isPhoton) <= 1)",
 )
 pass_taupt170 = Cut(
