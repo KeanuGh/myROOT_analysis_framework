@@ -51,8 +51,8 @@ class Cut:
             tags = {variable_data[v]["tag"] for v in self.included_variables}
             if VarTag.META in tags:
                 raise TypeError(f"Meta variable cut {self.name}")
-            if len(tags) > 1:
-                raise ValueError(f"Mixing reco/truth variables in cut {self.name}")
+            # if len(tags) > 1:
+            #     raise ValueError(f"Mixing reco/truth variables in cut {self.name}")
             self.is_reco = VarTag.RECO in tags
 
         else:
