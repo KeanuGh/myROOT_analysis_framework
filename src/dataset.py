@@ -78,8 +78,9 @@ class Dataset:
     is_signal: bool = False
     is_data: bool = False
     out_file: Path = ""
-    sys_list: list = field(init=False, default_factory=list)
     nominal_name: str = field(init=False, default="")
+    tes_sys_list: list = field(init=False, default_factory=list)
+    eff_sys_list: list = field(init=False, default_factory=list)
 
     def __post_init__(self) -> None:
         if not self.out_file:
@@ -91,8 +92,11 @@ class Dataset:
             for sys_name, rdf in self.rdataframes.items():
                 self.filters[sys_name] = self.gen_filters(rdf)
 
-        # get list of systematics and name of nominal channel
-        sys_set = set()
+        self.init_sys()
+
+    def init_sys(self) -> None:
+        """initialise systematics"""
+        # get list of TES systematics and name of nominal channel from ttrees
         for sys_name in self.rdataframes.keys():
             # skip nominal(s)
             if ("__1up" not in sys_name) and ("__1down" not in sys_name):
@@ -102,8 +106,14 @@ class Dataset:
                     )
                 self.nominal_name = sys_name
                 continue
-            sys_set.add(sys_name.removesuffix("__1up").removesuffix("__1down"))
-        self.sys_list = list(sys_set)
+            self.tes_sys_list.append(sys_name)
+
+        # get EFF systematics from rdataframe
+        self.eff_sys_list = [
+            str(wgt).removeprefix("weight_")
+            for wgt in self.rdataframes[self.nominal_name].GetColumnNames()
+            if wgt.startswith("weight_TAUS_TRUEHADTAU_EFF_")
+        ]
         self.logger.info(f"Initialised dataset: {self.name}")
 
     # Import/Export
@@ -209,18 +219,18 @@ class Dataset:
 
                     # import ttrees
                     if sel_obj_class == "TTree":
-                        sys_tree_name = str(sel_key.GetName()).removeprefix("data_")
-                        if sys_tree_name in imported_trees:
+                        sel_name = str(sel_key.GetName()).removeprefix("data_")
+                        if sel_name in imported_trees:
                             raise ValueError(
-                                f"'{sys_tree_name}' tree  already found in subdir"
+                                f"'{sel_name}' tree  already found in subdir"
                                 f"'{sys_name}/{sel_key.GetName()}' of file: {in_file}"
                             )
 
                         # import TTree into RDataFrame
-                        self.filters[sys_name][sys_tree_name].df = ROOT.RDataFrame(
+                        self.filters[sys_name][sel_name].df = ROOT.RDataFrame(
                             f"{sys_key.GetName()}/{sel_key.GetName()}", str(in_file)
                         )
-                        imported_trees.add(sys_tree_name)
+                        imported_trees.add(sel_name)
                         n_df += 1
                         continue
 
@@ -231,7 +241,7 @@ class Dataset:
                             "in '%s' directory of file: %s",
                             sel_obj_class,
                             sel_key.getName(),
-                            sel_name,
+                            sys_name,
                             in_file,
                         )
                         continue
@@ -254,6 +264,7 @@ class Dataset:
                                 f"'{sys_name}/{sel_key.GetName()}' subdirectory of file: {in_file}"
                             )
 
+        self.init_sys()
         self.logger.info(
             "%d histograms and %d RDataFrames successfully "
             "imported into dataset '%s' from file: %s",
@@ -671,8 +682,26 @@ class Dataset:
                     th1 = self.define_th1(variable_name, hist_name, hist_name)
                     th1_ptr_map[selection][variable_name] = sel_df.Fill(th1, fill_cols)
 
+                    # do systematic weights for reco variables in nominal tree
+                    if (
+                        (self.eff_sys_list or self.tes_sys_list)
+                        and (sys_name == self.nominal_name)
+                        and (weight == "reco_weight")
+                    ):
+                        for sys_wgt in [
+                            str(wgt)
+                            for wgt in self.rdataframes[self.nominal_name].GetColumnNames()
+                            if wgt.startswith("weight_TAUS_TRUEHADTAU_EFF_")
+                        ]:
+                            eff_sys_name = sys_wgt.removeprefix("weight_")
+                            hist_name = smart_join([eff_sys_name, selection, variable_name])
+                            th1 = self.define_th1(variable_name, hist_name, hist_name)
+                            th1_ptr_map[selection][f"{variable_name}|{eff_sys_name}"] = sel_df.Fill(
+                                th1, [variable_name, sys_wgt]
+                            )
+
                 # don't want profiles for systematics
-                if "NOMINAL" not in sys_name:
+                if sys_name == self.nominal_name:
                     continue
 
                 # Define profiles
@@ -701,7 +730,17 @@ class Dataset:
             for selection, hist_ptrs in th1_ptr_map.items():
                 histograms_dict[sys_name][selection] = dict()
                 for name, hist_ptr in hist_ptrs.items():
-                    histograms_dict[sys_name][selection][name] = hist_ptr.GetValue()
+                    # put EFF. sys in their own systematics key
+                    if "TAUS_TRUEHADTAU_EFF_" in name:
+                        var_name, eff_sys_name = name.split("|")
+                        if eff_sys_name not in histograms_dict:
+                            histograms_dict[eff_sys_name] = dict()
+                        if selection not in histograms_dict[eff_sys_name]:
+                            histograms_dict[eff_sys_name][selection] = dict()
+                        histograms_dict[eff_sys_name][selection][var_name] = hist_ptr.GetValue()
+
+                    else:
+                        histograms_dict[sys_name][selection][name] = hist_ptr.GetValue()
 
             def count(d):
                 """Count number of subvalues in nested dict"""
@@ -723,6 +762,17 @@ class Dataset:
     # ===========================================
     # ============== UNCERTAINTIES ==============
     # ===========================================
+    @staticmethod
+    def _get_base_sys_name(s: str) -> str:
+        """get the name of the base systematic"""
+        return (
+            # annoying typo: only JETID_EFF systematic doesn't have double underscore
+            s.removeprefix("weight_")
+            .removesuffix("_1up")
+            .removesuffix("_1down")
+            .removesuffix("_")
+        )
+
     def get_systematic_uncertainty(
         self,
         val: str,
@@ -750,38 +800,64 @@ class Dataset:
             - diff between up and down for each sys: {var}_{sys}_tot_uncert
             - percentage sys uncertainty for each sys: {var}_{sys}_pct_uncert
         """
-
-        nominal_name = ""
-        sys_list = []
-
         self.logger.info("Calculating systematic uncertainties...")
-        # collect systematics
-        for sys_name in self.histograms:
-            # skip nominal(s)
-            if ("__1up" not in sys_name) and ("__1down" not in sys_name):
-                if nominal_name:
-                    raise ValueError(
-                        f"Nominal '{nominal_name}' already found. Got another: '{sys_name}'"
-                    )
-                nominal_name = sys_name
-                continue
 
-            sys_list.append(sys_name)
+        def handle_sys(var: str, sel: str, sys: str, sys_hist: ROOT.TH1) -> None:
+            """
+            calculate systematics:
+                - "{var}_1(up/down)_uncert": the sum of every systematic uncertainty for var
+                - "{var}_1(up/down)_{sys}_diff": absolute difference between nominal and systematic
+                - "{var}_1(up/down)_{sys}_pct": percentage difference between nominal and systematic
+            """
+            if (var not in variable_data) or (variable_data[var]["tag"] != VarTag.RECO):
+                return  # only systematics for reco variables
 
-        if not sys_list:
-            self.logger.info("No systematic uncertainties found. Skipping.")
-            return
+            nonlocal sys_pairs
+            base_sys = self._get_base_sys_name(sys)
+
+            if isinstance(sys_hist, ROOT.TProfile):
+                return  # don't want profiles
+            if variable_data[var]["tag"] == VarTag.TRUTH:
+                return  # no truth systematics
+
+            if var not in sys_pairs[base_sys][sel]:
+                sys_pairs[base_sys][sel][var] = dict()
+
+            # save individual histograms for diff later + sum for total
+            if sys.endswith("_1up"):
+                sys_pairs[base_sys][sel][var]["1up"] = sys_hist
+                full_sys_name = f"{var}_1up_uncert"
+            elif sys.endswith("_1down"):
+                sys_pairs[base_sys][sel][var]["1down"] = sys_hist
+                full_sys_name = f"{var}_1down_uncert"
+            else:
+                raise ValueError(f"Systematic '{sys}' isn't 1up or 1down?")
+
+            # save diff between nominal and systematic
+            nominal_hist = self.histograms[self.nominal_name][sel][var]
+            diff_hist = sys_hist - nominal_hist
+            self.histograms[self.nominal_name][sel][f"{var}_{sys}_diff"] = diff_hist
+
+            # save pct between nominal and systematic
+            pct_hist = 100 * diff_hist / nominal_hist
+            self.histograms[self.nominal_name][sel][f"{var}_{sys}_pct"] = pct_hist
+
+            # sum for full systematics
+            if full_sys_name not in self.histograms[self.nominal_name][sel][var]:
+                self.histograms[self.nominal_name][sel][full_sys_name] = diff_hist
+            else:
+                self.histograms[self.nominal_name][sel][full_sys_name] += diff_hist
 
         # hold sys: selection: variable: (1up, 1down)
         sys_pairs: dict[str, dict[str, dict[str, dict[str, ROOT.TH1]]]] = dict()
 
-        # calculate diffs with nominal
         # SYSTEMATICS LOOP
-        for sys_name in sys_list:
+        # ==================================
+        for sys_name in self.eff_sys_list + self.tes_sys_list:
             sel_dict = self.histograms[sys_name]
 
             # start collecting systemtics pairs
-            base_sys_name = sys_name.removesuffix("__1up").removesuffix("__1down")
+            base_sys_name = self._get_base_sys_name(sys_name)
             if base_sys_name not in sys_pairs:
                 sys_pairs[base_sys_name] = dict()
 
@@ -791,44 +867,11 @@ class Dataset:
                     sys_pairs[base_sys_name][selection] = dict()
 
                 # VARIABLE LOOP
-                for variable, sys_hist in selection_dict.items():
-                    if isinstance(sys_hist, ROOT.TProfile):
-                        continue  # don't want profiles
-                    if variable_data[variable]["tag"] == VarTag.TRUTH:
-                        continue  # no truth systematics
+                for variable, syst_histogram in selection_dict.items():
+                    handle_sys(variable, selection, sys_name, syst_histogram)
 
-                    if variable not in sys_pairs[base_sys_name][selection]:
-                        sys_pairs[base_sys_name][selection][variable] = dict()
-
-                    # save individual histograms for diff later + sum for total
-                    if sys_name.endswith("__1up"):
-                        sys_pairs[base_sys_name][selection][variable]["1up"] = sys_hist
-                        full_sys_name = f"{variable}_1up_uncert"
-                    elif sys_name.endswith("__1down"):
-                        sys_pairs[base_sys_name][selection][variable]["1down"] = sys_hist
-                        full_sys_name = f"{variable}_1down_uncert"
-                    else:
-                        raise ValueError(f"Systematic '{sys_name}' isn't 1up or 1down?")
-
-                    # save diff between nominal and systematic
-                    nominal_hist = self.histograms[nominal_name][selection][variable]
-                    diff_hist = sys_hist - nominal_hist
-                    self.histograms[nominal_name][selection][
-                        f"{variable}_{sys_name}_diff"
-                    ] = diff_hist
-
-                    # save pct between nominal and systematic
-                    diff_hist = 100 * diff_hist / nominal_hist
-                    self.histograms[nominal_name][selection][
-                        f"{variable}_{sys_name}_pct"
-                    ] = diff_hist
-
-                    # sum for full systematics
-                    if full_sys_name not in self.histograms[nominal_name][selection][variable]:
-                        self.histograms[nominal_name][selection][full_sys_name] = diff_hist
-                    else:
-                        self.histograms[nominal_name][selection][full_sys_name] += diff_hist
-
+        # FULL UNCERTAINTY
+        # ==================================
         # final loop for full uncertainty
         for sys_name, _ in sys_pairs.items():
             for selection, __ in _.items():
@@ -836,13 +879,13 @@ class Dataset:
                     tot_uncert = pair["1up"] - pair["1down"]
 
                     # total uncert
-                    self.histograms[nominal_name][selection][
+                    self.histograms[self.nominal_name][selection][
                         f"{variable}_{sys_name}_tot_uncert"
                     ] = tot_uncert
 
                     # percentage uncert
-                    self.histograms[nominal_name][selection][
+                    self.histograms[self.nominal_name][selection][
                         f"{variable}_{sys_name}_pct_uncert"
-                    ] = (tot_uncert / self.histograms[nominal_name][selection][variable]) * 100
+                    ] = (tot_uncert / self.histograms[self.nominal_name][selection][variable]) * 100
 
         self.logger.info("Done.")

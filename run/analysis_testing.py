@@ -16,7 +16,7 @@ if __name__ == "__main__":
         # SIGNAL
         # ====================================================================
         "wtaunu": {
-            "data_path": "/mnt/D/data/DTA_outputs/2024-08-28/user.kghorban.Sh_2211_Wtaunu_H_maxHTpTV2_BFilter.e8351.MC16d.v1.2024-08-28_histograms.root/user.kghorban.40997756._000001.histograms.root",
+            "data_path": "/mnt/D/data/DTA_outputs/2024-09-19/user.kghorban.Sh_2211_Wtaunu_H_maxHTpTV2_BFilter.e8351.MC16d.v1.2024-09-19_histograms.root/user.kghorban.41345350._000001.histograms.root",
             "label": r"$W\rightarrow\tau\nu$",
             "is_signal": True,
         },
@@ -79,6 +79,7 @@ if __name__ == "__main__":
     analysis = Analysis(
         datasets,
         year=2017,
+        rerun=True,
         regen_histograms=True,
         do_systematics=True,
         # regen_metadata=True,
@@ -96,12 +97,26 @@ if __name__ == "__main__":
             },
         },
     )
+    print("TAUS_TRUEHADTAU_SME_TES_DETECTOR_Endcap_LowPt:")
     hist_sys_down = analysis["wtaunu"].get_hist(
         "TauPt", "TAUS_TRUEHADTAU_SME_TES_DETECTOR_Endcap_LowPt__1down", "SR_passID"
     )
     hist_nom = analysis["wtaunu"].get_hist("TauPt", "T_s1thv_NOMINAL", "SR_passID")
     hist_sys_up = analysis["wtaunu"].get_hist(
         "TauPt", "TAUS_TRUEHADTAU_SME_TES_DETECTOR_Endcap_LowPt__1up", "SR_passID"
+    )
+
+    print("sys_down: ", ROOT_utils.get_th1_bin_values(hist_sys_down))
+    print("nominal: ", ROOT_utils.get_th1_bin_values(hist_nom))
+    print("sys_up: ", ROOT_utils.get_th1_bin_values(hist_sys_up))
+
+    print("TAUS_TRUEHADTAU_EFF_RECO_TOTAL:")
+    hist_sys_down = analysis["wtaunu"].get_hist(
+        "TauPt", "TAUS_TRUEHADTAU_EFF_RECO_TOTAL__1down", "SR_passID"
+    )
+    hist_nom = analysis["wtaunu"].get_hist("TauPt", "T_s1thv_NOMINAL", "SR_passID")
+    hist_sys_up = analysis["wtaunu"].get_hist(
+        "TauPt", "TAUS_TRUEHADTAU_EFF_RECO_TOTAL__1up", "SR_passID"
     )
 
     print("sys_down: ", ROOT_utils.get_th1_bin_values(hist_sys_down))

@@ -92,20 +92,21 @@ class DatasetBuilder:
 
         # PRE-PROCESSING
         # ===============================
-
         # sanitise inputs
         if isinstance(cuts, list):
             cuts = {"": cuts}
         if not isinstance(self.ttree, list):
             self.ttree = {self.ttree}
-        if not isinstance(data_path, dict):
-            sample_paths = {self.__DEFAULT_SUBSAMPLE_NAME: data_path}
-        else:
-            sample_paths = data_path
+        if (extract_vars is not None) and (not isinstance(extract_vars, set)):
+            extract_vars = set(extract_vars)
         if self.do_systematics and self.is_data:
             self.logger.warning("No systematic uncertainties for data!")
             self.do_systematics = False
 
+        if not isinstance(data_path, dict):
+            sample_paths = {self.__DEFAULT_SUBSAMPLE_NAME: data_path}
+        else:
+            sample_paths = data_path
         self._subsamples = set(sample_paths.keys())
 
         # handle subsamples and hard cuts
@@ -249,6 +250,17 @@ class DatasetBuilder:
                 "reco_weight",
                 f"(weight * {self.lumi} * dsid_pmgf[mcChannel]) / dsid_sumw[mcChannel]",
             )
+
+        # systematics weights
+        if self.do_systematics:
+            # factor systematic weights with reco weight
+            systematics_weights = [
+                str(w)
+                for w in Rdf.GetColumnNames()
+                if str(w).startswith("weight_TAUS_TRUEHADTAU_EFF_")
+            ]
+            for sys_weight_name in systematics_weights:
+                Rdf = Rdf.Redefine(sys_weight_name, f"{sys_weight_name} * reco_weight")
 
         # rescale energy columns to GeV
         for gev_column in [
