@@ -1,8 +1,10 @@
 from pathlib import Path
 from typing import Dict
 
+import matplotlib.pyplot as plt
 import numpy as np
 
+from dataset import Dataset
 from src.analysis import Analysis
 from src.cutting import Cut
 from utils import ROOT_utils
@@ -79,8 +81,8 @@ if __name__ == "__main__":
     analysis = Analysis(
         datasets,
         year=2017,
-        rerun=True,
-        regen_histograms=True,
+        # rerun=True,
+        # regen_histograms=True,
         do_systematics=True,
         # regen_metadata=True,
         ttree="T_s1thv_NOMINAL",
@@ -124,13 +126,58 @@ if __name__ == "__main__":
     print("sys_up: ", ROOT_utils.get_th1_bin_values(hist_sys_up))
 
     analysis.plot(
-        val=[hist_sys_down, hist_nom, hist_sys_up],
+        val="TauPt",
+        dataset="wtaunu",
+        selection="SR_passID",
         xlabel=variable_data["TauPt"]["name"] + " [GeV]",
-        label=["sys_down", "nominal", "sys_up"],
+        ylabel="Events",
+        do_stat=True,
+        do_syst=True,
+        filename="TauPt_symmetric_uncert.png",
+    )
+
+    analysis.plot(
+        val="TauPt",
+        dataset="wtaunu",
+        selection="SR_passID",
+        xlabel=variable_data["TauPt"]["name"] + " [GeV]",
+        ylabel="Events",
+        do_stat=True,
+        do_syst=True,
+        symmetric_uncert=False,
+        filename="TauPt_unsymmetric_uncert.png",
+    )
+
+    eff_sys = [Dataset.get_base_sys_name(s) for s in analysis["wtaunu"].eff_sys_list]
+    sys_hists = [
+        analysis["wtaunu"].histograms[NOMINAL_NAME]["SR_passID"][f"TauPt_{sys}_pct_uncert"]
+        for sys in eff_sys
+    ]
+    cmap = plt.get_cmap("jet")
+    colours = cmap(np.linspace(0, 1.0, len(eff_sys)))
+    colours = [tuple(c) for c in colours]  # workaround mplhep bug
+    analysis.plot(
+        val=sys_hists,
+        label=eff_sys,
+        colour=colours,
+        xlabel=variable_data["TauPt"]["name"] + " [GeV]",
         ylabel="Events",
         kind="overlay",
-        filename="TauPt_and_systematics.png",
+        do_stat=False,
+        do_syst=False,
+        filename="TauPt_eff_uncerts.png",
     )
+
+    # analysis.plot(
+    #     val=[hist_sys_down, hist_nom, hist_sys_up],
+    #     xlabel=variable_data["TauPt"]["name"] + " [GeV]",
+    #     label=["sys_down", "nominal", "sys_up"],
+    #     ylabel="Events",
+    #     kind="overlay",
+    #     do_stat=False,
+    #     do_sys=False,
+    #     filename="TauPt_and_systematics.png",
+    # )
 
     # # SYSTEMATIC UNCERTAINTIES
     # # ===========================================================================

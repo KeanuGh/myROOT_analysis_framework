@@ -11,7 +11,7 @@ from src.histogram import Histogram1D
 from utils.plotting_tools import get_axis_labels
 from utils.variable_names import variable_data
 
-DTA_PATH = Path("/mnt/D/data/DTA_outputs/2024-08-28/")
+DTA_PATH = Path("/mnt/D/data/DTA_outputs/2024-09-19/")
 # DTA_PATH = Path("/eos/home-k/kghorban/DTA_OUT/2024-02-05/")
 DO_SYS = False
 
@@ -346,8 +346,8 @@ def run_analysis() -> Analysis:
     return Analysis(
         datasets,
         year=2017,
-        rerun=False,
-        # regen_histograms=True,
+        rerun=True,
+        regen_histograms=True,
         do_systematics=DO_SYS,
         # regen_metadata=True,
         ttree=NOMINAL_NAME,
@@ -437,8 +437,8 @@ if __name__ == "__main__":
             dataset="wtaunu",
             xlabel=r"$(p_T^\mathrm{true} - p_T^\mathrm{reco}) / p_T^\mathrm{true}$",
             title=(
-                r"Tau $p_T$ resolution in $W\rightarrow\tau\nu$ | mc16d | "
-                + f"{analysis.global_lumi / 1000:.3g}fb$^{{-1}}$"
+                    r"Tau $p_T$ resolution in $W\rightarrow\tau\nu$ | mc16d | "
+                    + f"{analysis.global_lumi / 1000:.3g}fb$^{{-1}}$"
             ),
             filename="wtaunu_taupt_resolution.png",
         )
@@ -447,8 +447,8 @@ if __name__ == "__main__":
             dataset="wtaunu",
             xlabel=r"$p_T^\mathrm{true} - p_T^\mathrm{reco}$ [GeV]",
             title=(
-                r"Tau $p_T$ resolution in $W\rightarrow\tau\nu$ | mc16d | "
-                + f"{analysis.global_lumi / 1000:.3g}fb$^{{-1}}$"
+                    r"Tau $p_T$ resolution in $W\rightarrow\tau\nu$ | mc16d | "
+                    + f"{analysis.global_lumi / 1000:.3g}fb$^{{-1}}$"
             ),
             filename="wtaunu_taupt_truthrecodiff.png",
         )
@@ -459,8 +459,8 @@ if __name__ == "__main__":
             ylabel=r"Mean $(p_T^\mathrm{true} - p_T^\mathrm{reco}) / p_T^\mathrm{true}$",
             xlabel=r"$m_W^T$ [GeV]",
             title=(
-                r"Tau $p_T$ resolution in $W\rightarrow\tau\nu$ | mc16d | "
-                + f"{analysis.global_lumi / 1000:.3g}fb$^{{-1}}$"
+                    r"Tau $p_T$ resolution in $W\rightarrow\tau\nu$ | mc16d | "
+                    + f"{analysis.global_lumi / 1000:.3g}fb$^{{-1}}$"
             ),
             y_axlim=(-10, 10),
             filename="wtaunu_mtw_taupt_profile.png",
@@ -477,8 +477,8 @@ if __name__ == "__main__":
             label=["SR_passID", "SR_failID", "CR_passID", "CR_failID"],
             xlabel=r"$(p_T^\mathrm{true} - p_T^\mathrm{reco}) / p_T^\mathrm{true}$",
             title=(
-                r"Tau $p_T$ resolution in $W\rightarrow\tau\nu$ | mc16d | "
-                + f"{analysis.global_lumi / 1000:.3g}fb$^{{-1}}$"
+                    r"Tau $p_T$ resolution in $W\rightarrow\tau\nu$ | mc16d | "
+                    + f"{analysis.global_lumi / 1000:.3g}fb$^{{-1}}$"
             ),
             ratio_plot=False,
             filename="wtaunu_taupt_resolution_selections.png",
@@ -495,8 +495,8 @@ if __name__ == "__main__":
             label=["SR_passID", "SR_failID", "CR_passID", "CR_failID"],
             xlabel=r"$p_T^\mathrm{true} - p_T^\mathrm{reco}$ [GeV]",
             title=(
-                r"Tau $p_T$ resolution in $W\rightarrow\tau\nu$ | mc16d | "
-                + f"{analysis.global_lumi / 1000:.3g}fb$^{{-1}}$"
+                    r"Tau $p_T$ resolution in $W\rightarrow\tau\nu$ | mc16d | "
+                    + f"{analysis.global_lumi / 1000:.3g}fb$^{{-1}}$"
             ),
             ratio_plot=False,
             filename="wtaunu_taupt_truthrecodiff_selections.png",
@@ -514,8 +514,8 @@ if __name__ == "__main__":
             ylabel=r"Mean $(p_T^\mathrm{true} - p_T^\mathrm{reco}) / p_T^\mathrm{true}$",
             xlabel=r"$m_W^T$ [GeV]",
             title=(
-                r"Tau $p_T$ resolution in $W\rightarrow\tau\nu$ | mc16d | "
-                + f"{analysis.global_lumi / 1000:.3g}fb$^{{-1}}$"
+                    r"Tau $p_T$ resolution in $W\rightarrow\tau\nu$ | mc16d | "
+                    + f"{analysis.global_lumi / 1000:.3g}fb$^{{-1}}$"
             ),
             y_axlim=(-10, 10),
             ratio_plot=False,
@@ -634,9 +634,9 @@ if __name__ == "__main__":
                     "dataset": all_samples + [None],
                     "systematic": NOMINAL_NAME,
                     "selection": (
-                        [f"{nprong}{wp}_SR_passID"]
-                        + [f"trueTau_{nprong}{wp}_SR_passID"] * len(mc_samples)
-                        + [None]
+                            [f"{nprong}{wp}_SR_passID"]
+                            + [f"trueTau_{nprong}{wp}_SR_passID"] * len(mc_samples)
+                            + [None]
                     ),
                     "label": [analysis[ds].label for ds in all_samples] + ["Multijet"],
                     "colour": [analysis[ds].colour for ds in all_samples] + [analysis.fakes_colour],
@@ -649,11 +649,13 @@ if __name__ == "__main__":
                     "kind": "stack",
                 }
 
+
                 def FF_vars(s: str) -> list[str]:
                     """List of variable names for each sample"""
                     return [s] * (len(all_samples)) + [
                         f"{nprong}{wp}_{s}_fakes_bkg_{fakes_source}_src"
                     ]
+
 
                 # mass variables
                 for v in measurement_vars_mass:
@@ -721,6 +723,7 @@ if __name__ == "__main__":
             "ratio_axlim": (0.8, 1.2),
         }
 
+
         def FF_full_bkg(variable: str, t: str) -> Histogram1D:
             """Sum of all backgrounds + signal + FF"""
             return Histogram1D(
@@ -735,8 +738,9 @@ if __name__ == "__main__":
                         for ds_ in mc_samples
                     ]
                 )
-                + analysis.get_hist(f"{wp}_{variable}_fakes_bkg_{t}_src")
+                    + analysis.get_hist(f"{wp}_{variable}_fakes_bkg_{t}_src")
             )
+
 
         # mass variables
         for v in measurement_vars_mass:

@@ -264,7 +264,6 @@ class Dataset:
                                 f"'{sys_name}/{sel_key.GetName()}' subdirectory of file: {in_file}"
                             )
 
-        self.init_sys()
         self.logger.info(
             "%d histograms and %d RDataFrames successfully "
             "imported into dataset '%s' from file: %s",
@@ -299,7 +298,7 @@ class Dataset:
     # ========= PRINTOUTS ===========
     # ===============================
     def cutflow_printout(
-        self, systematic: str = "", selection: str = "", path: Path | None = None
+            self, systematic: str = "", selection: str = "", path: Path | None = None
     ) -> None:
         """Prints cutflow table. Pass path to .tex file if you want to print to latex"""
 
@@ -322,9 +321,9 @@ class Dataset:
                 self.cutflows[systematic][selection].print(latex_path=path)
 
     def histogram_printout(
-        self,
-        to_file: Literal["txt", "latex", False] = False,
-        to_dir: Path | None = None,
+            self,
+            to_file: Literal["txt", "latex", False] = False,
+            to_dir: Path | None = None,
     ) -> None:
         """Printout of histogram metadata"""
         rows = []
@@ -425,16 +424,16 @@ class Dataset:
     # =========== PLOTING FUNCTION(S) ===========
     # ===========================================
     def plot_hist(
-        self,
-        var: str,
-        bins: list[float] | tuple[int, float, float] | None = None,
-        ax: plt.Axes = None,
-        yerr: ArrayLike | bool = False,
-        normalise: float | bool = False,
-        systematic: str = "T_s1hv_NOMINAL",
-        selection: str = "",
-        histtype: str = "TH1F",
-        **kwargs,
+            self,
+            var: str,
+            bins: list[float] | tuple[int, float, float] | None = None,
+            ax: plt.Axes = None,
+            yerr: ArrayLike | bool = False,
+            normalise: float | bool = False,
+            systematic: str = "T_s1hv_NOMINAL",
+            selection: str = "",
+            histtype: str = "TH1F",
+            **kwargs,
     ) -> Histogram1D:
         """
         Generate 1D plots of given variables in dataframe. Returns figure object of list of figure objects.
@@ -487,11 +486,11 @@ class Dataset:
     # ============== HISTOGRAMMING ==============
     # ===========================================
     def get_hist(
-        self,
-        variable,
-        systematic: str = "T_s1hv_NOMINAL",
-        selection: str = "",
-        kind: Literal["th1", "boost"] = "th1",
+            self,
+            variable,
+            systematic: str = "T_s1hv_NOMINAL",
+            selection: str = "",
+            kind: Literal["th1", "boost"] = "th1",
     ) -> ROOT.TH1 | Histogram1D:
         """Fetch histogram from internal dictionary"""
         try:
@@ -556,9 +555,9 @@ class Dataset:
 
         # select bins
         if (
-            selection
-            and (selection in self.binnings)
-            and (variable_name in self.binnings[selection])
+                selection
+                and (selection in self.binnings)
+                and (variable_name in self.binnings[selection])
         ):
             bin_args = {"bins": self.binnings[selection][variable_name]}
         elif variable_name in self.binnings[""]:
@@ -569,7 +568,7 @@ class Dataset:
         return bin_args
 
     def define_th1(
-        self, variable: str, name: str = "", title: str = "", histtype="TH1F"
+            self, variable: str, name: str = "", title: str = "", histtype="TH1F"
     ) -> ROOT.TH1F:
         """Define histogram from variable with correct binnings"""
         allowed_histtypes = ["TH1F", "TH1D", "TH1I", "TH1C", "TH1L", "TH1S"]
@@ -588,11 +587,11 @@ class Dataset:
         )
 
     def define_profile(
-        self,
-        profile_opts: ProfileOpts,
-        profile_name: str,
-        systematic: str = "T_s1hv_NOMINAL",
-        selection: str = "",
+            self,
+            profile_opts: ProfileOpts,
+            profile_name: str,
+            systematic: str = "T_s1hv_NOMINAL",
+            selection: str = "",
     ) -> tuple[ROOT.TProfile1DModel, str, str, str] | tuple[ROOT.TProfile1DModel, str, str]:
         """Return arguments for profile creation from profile options"""
         bin_args = self.get_binnings(profile_opts.x, selection)
@@ -608,11 +607,11 @@ class Dataset:
         return profile_model, profile_opts.x, profile_opts.y
 
     def gen_histogram(
-        self,
-        variable: str,
-        systematic: str = "T_s1thv_NOMINAL",
-        selection: str = "",
-        histtype: str = "TH1F",
+            self,
+            variable: str,
+            systematic: str = "T_s1thv_NOMINAL",
+            selection: str = "",
+            histtype: str = "TH1F",
     ) -> ROOT.TH1:
         """Return TH1 histogram from selection for variable. Binning taken from internal binnings dictionary"""
         weight = self._match_weight(variable)
@@ -640,6 +639,7 @@ class Dataset:
 
         histograms_dict = dict()  # to store outputs
         output_histogram_variables = self.all_vars
+        self.logger.info(f"Defining histograms for dataset {self.name}...")
         if self.logger.getEffectiveLevel() < 20 and do_prints:
             # variable MUST be in scope! (why is ROOT like this)
             verbosity = ROOT.Experimental.RLogScopedVerbosity(
@@ -684,9 +684,9 @@ class Dataset:
 
                     # do systematic weights for reco variables in nominal tree
                     if (
-                        (self.eff_sys_list or self.tes_sys_list)
-                        and (sys_name == self.nominal_name)
-                        and (weight == "reco_weight")
+                            (self.eff_sys_list or self.tes_sys_list)
+                            and (sys_name == self.nominal_name)
+                            and (weight == "reco_weight")
                     ):
                         for sys_wgt in [
                             str(wgt)
@@ -721,10 +721,14 @@ class Dataset:
                     )
                     th1_ptr_map[selection][profile_name] = root_sys_df.Profile1D(*profile_args)
 
+            def count(d):
+                """Count number of subvalues in nested dict"""
+                return sum([count(v) if isinstance(v, dict) else 1 for v in d.values()])
+
             # generate histograms
             t = time.time()
             self.logger.info(
-                "Producing %s histograms for %s in %s...", len(th1_ptr_map), sys_name, self.name
+                "Producing %s histograms for %s in %s...", count(th1_ptr_map), sys_name, self.name
             )
             histograms_dict[sys_name] = dict()
             for selection, hist_ptrs in th1_ptr_map.items():
@@ -741,10 +745,6 @@ class Dataset:
 
                     else:
                         histograms_dict[sys_name][selection][name] = hist_ptr.GetValue()
-
-            def count(d):
-                """Count number of subvalues in nested dict"""
-                return sum([count(v) if isinstance(v, dict) else 1 for v in d.values()])
 
             self.logger.info(
                 "Took %.3fs to produce %d histograms over %d run(s).",
@@ -763,7 +763,7 @@ class Dataset:
     # ============== UNCERTAINTIES ==============
     # ===========================================
     @staticmethod
-    def _get_base_sys_name(s: str) -> str:
+    def get_base_sys_name(s: str) -> str:
         """get the name of the base systematic"""
         return (
             # annoying typo: only JETID_EFF systematic doesn't have double underscore
@@ -774,15 +774,24 @@ class Dataset:
         )
 
     def get_systematic_uncertainty(
-        self,
-        val: str,
-        selection: str = "",
+            self,
+            val: str,
+            selection: str = "",
+            symmetric: bool = True,
     ) -> tuple[np.typing.NDArray[1] | Literal[0], np.typing.NDArray[1] | Literal[0]]:
         """Get systematic uncertainty for single variable in dataset. Returns 0s if not found"""
 
         try:
-            sys_up = self.histograms[self.nominal_name][selection][f"{val}_1up_uncert"]
-            sys_down = self.histograms[self.nominal_name][selection][f"{val}_1down_uncert"]
+            if symmetric:
+                uncert_halved = self.histograms[self.nominal_name][selection][
+                    f"{val}_tot_uncert"
+                ].Clone()
+                uncert_halved.Scale(0.5)
+                sys_up = self.histograms[self.nominal_name][selection][val] + uncert_halved
+                sys_down = self.histograms[self.nominal_name][selection][val] - uncert_halved
+            else:
+                sys_up = self.histograms[self.nominal_name][selection][f"{val}_1up_uncert"]
+                sys_down = self.histograms[self.nominal_name][selection][f"{val}_1down_uncert"]
         except KeyError:
             self.logger.debug(
                 "No systematic for histogram: v:%s, ds: %s, sel: %s", val, self.name, selection
@@ -813,7 +822,7 @@ class Dataset:
                 return  # only systematics for reco variables
 
             nonlocal sys_pairs
-            base_sys = self._get_base_sys_name(sys)
+            base_sys = self.get_base_sys_name(sys)
 
             if isinstance(sys_hist, ROOT.TProfile):
                 return  # don't want profiles
@@ -834,12 +843,12 @@ class Dataset:
                 raise ValueError(f"Systematic '{sys}' isn't 1up or 1down?")
 
             # save diff between nominal and systematic
-            nominal_hist = self.histograms[self.nominal_name][sel][var]
-            diff_hist = sys_hist - nominal_hist
+            nominal = self.histograms[self.nominal_name][sel][var]
+            diff_hist = sys_hist - nominal
             self.histograms[self.nominal_name][sel][f"{var}_{sys}_diff"] = diff_hist
 
             # save pct between nominal and systematic
-            pct_hist = 100 * diff_hist / nominal_hist
+            pct_hist = 100 * diff_hist / nominal
             self.histograms[self.nominal_name][sel][f"{var}_{sys}_pct"] = pct_hist
 
             # sum for full systematics
@@ -851,13 +860,13 @@ class Dataset:
         # hold sys: selection: variable: (1up, 1down)
         sys_pairs: dict[str, dict[str, dict[str, dict[str, ROOT.TH1]]]] = dict()
 
-        # SYSTEMATICS LOOP
-        # ==================================
+        # SYSTEMATICS LOOP FOR INDIVIDUAL SYSTEMATICS
+        # ================================================================
         for sys_name in self.eff_sys_list + self.tes_sys_list:
             sel_dict = self.histograms[sys_name]
 
             # start collecting systemtics pairs
-            base_sys_name = self._get_base_sys_name(sys_name)
+            base_sys_name = self.get_base_sys_name(sys_name)
             if base_sys_name not in sys_pairs:
                 sys_pairs[base_sys_name] = dict()
 
@@ -876,9 +885,13 @@ class Dataset:
         for sys_name, _ in sys_pairs.items():
             for selection, __ in _.items():
                 for variable, pair in __.items():
-                    tot_uncert = pair["1up"] - pair["1down"]
+                    nominal_hist = self.histograms[self.nominal_name][selection][variable]
+                    uncert_up = ROOT_utils.th1_abs(pair["1up"] - nominal_hist)
+                    undert_down = ROOT_utils.th1_abs(pair["1down"] - nominal_hist)
+                    tot_uncert = undert_down + uncert_up
+                    pct_uncert = (tot_uncert / nominal_hist) * 100
 
-                    # total uncert
+                    # total uncert for systematic
                     self.histograms[self.nominal_name][selection][
                         f"{variable}_{sys_name}_tot_uncert"
                     ] = tot_uncert
@@ -886,6 +899,32 @@ class Dataset:
                     # percentage uncert
                     self.histograms[self.nominal_name][selection][
                         f"{variable}_{sys_name}_pct_uncert"
-                    ] = (tot_uncert / self.histograms[self.nominal_name][selection][variable]) * 100
+                    ] = pct_uncert
+
+                    # overall summed uncertainty
+                    if (
+                            f"{variable}_tot_uncert"
+                            not in self.histograms[self.nominal_name][selection]
+                    ):
+                        self.histograms[self.nominal_name][selection][
+                            f"{variable}_tot_uncert"
+                        ] = tot_uncert
+                    else:
+                        self.histograms[self.nominal_name][selection][
+                            f"{variable}_tot_uncert"
+                        ] += tot_uncert
+
+                    # overall percent uncertainty
+                    if (
+                            f"{variable}_pct_uncert"
+                            not in self.histograms[self.nominal_name][selection]
+                    ):
+                        self.histograms[self.nominal_name][selection][
+                            f"{variable}_pct_uncert"
+                        ] = pct_uncert
+                    else:
+                        self.histograms[self.nominal_name][selection][
+                            f"{variable}_pct_uncert"
+                        ] += pct_uncert
 
         self.logger.info("Done.")

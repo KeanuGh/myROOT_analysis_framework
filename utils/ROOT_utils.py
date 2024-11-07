@@ -243,3 +243,11 @@ def get_th1_bin_errors(h: ROOT.TH1, flow: bool = False) -> np.typing.NDArray[flo
     if flow:
         return np.array([h.GetBinError(i) for i in range(h.GetNbinsX() + 2)])
     return np.array([h.GetBinError(i + 1) for i in range(h.GetNbinsX())])
+
+
+def th1_abs(h: ROOT.TH1) -> ROOT.TH1:
+    """Return abs() of th1"""
+    th1 = h.Clone()
+    for i in range(h.GetNbinsX()):
+        th1.SetBinContent(i + 1, abs(h.GetBinContent(i + 1)))
+    return th1
