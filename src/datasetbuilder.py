@@ -260,7 +260,9 @@ class DatasetBuilder:
                 if str(w).startswith("weight_TAUS_TRUEHADTAU_EFF_")
             ]
             for sys_weight_name in systematics_weights:
-                Rdf = Rdf.Redefine(sys_weight_name, f"{sys_weight_name} * reco_weight")
+                Rdf = Rdf.Redefine(
+                    sys_weight_name, f"{sys_weight_name} * reco_weight / selectionSF"
+                )
 
         # rescale energy columns to GeV
         for gev_column in [
