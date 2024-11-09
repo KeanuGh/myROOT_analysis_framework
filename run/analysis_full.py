@@ -1,102 +1,17 @@
 from pathlib import Path
 from typing import Dict
 
-import matplotlib.pyplot as plt
 import numpy as np
 
 from src.analysis import Analysis
 from src.cutting import Cut
 from src.dataset import ProfileOpts
 from src.histogram import Histogram1D
-from utils.plotting_tools import get_axis_labels
 from utils.variable_names import variable_data
 
 DTA_PATH = Path("/mnt/D/data/DTA_outputs/2024-09-19/")
 # DTA_PATH = Path("/eos/home-k/kghorban/DTA_OUT/2024-02-05/")
 DO_SYS = False
-
-datasets: Dict[str, Dict] = {
-    # SIGNAL
-    # ====================================================================
-    "wtaunu": {
-        "data_path": {
-            "lm_cut": DTA_PATH / "*Sh_2211_Wtaunu_*_maxHTpTV2*/*.root",
-            "full": DTA_PATH / "*Sh_2211_Wtaunu_mW_120*/*.root",
-        },
-        "hard_cut": {"lm_cut": "TruthBosonM < 120"},
-        "label": r"$W\rightarrow\tau\nu$",
-        "is_signal": True,
-    },
-    # BACKGROUNDS
-    # ====================================================================
-    # W -> light lepton
-    "wlnu": {
-        "data_path": {
-            "lm_cut": [
-                DTA_PATH / "*Sh_2211_Wmunu_maxHTpTV2*/*.root",
-                DTA_PATH / "*Sh_2211_Wenu_maxHTpTV2*/*.root",
-            ],
-            "full": [
-                DTA_PATH / "*Sh_2211_Wmunu_mW_120*/*.root",
-                DTA_PATH / "*Sh_2211_Wenu_mW_120*/*.root",
-            ],
-        },
-        "hard_cut": {"lm_cut": "TruthBosonM < 120"},
-        "label": r"$W\rightarrow (e/\mu)\nu$",
-    },
-    # Z -> ll
-    "zll": {
-        "data_path": {
-            "lm_cut": [
-                DTA_PATH / "*Sh_2211_Ztautau_*_maxHTpTV2*/*.root",
-                DTA_PATH / "*Sh_2211_Zee_maxHTpTV2*/*.root",
-                DTA_PATH / "*Sh_2211_Zmumu_maxHTpTV2*/*.root",
-            ],
-            "full": [
-                DTA_PATH / "*Sh_2211_Ztautau_mZ_120*/*.root",
-                DTA_PATH / "*Sh_2211_Zmumu_mZ_120*/*.root",
-                DTA_PATH / "*Sh_2211_Zee_mZ_120*/*.root",
-                DTA_PATH / "*Sh_2211_Znunu_pTV2*/*.root",
-            ],
-        },
-        "hard_cut": {"lm_cut": "TruthBosonM < 120"},
-        "label": r"$Z\rightarrow (l/\nu)(l/\nu)$",
-    },
-    "top": {
-        "data_path": [
-            DTA_PATH / "*PP8_singletop*/*.root",
-            DTA_PATH / "*PP8_tchan*/*.root",
-            DTA_PATH / "*PP8_Wt_DR_dilepton*/*.root",
-            DTA_PATH / "*PP8_ttbar_hdamp258p75*/*.root",
-        ],
-        "label": "Top",
-    },
-    # DIBOSON
-    "diboson": {
-        "data_path": [
-            DTA_PATH / "*Sh_2212_llll*/*.root",
-            DTA_PATH / "*Sh_2212_lllv*/*.root",
-            DTA_PATH / "*Sh_2212_llvv*/*.root",
-            DTA_PATH / "*Sh_2212_lvvv*/*.root",
-            DTA_PATH / "*Sh_2212_vvvv*/*.root",
-            DTA_PATH / "*Sh_2211_ZqqZll*/*.root",
-            DTA_PATH / "*Sh_2211_ZbbZll*/*.root",
-            DTA_PATH / "*Sh_2211_WqqZll*/*.root",
-            DTA_PATH / "*Sh_2211_WlvWqq*/*.root",
-            DTA_PATH / "*Sh_2211_WlvZqq*/*.root",
-            DTA_PATH / "*Sh_2211_WlvZbb*/*.root",
-        ],
-        "label": "Diboson",
-    },
-    # DATA
-    # ====================================================================
-    "data": {
-        # "data_path": DTA_PATH / "*data17*/*.root",
-        "data_path": Path("/data/DTA_outputs/2024-03-05/*data17*/*.root"),
-        "label": "data",
-        "is_data": True,
-    },
-}
 
 # CUTS & SELECTIONS
 # ========================================================================
@@ -283,25 +198,8 @@ wanted_variables = {
     "MET_met",
     "MET_phi",
     "MTW",
-    "DeltaPhi_tau_met",
-    "TauPt_div_MET",
     "TauRNNJetScore",
     "TauBDTEleScore",
-    "TruthTauPt",
-    "TruthTauEta",
-    "TruthTauPhi",
-    "TauNCoreTracks",
-    # "TruthTau_nChargedTracks",
-    # "TruthTau_nNeutralTracks",
-    "TauPt_res",
-    "TauPt_diff",
-    "MatchedTruthParticlePt",
-    "MatchedTruthParticle_isTau",
-    "MatchedTruthParticle_isElectron",
-    "MatchedTruthParticle_isMuon",
-    "MatchedTruthParticle_isPhoton",
-    "MatchedTruthParticle_isJet",
-    "nJets",
 }
 measurement_vars_mass = [
     "TauPt",
@@ -312,11 +210,8 @@ measurement_vars_unitless = [
     "TauEta",
     "TauPhi",
     "nJets",
-    "TauNCoreTracks",
-    "TauRNNJetScore",
     "TauBDTEleScore",
     "DeltaPhi_tau_met",
-    "TauPt_div_MET",
 ]
 measurement_vars = measurement_vars_unitless + measurement_vars_mass
 profile_vars = [
@@ -340,6 +235,89 @@ for measurement_var in measurement_vars:
         )
 NOMINAL_NAME = "T_s1thv_NOMINAL"
 
+datasets: Dict[str, Dict] = {
+    # SIGNAL
+    # ====================================================================
+    "wtaunu": {
+        "data_path": {
+            "lm_cut": DTA_PATH / "*Sh_2211_Wtaunu_*_maxHTpTV2*/*.root",
+            "full": DTA_PATH / "*Sh_2211_Wtaunu_mW_120*/*.root",
+        },
+        "hard_cut": {"lm_cut": "TruthBosonM < 120"},
+        "label": r"$W\rightarrow\tau\nu$",
+        "is_signal": True,
+    },
+    # BACKGROUNDS
+    # ====================================================================
+    # W -> light lepton
+    "wlnu": {
+        "data_path": {
+            "lm_cut": [
+                DTA_PATH / "*Sh_2211_Wmunu_maxHTpTV2*/*.root",
+                DTA_PATH / "*Sh_2211_Wenu_maxHTpTV2*/*.root",
+            ],
+            "full": [
+                DTA_PATH / "*Sh_2211_Wmunu_mW_120*/*.root",
+                DTA_PATH / "*Sh_2211_Wenu_mW_120*/*.root",
+            ],
+        },
+        "hard_cut": {"lm_cut": "TruthBosonM < 120"},
+        "label": r"$W\rightarrow (e/\mu)\nu$",
+    },
+    # Z -> ll
+    "zll": {
+        "data_path": {
+            "lm_cut": [
+                DTA_PATH / "*Sh_2211_Ztautau_*_maxHTpTV2*/*.root",
+                DTA_PATH / "*Sh_2211_Zee_maxHTpTV2*/*.root",
+                DTA_PATH / "*Sh_2211_Zmumu_maxHTpTV2*/*.root",
+            ],
+            "full": [
+                DTA_PATH / "*Sh_2211_Ztautau_mZ_120*/*.root",
+                DTA_PATH / "*Sh_2211_Zmumu_mZ_120*/*.root",
+                DTA_PATH / "*Sh_2211_Zee_mZ_120*/*.root",
+                DTA_PATH / "*Sh_2211_Znunu_pTV2*/*.root",
+            ],
+        },
+        "hard_cut": {"lm_cut": "TruthBosonM < 120"},
+        "label": r"$Z\rightarrow (l/\nu)(l/\nu)$",
+    },
+    "top": {
+        "data_path": [
+            DTA_PATH / "*PP8_singletop*/*.root",
+            DTA_PATH / "*PP8_tchan*/*.root",
+            DTA_PATH / "*PP8_Wt_DR_dilepton*/*.root",
+            DTA_PATH / "*PP8_ttbar_hdamp258p75*/*.root",
+        ],
+        "label": "Top",
+    },
+    # DIBOSON
+    "diboson": {
+        "data_path": [
+            DTA_PATH / "*Sh_2212_llll*/*.root",
+            DTA_PATH / "*Sh_2212_lllv*/*.root",
+            DTA_PATH / "*Sh_2212_llvv*/*.root",
+            DTA_PATH / "*Sh_2212_lvvv*/*.root",
+            DTA_PATH / "*Sh_2212_vvvv*/*.root",
+            DTA_PATH / "*Sh_2211_ZqqZll*/*.root",
+            DTA_PATH / "*Sh_2211_ZbbZll*/*.root",
+            DTA_PATH / "*Sh_2211_WqqZll*/*.root",
+            DTA_PATH / "*Sh_2211_WlvWqq*/*.root",
+            DTA_PATH / "*Sh_2211_WlvZqq*/*.root",
+            DTA_PATH / "*Sh_2211_WlvZbb*/*.root",
+        ],
+        "label": "Diboson",
+    },
+    # DATA
+    # ====================================================================
+    "data": {
+        # "data_path": DTA_PATH / "*data17*/*.root",
+        "data_path": Path("/data/DTA_outputs/2024-03-05/*data17*/*.root"),
+        "label": "data",
+        "is_data": True,
+    },
+}
+
 
 def run_analysis() -> Analysis:
     """Run analysis"""
@@ -351,7 +329,7 @@ def run_analysis() -> Analysis:
         do_systematics=DO_SYS,
         # regen_metadata=True,
         ttree=NOMINAL_NAME,
-        cuts=selections,
+        selections=selections,
         analysis_label="analysis_full",
         log_level=10,
         log_out="both",
@@ -371,10 +349,6 @@ def run_analysis() -> Analysis:
                 "TauRNNJetScore": np.linspace(0, 1, 51),
                 "TauBDTEleScore": np.linspace(0, 1, 51),
                 "TruthTauPt": np.geomspace(1, 1000, 21),
-                "TauNCoreTracks": np.linspace(0, 4, 5),
-                "TauPt_res": np.linspace(-1, 1, 51),
-                "TauPt_diff": np.linspace(-300, 300, 51),
-                "badJet": (2, 0, 2),
             },
             ".*_CR_.*ID": {
                 "MET_met": np.geomspace(1, 100, 51),
@@ -407,120 +381,6 @@ if __name__ == "__main__":
     # loop over each working point
     for wp in ("loose", "medium", "tight"):
         wp_dir = base_plotting_dir / wp
-
-        # PLOT TRUTH (for mental health) (no selection)
-        # ========================================================================
-        analysis.paths.plot_dir = wp_dir / "truth"
-        default_args = {
-            "dataset": mc_samples,
-            "title": f"Truth Taus | mc16d | {analysis.global_lumi / 1000:.3g}" + r"fb$^{-1}$",
-            "do_stat": True,
-            "do_sys": False,
-            "selection": "",
-            "ratio_plot": False,
-            "stats_box": False,
-        }
-        analysis.plot(val="MatchedTruthParticlePt", **default_args, logx=True)
-        analysis.plot(val="TruthTauPt", **default_args, logx=True)
-        analysis.plot(val="TruthTauEta", **default_args)
-        analysis.plot(val="TruthTauPhi", **default_args)
-
-        default_args["selection"] = f"trueTau_{wp}_SR_passID"
-        analysis.plot(val="MatchedTruthParticlePt", **default_args, logx=True)
-        analysis.plot(val="TruthTauPt", **default_args, logx=True)
-        analysis.plot(val="TruthTauEta", **default_args)
-        analysis.plot(val="TruthTauPhi", **default_args)
-
-        # tau pt resolution
-        analysis.plot(
-            val="TauPt_res",
-            dataset="wtaunu",
-            xlabel=r"$(p_T^\mathrm{true} - p_T^\mathrm{reco}) / p_T^\mathrm{true}$",
-            title=(
-                    r"Tau $p_T$ resolution in $W\rightarrow\tau\nu$ | mc16d | "
-                    + f"{analysis.global_lumi / 1000:.3g}fb$^{{-1}}$"
-            ),
-            filename="wtaunu_taupt_resolution.png",
-        )
-        analysis.plot(
-            val="TauPt_diff",
-            dataset="wtaunu",
-            xlabel=r"$p_T^\mathrm{true} - p_T^\mathrm{reco}$ [GeV]",
-            title=(
-                    r"Tau $p_T$ resolution in $W\rightarrow\tau\nu$ | mc16d | "
-                    + f"{analysis.global_lumi / 1000:.3g}fb$^{{-1}}$"
-            ),
-            filename="wtaunu_taupt_truthrecodiff.png",
-        )
-        analysis.plot(
-            val="MTW_TauPt_res",
-            dataset="wtaunu",
-            selection=f"{wp}_SR_passID",
-            ylabel=r"Mean $(p_T^\mathrm{true} - p_T^\mathrm{reco}) / p_T^\mathrm{true}$",
-            xlabel=r"$m_W^T$ [GeV]",
-            title=(
-                    r"Tau $p_T$ resolution in $W\rightarrow\tau\nu$ | mc16d | "
-                    + f"{analysis.global_lumi / 1000:.3g}fb$^{{-1}}$"
-            ),
-            y_axlim=(-10, 10),
-            filename="wtaunu_mtw_taupt_profile.png",
-        )
-        analysis.plot(
-            val="TauPt_res",
-            selection=[
-                f"trueTau_{wp}_SR_passID",
-                f"trueTau_{wp}_SR_failID",
-                f"trueTau_{wp}_CR_passID",
-                f"trueTau_{wp}_CR_failID",
-            ],
-            dataset="wtaunu",
-            label=["SR_passID", "SR_failID", "CR_passID", "CR_failID"],
-            xlabel=r"$(p_T^\mathrm{true} - p_T^\mathrm{reco}) / p_T^\mathrm{true}$",
-            title=(
-                    r"Tau $p_T$ resolution in $W\rightarrow\tau\nu$ | mc16d | "
-                    + f"{analysis.global_lumi / 1000:.3g}fb$^{{-1}}$"
-            ),
-            ratio_plot=False,
-            filename="wtaunu_taupt_resolution_selections.png",
-        )
-        analysis.plot(
-            val="TauPt_diff",
-            selection=[
-                f"trueTau_{wp}_SR_passID",
-                f"trueTau_{wp}_SR_failID",
-                f"trueTau_{wp}_CR_passID",
-                f"trueTau_{wp}_CR_failID",
-            ],
-            dataset="wtaunu",
-            label=["SR_passID", "SR_failID", "CR_passID", "CR_failID"],
-            xlabel=r"$p_T^\mathrm{true} - p_T^\mathrm{reco}$ [GeV]",
-            title=(
-                    r"Tau $p_T$ resolution in $W\rightarrow\tau\nu$ | mc16d | "
-                    + f"{analysis.global_lumi / 1000:.3g}fb$^{{-1}}$"
-            ),
-            ratio_plot=False,
-            filename="wtaunu_taupt_truthrecodiff_selections.png",
-        )
-        analysis.plot(
-            val="MTW_TauPt_res",
-            selection=[
-                f"trueTau_{wp}_SR_passID",
-                f"trueTau_{wp}_SR_failID",
-                f"trueTau_{wp}_CR_passID",
-                f"trueTau_{wp}_CR_failID",
-            ],
-            dataset="wtaunu",
-            label=["SR_passID", "SR_failID", "CR_passID", "CR_failID"],
-            ylabel=r"Mean $(p_T^\mathrm{true} - p_T^\mathrm{reco}) / p_T^\mathrm{true}$",
-            xlabel=r"$m_W^T$ [GeV]",
-            title=(
-                    r"Tau $p_T$ resolution in $W\rightarrow\tau\nu$ | mc16d | "
-                    + f"{analysis.global_lumi / 1000:.3g}fb$^{{-1}}$"
-            ),
-            y_axlim=(-10, 10),
-            ratio_plot=False,
-            filename="wtaunu_mtw_taupt_profile_selections.png",
-        )
 
         # FAKES ESTIMATE
         # ========================================================================
@@ -634,28 +494,26 @@ if __name__ == "__main__":
                     "dataset": all_samples + [None],
                     "systematic": NOMINAL_NAME,
                     "selection": (
-                            [f"{nprong}{wp}_SR_passID"]
-                            + [f"trueTau_{nprong}{wp}_SR_passID"] * len(mc_samples)
-                            + [None]
+                        [f"{nprong}{wp}_SR_passID"]
+                        + [f"trueTau_{nprong}{wp}_SR_passID"] * len(mc_samples)
+                        + [None]
                     ),
                     "label": [analysis[ds].label for ds in all_samples] + ["Multijet"],
                     "colour": [analysis[ds].colour for ds in all_samples] + [analysis.fakes_colour],
                     "title": f"{fakes_source} fakes binning | data17 | mc16d | {analysis.global_lumi / 1000:.3g}fb$^{{-1}}$",
                     "do_stat": False,
-                    "do_sys": DO_SYS,
+                    "do_syst": DO_SYS,
                     "suffix": "fake_scaled_log",
                     "ratio_plot": True,
                     "ratio_axlim": (0.8, 1.2),
                     "kind": "stack",
                 }
 
-
                 def FF_vars(s: str) -> list[str]:
                     """List of variable names for each sample"""
                     return [s] * (len(all_samples)) + [
                         f"{nprong}{wp}_{s}_fakes_bkg_{fakes_source}_src"
                     ]
-
 
                 # mass variables
                 for v in measurement_vars_mass:
@@ -717,12 +575,11 @@ if __name__ == "__main__":
             "label": ["Data SR", "MC + TauPt Fakes", "MC + MTW Fakes"],
             "colour": ["k", "b", "r"],
             "do_stat": True,
-            "do_sys": DO_SYS,
+            "do_syst": DO_SYS,
             "suffix": "fake_scaled_log",
             "ratio_plot": True,
             "ratio_axlim": (0.8, 1.2),
         }
-
 
         def FF_full_bkg(variable: str, t: str) -> Histogram1D:
             """Sum of all backgrounds + signal + FF"""
@@ -738,9 +595,8 @@ if __name__ == "__main__":
                         for ds_ in mc_samples
                     ]
                 )
-                    + analysis.get_hist(f"{wp}_{variable}_fakes_bkg_{t}_src")
+                + analysis.get_hist(f"{wp}_{variable}_fakes_bkg_{t}_src")
             )
-
 
         # mass variables
         for v in measurement_vars_mass:
@@ -802,7 +658,7 @@ if __name__ == "__main__":
             default_args = {
                 "label": sys_list,
                 "do_stat": False,
-                "do_sys": False,
+                "do_syst": False,
                 "ratio_plot": False,
                 "legend_params": {"ncols": 1, "fontsize": 8},
             }
@@ -869,7 +725,7 @@ if __name__ == "__main__":
             "dataset": all_samples,
             "title": f"data17 | mc16d | {analysis.global_lumi / 1000:.3g}fb$^{{-1}}$",
             "do_stat": True,
-            "do_sys": False,
+            "do_syst": False,
             "selection": f"{wp}_SR_passID",
             "ratio_plot": True,
             "ratio_axlim": (0.8, 1.2),
@@ -908,122 +764,6 @@ if __name__ == "__main__":
                 logy=False,
                 logx=False,
                 filename=f"{wp}_{var}_stack_no_fakes_liny.png",
-            )
-
-        # Fakes distribution across kinematic variable for signal MC
-        # -----------------------------------------------------------------------
-        analysis.paths.plot_dir = wp_dir / "fakes_distributions"
-        for var in measurement_vars:
-            xlabel = get_axis_labels(var)[0]
-            sel = f"{wp}_SR_passID"
-            mc = "wtaunu"
-
-            # for all MC
-            wtaunu_el_fakes = analysis.sum_hists(
-                [
-                    analysis.get_hist(
-                        f"{var}_MatchedTruthParticle_isElectron", dataset=d, selection=sel
-                    )
-                    for d in mc_samples
-                ],
-                f"{wp}_all_mc_{var}_MatchedTruthParticle_isElectron_{sel}_PROFILE",
-            )
-            wtaunu_mu_fakes = analysis.sum_hists(
-                [
-                    analysis.get_hist(
-                        f"{var}_MatchedTruthParticle_isMuon", dataset=d, selection=sel
-                    )
-                    for d in mc_samples
-                ],
-                f"{wp}_all_mc_{var}_MatchedTruthParticle_isMuon_{sel}_PROFILE",
-            )
-            wtaunu_ph_fakes = analysis.sum_hists(
-                [
-                    analysis.get_hist(
-                        f"{var}_MatchedTruthParticle_isPhoton", dataset=d, selection=sel
-                    )
-                    for d in mc_samples
-                ],
-                f"{wp}_all_mc_{var}_MatchedTruthParticle_isPhoton_{sel}_PROFILE",
-            )
-            wtaunu_jet_fakes = analysis.sum_hists(
-                [
-                    analysis.get_hist(f"{var}_MatchedTruthParticle_isJet", dataset=d, selection=sel)
-                    for d in mc_samples
-                ],
-                f"{wp}_all_mc_{var}_MatchedTruthParticle_isJet_{sel}_PROFILE",
-            )
-            wtaunu_true_taus = analysis.sum_hists(
-                [
-                    analysis.get_hist(f"{var}_MatchedTruthParticle_isTau", dataset=d, selection=sel)
-                    for d in mc_samples
-                ],
-                f"{wp}_all_mc_{var}_MatchedTruthParticle_isTau_{sel}_PROFILE",
-            )
-            analysis.plot(
-                [
-                    wtaunu_jet_fakes,
-                    wtaunu_ph_fakes,
-                    wtaunu_mu_fakes,
-                    wtaunu_el_fakes,
-                    wtaunu_true_taus,
-                ],
-                label=[
-                    "Jet-matched fake taus",
-                    "Photon-matched fake taus",
-                    "Muon-matched fake taus",
-                    "electron-matched fake taus",
-                    "True taus",
-                ],
-                sort=False,
-                do_stat=False,
-                colour=list(plt.rcParams["axes.prop_cycle"].by_key()["color"])[:5],
-                title=f"Fake fractions for {var} in {sel} for all MC in SR",
-                y_axlim=(0, 1),
-                kind="stack",
-                xlabel=xlabel,
-                ylabel="Fraction of fake matched taus in signal MC",
-                filename=f"{wp}_all_mc_{var}_{sel}_fake_fractions.png",
-            )
-
-            # for all MC
-            el_fakes = analysis.get_hist(
-                f"{var}_MatchedTruthParticle_isElectron", dataset=mc, selection=sel
-            )
-            mu_fakes = analysis.get_hist(
-                f"{var}_MatchedTruthParticle_isMuon", dataset=mc, selection=sel
-            )
-            ph_fakes = analysis.get_hist(
-                f"{var}_MatchedTruthParticle_isPhoton", dataset=mc, selection=sel
-            )
-            jet_fakes = analysis.get_hist(
-                f"{var}_MatchedTruthParticle_isJet", dataset=mc, selection=sel
-            )
-            true_taus = analysis.get_hist(
-                f"{var}_MatchedTruthParticle_isTau", dataset=mc, selection=sel
-            )
-
-            sel_hist = analysis.get_hist(var, "wtaunu", selection=sel, TH1=True)
-            nbins = sel_hist.GetNbinsX()
-
-            analysis.plot(
-                [jet_fakes, ph_fakes, mu_fakes, el_fakes, true_taus],
-                label=[
-                    "Jet Fakes",
-                    "Photon Fakes",
-                    "Muon Fakes",
-                    "Electron Fakes",
-                    "True taus",
-                ],
-                sort=False,
-                do_stat=False,
-                colour=list(plt.rcParams["axes.prop_cycle"].by_key()["color"])[:5],
-                title=f"Fake fractions for {var} in {mc} for SR",
-                y_axlim=(0, 1),
-                kind="stack",
-                xlabel=xlabel,
-                ylabel="Fraction of fake matched taus in signal MC",
-                filename=f"{wp}_{mc}_{var}_{sel}_fake_fractions.png",
             )
 
     analysis.histogram_printout(to_file="txt")

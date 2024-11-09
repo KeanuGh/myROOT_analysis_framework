@@ -77,7 +77,7 @@ class DatasetBuilder:
     def build(
         self,
         data_path: Path | list[Path] | dict[str, list[Path] | Path],
-        cuts: list[Cut] | dict[str, list[Cut]],
+        selections: list[Cut] | dict[str, list[Cut]],
         extract_vars: set[str] | None = None,
     ) -> Dataset:
         """
@@ -85,7 +85,7 @@ class DatasetBuilder:
 
         :param data_path: Path to ROOT file(s). Either a single path, list of paths to be included to
                           or a sample: path dictionary with defined subsamples for dataset
-        :param cuts: list of Cut objects if cuts are to be applied but no cutfile is given
+        :param selections: list of Cut objects if cuts are to be applied but no cutfile is given
         :param extract_vars: set of branches to extract if cutfile is not given
         :return: full built Dataset object
         """
@@ -93,8 +93,8 @@ class DatasetBuilder:
         # PRE-PROCESSING
         # ===============================
         # sanitise inputs
-        if isinstance(cuts, list):
-            cuts = {"": cuts}
+        if isinstance(selections, list):
+            selections = {"": selections}
         if not isinstance(self.ttree, list):
             self.ttree = {self.ttree}
         if (extract_vars is not None) and (not isinstance(extract_vars, set)):
@@ -124,8 +124,8 @@ class DatasetBuilder:
         # Parsing cuts
         # extract all variables in all cuts in all selections passed to builder and which to extract
         all_vars: set[str] = set()
-        for cut_list in cuts.values():
-            for cut in cut_list:
+        for selection in selections.values():
+            for cut in selection:
                 all_vars |= cut.included_variables
         all_vars |= extract_vars | hard_cut_vars
         self._vars_to_calc |= {var for var in all_vars if var in derived_vars}
@@ -177,7 +177,7 @@ class DatasetBuilder:
         dataset = Dataset(
             name=self.name,
             rdataframes=dataframes,
-            selections=cuts,
+            selections=selections,
             all_vars=self._vars_to_calc | self._vars_to_extract | {"truth_weight", "reco_weight"},
             logger=self.logger,
             lumi=self.lumi,
