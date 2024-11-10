@@ -254,15 +254,12 @@ class DatasetBuilder:
         # systematics weights
         if self.do_systematics:
             # factor systematic weights with reco weight
-            systematics_weights = [
+            for sys_wgt in [
                 str(w)
                 for w in Rdf.GetColumnNames()
                 if str(w).startswith("weight_TAUS_TRUEHADTAU_EFF_")
-            ]
-            for sys_weight_name in systematics_weights:
-                Rdf = Rdf.Redefine(
-                    sys_weight_name, f"{sys_weight_name} * reco_weight / selectionSF"
-                )
+            ]:
+                Rdf = Rdf.Redefine(sys_wgt, f"{sys_wgt} * reco_weight / selectionSF")
 
         # rescale energy columns to GeV
         for gev_column in [

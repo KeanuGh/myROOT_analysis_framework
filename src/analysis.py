@@ -495,16 +495,17 @@ class Analysis:
                 # do errors (if necessary
                 errs = np.zeros((2, len(hist.bin_values())))
                 if do_stat:
-                    errs += (hist.error() / 2)[None, :]  # broadcast
+                    errs[0, :] += hist.error() / 2
+                    errs[1, :] += hist.error() / 2
                 if do_syst:
-                    ds = per_hist_vars["datasets"][i]
-                    sel = per_hist_vars["selections"][i]
-                    v = per_hist_vars["vals"][i]
                     sys_down, sys_up = self.get_systematic_uncertainty(
-                        v, ds, sel, symmetric=symmetric_uncert
+                        per_hist_vars["vals"][i],
+                        per_hist_vars["datasets"][i],
+                        per_hist_vars["selections"][i],
+                        symmetric=symmetric_uncert,
                     )
-                    errs[0, :] += np.clip(sys_down, 0, None)  # prevent negative errors
-                    errs[1, :] += np.clip(sys_up, 0, None)
+                    errs[0, :] += sys_down
+                    errs[1, :] += sys_up
 
                 hist.plot(
                     ax=ax,

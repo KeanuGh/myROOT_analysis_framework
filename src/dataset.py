@@ -79,8 +79,8 @@ class Dataset:
     is_data: bool = False
     out_file: Path = ""
     nominal_name: str = field(init=False, default="")
-    tes_sys_list: list = field(init=False, default_factory=list)
-    eff_sys_list: list = field(init=False, default_factory=list)
+    tes_sys_set: set = field(init=False, default_factory=set)
+    eff_sys_set: set = field(init=False, default_factory=set)
 
     def __post_init__(self) -> None:
         if not self.out_file:
@@ -106,14 +106,14 @@ class Dataset:
                     )
                 self.nominal_name = sys_name
                 continue
-            self.tes_sys_list.append(sys_name)
+            self.tes_sys_set.add(sys_name)
 
         # get EFF systematics from rdataframe
-        self.eff_sys_list = [
+        self.eff_sys_set = {
             str(wgt).removeprefix("weight_")
             for wgt in self.rdataframes[self.nominal_name].GetColumnNames()
             if wgt.startswith("weight_TAUS_TRUEHADTAU_EFF_")
-        ]
+        }
         self.logger.info(f"Initialised dataset: {self.name}")
 
     # Import/Export
@@ -684,7 +684,7 @@ class Dataset:
 
                     # do systematic weights for reco variables in nominal tree
                     if (
-                        (self.eff_sys_list or self.tes_sys_list)
+                        (self.eff_sys_set or self.tes_sys_set)
                         and (sys_name == self.nominal_name)
                         and (weight == "reco_weight")
                     ):
@@ -730,13 +730,14 @@ class Dataset:
             self.logger.info(
                 "Producing %s histograms for %s in %s...", count(th1_ptr_map), sys_name, self.name
             )
+
             histograms_dict[sys_name] = dict()
             for selection, hist_ptrs in th1_ptr_map.items():
                 histograms_dict[sys_name][selection] = dict()
-                for name, hist_ptr in hist_ptrs.items():
+                for hist_name, hist_ptr in hist_ptrs.items():
                     # put EFF. sys in their own systematics key
-                    if "TAUS_TRUEHADTAU_EFF_" in name:
-                        var_name, eff_sys_name = name.split("|")
+                    if "TAUS_TRUEHADTAU_EFF_" in hist_name:
+                        var_name, eff_sys_name = hist_name.split("|")
                         if eff_sys_name not in histograms_dict:
                             histograms_dict[eff_sys_name] = dict()
                         if selection not in histograms_dict[eff_sys_name]:
@@ -744,7 +745,7 @@ class Dataset:
                         histograms_dict[eff_sys_name][selection][var_name] = hist_ptr.GetValue()
 
                     else:
-                        histograms_dict[sys_name][selection][name] = hist_ptr.GetValue()
+                        histograms_dict[sys_name][selection][hist_name] = hist_ptr.GetValue()
 
             self.logger.info(
                 "Took %.3fs to produce %d histograms over %d run(s).",
@@ -780,6 +781,7 @@ class Dataset:
         symmetric: bool = True,
     ) -> tuple[np.typing.NDArray[1] | Literal[0], np.typing.NDArray[1] | Literal[0]]:
         """Get systematic uncertainty for single variable in dataset. Returns 0s if not found"""
+        nominal = self.histograms[self.nominal_name][selection][val]
 
         try:
             if symmetric:
@@ -787,11 +789,15 @@ class Dataset:
                     f"{val}_tot_uncert"
                 ].Clone()
                 uncert_halved.Scale(0.5)
-                sys_up = self.histograms[self.nominal_name][selection][val] + uncert_halved
-                sys_down = self.histograms[self.nominal_name][selection][val] - uncert_halved
+                sys_up = uncert_halved
+                sys_down = uncert_halved
             else:
-                sys_up = self.histograms[self.nominal_name][selection][f"{val}_1up_uncert"]
-                sys_down = self.histograms[self.nominal_name][selection][f"{val}_1down_uncert"]
+                sys_up = ROOT_utils.th1_abs(
+                    self.histograms[self.nominal_name][selection][f"{val}_1up_uncert"] - nominal
+                )
+                sys_down = ROOT_utils.th1_abs(
+                    self.histograms[self.nominal_name][selection][f"{val}_1down_uncert"] - nominal
+                )
         except KeyError:
             self.logger.debug(
                 "No systematic for histogram: v:%s, ds: %s, sel: %s", val, self.name, selection
@@ -862,7 +868,7 @@ class Dataset:
 
         # SYSTEMATICS LOOP FOR INDIVIDUAL SYSTEMATICS
         # ================================================================
-        for sys_name in self.eff_sys_list + self.tes_sys_list:
+        for sys_name in self.eff_sys_set | self.tes_sys_set:
             sel_dict = self.histograms[sys_name]
 
             # start collecting systemtics pairs
