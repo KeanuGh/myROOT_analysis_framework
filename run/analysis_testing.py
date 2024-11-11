@@ -86,7 +86,7 @@ if __name__ == "__main__":
         do_systematics=True,
         # regen_metadata=True,
         ttree="T_s1thv_NOMINAL",
-        cuts=selections,
+        selections=selections,
         analysis_label="analysis_test",
         dataset_type="dta",
         log_level=10,
@@ -120,10 +120,33 @@ if __name__ == "__main__":
     hist_sys_up = analysis["wtaunu"].get_hist(
         "TauPt", "TAUS_TRUEHADTAU_EFF_RECO_TOTAL__1up", "SR_passID"
     )
+    hist_sys_tot = analysis["wtaunu"].get_hist(
+        "TauPt_TAUS_TRUEHADTAU_EFF_RECO_TOTAL_tot_uncert", NOMINAL_NAME, "SR_passID"
+    )
+    hist_sys_pct = analysis["wtaunu"].get_hist(
+        "TauPt_TAUS_TRUEHADTAU_EFF_RECO_TOTAL_pct_uncert", NOMINAL_NAME, "SR_passID"
+    )
 
     print("sys_down: ", ROOT_utils.get_th1_bin_values(hist_sys_down))
     print("nominal: ", ROOT_utils.get_th1_bin_values(hist_nom))
     print("sys_up: ", ROOT_utils.get_th1_bin_values(hist_sys_up))
+    print("tot_uncert: ", ROOT_utils.get_th1_bin_values(hist_sys_tot))
+    print("pct_uncert: ", ROOT_utils.get_th1_bin_values(hist_sys_pct))
+
+    # try summing manually
+    sys_up_sum = analysis["wtaunu"].get_hist(
+        f"TauPt_TAUS_TRUEHADTAU_EFF_RECO_TOTAL__1up_diff", NOMINAL_NAME, "SR_passID"
+    )
+    for sys in analysis["wtaunu"].eff_sys_set | analysis["wtaunu"].tes_sys_set:
+        if "TAUS_TRUEHADTAU_EFF_RECO_TOTAL" in sys:
+            continue
+        # if "EFF" in sys:
+        #     continue
+        if sys.endswith("_1down"):
+            continue
+        sys_up_sum += analysis["wtaunu"].get_hist(f"TauPt_{sys}_diff", NOMINAL_NAME, "SR_passID")
+
+    print("sys_up_sum: ", ROOT_utils.get_th1_bin_values(sys_up_sum))
 
     analysis.plot(
         val="TauPt",
@@ -131,8 +154,9 @@ if __name__ == "__main__":
         selection="SR_passID",
         xlabel=variable_data["TauPt"]["name"] + " [GeV]",
         ylabel="Events",
-        do_stat=True,
+        do_stat=False,
         do_syst=True,
+        symmetric_uncert=True,
         filename="TauPt_symmetric_uncert.png",
     )
 
@@ -142,13 +166,13 @@ if __name__ == "__main__":
         selection="SR_passID",
         xlabel=variable_data["TauPt"]["name"] + " [GeV]",
         ylabel="Events",
-        do_stat=True,
+        do_stat=False,
         do_syst=True,
         symmetric_uncert=False,
         filename="TauPt_unsymmetric_uncert.png",
     )
 
-    eff_sys = [Dataset.get_base_sys_name(s) for s in analysis["wtaunu"].eff_sys_list]
+    eff_sys = [Dataset.get_base_sys_name(s) for s in analysis["wtaunu"].eff_sys_set]
     sys_hists = [
         analysis["wtaunu"].histograms[NOMINAL_NAME]["SR_passID"][f"TauPt_{sys}_pct_uncert"]
         for sys in eff_sys
@@ -161,12 +185,43 @@ if __name__ == "__main__":
         label=eff_sys,
         colour=colours,
         xlabel=variable_data["TauPt"]["name"] + " [GeV]",
-        ylabel="Events",
+        ylabel="pct uncertainty",
         kind="overlay",
         do_stat=False,
         do_syst=False,
         filename="TauPt_eff_uncerts.png",
     )
+
+    tes_sys = [Dataset.get_base_sys_name(s) for s in analysis["wtaunu"].tes_sys_set]
+    sys_hists = [
+        analysis["wtaunu"].histograms[NOMINAL_NAME]["SR_passID"][f"TauPt_{sys}_pct_uncert"]
+        for sys in tes_sys
+    ]
+    cmap = plt.get_cmap("jet")
+    colours = cmap(np.linspace(0, 1.0, len(tes_sys)))
+    colours = [tuple(c) for c in colours]  # workaround mplhep bug
+    analysis.plot(
+        val=sys_hists,
+        label=tes_sys,
+        colour=colours,
+        xlabel=variable_data["TauPt"]["name"] + " [GeV]",
+        ylabel="pct uncertainty",
+        kind="overlay",
+        do_stat=False,
+        do_syst=False,
+        filename="TauPt_tes_uncerts.png",
+    )
+
+    # desperate!
+    all_sys = [
+        Dataset.get_base_sys_name(s)
+        for s in sorted(list(analysis["wtaunu"].eff_sys_set | analysis["wtaunu"].tes_sys_set))
+    ]
+    sys_map = {}
+    for sys in all_sys:
+        sys_map[sys] = ROOT_utils.get_th1_bin_values(
+            analysis["wtaunu"].histograms[NOMINAL_NAME]["SR_passID"][f"TauPt_{sys}_tot_uncert"]
+        )
 
     # analysis.plot(
     #     val=[hist_sys_down, hist_nom, hist_sys_up],

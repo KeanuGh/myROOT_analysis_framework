@@ -1,4 +1,3 @@
-import collections
 import copy
 import inspect
 import itertools
@@ -789,14 +788,10 @@ class Analysis:
         :return number of plottables, and cleaned variable dictionary
         """
 
-        def iterable_not_string(arg):
-            """check whether object is a non-string iterable"""
-            return isinstance(arg, collections.abc.Iterable) and not isinstance(arg, str)
-
         # make sure
         n_plottables = 1
         for var, val in var_dict.items():
-            if iterable_not_string(val):
+            if isinstance(val, (list, tuple)):
                 n_val = len(val)
                 if n_val == 0:
                     raise ValueError(f"Empty value for '{var}'! Check arguments.")
@@ -1231,8 +1226,6 @@ class Analysis:
         filename: str | Path | None = None,
     ) -> None:
         """Prints full cutflows for all passed datasets"""
-
-        self.__verify_same_cuts(datasets)
 
         # for each cut set, create new set of rows in table
         if isinstance(selections, str):

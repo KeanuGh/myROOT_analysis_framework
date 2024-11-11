@@ -5,7 +5,6 @@ import numpy as np
 
 from src.analysis import Analysis
 from src.cutting import Cut
-from src.dataset import ProfileOpts
 from src.histogram import Histogram1D
 from utils.variable_names import variable_data
 
@@ -188,6 +187,8 @@ for selection, cut_list in zip(selections_list, selections_cuts):
             pass_truetau,
             Cut(cut_name, cutstr),
         ]
+# for data
+selections_notruth = {n: s for n, s in selections.items() if not n.startswith("trueTau_")}
 
 # VARIABLES
 # ========================================================================
@@ -209,30 +210,9 @@ measurement_vars_mass = [
 measurement_vars_unitless = [
     "TauEta",
     "TauPhi",
-    "nJets",
     "TauBDTEleScore",
-    "DeltaPhi_tau_met",
 ]
 measurement_vars = measurement_vars_unitless + measurement_vars_mass
-profile_vars = [
-    "TauPt_res",
-    "TauPt_diff",
-    "MatchedTruthParticlePt",
-    "MatchedTruthParticle_isTau",
-    "MatchedTruthParticle_isElectron",
-    "MatchedTruthParticle_isMuon",
-    "MatchedTruthParticle_isPhoton",
-    "MatchedTruthParticle_isJet",
-]
-# define which profiles to calculate
-profiles: dict[str, ProfileOpts] = dict()
-for measurement_var in measurement_vars:
-    for prof_var in profile_vars:
-        profiles[f"{measurement_var}_{prof_var}"] = ProfileOpts(
-            x=measurement_var,
-            y=prof_var,
-            weight="" if "MatchedTruthParticle" in prof_var else "reco_weight",
-        )
 NOMINAL_NAME = "T_s1thv_NOMINAL"
 
 datasets: Dict[str, Dict] = {
@@ -246,6 +226,7 @@ datasets: Dict[str, Dict] = {
         "hard_cut": {"lm_cut": "TruthBosonM < 120"},
         "label": r"$W\rightarrow\tau\nu$",
         "is_signal": True,
+        "selections": selections,
     },
     # BACKGROUNDS
     # ====================================================================
@@ -263,6 +244,7 @@ datasets: Dict[str, Dict] = {
         },
         "hard_cut": {"lm_cut": "TruthBosonM < 120"},
         "label": r"$W\rightarrow (e/\mu)\nu$",
+        "selections": selections,
     },
     # Z -> ll
     "zll": {
@@ -281,6 +263,7 @@ datasets: Dict[str, Dict] = {
         },
         "hard_cut": {"lm_cut": "TruthBosonM < 120"},
         "label": r"$Z\rightarrow (l/\nu)(l/\nu)$",
+        "selections": selections,
     },
     "top": {
         "data_path": [
@@ -290,6 +273,7 @@ datasets: Dict[str, Dict] = {
             DTA_PATH / "*PP8_ttbar_hdamp258p75*/*.root",
         ],
         "label": "Top",
+        "selections": selections,
     },
     # DIBOSON
     "diboson": {
@@ -307,6 +291,7 @@ datasets: Dict[str, Dict] = {
             DTA_PATH / "*Sh_2211_WlvZbb*/*.root",
         ],
         "label": "Diboson",
+        "selections": selections,
     },
     # DATA
     # ====================================================================
@@ -315,6 +300,7 @@ datasets: Dict[str, Dict] = {
         "data_path": Path("/data/DTA_outputs/2024-03-05/*data17*/*.root"),
         "label": "data",
         "is_data": True,
+        "selections": selections_notruth,
     },
 }
 
@@ -324,34 +310,32 @@ def run_analysis() -> Analysis:
     return Analysis(
         datasets,
         year=2017,
-        rerun=True,
-        regen_histograms=True,
+        # rerun=True,
+        # regen_histograms=True,
         do_systematics=DO_SYS,
         # regen_metadata=True,
         ttree=NOMINAL_NAME,
-        selections=selections,
-        analysis_label="analysis_full",
+        analysis_label="analysis_main",
         log_level=10,
         log_out="both",
         extract_vars=wanted_variables,
         import_missing_columns_as_nan=True,
-        profiles=profiles,
         binnings={
             "": {
-                "MTW": np.geomspace(150, 1000, 21),
-                "TauPt": np.geomspace(170, 1000, 21),
-                "TauEta": np.linspace(-2.5, 2.5, 21),
-                "EleEta": np.linspace(-2.5, 2.5, 21),
-                "MuonEta": np.linspace(-2.5, 2.5, 21),
-                "MET_met": np.geomspace(150, 1000, 21),
-                "DeltaPhi_tau_met": np.linspace(0, 3.5, 21),
-                "TauPt_div_MET": np.linspace(0, 3, 61),
+                "MTW": np.geomspace(150, 1000, 11),
+                "TauPt": np.geomspace(170, 1000, 11),
+                "TauEta": np.linspace(-2.5, 2.5, 11),
+                "EleEta": np.linspace(-2.5, 2.5, 11),
+                "MuonEta": np.linspace(-2.5, 2.5, 11),
+                "MET_met": np.geomspace(150, 1000, 11),
+                "DeltaPhi_tau_met": np.linspace(0, 3.5, 11),
+                "TauPt_div_MET": np.linspace(0, 3, 21),
                 "TauRNNJetScore": np.linspace(0, 1, 51),
                 "TauBDTEleScore": np.linspace(0, 1, 51),
                 "TruthTauPt": np.geomspace(1, 1000, 21),
             },
             ".*_CR_.*ID": {
-                "MET_met": np.geomspace(1, 100, 51),
+                "MET_met": np.geomspace(1, 100, 11),
             },
         },
     )
@@ -465,7 +449,7 @@ if __name__ == "__main__":
                 )
                 analysis.plot(
                     SR_failID_data - SR_failID_mc,
-                    label=["SR_failID_data - SR_failID_mc"],
+                    label="SR_failID_data - SR_failID_mc",
                     do_stat=False,
                     logy=True,
                     xlabel=fakes_source,
@@ -654,7 +638,8 @@ if __name__ == "__main__":
         if DO_SYS:
             # SYSTEMATIC UNCERTAINTIES
             # ===========================================================================
-            sys_list = analysis["wtaunu"].sys_list  # list of systematic variations
+            # list of systematic variations
+            sys_list = sorted(list(analysis["wtaunu"].eff_sys_set | analysis["wtaunu"].tes_sys_set))
             default_args = {
                 "label": sys_list,
                 "do_stat": False,
@@ -689,7 +674,7 @@ if __name__ == "__main__":
                                         systematic=NOMINAL_NAME,
                                         selection=selection,
                                     )
-                                    for sys_name in analysis["wtaunu"].sys_list
+                                    for sys_name in sys_list
                                 ],
                                 logy=False,
                                 logx=False,
@@ -708,7 +693,7 @@ if __name__ == "__main__":
                                         systematic=NOMINAL_NAME,
                                         selection=f"{wp}_SR_passID",
                                     )
-                                    for sys_name in analysis["wtaunu"].sys_list
+                                    for sys_name in sys_list
                                 ],
                                 logx=False,
                                 logy=False,
