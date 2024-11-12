@@ -121,6 +121,10 @@ pass_met150 = Cut(
     r"$E_T^{\mathrm{miss}} > 150$",
     r"MET_met > 150",
 )
+pass_truetau = Cut(
+    r"True Tau",
+    "MatchedTruthParticle_isHadronicTau == true",
+)
 
 # selections
 selections: dict[str, list[Cut]] = {
@@ -146,6 +150,11 @@ selections: dict[str, list[Cut]] = {
         pass_met150,
     ],
 }
+# define selection for MC samples
+selections_list = list(selections.keys())
+selections_cuts = list(selections.values())
+for selection, cut_list in zip(selections_list, selections_cuts):
+    selections[f"trueTau_{selection}"] = cut_list + [pass_truetau]
 
 # VARIABLES
 # ========================================================================
@@ -181,10 +190,7 @@ measurement_vars_mass = [
 measurement_vars_unitless = [
     "TauEta",
     "TauPhi",
-    "nJets",
     "TauNCoreTracks",
-    "TauRNNJetScore",
-    "TauBDTEleScore",
     "DeltaPhi_tau_met",
     "TauPt_div_MET",
 ]
@@ -216,12 +222,12 @@ def run_analysis() -> Analysis:
     return Analysis(
         datasets,
         year=2017,
-        rerun=True,
-        regen_histograms=True,
+        # rerun=True,
+        # regen_histograms=True,
         do_systematics=False,
         # regen_metadata=True,
         ttree=NOMINAL_NAME,
-        cuts=selections,
+        selections=selections,
         analysis_label="truth_and_fakes",
         log_level=10,
         log_out="both",
@@ -257,10 +263,7 @@ if __name__ == "__main__":
     # ========================================================================
     analysis = run_analysis()
     base_plotting_dir = analysis.paths.plot_dir
-    all_samples = [analysis.data_sample] + analysis.mc_samples
-    mc_samples = analysis.mc_samples
-    analysis.full_cutflow_printout(datasets=all_samples)
-    analysis.print_metadata_table(datasets=mc_samples)
+    mc_samples = list(datasets.keys())
 
     # START OF WP LOOP
     # ========================================================================
@@ -279,6 +282,7 @@ if __name__ == "__main__":
             "selection": "",
             "ratio_plot": False,
             "stats_box": False,
+            "label_params": {"llabel": "Simulation"},
         }
         analysis.plot(val="MatchedTruthParticlePt", **default_args, logx=True)
         analysis.plot(val="TruthTauPt", **default_args, logx=True)
@@ -292,95 +296,41 @@ if __name__ == "__main__":
         analysis.plot(val="TruthTauPhi", **default_args)
 
         # tau pt resolution
-        analysis.plot(
-            val="TauPt_res",
-            dataset="wtaunu",
-            xlabel=r"$(p_T^\mathrm{true} - p_T^\mathrm{reco}) / p_T^\mathrm{true}$",
-            title=(
-                r"Tau $p_T$ resolution in $W\rightarrow\tau\nu$ | mc16d | "
-                + f"{analysis.global_lumi / 1000:.3g}fb$^{{-1}}$"
-            ),
-            filename="wtaunu_taupt_resolution.png",
-        )
-        analysis.plot(
-            val="TauPt_diff",
-            dataset="wtaunu",
-            xlabel=r"$p_T^\mathrm{true} - p_T^\mathrm{reco}$ [GeV]",
-            title=(
-                r"Tau $p_T$ resolution in $W\rightarrow\tau\nu$ | mc16d | "
-                + f"{analysis.global_lumi / 1000:.3g}fb$^{{-1}}$"
-            ),
-            filename="wtaunu_taupt_truthrecodiff.png",
-        )
-        analysis.plot(
-            val="MTW_TauPt_res",
-            dataset="wtaunu",
-            selection=f"{wp}_SR_passID",
-            ylabel=r"Mean $(p_T^\mathrm{true} - p_T^\mathrm{reco}) / p_T^\mathrm{true}$",
-            xlabel=r"$m_W^T$ [GeV]",
-            title=(
-                r"Tau $p_T$ resolution in $W\rightarrow\tau\nu$ | mc16d | "
-                + f"{analysis.global_lumi / 1000:.3g}fb$^{{-1}}$"
-            ),
-            y_axlim=(-10, 10),
-            filename="wtaunu_mtw_taupt_profile.png",
-        )
-        analysis.plot(
-            val="TauPt_res",
-            selection=[
-                f"trueTau_{wp}_SR_passID",
-                f"trueTau_{wp}_SR_failID",
-                f"trueTau_{wp}_CR_passID",
-                f"trueTau_{wp}_CR_failID",
-            ],
-            dataset="wtaunu",
-            label=["SR_passID", "SR_failID", "CR_passID", "CR_failID"],
-            xlabel=r"$(p_T^\mathrm{true} - p_T^\mathrm{reco}) / p_T^\mathrm{true}$",
-            title=(
-                r"Tau $p_T$ resolution in $W\rightarrow\tau\nu$ | mc16d | "
-                + f"{analysis.global_lumi / 1000:.3g}fb$^{{-1}}$"
-            ),
-            ratio_plot=False,
-            filename="wtaunu_taupt_resolution_selections.png",
-        )
-        analysis.plot(
-            val="TauPt_diff",
-            selection=[
-                f"trueTau_{wp}_SR_passID",
-                f"trueTau_{wp}_SR_failID",
-                f"trueTau_{wp}_CR_passID",
-                f"trueTau_{wp}_CR_failID",
-            ],
-            dataset="wtaunu",
-            label=["SR_passID", "SR_failID", "CR_passID", "CR_failID"],
-            xlabel=r"$p_T^\mathrm{true} - p_T^\mathrm{reco}$ [GeV]",
-            title=(
-                r"Tau $p_T$ resolution in $W\rightarrow\tau\nu$ | mc16d | "
-                + f"{analysis.global_lumi / 1000:.3g}fb$^{{-1}}$"
-            ),
-            ratio_plot=False,
-            filename="wtaunu_taupt_truthrecodiff_selections.png",
-        )
-        analysis.plot(
-            val="MTW_TauPt_res",
-            selection=[
-                f"trueTau_{wp}_SR_passID",
-                f"trueTau_{wp}_SR_failID",
-                f"trueTau_{wp}_CR_passID",
-                f"trueTau_{wp}_CR_failID",
-            ],
-            dataset="wtaunu",
-            label=["SR_passID", "SR_failID", "CR_passID", "CR_failID"],
-            ylabel=r"Mean $(p_T^\mathrm{true} - p_T^\mathrm{reco}) / p_T^\mathrm{true}$",
-            xlabel=r"$m_W^T$ [GeV]",
-            title=(
-                r"Tau $p_T$ resolution in $W\rightarrow\tau\nu$ | mc16d | "
-                + f"{analysis.global_lumi / 1000:.3g}fb$^{{-1}}$"
-            ),
-            y_axlim=(-10, 10),
-            ratio_plot=False,
-            filename="wtaunu_mtw_taupt_profile_selections.png",
-        )
+        for selection in ("", f"{wp}_SR_passID", f"trueTau_{wp}_SR_passID"):
+            analysis.plot(
+                val="TauPt_res",
+                dataset="wtaunu",
+                xlabel=r"$(p_T^\mathrm{true} - p_T^\mathrm{reco}) / p_T^\mathrm{true}$",
+                selection=selection,
+                title=(
+                    r"Tau $p_T$ resolution in $W\rightarrow\tau\nu$ | mc16d | "
+                    + f"{analysis.global_lumi / 1000:.3g}fb$^{{-1}}$"
+                ),
+                filename=f"wtaunu_taupt_{selection}_resolution.png",
+            )
+            analysis.plot(
+                val="TauPt_diff",
+                dataset="wtaunu",
+                xlabel=r"$p_T^\mathrm{true} - p_T^\mathrm{reco}$ [GeV]",
+                title=(
+                    r"Tau $p_T$ resolution in $W\rightarrow\tau\nu$ | mc16d | "
+                    + f"{analysis.global_lumi / 1000:.3g}fb$^{{-1}}$"
+                ),
+                filename=f"wtaunu_taupt_{selection}_truthrecodiff.png",
+            )
+            analysis.plot(
+                val="MTW_TauPt_res",
+                dataset="wtaunu",
+                selection=f"{wp}_SR_passID",
+                ylabel=r"Mean $(p_T^\mathrm{true} - p_T^\mathrm{reco}) / p_T^\mathrm{true}$",
+                xlabel=r"$m_W^T$ [GeV]",
+                title=(
+                    r"Tau $p_T$ resolution in $W\rightarrow\tau\nu$ | mc16d | "
+                    + f"{analysis.global_lumi / 1000:.3g}fb$^{{-1}}$"
+                ),
+                y_axlim=(-10, 10),
+                filename=f"wtaunu_mtw_taupt_{selection}_profile.png",
+            )
 
         # Fakes distribution across kinematic variable for signal MC
         # -----------------------------------------------------------------------
@@ -394,7 +344,10 @@ if __name__ == "__main__":
             wtaunu_el_fakes = analysis.sum_hists(
                 [
                     analysis.get_hist(
-                        f"{var}_MatchedTruthParticle_isElectron", dataset=d, selection=sel
+                        f"{var}_MatchedTruthParticle_isElectron",
+                        dataset=d,
+                        selection=sel,
+                        systematic=NOMINAL_NAME,
                     )
                     for d in mc_samples
                 ],
@@ -403,7 +356,10 @@ if __name__ == "__main__":
             wtaunu_mu_fakes = analysis.sum_hists(
                 [
                     analysis.get_hist(
-                        f"{var}_MatchedTruthParticle_isMuon", dataset=d, selection=sel
+                        f"{var}_MatchedTruthParticle_isMuon",
+                        dataset=d,
+                        selection=sel,
+                        systematic=NOMINAL_NAME,
                     )
                     for d in mc_samples
                 ],
@@ -412,7 +368,10 @@ if __name__ == "__main__":
             wtaunu_ph_fakes = analysis.sum_hists(
                 [
                     analysis.get_hist(
-                        f"{var}_MatchedTruthParticle_isPhoton", dataset=d, selection=sel
+                        f"{var}_MatchedTruthParticle_isPhoton",
+                        dataset=d,
+                        selection=sel,
+                        systematic=NOMINAL_NAME,
                     )
                     for d in mc_samples
                 ],
@@ -420,14 +379,24 @@ if __name__ == "__main__":
             )
             wtaunu_jet_fakes = analysis.sum_hists(
                 [
-                    analysis.get_hist(f"{var}_MatchedTruthParticle_isJet", dataset=d, selection=sel)
+                    analysis.get_hist(
+                        f"{var}_MatchedTruthParticle_isJet",
+                        dataset=d,
+                        selection=sel,
+                        systematic=NOMINAL_NAME,
+                    )
                     for d in mc_samples
                 ],
                 f"{wp}_all_mc_{var}_MatchedTruthParticle_isJet_{sel}_PROFILE",
             )
             wtaunu_true_taus = analysis.sum_hists(
                 [
-                    analysis.get_hist(f"{var}_MatchedTruthParticle_isTau", dataset=d, selection=sel)
+                    analysis.get_hist(
+                        f"{var}_MatchedTruthParticle_isTau",
+                        dataset=d,
+                        selection=sel,
+                        systematic=NOMINAL_NAME,
+                    )
                     for d in mc_samples
                 ],
                 f"{wp}_all_mc_{var}_MatchedTruthParticle_isTau_{sel}_PROFILE",
@@ -447,6 +416,7 @@ if __name__ == "__main__":
                     "electron-matched fake taus",
                     "True taus",
                 ],
+                systematic=NOMINAL_NAME,
                 sort=False,
                 do_stat=False,
                 colour=list(plt.rcParams["axes.prop_cycle"].by_key()["color"])[:5],
@@ -459,23 +429,16 @@ if __name__ == "__main__":
             )
 
             # for all MC
-            el_fakes = analysis.get_hist(
-                f"{var}_MatchedTruthParticle_isElectron", dataset=mc, selection=sel
-            )
-            mu_fakes = analysis.get_hist(
-                f"{var}_MatchedTruthParticle_isMuon", dataset=mc, selection=sel
-            )
-            ph_fakes = analysis.get_hist(
-                f"{var}_MatchedTruthParticle_isPhoton", dataset=mc, selection=sel
-            )
-            jet_fakes = analysis.get_hist(
-                f"{var}_MatchedTruthParticle_isJet", dataset=mc, selection=sel
-            )
-            true_taus = analysis.get_hist(
-                f"{var}_MatchedTruthParticle_isTau", dataset=mc, selection=sel
-            )
+            args = dict(dataset=mc, selection=sel, systematic=NOMINAL_NAME)
+            el_fakes = analysis.get_hist(f"{var}_MatchedTruthParticle_isElectron", **args)
+            mu_fakes = analysis.get_hist(f"{var}_MatchedTruthParticle_isMuon", **args)
+            ph_fakes = analysis.get_hist(f"{var}_MatchedTruthParticle_isPhoton", **args)
+            jet_fakes = analysis.get_hist(f"{var}_MatchedTruthParticle_isJet", **args)
+            true_taus = analysis.get_hist(f"{var}_MatchedTruthParticle_isTau", **args)
 
-            sel_hist = analysis.get_hist(var, "wtaunu", selection=sel, TH1=True)
+            sel_hist = analysis.get_hist(
+                var, "wtaunu", selection=sel, systematic=NOMINAL_NAME, TH1=True
+            )
             nbins = sel_hist.GetNbinsX()
 
             analysis.plot(
@@ -489,11 +452,13 @@ if __name__ == "__main__":
                 ],
                 sort=False,
                 do_stat=False,
+                systematic=NOMINAL_NAME,
                 colour=list(plt.rcParams["axes.prop_cycle"].by_key()["color"])[:5],
                 title=f"Fake fractions for {var} in {mc} for SR",
                 y_axlim=(0, 1),
                 kind="stack",
                 xlabel=xlabel,
+                label_params={"llabel": "Simulation"},
                 ylabel="Fraction of fake matched taus in signal MC",
                 filename=f"{wp}_{mc}_{var}_{sel}_fake_fractions.png",
             )

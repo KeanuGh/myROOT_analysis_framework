@@ -10,7 +10,7 @@ from utils.variable_names import variable_data
 
 DTA_PATH = Path("/mnt/D/data/DTA_outputs/2024-09-19/")
 # DTA_PATH = Path("/eos/home-k/kghorban/DTA_OUT/2024-02-05/")
-DO_SYS = False
+DO_SYS = True
 
 # CUTS & SELECTIONS
 # ========================================================================
@@ -310,8 +310,8 @@ def run_analysis() -> Analysis:
     return Analysis(
         datasets,
         year=2017,
-        # rerun=True,
-        # regen_histograms=True,
+        rerun=True,
+        regen_histograms=True,
         do_systematics=DO_SYS,
         # regen_metadata=True,
         ttree=NOMINAL_NAME,
