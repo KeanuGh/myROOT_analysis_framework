@@ -87,6 +87,7 @@ class Analysis:
         rerun: bool = False,
         regen_histograms: bool = False,
         regen_metadata: bool = False,
+        snapshot: bool = False,
         year: int = 2017,
         **kwargs,
     ):
@@ -103,6 +104,7 @@ class Analysis:
         :param rerun: Whether to rerun full analysis
         :param regen_histograms: Whether to regenerate all histograms for all datasets (can be applied separately)
         :param regen_metadata: Whether to regenerate DSID metadata (requires connection to pyami)
+        :param snapshot: snapshot generated datasets into root output file
         :param snapshot: Whether to save a snapshot of datasets to disk
         :param year: Data-year. One of 2016, 2017, 2018
         :param kwargs: Options arguments to pass to all dataset builders
@@ -263,13 +265,15 @@ class Analysis:
             if indiv_rerun_files or not dataset_file.is_file():
                 dataset.gen_all_histograms()
                 dataset.gen_cutflows()
-                dataset.export_dataset(dataset_file)
+                if snapshot:
+                    dataset.export_dataset(dataset_file)
                 dataset.export_histograms(dataset_file)
             elif indiv_regen_hists:
                 dataset.import_dataset(dataset_file)
                 dataset.reset_cutflows()
                 dataset.gen_all_histograms()
-                dataset.export_histograms()
+                if snapshot:
+                    dataset.export_histograms()
             else:
                 dataset.import_dataset(dataset_file)
                 dataset.reset_cutflows()
@@ -357,6 +361,7 @@ class Analysis:
         x_axlim: tuple[float, float] | None = None,
         y_axlim: tuple[float, float] | None = None,
         legend_params: dict | None = None,
+        label_params: dict | None = None,
         ratio_plot: bool = False,
         ratio_fit: bool = False,
         ratio_axlim: float | tuple[float, float] | None = None,
@@ -395,6 +400,7 @@ class Analysis:
         :param x_axlim: x-axis limits. If None matplolib decides
         :param y_axlim: x-axis limits. If None matplolib decides
         :param legend_params: dictionary of options for legend drawing. Supports font size, loc, ncol
+        :param label_params: dictionary of options to pass to mplhep.atlas.label
         :param ratio_plot: If True, adds ratio of the first plot with each subseqent plot below
         :param ratio_fit: If True, fits ratio plot to a 0-degree polynomial and display line, chi-square and p-value
         :param ratio_axlim: pass to yax_lim in rato plotter
@@ -440,11 +446,19 @@ class Analysis:
         # remove data & signal histogram if stacking, so it can be handled separately
         data_plot_args = {}
         signal_plot_args = {}
-        if (kind == "stack") and (self.data_sample in per_hist_vars["datasets"]):
+        if (
+            self.data_sample
+            and (kind == "stack")
+            and (self.data_sample in per_hist_vars["datasets"])
+        ):
             idx = per_hist_vars["datasets"].index(self.data_sample)
             for v in per_hist_vars.keys():
                 data_plot_args[v] = per_hist_vars[v].pop(idx)  # type: ignore
-        if (kind == "stack") and (self.signal_sample in per_hist_vars["datasets"]):
+        if (
+            self.signal_sample
+            and (kind == "stack")
+            and (self.signal_sample in per_hist_vars["datasets"])
+        ):
             idx = per_hist_vars["datasets"].index(self.signal_sample)
             for v in per_hist_vars:
                 signal_plot_args[v] = per_hist_vars[v].pop(idx)  # type: ignore
@@ -565,6 +579,7 @@ class Analysis:
             logy=logy,
             x_axlim=x_axlim,
             y_axlim=y_axlim,
+            label_params=label_params,
         )
 
         # SAVE
@@ -712,7 +727,7 @@ class Analysis:
                 linestyle="None",
                 color="black",
                 marker=".",
-                label=self["data"].label,
+                label=self[self.data_sample].label,
             )
 
         # handle ratio plot options
@@ -921,7 +936,7 @@ class Analysis:
             )
 
         # otherwise, get from dataset
-        if systematic is None:
+        if not systematic:
             systematic = self[dataset].nominal_name
         try:
             return self[dataset].get_hist(
