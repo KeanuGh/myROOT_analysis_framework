@@ -126,11 +126,15 @@ def set_axis_options(
     logy: bool = False,
     x_axlim: tuple[float, float] | None = None,
     y_axlim: tuple[float, float] | None = None,
+    label_params: dict | None = None,
 ) -> None:
     """Set axis options for plot"""
 
     # let mplhep handle the easy stuff
-    hep.atlas.label(italic=(True, True, False), ax=ax, loc=0, llabel="Internal", rlabel=title)
+    label_args = dict(italic=(True, True, False), ax=ax, loc=0, llabel="Preliminary", rlabel=title)
+    if label_params:
+        label_args.update(label_params)
+    hep.atlas.label(**label_args)
 
     # get axis labels from variable names if possible
     # it'll error out when plotting if the histogram edges aren't equal
