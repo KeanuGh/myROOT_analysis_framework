@@ -184,6 +184,7 @@ class DatasetBuilder:
             label=self.label,
             is_signal=self.is_signal,
             is_data=self.is_data,
+            do_systematics=self.do_systematics,
         )
 
         return dataset
