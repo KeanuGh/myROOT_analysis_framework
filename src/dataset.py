@@ -79,6 +79,7 @@ class Dataset:
     is_data: bool = False
     out_file: Path = ""
     nominal_name: str = field(init=False, default="")
+    do_systematics: bool = False
     tes_sys_set: set = field(init=False, default_factory=set)
     eff_sys_set: set = field(init=False, default_factory=set)
 
@@ -92,15 +93,21 @@ class Dataset:
             for sys_name, rdf in self.rdataframes.items():
                 self.filters[sys_name] = self.gen_filters(rdf)
 
-        self.init_sys()
+        if self.do_systematics:
+            self.init_sys()
 
     def init_sys(self) -> None:
         """initialise systematics"""
         # get list of TES systematics and name of nominal channel from ttrees
+        if self.nominal_name:
+            find_nominal = False
+        else:
+            find_nominal = True
+
         for sys_name in self.rdataframes.keys():
             # skip nominal(s)
             if ("__1up" not in sys_name) and ("__1down" not in sys_name):
-                if self.nominal_name:
+                if self.nominal_name and find_nominal:
                     raise ValueError(
                         f"Nominal '{self.nominal_name}' already found. Got another: '{sys_name}'"
                     )
@@ -758,7 +765,8 @@ class Dataset:
         self.histograms = histograms_dict
 
         # gen uncertainties
-        self.calculate_systematic_uncertainties()
+        if self.do_systematics:
+            self.calculate_systematic_uncertainties()
 
     # ===========================================
     # ============== UNCERTAINTIES ==============
