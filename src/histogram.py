@@ -781,7 +781,7 @@ class Histogram1D(bh.Histogram, family=None):
                 with redirect_stdout() as fit_output:
                     fit_results = fit_hist.Fit("pol0", "VFSN")
 
-                if "Fit data is empty" in fit_output.getvalue():
+                if not fit_output.getvalue():
                     self.logger.warning("Fit result is empty. Skipping..")
 
                 else:
@@ -795,7 +795,11 @@ class Histogram1D(bh.Histogram, family=None):
                     fit_err = fit_results.Errors()[0]
 
                     # display fit line
-                    fit_col = colour if colour else "r"
+                    fit_col = (
+                        "r"
+                        if (colour is None) or (colour == "black") or (colour == "k")
+                        else colour
+                    )
                     ax.fill_between(
                         [self.bin_edges[0], self.bin_edges[-1]],  # type: ignore
                         [c - fit_err],

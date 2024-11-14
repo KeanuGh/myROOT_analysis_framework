@@ -540,7 +540,7 @@ class Analysis:
                             if n_plottables > 2
                             else None
                         ),
-                        colour=per_hist_vars["colours"][i],
+                        colour=None if n_plottables == 2 else per_hist_vars["colours"][i],
                         fit=ratio_fit,
                         yax_lim=ratio_axlim,
                         display_stats=len(per_hist_vars["hists"]) <= 3,
@@ -993,7 +993,7 @@ class Analysis:
         symmetric: bool = True,
     ) -> tuple[np.typing.NDArray[float] | Literal[0], np.typing.NDArray[float] | Literal[0]]:
         """Get systematic uncertainty for single variable in dataframe"""
-        if not dataset:
+        if (not dataset) or (selection is None):
             self.logger.debug("No systematic uncertainties for histograms outside a dataset")
             return 0, 0
 
