@@ -644,6 +644,10 @@ class Dataset:
     def gen_all_histograms(self, do_prints: bool = True) -> None:
         """Generate histograms for all variables and cuts."""
 
+        def count(d):
+            """Count number of subvalues in nested dict"""
+            return sum([count(v) if isinstance(v, dict) else 1 for v in d.values()])
+
         histograms_dict = dict()  # to store outputs
         output_histogram_variables = self.all_vars
         self.logger.info(f"Defining histograms for dataset {self.name}...")
@@ -728,10 +732,6 @@ class Dataset:
                     )
                     th1_ptr_map[selection][profile_name] = root_sys_df.Profile1D(*profile_args)
 
-            def count(d):
-                """Count number of subvalues in nested dict"""
-                return sum([count(v) if isinstance(v, dict) else 1 for v in d.values()])
-
             # generate histograms
             t = time.time()
             self.logger.info(
@@ -761,7 +761,7 @@ class Dataset:
                 root_sys_df.GetNRuns(),
             )
 
-        self.logger.info("Producted %d histograms.", len(histograms_dict))
+        self.logger.info("Produced %d histograms.", count(histograms_dict))
         self.histograms = histograms_dict
 
         # gen uncertainties
