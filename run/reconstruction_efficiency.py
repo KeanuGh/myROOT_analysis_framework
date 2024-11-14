@@ -7,7 +7,7 @@ from src.analysis import Analysis
 from src.cutting import Cut
 from utils.variable_names import variable_data
 
-DTA_PATH = Path("/mnt/D/data/DTA_outputs/2024-08-28/")
+DTA_PATH = Path("/mnt/D/data/DTA_outputs/2024-09-19/")
 # DTA_PATH = Path("/eos/home-k/kghorban/DTA_OUT/2024-02-05/")
 
 datasets: Dict[str, Dict] = {
@@ -83,7 +83,7 @@ pass_tight = Cut(
     r"((TauRNNJetScore > 0.4) * (TauNCoreTracks == 1) + (TauRNNJetScore > 0.55) * (TauNCoreTracks == 3))",
 )
 pass_SR_reco = Cut(
-    r"Pass SR Truth",
+    r"Pass SR Reco",
     r"(TauPt > 170) && (MET_met > 150) && (MTW > 150)"
     r"&& ((TauNCoreTracks == 1) || (TauNCoreTracks == 3))",
 )
@@ -99,7 +99,7 @@ pass_matched_truth_tau = Cut(
 selections: dict[str, list[Cut]] = {
     "truth_tau": [
         pass_truth,
-        pass_SR_truth,
+        # pass_SR_truth,
     ],
     "1prong_truth_tau": [
         pass_truth,
@@ -144,80 +144,81 @@ selections: dict[str, list[Cut]] = {
     "vl_reco_tau": [
         pass_presel,
         pass_matched_truth_tau,
-        pass_SR_reco,
+        pass_SR_truth,
         reco_tau,
     ],
     "vl_1prong_reco_tau": [
         pass_presel,
         pass_matched_truth_tau,
-        pass_SR_reco,
+        pass_SR_truth,
         reco_tau_1prong,
     ],
     "vl_3prong_reco_tau": [
         pass_presel,
         pass_matched_truth_tau,
-        pass_SR_reco,
+        pass_SR_truth,
         reco_tau_3prong,
     ],
     "loose_reco_tau": [
         pass_presel,
         pass_matched_truth_tau,
-        pass_SR_reco,
+        pass_SR_truth,
         pass_loose,
         reco_tau,
     ],
     "loose_1prong_reco_tau": [
         pass_presel,
         pass_matched_truth_tau,
-        pass_SR_reco,
+        pass_SR_truth,
         pass_loose,
         reco_tau_1prong,
     ],
     "loose_3prong_reco_tau": [
         pass_presel,
         pass_matched_truth_tau,
+        pass_SR_truth,
         pass_loose,
         reco_tau_3prong,
     ],
     "medium_reco_tau": [
         pass_presel,
         pass_matched_truth_tau,
-        pass_SR_reco,
+        pass_SR_truth,
         pass_medium,
         reco_tau,
     ],
     "medium_1prong_reco_tau": [
         pass_presel,
         pass_matched_truth_tau,
-        pass_SR_reco,
+        pass_SR_truth,
         pass_medium,
         reco_tau_1prong,
     ],
     "medium_3prong_reco_tau": [
         pass_presel,
         pass_matched_truth_tau,
-        pass_SR_reco,
+        pass_SR_truth,
         pass_medium,
         reco_tau_3prong,
     ],
     "tight_reco_tau": [
         pass_presel,
         pass_matched_truth_tau,
-        pass_SR_reco,
+        pass_SR_truth,
         pass_tight,
         reco_tau,
     ],
     "tight_1prong_reco_tau": [
         pass_presel,
         pass_matched_truth_tau,
-        pass_SR_reco,
+        pass_SR_truth,
         pass_tight,
         reco_tau_1prong,
     ],
     "tight_3prong_reco_tau": [
         pass_presel,
         pass_matched_truth_tau,
-        pass_SR_reco,
+        pass_SR_truth,
         pass_tight,
         reco_tau_3prong,
     ],
@@ -226,33 +227,33 @@ selections: dict[str, list[Cut]] = {
 # VARIABLES
 # ========================================================================
 measurement_vars_mass = [
-    "TauPt",
+    # "TauPt",
     "TruthTauPt",
     "VisTruthTauPt",
-    "MTW",
+    # "MTW",
     "TruthMTW",
-    "TruthBosonM",
-    "TruthDilepM",
+    # "TruthBosonM",
+    # "TruthDilepM",
 ]
 measurement_vars_unitless = [
-    "TauEta",
-    "TauPhi",
+    # "TauEta",
+    # "TauPhi",
     "TruthTauEta",
     "TruthTauPhi",
     "VisTruthTauEta",
     "VisTruthTauPhi",
     "TruthNeutrinoPt",
     "TruthNeutrinoEta",
-    "nJets",
+    # "nJets",
     "TruthTau_nChargedTracks",
     "TruthTau_nNeutralTracks",
-    "TauNCoreTracks",
-    "TauRNNJetScore",
-    "TauBDTEleScore",
-    "DeltaPhi_tau_met",
-    "TruthDeltaPhi_tau_met",
-    "TauPt_div_MET",
-    "TruthTauPt_div_MET",
+    # "TauNCoreTracks",
+    # "TauRNNJetScore",
+    # "TauBDTEleScore",
+    # "DeltaPhi_tau_met",
+    # "TruthDeltaPhi_tau_met",
+    # "TauPt_div_MET",
+    # "TruthTauPt_div_MET",
 ]
 measurement_vars = measurement_vars_unitless + measurement_vars_mass
 NOMINAL_NAME = "T_s1thv_NOMINAL"
@@ -260,6 +261,8 @@ NOMINAL_NAME = "T_s1thv_NOMINAL"
 
 def run_analysis() -> Analysis:
     """Run analysis"""
+
+    nedges = 11
     return Analysis(
         datasets,
         year=2017,
@@ -277,31 +280,30 @@ def run_analysis() -> Analysis:
         snapshot=False,
         binnings={
             "": {
-                "MTW": np.geomspace(150, 1000, 13),
-                "TruthMTW": np.geomspace(150, 1000, 13),
-                "TruthBosonM": np.geomspace(150, 1000, 13),
-                "TauPt": np.geomspace(170, 1000, 13),
-                "TruthTauPt": np.geomspace(170, 1000, 13),
-                "VisTruthTauPt": np.geomspace(170, 1000, 13),
-                "TruthNeutrinoPt": np.geomspace(170, 1000, 13),
+                "MTW": np.geomspace(150, 1000, nedges),
+                "TruthMTW": np.geomspace(150, 1000, nedges),
+                "TauPt": np.geomspace(170, 1000, nedges),
+                "TruthTauPt": np.geomspace(170, 1000, nedges),
+                "VisTruthTauPt": np.geomspace(170, 1000, nedges),
+                "TruthNeutrinoPt": np.geomspace(170, 1000, nedges),
                 "TruthTau_nChargedTracks": np.array([0.0, 1.0, 2.0, 3.0, 4.0]),
                 "TruthTau_nNeutralTracks": np.array([0.0, 1.0, 2.0, 3.0, 4.0, 5.0]),
-                "TauEta": np.linspace(-2.5, 2.5, 13),
-                "TruthTauEta": np.linspace(-2.5, 2.5, 13),
-                "TruthTauPhi": np.linspace(-2.5, 2.5, 13),
-                "VisTruthTauEta": np.linspace(-2.5, 2.5, 13),
-                "VisTruthTauPhi": np.linspace(-2.5, 2.5, 13),
-                "TruthNeutrinoEta": np.linspace(-2.5, 2.5, 13),
-                "MET_met": np.geomspace(150, 1000, 13),
-                "DeltaPhi_tau_met": np.linspace(0, 2 * np.pi, 13),
-                "TruthDeltaPhi_tau_met": np.linspace(0, 3.5, 13),
-                "TauPt_div_MET": np.linspace(0, 3, 13),
-                "TruthTauPt_div_MET": np.linspace(0, 3, 13),
+                "TauEta": np.linspace(-2.5, 2.5, nedges),
+                "TruthTauEta": np.linspace(-2.5, 2.5, nedges),
+                "TruthTauPhi": np.linspace(-2.5, 2.5, nedges),
+                "VisTruthTauEta": np.linspace(-2.5, 2.5, nedges),
+                "VisTruthTauPhi": np.linspace(-2.5, 2.5, nedges),
+                "TruthNeutrinoEta": np.linspace(-2.5, 2.5, nedges),
+                "MET_met": np.geomspace(150, 1000, nedges),
+                "DeltaPhi_tau_met": np.linspace(0, 2 * np.pi, nedges),
+                "TruthDeltaPhi_tau_met": np.linspace(0, 3.5, nedges),
+                "TauPt_div_MET": np.linspace(0, 3, nedges),
+                "TruthTauPt_div_MET": np.linspace(0, 3, nedges),
                 "TauRNNJetScore": np.linspace(0, 1, 51),
                 "TauBDTEleScore": np.linspace(0, 1, 51),
                 "TauNCoreTracks": np.linspace(0, 4, 5),
-                "TauPt_res": np.linspace(-1, 1, 13),
-                "TauPt_diff": np.linspace(-300, 300, 13),
+                "TauPt_res": np.linspace(-1, 1, nedges),
+                "TauPt_diff": np.linspace(-300, 300, nedges),
             },
             ".*_CR_.*ID": {
                 "MET_met": np.geomspace(1, 100, 51),
@@ -358,134 +360,64 @@ if __name__ == "__main__":
 
     default_args = {
         "dataset": "wtaunu",
+        "systematic": NOMINAL_NAME,
         "title": f"mc16d | {analysis.global_lumi / 1000:.3g}" + r"fb$^{-1}$",
-        "do_stat": False,
+        "do_stat": True,
         "do_syst": False,
-        "selection": "",
-        "ratio_plot": False,
-        "stats_box": False,
-        "label_params": {"llabel": "Simulation"},
-        "ylabel": r"Trigger Efficiency $\epsilon_\mathrm{trigger}$",
+        "ratio_err": "binom",
+        "label_params": {"llabel": "Simulation", "loc": 1},
     }
+
+    # DIRECT FRACTIONS
+    # =======================================================================
+    analysis.paths.plot_dir = base_plotting_dir / "ratio_overlay"
+    for wp in ("vl", "loose", "medium", "tight"):
+        for nprong in ("", "1prong_", "3prong_"):
+            for v in measurement_vars:
+                if v in measurement_vars_mass:
+                    default_args.update(
+                        {"logx": True, "xlabel": variable_data[v]["name"] + " [GeV]"}
+                    )
+                elif v in measurement_vars_unitless:
+                    default_args.update({"logx": False, "xlabel": variable_data[v]["name"]})
+
+                analysis.plot(
+                    val=v,
+                    selection=[f"{nprong}truth_tau", f"{wp}_{nprong}reco_tau"],
+                    label=["Particle-Level", "Detector-Level"],
+                    **default_args,
+                    filename=f"{wp}_{v}_{nprong}_overlay_compare.png",
+                    ylabel="Events",
+                    ratio_label=r"$\epsilon_\mathrm{reco}$",
+                    ratio_plot=True,
+                    ratio_fit=True,
+                    ratio_axlim=(0, 1),
+                )
 
     # TRIGGER EFFICIENCY
     # ========================================================================
-    # reco
+    default_args["selection"] = ""
+    default_args["ylabel"] = r"Trigger Efficiency $\epsilon_\mathrm{trigger}$"
+
     analysis.paths.plot_dir = base_plotting_dir / "trigger_efficiency"
     for s, effs in (("trigger", trigger_efficiencies), ("met_trigger", met_trigger_efficiencies)):
-        analysis.plot(
-            val=[
-                effs["1prong_"]["TauPt"],
-                effs["3prong_"]["TauPt"],
-            ],
-            label=["1-prong", "3-prong"],
-            **default_args,
-            logx=True,
-            xlabel=variable_data["TauPt"]["name"] + " [GeV]",
-            filename=f"TauPt_{s}_efficiency_1prong_3prong.png",
-        )
-        analysis.plot(
-            val=[
-                effs["1prong_"]["TauEta"],
-                effs["3prong_"]["TauEta"],
-            ],
-            label=["1-prong", "3-prong"],
-            **default_args,
-            logx=False,
-            xlabel=variable_data["TauEta"]["name"],
-            filename=f"TauEta_{s}_efficiency_1prong_3prong.png",
-        )
-        # truth
-        analysis.plot(
-            val=[
-                effs["1prong_"]["TruthTauPt"],
-                effs["3prong_"]["TruthTauPt"],
-            ],
-            label=["1-prong", "3-prong"],
-            **default_args,
-            logx=True,
-            xlabel=variable_data["TruthTauPt"]["name"] + " [GeV]",
-            filename=f"TruthTauPt_{s}_efficiency_1prong_3prong.png",
-        )
-        analysis.plot(
-            val=[
-                effs["1prong_"]["VisTruthTauPt"],
-                effs["3prong_"]["VisTruthTauPt"],
-            ],
-            label=["1-prong", "3-prong"],
-            **default_args,
-            logx=True,
-            xlabel=variable_data["VisTruthTauPt"]["name"] + " [GeV]",
-            filename=f"VisTruthTauPt_{s}_efficiency_1prong_3prong.png",
-        )
-        analysis.plot(
-            val=[
-                effs["1prong_"]["TruthNeutrinoPt"],
-                effs["3prong_"]["TruthNeutrinoPt"],
-            ],
-            label=["1-prong", "3-prong"],
-            **default_args,
-            logx=True,
-            xlabel=variable_data["TruthNeutrinoPt"]["name"] + " [GeV]",
-            filename=f"TruthNeutrinoPt_{s}_efficiency_1prong_3prong.png",
-        )
-        analysis.plot(
-            val=[
-                effs["1prong_"]["TruthTauEta"],
-                effs["3prong_"]["TruthTauEta"],
-            ],
-            label=["1-prong", "3-prong"],
-            **default_args,
-            logx=False,
-            xlabel=variable_data["TruthTauEta"]["name"],
-            filename=f"TruthTauEta_{s}_efficiency_1prong_3prong.png",
-        )
-        analysis.plot(
-            val=[
-                effs["1prong_"]["VisTruthTauEta"],
-                effs["3prong_"]["VisTruthTauEta"],
-            ],
-            label=["1-prong", "3-prong"],
-            **default_args,
-            logx=False,
-            xlabel=variable_data["VisTruthTauEta"]["name"],
-            filename=f"VisTruthTauEta_{s}_efficiency_1prong_3prong.png",
-        )
-        analysis.plot(
-            val=[
-                effs["1prong_"]["TruthNeutrinoEta"],
-                effs["3prong_"]["TruthNeutrinoEta"],
-            ],
-            label=["1-prong", "3-prong"],
-            **default_args,
-            logx=False,
-            xlabel=variable_data["TruthNeutrinoEta"]["name"],
-            filename=f"TruthNeutrinoEta_{s}_efficiency_1prong_3prong.png",
-        )
-        analysis.plot(
-            val=[
-                effs["1prong_"]["TruthTau_nNeutralTracks"],
-                effs["3prong_"]["TruthTau_nNeutralTracks"],
-            ],
-            label=["1-prong", "3-prong"],
-            **default_args,
-            logx=False,
-            xlabel=variable_data["TruthTau_nNeutralTracks"]["name"],
-            filename=f"TruthTau_nNeutralTracks_{s}_efficiency_1prong_3prong.png",
-        )
-        analysis.plot(
-            val=[
-                effs["1prong_"]["TruthTau_nChargedTracks"],
-                effs["3prong_"]["TruthTau_nChargedTracks"],
-            ],
-            label=["1-prong", "3-prong"],
-            **default_args,
-            logx=False,
-            xlabel=variable_data["TruthTau_nChargedTracks"]["name"],
-            filename=f"TruthTau_nChargedTracks_{s}_efficiency_1prong_3prong.png",
-        )
+        for v in measurement_vars:
+            if v in measurement_vars_mass:
+                default_args.update({"logx": True, "xlabel": variable_data[v]["name"] + " [GeV]"})
+            elif v in measurement_vars_unitless:
+                default_args.update({"logx": False, "xlabel": variable_data[v]["name"]})
 
-    # START OF PONG LOOP
+            analysis.plot(
+                val=[
+                    effs["1prong_"][v],
+                    effs["3prong_"][v],
+                ],
+                label=["1-prong", "3-prong"],
+                **default_args,
+                filename=f"{v}_{s}_efficiency_1prong_3prong.png",
+            )
+
+    # START OF PRONG LOOP
     # ========================================================================
     default_args["ylabel"] = r"Reconstruction Efficiency $\epsilon$"
     wps = ("vl", "loose", "medium", "tight")
@@ -494,22 +426,17 @@ if __name__ == "__main__":
 
         # RECONSTRUCTION EFFICIENCY
         # ========================================================================
-        for v in measurement_vars_mass:
+        for v in measurement_vars:
+            if v in measurement_vars_mass:
+                default_args.update({"logx": True, "xlabel": variable_data[v]["name"] + " [GeV]"})
+            elif v in measurement_vars_unitless:
+                default_args.update({"logx": False, "xlabel": variable_data[v]["name"]})
+
             analysis.plot(
                 val=[recon_efficiencies[wp][nprong][v] for wp in wps],
                 label=["Very Loose", "Loose", "Medium", "Tight"],
                 **default_args,
-                logx=True,
-                xlabel=variable_data[v]["name"] + " [GeV]",
                 filename=f"{v}_{nprong}_efficiency_wp_compare.png",
-            )
-        for v in measurement_vars_unitless:
-            analysis.plot(
-                val=[recon_efficiencies[wp][nprong][v] for wp in wps],
-                label=["Very Loose", "Loose", "Medium", "Tight"],
-                **default_args,
-                xlabel=variable_data[v]["name"],
-                filename=f"{v}_{nprong}efficiency_wp_compare.png",
             )
 
     # START OF WP LOOP
@@ -520,21 +447,16 @@ if __name__ == "__main__":
 
         # RECONSTRUCTION EFFICIENCY
         # ========================================================================
-        for v in measurement_vars_mass:
+        for v in measurement_vars:
+            if v in measurement_vars_mass:
+                default_args.update({"logx": True, "xlabel": variable_data[v]["name"] + " [GeV]"})
+            elif v in measurement_vars_unitless:
+                default_args.update({"logx": False, "xlabel": variable_data[v]["name"]})
+
             analysis.plot(
                 val=[recon_efficiencies[wp]["1prong_"][v], recon_efficiencies[wp]["3prong_"][v]],
                 label=["1-prong", "3-prong"],
                 **default_args,
-                logx=True,
-                xlabel=variable_data[v]["name"] + " [GeV]",
-                filename=f"{v}_efficiency_{wp}_1prong_3prong.png",
-            )
-        for v in measurement_vars_unitless:
-            analysis.plot(
-                val=[recon_efficiencies[wp]["1prong_"][v], recon_efficiencies[wp]["3prong_"][v]],
-                label=["1-prong", "3-prong"],
-                **default_args,
-                xlabel=variable_data[v]["name"],
                 filename=f"{v}_efficiency_{wp}_1prong_3prong.png",
             )
 
