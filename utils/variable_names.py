@@ -279,12 +279,12 @@ variable_data: Dict[str, Branch] = {
         "tag": VarTag.RECO,
     },
     "TauPt_div_MET": {
-        "name": r"Tau $p_T/E_T^\mathrm{miss}$",
+        "name": r"Tau $p_\mathrm{T}/E_\mathrm{T}^\mathrm{miss}$",
         "units": "",
         "tag": VarTag.RECO,
     },
     "DeltaPhi_tau_met": {
-        "name": r"$\Delta\phi(p^\tau_T,E_T^\mathrm{miss})$",
+        "name": r"$\Delta\phi(p^\tau_\mathrm{T},E_\mathrm{T}^\mathrm{miss})$",
         "units": "",
         "tag": VarTag.RECO,
     },
@@ -292,7 +292,7 @@ variable_data: Dict[str, Branch] = {
     # =======================================================
     # analysistop
     "el_pt": {
-        "name": r"Electron $p_{T}$",
+        "name": r"Electron $p_\mathrm{T}$",
         "units": "GeV",
         "tag": VarTag.RECO,
     },
@@ -322,7 +322,7 @@ variable_data: Dict[str, Branch] = {
         "tag": VarTag.RECO,
     },
     "mu_pt": {
-        "name": r"Muon $p_{T}$",
+        "name": r"Muon $p_\mathrm{T}$",
         "units": "GeV",
         "tag": VarTag.RECO,
     },
@@ -352,7 +352,7 @@ variable_data: Dict[str, Branch] = {
         "tag": VarTag.RECO,
     },
     "jet_pt": {
-        "name": r"Jet $p_{T}$",
+        "name": r"Jet $p_\mathrm{T}$",
         "units": "GeV",
         "tag": VarTag.RECO,
     },
@@ -372,12 +372,12 @@ variable_data: Dict[str, Branch] = {
         "tag": VarTag.RECO,
     },
     "met_met": {
-        "name": r"$E_{T}^{\mathrm{miss}}$",
+        "name": r"$E_\mathrm{T}^\mathrm{miss}$",
         "units": "GeV",
         "tag": VarTag.RECO,
     },
     "met_phi": {
-        "name": r"$E_T^{\mathrm{miss}} \phi$",
+        "name": r"$E_\mathrm{T}^\mathrm{miss} \phi$",
         "units": "",
         "tag": VarTag.RECO,
     },
@@ -413,7 +413,7 @@ variable_data: Dict[str, Branch] = {
         "tag": VarTag.RECO,
     },
     "ElePt": {
-        "name": r"Electron $p_{T}$",
+        "name": r"Electron $p_\mathrm{T}$",
         "units": "GeV",
         "tag": VarTag.RECO,
     },
@@ -448,7 +448,7 @@ variable_data: Dict[str, Branch] = {
         "tag": VarTag.RECO,
     },
     "MuonPt": {
-        "name": r"Muon $p_{T}$",
+        "name": r"Muon $p_\mathrm{T}$",
         "units": "GeV",
         "tag": VarTag.RECO,
     },
@@ -488,7 +488,7 @@ variable_data: Dict[str, Branch] = {
         "tag": VarTag.RECO,
     },
     "TauPt": {
-        "name": r"Tau $p_{T}$",
+        "name": r"Tau $p_\mathrm{T}$",
         "units": "GeV",
         "tag": VarTag.RECO,
     },
@@ -508,7 +508,7 @@ variable_data: Dict[str, Branch] = {
         "tag": VarTag.RECO,
     },
     "JetPt": {
-        "name": r"Jet $p_{T}$",
+        "name": r"Jet $p_\mathrm{T}$",
         "units": "GeV",
         "tag": VarTag.RECO,
     },
@@ -533,7 +533,7 @@ variable_data: Dict[str, Branch] = {
         "tag": VarTag.RECO,
     },
     "PhotonPt": {
-        "name": r"Photon $p_{T}$",
+        "name": r"Photon $p_\mathrm{T}$",
         "units": "GeV",
         "tag": VarTag.RECO,
     },
@@ -553,27 +553,27 @@ variable_data: Dict[str, Branch] = {
         "tag": VarTag.RECO,
     },
     "MET_etx": {
-        "name": r"$E_{Tx}^{\mathrm{miss}}$",
+        "name": r"$E_{\mathrm{T},x}^\mathrm{miss}$",
         "units": "GeV",
         "tag": VarTag.RECO,
     },
     "MET_ety": {
-        "name": r"$E_{Ty}^{\mathrm{miss}}$",
+        "name": r"$E_{\mathrm{T},y}^\mathrm{miss}$",
         "units": "GeV",
         "tag": VarTag.RECO,
     },
     "MET_met": {
-        "name": r"$E_{T}^{\mathrm{miss}}$",
+        "name": r"$E_\mathrm{T}^\mathrm{miss}$",
         "units": "GeV",
         "tag": VarTag.RECO,
     },
     "MET_phi": {
-        "name": r"$E_T^{\mathrm{miss}} \phi$",
+        "name": r"$E_\mathrm{T}^\mathrm{miss} \phi$",
         "units": "",
         "tag": VarTag.RECO,
     },
     "MatchedTruthParticlePt": {
-        "name": r"Truth Matched Particle $p_T$",
+        "name": r"Truth Matched Particle $p_\mathrm{T}$",
         "units": "GeV",
         "tag": VarTag.RECO,
     },
@@ -628,12 +628,12 @@ variable_data: Dict[str, Branch] = {
         "tag": VarTag.RECO,
     },
     "TauPt_res": {
-        "name": r"$(p_T^\mathrm{true} - p_T^\mathrm{reco}) / p_T^\mathrm{true}$",
+        "name": r"$(p_\mathrm{T|^\mathrm{true} - p_\mathrm{T}^\mathrm{reco}) / p_\mathrm{T}^\mathrm{true}$",
         "units": "",
         "tag": VarTag.RECO,
     },
     "TauPt_diff": {
-        "name": r"$p_T^\mathrm{true} - p_T^\mathrm{reco}$",
+        "name": r"$p_\mathrm{T}^\mathrm{true} - p_\mathrm{T}^\mathrm{reco}$",
         "units": "GeV",
         "tag": VarTag.RECO,
     },
@@ -648,7 +648,7 @@ variable_data: Dict[str, Branch] = {
         "tag": VarTag.RECO,
     },
     "LeadingJetPt": {
-        "name": "Leading jet $p_T$",
+        "name": r"Leading jet $p_\mathrm{T}$",
         "units": "GeV",
         "tag": VarTag.RECO,
     },
@@ -701,17 +701,17 @@ variable_data: Dict[str, Branch] = {
         "tag": VarTag.TRUTH,
     },
     "MC_WZ_dilep_pt_born": {
-        "name": r"Born dilepton $p_{T}$",
+        "name": r"Born dilepton $p_\mathrm{T}$",
         "units": "GeV",
         "tag": VarTag.TRUTH,
     },
     "MC_WZ_dilep_pt_bare": {
-        "name": r"bare dilepton $p_{T}$",
+        "name": r"bare dilepton $p_\mathrm{T}$",
         "units": "GeV",
         "tag": VarTag.TRUTH,
     },
     "MC_WZ_dilep_pt_dres": {
-        "name": r"dressed dilepton $p_{T}$",
+        "name": r"dressed dilepton $p_\mathrm{T}$",
         "units": "GeV",
         "tag": VarTag.TRUTH,
     },
@@ -776,17 +776,17 @@ variable_data: Dict[str, Branch] = {
         "tag": VarTag.TRUTH,
     },
     "MC_WZneutrino_pt_born": {
-        "name": r"Born neutrino $p_{T}$",
+        "name": r"Born neutrino $p_\mathrm{T}$",
         "units": "GeV",
         "tag": VarTag.TRUTH,
     },
     "MC_WZneutrino_pt_bare": {
-        "name": r"bare neutrino $p_{T}$",
+        "name": r"bare neutrino $p_\mathrm{T}$",
         "units": "GeV",
         "tag": VarTag.TRUTH,
     },
     "MC_WZneutrino_pt_dres": {
-        "name": r"dressed neutrino $p_{T}$",
+        "name": r"dressed neutrino $p_\mathrm{T}$",
         "units": "GeV",
         "tag": VarTag.TRUTH,
     },
@@ -821,17 +821,17 @@ variable_data: Dict[str, Branch] = {
         "tag": VarTag.TRUTH,
     },
     "MC_WZmu_el_pt_born": {
-        "name": r"Born %s $p_{T}$",
+        "name": r"Born %s $p_\mathrm{T}$",
         "units": "GeV",
         "tag": VarTag.TRUTH,
     },
     "MC_WZmu_el_pt_bare": {
-        "name": r"bare %s $p_{T}$",
+        "name": r"bare %s $p_\mathrm{T}$",
         "units": "",
         "tag": VarTag.TRUTH,
     },
     "MC_WZmu_el_pt_dres": {
-        "name": r"dressed %s $p{T}$",
+        "name": r"dressed %s $p_\mathrm{T}$",
         "units": "GeV",
         "tag": VarTag.TRUTH,
     },
@@ -851,7 +851,7 @@ variable_data: Dict[str, Branch] = {
         "tag": VarTag.TRUTH,
     },
     "MC_WZ_pt": {
-        "name": r"dressed W $p_{T}$",
+        "name": r"dressed W $p_\mathrm{T}$",
         "units": "GeV",
         "tag": VarTag.TRUTH,
     },
@@ -882,7 +882,7 @@ variable_data: Dict[str, Branch] = {
         "tag": VarTag.TRUTH,
     },
     "TruthJetPt": {
-        "name": r"Truth jet $p_{T}$",
+        "name": r"Truth jet $p_\mathrm{T}$",
         "units": "GeV",
         "tag": VarTag.TRUTH,
     },
@@ -907,12 +907,12 @@ variable_data: Dict[str, Branch] = {
         "tag": VarTag.TRUTH,
     },
     "TruthNeutrinoPt": {
-        "name": r"Truth neutrino $p_{T}$",
+        "name": r"Truth neutrino $p_\mathrm{T}$",
         "units": "GeV",
         "tag": VarTag.TRUTH,
     },
     "TruthMetPt": {
-        "name": r"Truth neutrino $p_T$",
+        "name": r"Truth neutrino $p_\mathrm{T}$",
         "units": "GeV",
         "tag": VarTag.TRUTH,
     },
@@ -927,7 +927,7 @@ variable_data: Dict[str, Branch] = {
         "tag": VarTag.TRUTH,
     },
     "ImplicitMetPt": {
-        "name": r"Implicit MET $p_T$",
+        "name": r"Implicit MET $p_\mathrm{T}$",
         "units": "GeV",
         "tag": VarTag.TRUTH,
     },
@@ -952,7 +952,7 @@ variable_data: Dict[str, Branch] = {
         "tag": VarTag.TRUTH,
     },
     "TruthMuonPt": {
-        "name": r"Truth muon $p_{T}$",
+        "name": r"Truth muon $p_\mathrm{T}$",
         "units": "GeV",
         "tag": VarTag.TRUTH,
     },
@@ -972,7 +972,7 @@ variable_data: Dict[str, Branch] = {
         "tag": VarTag.TRUTH,
     },
     "TruthElePt": {
-        "name": r"Truth electron $p_{T}$",
+        "name": r"Truth electron $p_\mathrm{T}$",
         "units": "GeV",
         "tag": VarTag.TRUTH,
     },
@@ -997,7 +997,7 @@ variable_data: Dict[str, Branch] = {
         "tag": VarTag.TRUTH,
     },
     "TruthTauPt": {
-        "name": r"Truth tau $p_{T}$",
+        "name": r"Truth tau $p_\mathrm{T}$",
         "units": "GeV",
         "tag": VarTag.TRUTH,
     },
@@ -1022,7 +1022,7 @@ variable_data: Dict[str, Branch] = {
         "tag": VarTag.TRUTH,
     },
     "TruthBosonPt": {
-        "name": r"Truth boson $p_T$",
+        "name": r"Truth boson $p_\mathrm{T}$",
         "units": "GeV",
         "tag": VarTag.TRUTH,
     },
@@ -1052,7 +1052,7 @@ variable_data: Dict[str, Branch] = {
         "tag": VarTag.TRUTH,
     },
     "VisTruthTauPt": {
-        "name": r"Visible truth tau products $p_{T}$",
+        "name": r"Visible truth tau products $p_\mathrm{T}$",
         "units": "GeV",
         "tag": VarTag.TRUTH,
     },
@@ -1067,12 +1067,12 @@ variable_data: Dict[str, Branch] = {
         "tag": VarTag.TRUTH,
     },
     "TruthTauPt_div_MET": {
-        "name": r"Truth $p^\tau_T/p^\nu_T$",
+        "name": r"Truth $p^\tau_{mathrmT{}/p^\nu_\mathrm{T}$",
         "units": "",
         "tag": VarTag.TRUTH,
     },
     "TruthDeltaPhi_tau_met": {
-        "name": r"Truth $\Delta\phi(p^\tau_T,E_T^\mathrm{miss})$",
+        "name": r"Truth $\Delta\phi(p^\tau_\mathrm{T},E_\mathrm{T}^\mathrm{miss})$",
         "units": "",
         "tag": VarTag.TRUTH,
     },
