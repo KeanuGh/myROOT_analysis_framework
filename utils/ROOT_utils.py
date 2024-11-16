@@ -3,7 +3,7 @@ import logging
 import pickle as pkl
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Type, Iterable
+from typing import Type, Iterable, Literal
 
 import ROOT  # type: ignore
 import boost_histogram as bh
@@ -226,9 +226,13 @@ def get_TH1_bin_args(
     raise ValueError("Bins should be list of bin edges or tuple like (nbins, xmin, xmax)")
 
 
-def get_th1_bin_edges(h: ROOT.TH1) -> np.typing.NDArray[float]:
+def get_th1_bin_edges(h: ROOT.TH1, ax: Literal["x", "y"] = "x") -> np.typing.NDArray[float]:
     """Return bin edges for TH1 object hist"""
-    return np.array([h.GetBinLowEdge(i + 1) for i in range(h.GetNbinsX() + 1)])
+    if ax == "x":
+        return np.array(h.GetXaxis().GetXbins())
+    if ax == "y":
+        return np.array(h.GetYaxis().GetXbins())
+    raise ValueError(f'Azis must be "x" or "y". Got: {ax}')
 
 
 def get_th1_bin_values(h: ROOT.TH1, flow: bool = False) -> np.typing.NDArray[float]:

@@ -26,7 +26,6 @@ if ROOT.PyConfig.StartGUIThread:  # prevents a ROOT crash from settings being ap
     np.seterr(invalid="ignore", divide="ignore")  # ignore division by zero errors
 
 
-# TODO: 2D hist
 class Histogram1D(bh.Histogram, family=None):
     """
     Wrapper around boost-histogram histogram for 1D
@@ -123,6 +122,10 @@ class Histogram1D(bh.Histogram, family=None):
             th1 = var
 
         if th1:
+            # if passed histogram is a TH2, project along the X-axis
+            if isinstance(th1, ROOT.TH2):
+                th1 = th1.ProfileX()
+
             # create from TH1
             edges = ROOT_utils.get_th1_bin_edges(th1)
             super().__init__(bh.axis.Variable(edges), storage=bh.storage.Weight())

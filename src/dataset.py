@@ -18,25 +18,8 @@ from src.histogram import Histogram1D
 from src.logger import get_logger
 from utils import ROOT_utils
 from utils.file_utils import smart_join
+from utils.plotting_tools import ProfileOpts, Hist2dOpts
 from utils.variable_names import variable_data, VarTag
-
-
-@dataclass(slots=True)
-class ProfileOpts:
-    """
-    Options for building ROOT profile from RDataFrame columns
-
-    :param x: x-axis column name.
-    :param y: y-axis column name.
-    :param weight: name of column to apply as weight.
-    :param option: option paramter to pass to `TProfile1DModel()`
-        (see https://root.cern.ch/doc/master/classTProfile.html#a1ff9340284c73ce8762ab6e7dc0e6725)
-    """
-
-    x: str
-    y: str
-    weight: str = ""
-    option: str = ""
 
 
 @dataclass(slots=True)
@@ -52,6 +35,7 @@ class Dataset:
     :param selections: Dictionary of name: list of cuts to serve as selections/regions for analysis
     :param all_vars: set of all variables to extract from data (taken from branch names in df)
     :param profiles: dictionary of profile_name: ProfileOpts to build TProfile objects from dataframe
+    :param hists_2d: dictionary of hist_name: Hist2dOpts to build 2d histograms
     :param lumi: Dataset Luminosity scale
     :param label: Dataset label to put on plots
     :param logger: Logger object to print to. Defaults to console output at DEBUG-level
@@ -70,6 +54,7 @@ class Dataset:
     selections: dict[str, list[Cut]] = field(default_factory=list)
     all_vars: set[str] = field(default_factory=set)
     profiles: dict[str, ProfileOpts] = field(default_factory=dict)
+    hists_2d: dict[str, Hist2dOpts] = field(default_factory=dict)
     lumi: float = 139.0
     label: str = ""
     logger: logging.Logger = field(default_factory=get_logger)
@@ -439,7 +424,7 @@ class Dataset:
         normalise: float | bool = False,
         systematic: str = "T_s1hv_NOMINAL",
         selection: str = "",
-        histtype: str = "TH1F",
+        histtype: Literal["TH1F", "TH1D", "TH1I", "TH1C", "TH1L", "TH1S"] = "TH1F",
         **kwargs,
     ) -> Histogram1D:
         """
@@ -478,7 +463,7 @@ class Dataset:
             if bins is None:
                 raise ValueError("Must pass bins if histogram not in dictionary") from e
 
-            th1 = self.gen_histogram(
+            th1 = self.gen_th1(
                 variable=var, systematic=systematic, selection=selection, histtype=histtype
             )
 
@@ -575,9 +560,13 @@ class Dataset:
         return bin_args
 
     def define_th1(
-        self, variable: str, name: str = "", title: str = "", histtype="TH1F"
+        self,
+        variable: str,
+        name: str = "",
+        title: str = "",
+        histtype: Literal["TH1F", "TH1D", "TH1I", "TH1C", "TH1L", "TH1S"] = "TH1F",
     ) -> ROOT.TH1F:
-        """Define histogram from variable with correct binnings"""
+        """Define 1D histogram from variable with correct binnings"""
         allowed_histtypes = ["TH1F", "TH1D", "TH1I", "TH1C", "TH1L", "TH1S"]
         if histtype.upper() not in allowed_histtypes:
             raise ValueError(
@@ -586,11 +575,35 @@ class Dataset:
         if variable not in self.all_vars:
             raise ValueError(f"No known variable {variable} in dataset {self.name}")
 
-        bin_args = self.get_binnings(variable)
         return ROOT.__getattr__(histtype)(
             name if name else variable,
             title if title else name if name else variable,
-            *ROOT_utils.get_TH1_bin_args(**bin_args),
+            *ROOT_utils.get_TH1_bin_args(**self.get_binnings(variable)),
+        )
+
+    def define_th2(
+        self,
+        x: str,
+        y: str,
+        name: str = "",
+        title: str = "",
+        histtype: Literal["TH2F", "TH2D", "TH2I", "TH2C", "TH2L", "TH2S"] = "TH2F",
+    ) -> ROOT.TH1F:
+        """Define 2D histogram from variables with correct binnings"""
+        allowed_histtypes = ["TH2F", "TH2D", "TH2I", "TH2C", "TH2L", "TH2S"]
+        if histtype.upper() not in allowed_histtypes:
+            raise ValueError(
+                f"Unknown histogram type: {histtype}. Allowed histogram types: {allowed_histtypes}."
+            )
+        for v in (x, y):
+            if v not in self.all_vars:
+                raise ValueError(f"No known variable {v} in dataset {self.name}")
+
+        return ROOT.__getattr__(histtype)(
+            name if name else f"{x}_{y}",
+            title if title else name if name else f"{x}_{y}",
+            *ROOT_utils.get_TH1_bin_args(**self.get_binnings(x)),
+            *ROOT_utils.get_TH1_bin_args(**self.get_binnings(y)),
         )
 
     def define_profile(
@@ -613,12 +626,12 @@ class Dataset:
             return profile_model, profile_opts.x, profile_opts.y, profile_opts.weight
         return profile_model, profile_opts.x, profile_opts.y
 
-    def gen_histogram(
+    def gen_th1(
         self,
         variable: str,
         systematic: str = "T_s1thv_NOMINAL",
         selection: str = "",
-        histtype: str = "TH1F",
+        histtype: Literal["TH1F", "TH1D", "TH1I", "TH1C", "TH1L", "TH1S"] = "TH1F",
     ) -> ROOT.TH1:
         """Return TH1 histogram from selection for variable. Binning taken from internal binnings dictionary"""
         weight = self._match_weight(variable)
@@ -683,7 +696,8 @@ class Dataset:
             for selection, sel_df in zip(selections, rdfs):
                 th1_ptr_map[selection] = dict()
 
-                # Define histograms from listed variables
+                # Define Histograms
+                # =======================================================
                 for variable_name in output_histogram_variables:
                     weight = self._match_weight(variable_name)
                     fill_cols = [variable_name, weight] if weight else [variable_name]
@@ -711,11 +725,12 @@ class Dataset:
                                 th1, [variable_name, sys_wgt]
                             )
 
-                # don't want profiles for systematics
+                # only want regular 1D histograms for systemaics
                 if sys_name == self.nominal_name:
                     continue
 
                 # Define profiles
+                # =======================================================
                 for profile_name, profile_opts in self.profiles.items():
                     if profile_name in output_histogram_variables:
                         self.logger.error(
@@ -731,6 +746,31 @@ class Dataset:
                         selection=selection,
                     )
                     th1_ptr_map[selection][profile_name] = root_sys_df.Profile1D(*profile_args)
+
+                # Define 2D histograms
+                # =======================================================
+                for hist2d_name, hist2d_opts in self.hists_2d.items():
+                    if hist2d_name in output_histogram_variables:
+                        self.logger.error(
+                            "Histogram for '%s' already exists! Skipping 2D histogram creation",
+                            hist2d_name,
+                        )
+                        continue
+
+                    fill_cols = (
+                        [hist2d_opts.x, hist2d_opts.y, hist2d_opts.weight]
+                        if hist2d_opts.weight
+                        else [hist2d_opts.x, hist2d_opts.y]
+                    )
+
+                    # define histogram
+                    hist_name = smart_join(
+                        [sys_name, selection, f"{hist2d_opts.x}_{hist2d_opts.y}"]
+                    )
+                    th2 = self.define_th2(hist2d_opts.x, hist2d_opts.y, hist_name, hist_name)
+                    th1_ptr_map[selection][f"{hist2d_opts.x}_{hist2d_opts.y}"] = sel_df.Fill(
+                        th2, fill_cols
+                    )
 
             # generate histograms
             t = time.time()

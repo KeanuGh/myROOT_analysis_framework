@@ -10,6 +10,7 @@ import ROOT
 import matplotlib.pyplot as plt
 import mplhep as hep
 import numpy as np
+from matplotlib import ticker
 from numpy.typing import ArrayLike
 from tabulate import tabulate
 
@@ -248,10 +249,7 @@ class Analysis:
             dataset = builder.build(**self._match_params(args, DatasetBuilder.build))
 
             # apply some manual settings
-            for manual_setting in [
-                "binnings",
-                "profiles",
-            ]:
+            for manual_setting in ["binnings", "profiles", "hists_2d"]:
                 if manual_setting in args:
                     dataset.__setattr__(manual_setting, args[manual_setting])
 
@@ -631,6 +629,98 @@ class Analysis:
         self.logger.info(f"Saved plot to {filepath}")
         plt.close(fig)
 
+    def plot_2d(
+        self,
+        xvar: str,
+        yvar: str,
+        dataset: str | None = None,
+        systematic: str = "T_s1thv_NOMINAL",
+        selection: str = "",
+        logx: bool = False,
+        logy: bool = False,
+        xlabel: str = "",
+        ylabel: str = "",
+        title: str = "",
+        filename: str | Path = "",
+        suffix: str = "",
+        prefix: str = "",
+        label_params: dict | None = None,
+        **kwargs,
+    ):
+        """2D plot using mplhep"""
+
+        # get hist values
+        # =========================================================================
+        h = self.get_hist(
+            f"{xvar}_{yvar}",
+            dataset=dataset,
+            systematic=systematic,
+            selection=selection,
+        )
+
+        nbinsx = h.GetNbinsX()
+        nbinsy = h.GetNbinsY()
+        bin_edgesx = ROOT_utils.get_th1_bin_edges(h, "x")
+        bin_edgesy = ROOT_utils.get_th1_bin_edges(h, "y")
+
+        bin_values = np.empty((nbinsx, nbinsy))
+        for i in range(nbinsx):
+            for j in range(nbinsy):
+                bin_values[i][j] = h.GetBinContent(i + 1, j + 1)
+
+        # plot
+        # =========================================================================
+        fig, ax = plt.subplots()
+        hep.hist2dplot(
+            H=bin_values,
+            xbins=bin_edgesx,
+            ybins=bin_edgesy,
+            ax=ax,
+            **kwargs,
+        )
+
+        # axis format
+        # =========================================================================
+        if label_params is None:
+            label_params = {}
+        plotting_tools.set_hep_label(ax=ax, title=title, **label_params)
+        if logx:
+            ax.semilogx()
+            ax.xaxis.set_minor_formatter(ticker.LogFormatter())
+            ax.xaxis.set_major_formatter(ticker.LogFormatter())
+        if logy:
+            ax.semilogy()
+            ax.yaxis.set_minor_formatter(ticker.LogFormatter())
+            ax.yaxis.set_major_formatter(ticker.LogFormatter())
+        ax.set_xlabel(xlabel if xlabel else plotting_tools.get_axis_labels(xvar)[0])
+        ax.set_ylabel(ylabel if ylabel else plotting_tools.get_axis_labels(yvar)[0])
+
+        # save
+        # =========================================================================
+        if filename:
+            filepath = self.paths.plot_dir / filename
+        else:
+            filename = (
+                smart_join(
+                    [
+                        prefix,
+                        xvar,
+                        yvar,
+                        "2D",
+                        dataset,
+                        systematic,
+                        selection,
+                        suffix,
+                    ]
+                )
+                + ".png"
+            )
+            filepath = self.paths.plot_dir / filename
+
+        fig.savefig(filepath, bbox_inches="tight")
+        self.logger.info(f"Saved plot to {filepath}")
+        plt.close(fig)
+
     def _plot_stack(
         self,
         ax: plt.Axes,
@@ -812,11 +902,10 @@ class Analysis:
                     raise ValueError(f"Empty value for '{var}'! Check arguments.")
                 else:
                     if n_plottables not in (1, n_val):
-                        d_ = {k: len(v) for k, v in var_dict.items()}
                         raise ValueError(
                             f"Lengths of variables: {list(var_dict.keys())} must match in length"
                             f" or be single values to apply to all histograms.\n"
-                            f"Got: {d_}"
+                            f"Got: {var_dict}"
                         )
                     n_plottables = len(val)
 
@@ -899,13 +988,13 @@ class Analysis:
         dataset: str,
         systematic: str = "T_s1hv_NOMINAL",
         selection: str = "",
-        histtype: str = "TH1F",
+        histtype: Literal["TH1F", "TH1D", "TH1I", "TH1C", "TH1L", "TH1S"] = "TH1F",
         save: bool = True,
     ) -> ROOT.TH1:
         """
         Generate histogram on-the-fly from given options
         """
-        h = self[dataset].gen_histogram(variable, systematic, selection, histtype)
+        h = self[dataset].gen_th1(variable, systematic, selection, histtype)
 
         if save:
             self[dataset].histograms[systematic][selection][variable] = h
@@ -950,7 +1039,7 @@ class Analysis:
                 self.logger.info(
                     f"Generating histogram for {variable} in {dataset} with selection: {selection}.."
                 )
-                h = self[dataset].gen_histogram(variable, systematic, selection)
+                h = self[dataset].gen_th1(variable, systematic, selection)
                 self[dataset].histograms[systematic][selection][variable] = h
                 return h
             raise ValueError(
