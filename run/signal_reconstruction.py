@@ -5,6 +5,7 @@ import numpy as np
 
 from src.analysis import Analysis
 from src.cutting import Cut
+from utils.plotting_tools import Hist2dOpts
 from utils.variable_names import variable_data
 
 DTA_PATH = Path("/mnt/D/data/DTA_outputs/2024-09-19/")
@@ -227,23 +228,24 @@ selections: dict[str, list[Cut]] = {
 # VARIABLES
 # ========================================================================
 measurement_vars_mass = [
-    # "TauPt",
+    "TauPt",
     "TruthTauPt",
     "VisTruthTauPt",
-    # "MTW",
+    "MTW",
     "TruthMTW",
     # "TruthBosonM",
     # "TruthDilepM",
 ]
 measurement_vars_unitless = [
-    # "TauEta",
-    # "TauPhi",
+    "TauEta",
+    "TauPhi",
     "TruthTauEta",
     "TruthTauPhi",
     "VisTruthTauEta",
     "VisTruthTauPhi",
     "TruthNeutrinoPt",
     "TruthNeutrinoEta",
+    "TauPt_res",
     # "nJets",
     "TruthTau_nChargedTracks",
     "TruthTau_nNeutralTracks",
@@ -256,6 +258,21 @@ measurement_vars_unitless = [
     # "TruthTauPt_div_MET",
 ]
 measurement_vars = measurement_vars_unitless + measurement_vars_mass
+truth_measurement_vars = [v for v in measurement_vars_mass if variable_data[v]["tag"] == "truth"]
+reco_measurement_vars = [
+    v for v in measurement_vars_mass if (variable_data[v]["tag"] == "reco") and (v != "TauPt_res")
+]
+
+# define 2d histograms
+hists_2d = {
+    "TauPt_TruthTauPt": Hist2dOpts("TauPt", "TruthTauPt"),
+}
+for v in reco_measurement_vars:
+    hists_2d[f"{v}_TauPt_res"] = Hist2dOpts(
+        x=v,
+        y="TauPt_res",
+        weight="reco_weight",
+    )
 NOMINAL_NAME = "T_s1thv_NOMINAL"
 
 
@@ -272,12 +289,13 @@ def run_analysis() -> Analysis:
         # regen_metadata=True,
         ttree=NOMINAL_NAME,
         selections=selections,
-        analysis_label="reconstruction_efficiency",
+        analysis_label="signal_reconstruction",
         log_level=10,
         log_out="both",
         extract_vars=measurement_vars,
         import_missing_columns_as_nan=True,
         snapshot=False,
+        hists_2d=hists_2d,
         binnings={
             "": {
                 "MTW": np.geomspace(150, 1000, nedges),
@@ -323,7 +341,11 @@ if __name__ == "__main__":
     for dataset in analysis:
         dataset.histogram_printout(to_file="txt", to_dir=analysis.paths.latex_dir)
 
-    # calculate efficiencies
+    working_points = ("vl", "loose", "medium", "tight")
+    working_prongs = ("", "1prong_", "3prong_")
+
+    # CALCULATE EFFICIENCIES
+    # ========================================================================
     recon_efficiencies = {
         wp: {
             nprong: {
@@ -333,9 +355,9 @@ if __name__ == "__main__":
                 )
                 for var in measurement_vars
             }
-            for nprong in ("", "1prong_", "3prong_")
+            for nprong in working_prongs
         }
-        for wp in ("vl", "loose", "medium", "tight")
+        for wp in working_points
     }
     trigger_efficiencies = {
         nprong: {
@@ -358,54 +380,38 @@ if __name__ == "__main__":
         for nprong in ("1prong_", "3prong_")
     }
 
-    default_args = {
+    args_eff = {
         "dataset": "wtaunu",
         "systematic": NOMINAL_NAME,
-        "title": f"mc16d | {analysis.global_lumi / 1000:.3g}" + r"fb$^{-1}$",
+        "title": f"Reconstruction Efficiency | mc16d | {analysis.global_lumi / 1000:.3g}"
+        + r"fb$^{-1}$",
         "do_stat": True,
         "do_syst": False,
         "ratio_err": "binom",
         "label_params": {"llabel": "Simulation", "loc": 1},
     }
-
-    # DIRECT FRACTIONS
-    # =======================================================================
-    analysis.paths.plot_dir = base_plotting_dir / "ratio_overlay"
-    for wp in ("vl", "loose", "medium", "tight"):
-        for nprong in ("", "1prong_", "3prong_"):
-            for v in measurement_vars:
-                if v in measurement_vars_mass:
-                    default_args.update(
-                        {"logx": True, "xlabel": variable_data[v]["name"] + " [GeV]"}
-                    )
-                elif v in measurement_vars_unitless:
-                    default_args.update({"logx": False, "xlabel": variable_data[v]["name"]})
-
-                analysis.plot(
-                    val=v,
-                    selection=[f"{nprong}truth_tau", f"{wp}_{nprong}reco_tau"],
-                    label=["Particle-Level", "Detector-Level"],
-                    **default_args,
-                    filename=f"{wp}_{v}_{nprong}_overlay_compare.png",
-                    ylabel="Events",
-                    ratio_label=r"$\epsilon_\mathrm{reco}$",
-                    ratio_plot=True,
-                    ratio_fit=True,
-                    ratio_axlim=(0, 1),
-                )
+    args_res = {
+        "dataset": "wtaunu",
+        "systematic": NOMINAL_NAME,
+        "title": f"Tau $p_T$ resolution | mc16d | {analysis.global_lumi / 1000:.3g}" + r"fb$^{-1}$",
+        "ylabel": r"$(p_\mathrm{T}^\mathrm{true} - p_\mathrm{T}^\mathrm{reco}) / p_\mathrm{T}^\mathrm{true}$",
+        "do_stat": True,
+        "do_syst": False,
+        "label_params": {"llabel": "Simulation", "loc": 1},
+    }
 
     # TRIGGER EFFICIENCY
     # ========================================================================
-    default_args["selection"] = ""
-    default_args["ylabel"] = r"Trigger Efficiency $\epsilon_\mathrm{trigger}$"
+    args_eff["selection"] = ""
+    args_eff["ylabel"] = r"Trigger Efficiency $\epsilon_\mathrm{trigger}$"
 
     analysis.paths.plot_dir = base_plotting_dir / "trigger_efficiency"
     for s, effs in (("trigger", trigger_efficiencies), ("met_trigger", met_trigger_efficiencies)):
-        for v in measurement_vars:
+        for v in truth_measurement_vars:
             if v in measurement_vars_mass:
-                default_args.update({"logx": True, "xlabel": variable_data[v]["name"] + " [GeV]"})
+                args_eff.update({"logx": True, "xlabel": variable_data[v]["name"] + " [GeV]"})
             elif v in measurement_vars_unitless:
-                default_args.update({"logx": False, "xlabel": variable_data[v]["name"]})
+                args_eff.update({"logx": False, "xlabel": variable_data[v]["name"]})
 
             analysis.plot(
                 val=[
@@ -413,51 +419,149 @@ if __name__ == "__main__":
                     effs["3prong_"][v],
                 ],
                 label=["1-prong", "3-prong"],
-                **default_args,
+                **args_eff,
                 filename=f"{v}_{s}_efficiency_1prong_3prong.png",
+            )
+
+    # BEEEG LOOP
+    # =======================================================================
+    for wp in working_points:
+        for nprong in working_prongs:
+            # DIRECT FRACTIONS
+            # =======================================================================
+            analysis.paths.plot_dir = base_plotting_dir / "efficiency/full"
+            args_eff["selection"] = [f"{nprong}truth_tau", f"{wp}_{nprong}reco_tau"]
+            args_eff["ylabel"] = f"Events"
+            for v in truth_measurement_vars:
+                if v in measurement_vars_mass:
+                    args_eff.update({"logx": True, "xlabel": variable_data[v]["name"] + " [GeV]"})
+                elif v in measurement_vars_unitless:
+                    args_eff.update({"logx": False, "xlabel": variable_data[v]["name"]})
+
+                analysis.plot(
+                    val=v,
+                    label=["Particle-Level", "Detector-Level"],
+                    **args_eff,
+                    filename=f"{wp}_{v}_{nprong}_overlay_compare.png",
+                    ratio_label=r"$\epsilon_\mathrm{reco}$",
+                    ratio_plot=True,
+                    ratio_fit=True,
+                    ratio_axlim=(0, 1),
+                )
+
+            # 2D RESOLUTION PLOTS
+            # ========================================================================
+            analysis.paths.plot_dir = base_plotting_dir / "resolution/full"
+            selection = f"{wp}_{nprong}reco_tau"
+            # profiles
+            for v in reco_measurement_vars:
+                analysis.plot_2d(
+                    v,
+                    "TauPt_res",
+                    dataset="wtaunu",
+                    systematic=NOMINAL_NAME,
+                    selection=selection,
+                    ylabel=r"$(p_\mathrm{T}^\mathrm{true} - p_\mathrm{T}^\mathrm{reco}) / p_\mathrm{T}^\mathrm{true}$",
+                    title=f"Tau $p_T$ resolution | mc16d | {analysis.global_lumi / 1000:.3g}fb$^{{-1}}$",
+                    norm="log",
+                    logx=True,
+                    logy=False,
+                    label_params={"llabel": "Simulation"},
+                    filename=f"{v}_TauPt_res_2D_{selection}.png",
+                )
+            analysis.plot_2d(
+                "TauPt",
+                "TruthTauPt",
+                dataset="wtaunu",
+                systematic=NOMINAL_NAME,
+                selection=selection,
+                xlabel=r"$p_\mathrm{T}^\mathrm{reco}$",
+                ylabel=r"$p_\mathrm{T}^\mathrm{true}$",
+                logx=True,
+                logy=True,
+                title=f"Tau $p_T$ resolution | mc16d | {analysis.global_lumi / 1000:.3g}fb$^{{-1}}$",
+                norm="log",
+                label_params={"llabel": "Simulation"},
+                filename=f"TauPt_TruthTauPt_2D_{selection}.png",
             )
 
     # START OF PRONG LOOP
     # ========================================================================
-    default_args["ylabel"] = r"Reconstruction Efficiency $\epsilon$"
-    wps = ("vl", "loose", "medium", "tight")
-    for nprong in ("", "1prong_", "3prong_"):
-        analysis.paths.plot_dir = base_plotting_dir / nprong
-
+    args_eff["ylabel"] = r"Reconstruction Efficiency $\epsilon$"
+    for nprong in working_prongs:
         # RECONSTRUCTION EFFICIENCY
         # ========================================================================
-        for v in measurement_vars:
+        analysis.paths.plot_dir = base_plotting_dir / "efficiency" / nprong
+        args_eff["selection"] = None
+        for v in truth_measurement_vars:
             if v in measurement_vars_mass:
-                default_args.update({"logx": True, "xlabel": variable_data[v]["name"] + " [GeV]"})
+                args_eff.update({"logx": True, "xlabel": variable_data[v]["name"] + " [GeV]"})
             elif v in measurement_vars_unitless:
-                default_args.update({"logx": False, "xlabel": variable_data[v]["name"]})
+                args_eff.update({"logx": False, "xlabel": variable_data[v]["name"]})
 
             analysis.plot(
-                val=[recon_efficiencies[wp][nprong][v] for wp in wps],
+                val=[recon_efficiencies[wp][nprong][v] for wp in working_points],
                 label=["Very Loose", "Loose", "Medium", "Tight"],
-                **default_args,
+                **args_eff,
                 filename=f"{v}_{nprong}_efficiency_wp_compare.png",
+            )
+
+        # RESOLUTION
+        # ========================================================================
+        analysis.paths.plot_dir = base_plotting_dir / "resolution" / nprong
+        # profiles
+        for v in reco_measurement_vars:
+            if v in measurement_vars_mass:
+                args_res.update({"logx": True, "xlabel": variable_data[v]["name"] + " [GeV]"})
+            elif v in measurement_vars_unitless:
+                args_res.update({"logx": False, "xlabel": variable_data[v]["name"]})
+
+            selection = [f"{wp}_{nprong}reco_tau" for wp in working_points]
+            analysis.plot(
+                val=f"{v}_TauPt_res",
+                label=["Very Loose", "Loose", "Medium", "Tight"],
+                selection=selection,
+                **args_res,
+                filename=f"{v}_TauPt_res_wp_compare.png",
             )
 
     # START OF WP LOOP
     # ========================================================================
     # loop over each working point
-    for wp in ("vl", "loose", "medium", "tight"):
-        analysis.paths.plot_dir = base_plotting_dir / wp
-
+    for wp in working_points:
         # RECONSTRUCTION EFFICIENCY
         # ========================================================================
-        for v in measurement_vars:
+        analysis.paths.plot_dir = base_plotting_dir / "efficiency" / wp
+        for v in truth_measurement_vars:
             if v in measurement_vars_mass:
-                default_args.update({"logx": True, "xlabel": variable_data[v]["name"] + " [GeV]"})
+                args_eff.update({"logx": True, "xlabel": variable_data[v]["name"] + " [GeV]"})
             elif v in measurement_vars_unitless:
-                default_args.update({"logx": False, "xlabel": variable_data[v]["name"]})
+                args_eff.update({"logx": False, "xlabel": variable_data[v]["name"]})
 
             analysis.plot(
                 val=[recon_efficiencies[wp]["1prong_"][v], recon_efficiencies[wp]["3prong_"][v]],
                 label=["1-prong", "3-prong"],
-                **default_args,
+                **args_eff,
                 filename=f"{v}_efficiency_{wp}_1prong_3prong.png",
+            )
+
+        # RESOLUTION
+        # ========================================================================
+        analysis.paths.plot_dir = base_plotting_dir / "resolution" / wp
+        # profiles
+        for v in reco_measurement_vars:
+            if v in measurement_vars_mass:
+                args_res.update({"logx": True, "xlabel": variable_data[v]["name"] + " [GeV]"})
+            elif v in measurement_vars_unitless:
+                args_res.update({"logx": False, "xlabel": variable_data[v]["name"]})
+
+            selection = [f"{wp}_{nprong}_reco_tau" for nprong in ("1prong", "3prong")]
+            analysis.plot(
+                val=f"{v}_TauPt_res",
+                selection=selection,
+                label=["1-prong", "3-prong"],
+                **args_res,
+                filename=f"{v}_TauPt_res_prong_compare_profile.png",
             )
 
     analysis.histogram_printout(to_file="txt")
