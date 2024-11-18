@@ -88,7 +88,7 @@ class Analysis:
         rerun: bool = False,
         regen_histograms: bool = False,
         regen_metadata: bool = False,
-        snapshot: bool = False,
+        snapshot: bool | dict = False,
         year: int = 2017,
         **kwargs,
     ):
@@ -105,8 +105,7 @@ class Analysis:
         :param rerun: Whether to rerun full analysis
         :param regen_histograms: Whether to regenerate all histograms for all datasets (can be applied separately)
         :param regen_metadata: Whether to regenerate DSID metadata (requires connection to pyami)
-        :param snapshot: snapshot generated datasets into root output file
-        :param snapshot: Whether to save a snapshot of datasets to disk
+        :param snapshot: whether to snapshot generated datasets into root output file. If dictinoary, pass as argument to export function
         :param year: Data-year. One of 2016, 2017, 2018
         :param kwargs: Options arguments to pass to all dataset builders
         """
@@ -264,14 +263,20 @@ class Analysis:
                 dataset.gen_all_histograms()
                 dataset.gen_cutflows()
                 if snapshot:
-                    dataset.export_dataset(dataset_file)
+                    if isinstance(snapshot, dict):
+                        dataset.export_dataset(dataset_file, **snapshot)
+                    else:
+                        dataset.export_dataset(dataset_file)
                 dataset.export_histograms(dataset_file)
             elif indiv_regen_hists:
                 dataset.import_dataset(dataset_file)
                 dataset.reset_cutflows()
                 dataset.gen_all_histograms()
                 if snapshot:
-                    dataset.export_histograms()
+                    if isinstance(snapshot, dict):
+                        dataset.export_dataset(dataset_file, **snapshot)
+                    else:
+                        dataset.export_dataset(dataset_file)
             else:
                 dataset.import_dataset(dataset_file)
                 dataset.reset_cutflows()
@@ -813,7 +818,7 @@ class Analysis:
                 data_hist.bin_centres,
                 data_hist.bin_values(flow),
                 xerr=data_hist.bin_widths / 2,
-                yerr=data_hist.error(flow),
+                yerr=data_hist.error(flow) if do_stat else None,
                 linestyle="None",
                 color="black",
                 marker=".",

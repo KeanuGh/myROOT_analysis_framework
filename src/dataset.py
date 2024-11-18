@@ -110,7 +110,13 @@ class Dataset:
 
     # Import/Export
     # ===================
-    def export_dataset(self, filepath: str | Path | None = None, overwrite: bool = True) -> None:
+    def export_dataset(
+        self,
+        filepath: str | Path | None = None,
+        selections: list | str | None = None,
+        systematics: list | str | None = None,
+        overwrite: bool = True,
+    ) -> None:
         """
         Save data and histograms to ROOT file. File structure goes as:
         - systematic
@@ -121,6 +127,11 @@ class Dataset:
 
         if filepath is None:
             filepath = f"{self.name}.root"
+
+        if not isinstance(selections, list):
+            selections = [selections]
+        if not isinstance(systematics, list):
+            selections = [systematics]
 
         # Snapshotting options
         snapshot_opts = ROOT.RDF.RSnapshotOptions()
@@ -138,13 +149,24 @@ class Dataset:
                 )
 
         # save data
+        n_sys = len(systematics if systematics else self.filters)
+        n_sel = len(selections if selections else self.selections)
         self.logger.info(
-            "Saving snapshots of %s systematics in dataset '%s'...", len(self.filters), self.name
+            "Saving snapshots of %i selections for %i systematics in dataset '%s'...",
+            n_sel,
+            n_sys,
+            self.name,
         )
         t1 = time.time()
         n_ds = 0
         for sys_name, sys_selections in self.filters.items():
-            for selection in sys_selections:
+            if sys_name not in systematics:
+                continue
+
+            for selection in selections:
+                if selection not in selections:
+                    continue
+
                 self.filters[sys_name][selection].df = self.filters[sys_name][
                     selection
                 ].df.Snapshot(
@@ -353,10 +375,13 @@ class Dataset:
     # ===============================
     # ========== CUTTING ============
     # ===============================
-    def gen_cutflows(self, do_print: bool = False) -> None:
+    def gen_cutflows(self, do_print: bool = False, nominal_only: bool = True) -> None:
         """Generate cutflows for each systematic-selection"""
 
-        for systematic in self.rdataframes.keys():
+        systematics = (
+            [self.nominal_name] if nominal_only else list(self.eff_sys_set | self.tes_sys_set)
+        )
+        for systematic in systematics:
             self.cutflows[systematic] = dict()
             for selection in self.selections:
                 self.logger.info(
