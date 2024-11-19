@@ -56,3 +56,14 @@ def multi_glob(paths: Path | list[Path] | str | list[str]) -> list[str]:
 def smart_join(s: list[str | None], sep: str = "_") -> str:
     """Concatenated string with separator, ignoring any blank strings or None"""
     return sep.join(filter(None, s))
+
+
+def get_base_sys_name(s: str) -> str:
+    """get the name of the base systematic"""
+    return (
+        # annoying typo: only JETID_EFF systematic doesn't have double underscore
+        s.removeprefix("weight_")
+        .removesuffix("_1up")
+        .removesuffix("_1down")
+        .removesuffix("_")
+    )

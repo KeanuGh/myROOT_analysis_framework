@@ -10,7 +10,7 @@ from src.cutting import Cut
 from src.dataset import Dataset
 from src.logger import get_logger
 from utils.ROOT_utils import get_object_names_in_file
-from utils.file_utils import multi_glob
+from utils.helper_functions import multi_glob
 from utils.var_helpers import derived_vars
 from utils.variable_names import variable_data
 

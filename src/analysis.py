@@ -21,7 +21,7 @@ from src.histogram import Histogram1D
 from src.logger import get_logger
 from utils import plotting_tools, ROOT_utils
 from utils.context import handle_dataset_arg
-from utils.file_utils import smart_join
+from utils.helper_functions import smart_join
 
 
 @dataclass(slots=True)
@@ -350,7 +350,7 @@ class Analysis:
         systematic: str | Sequence[str] = "T_s1thv_NOMINAL",
         selection: str | Sequence[str] = "",
         label: str | None | Sequence[str | None] = None,
-        colour: str | None | Sequence[str | None] = None,
+        colour: str | tuple | None | Sequence[str | tuple | None] = None,
         do_stat: bool = True,
         do_syst: bool = False,
         symmetric_uncert: bool = True,
@@ -885,7 +885,6 @@ class Analysis:
                 ax=ratio_ax,
                 yerr=True,
                 yax_lim=ratio_axlim,
-                display_unity=False,
             )
 
     def _process_plot_variables(
@@ -1088,7 +1087,7 @@ class Analysis:
     ) -> tuple[np.typing.NDArray[float] | Literal[0], np.typing.NDArray[float] | Literal[0]]:
         """Get systematic uncertainty for single variable in dataframe"""
         if (not dataset) or (selection is None):
-            self.logger.debug("No systematic uncertainties for histograms outside a dataset")
+            # self.logger.debug("No systematic uncertainties for histograms outside a dataset")
             return 0, 0
 
         return self[dataset].get_systematic_uncertainty(

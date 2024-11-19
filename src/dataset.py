@@ -17,7 +17,7 @@ from src.cutting import Cut, Cutflow, FilterNode, FilterTree
 from src.histogram import Histogram1D
 from src.logger import get_logger
 from utils import ROOT_utils
-from utils.file_utils import smart_join
+from utils.helper_functions import smart_join, get_base_sys_name
 from utils.plotting_tools import ProfileOpts, Hist2dOpts
 from utils.variable_names import variable_data, VarTag
 
@@ -80,6 +80,8 @@ class Dataset:
 
         if self.do_systematics:
             self.init_sys()
+        else:
+            self.nominal_name = next(s for s in self.rdataframes if "NOMINAL" in s)
 
     def init_sys(self) -> None:
         """initialise systematics"""
@@ -751,7 +753,7 @@ class Dataset:
                             )
 
                 # only want regular 1D histograms for systemaics
-                if sys_name == self.nominal_name:
+                if sys_name != self.nominal_name:
                     continue
 
                 # Define profiles
@@ -836,17 +838,6 @@ class Dataset:
     # ===========================================
     # ============== UNCERTAINTIES ==============
     # ===========================================
-    @staticmethod
-    def get_base_sys_name(s: str) -> str:
-        """get the name of the base systematic"""
-        return (
-            # annoying typo: only JETID_EFF systematic doesn't have double underscore
-            s.removeprefix("weight_")
-            .removesuffix("_1up")
-            .removesuffix("_1down")
-            .removesuffix("_")
-        )
-
     def get_systematic_uncertainty(
         self,
         val: str,
@@ -901,7 +892,7 @@ class Dataset:
                 return  # only systematics for reco variables
 
             nonlocal sys_pairs
-            base_sys = self.get_base_sys_name(sys)
+            base_sys = get_base_sys_name(sys)
 
             if isinstance(sys_hist, ROOT.TProfile):
                 return  # don't want profiles
@@ -945,7 +936,7 @@ class Dataset:
             sel_dict = self.histograms[sys_name]
 
             # start collecting systemtics pairs
-            base_sys_name = self.get_base_sys_name(sys_name)
+            base_sys_name = get_base_sys_name(sys_name)
             if base_sys_name not in sys_pairs:
                 sys_pairs[base_sys_name] = dict()
 
