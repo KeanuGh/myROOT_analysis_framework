@@ -228,11 +228,17 @@ def get_TH1_bin_args(
 
 def get_th1_bin_edges(h: ROOT.TH1, ax: Literal["x", "y"] = "x") -> np.typing.NDArray[float]:
     """Return bin edges for TH1 object hist"""
-    if ax == "x":
-        return np.array(h.GetXaxis().GetXbins())
-    if ax == "y":
-        return np.array(h.GetYaxis().GetXbins())
-    raise ValueError(f'Azis must be "x" or "y". Got: {ax}')
+    if "TH1" in h.ClassName():
+        return np.array([h.GetBinLowEdge(i + 1) for i in range(h.GetNbinsX() + 1)])
+
+    elif "TH2" in h.ClassName():
+        if ax == "x":
+            return np.array([h.GetBinLowEdge(i + 1) for i in range(h.GetNbinsX() + 1)])
+        if ax == "y":
+            return np.array(h.GetYaxis().GetXbins())
+        raise ValueError(f'Azis must be "x" or "y". Got: {ax}')
+
+    raise TypeError(f"Unknown histogram of type '{h.ClassName()}'")
 
 
 def get_th1_bin_values(h: ROOT.TH1, flow: bool = False) -> np.typing.NDArray[float]:
