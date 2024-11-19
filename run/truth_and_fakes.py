@@ -238,6 +238,7 @@ def run_analysis() -> Analysis:
             "": {
                 "MTW": np.geomspace(150, 1000, 21),
                 "TauPt": np.geomspace(170, 1000, 21),
+                "MatchedTruthParticlePt": np.geomspace(170, 1000, 21),
                 "EleEta": np.linspace(-2.5, 2.5, 21),
                 "MuonEta": np.linspace(-2.5, 2.5, 21),
                 "MET_met": np.geomspace(150, 1000, 21),
