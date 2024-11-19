@@ -165,6 +165,8 @@ def set_axis_options(
     """Set axis options for plot"""
 
     # let mplhep handle the easy stuff
+    if label_params is None:
+        label_params = {}
     set_hep_label(ax=ax, title=title, **label_params)
 
     # get axis labels from variable names if possible
@@ -188,6 +190,9 @@ def set_axis_options(
     # Main plot yaxis options
     if y_axlim:
         ax.set_ylim(*y_axlim)
+
+    if logx:
+        ax.semilogx()
     if logy:
         ax.semilogy()
     else:
@@ -220,9 +225,15 @@ def set_axis_options(
         else:
             ratio_ax.set_xlim(*bin_range)
 
-        # just in case (I do not trust matplotlib)
-        ax.set_xticklabels([])
-        ax.set_xlabel("")
+        # i hate matplotlib i hate matplotlib i hate matplotlib i hate matplotlib i hate maplotlib i
+        ax.semilogx()
+        ax.xaxis.set_minor_formatter(
+            ticker.LogFormatter(labelOnlyBase=True, minor_thresholds=(0, 0))
+        )
+        ax.xaxis.set_major_formatter(
+            ticker.LogFormatter(labelOnlyBase=True, minor_thresholds=(0, 0))
+        )
+        ax.xaxis.set_ticklabels([])
 
 
 def set_hep_label(ax: plt.Axes, title: str = "", **label_params) -> None:
