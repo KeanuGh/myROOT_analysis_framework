@@ -226,13 +226,14 @@ def set_axis_options(
             ratio_ax.set_xlim(*bin_range)
 
         # i hate matplotlib i hate matplotlib i hate matplotlib i hate matplotlib i hate maplotlib i
-        ax.semilogx()
-        ax.xaxis.set_minor_formatter(
-            ticker.LogFormatter(labelOnlyBase=True, minor_thresholds=(0, 0))
-        )
-        ax.xaxis.set_major_formatter(
-            ticker.LogFormatter(labelOnlyBase=True, minor_thresholds=(0, 0))
-        )
+        if logx:
+            ax.semilogx()
+            ax.xaxis.set_minor_formatter(
+                ticker.LogFormatter(labelOnlyBase=True, minor_thresholds=(0, 0))
+            )
+            ax.xaxis.set_major_formatter(
+                ticker.LogFormatter(labelOnlyBase=True, minor_thresholds=(0, 0))
+            )
         ax.xaxis.set_ticklabels([])
 
 
