@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import copy
 import logging
+from copy import deepcopy
 from typing import Any, overload
 
 import ROOT
@@ -521,23 +522,7 @@ class Histogram1D(bh.Histogram, family=None):
 
     # Conversion
     # ===================
-    def to_TH1(self) -> ROOT.TH1F:
-        """Convert Histogram to ROOT TH1F"""
-        if self.TH1 is None:
-            h_root = ROOT.TH1F(self.name, self.name, self.n_bins, self.bin_edges)
-        else:
-            h_root = self.TH1
-
-        # fill TH1
-        for idx, bin_cont in np.ndenumerate(self.view(flow=True)):
-            h_root.SetBinContent(*idx, bin_cont[0])  # bin value
-            h_root.SetBinError(*idx, np.sqrt(bin_cont[1]))  # root sum of weights
-
-        self.TH1 = h_root
-
-        return h_root
-
-    def non_zero_range(self, tol=1e-5) -> Histogram1D:
+    def non_zero_range(self, tol=1e-15) -> Histogram1D:
         """Return histogram containing non-zero range of self"""
         first_nz_idx = 0
         last_nz_idx = 0
@@ -557,8 +542,35 @@ class Histogram1D(bh.Histogram, family=None):
             return self
 
         new_hist = self[first_nz_idx:last_nz_idx]
-        new_hist.TH1 = self.TH1
-        new_hist.TH1 = new_hist.to_TH1()
+
+        # define new TH1
+        new_hist.TH1 = ROOT.__getattr__(self.TH1.ClassName())(
+            self.TH1.GetName(),
+            self.TH1.GetTitle(),
+            len(new_hist),
+            *new_hist.bin_edges(),
+        )
+        for i in range(first_nz_idx, last_nz_idx):
+            new_hist.TH1.SetBinContent(i + 1, new_hist.TH1.GetBinContent(i + 1))
+            new_hist.TH1.SetBinError(i + 1, new_hist.TH1.GetBinError(i + 1))
+
+        return new_hist
+
+    def zero_outliers(self, zscore_threshold: float = 6) -> Histogram1D:
+        """Sets outliers to zero (for exlusion from a chi-square fit)"""
+
+        new_hist = deepcopy(self)
+
+        zscores_val = (self.bin_values() - np.mean(self.bin_values())) / np.std(self.bin_values())
+        zscores_err = (self.error() - np.mean(self.error())) / np.std(self.error())
+        idx = np.argwhere(
+            (abs(zscores_val) >= zscore_threshold) | (abs(zscores_err) >= zscore_threshold)
+        )
+        for i in idx:
+            new_hist.view().value[i] = 0
+            new_hist.view().variance[i] = 0
+            new_hist.TH1.SetBinContent(i + 1, 0)
+            new_hist.TH1.SetBinError(i + 1, 0)
 
         return new_hist
 
@@ -705,8 +717,8 @@ class Histogram1D(bh.Histogram, family=None):
         yax_lim: float | tuple[float, float] | None = None,
         display_stats: bool = True,
         fit_empty: bool = False,
-        display_unity: bool = True,
         colour: str | None = None,
+        exclude_outliers: bool = True,
         **kwargs,
     ) -> Histogram1D:
         """
@@ -728,8 +740,8 @@ class Histogram1D(bh.Histogram, family=None):
         :param yax_lim: limit y-axis to 1 +/- {yax_lim}
         :param display_stats: whether to display the fit parameters on the plot
         :param fit_empty: Whether to fit on empty bins. If false, fits on non-empty bin range
-        :param display_unity: Whether to add in a line at 1
         :param colour: plot colour. Defaults to black.
+        :param exclude_outliers: whether to exclude outliers before fit
         :param kwargs: Args to pass to ax.errorbar()
         :return: axis object with plot
         """
@@ -774,65 +786,15 @@ class Histogram1D(bh.Histogram, family=None):
             if h_ratio.TH1.GetEntries() == 0:
                 self.logger.warning("Ratio histogram empty. Skipping fit.")
             else:
-                self.logger.info("Performing fit on ratio..")
+                h_ratio.do_fit(
+                    ax=ax,
+                    colour=colour,
+                    display_stats=display_stats,
+                    fit_empty=fit_empty,
+                    exclude_outliers=exclude_outliers,
+                )
 
-                if not fit_empty:
-                    fit_hist = h_ratio.non_zero_range().TH1
-                else:
-                    fit_hist = h_ratio.TH1
-
-                with redirect_stdout() as fit_output:
-                    fit_results = fit_hist.Fit("pol0", "VFSN")
-
-                if not fit_output.getvalue():
-                    self.logger.warning("Fit result is empty. Skipping..")
-
-                else:
-                    self.logger.debug(
-                        f"ROOT fit output:\n"
-                        f"==========================================================================\n"
-                        f"{fit_output.getvalue()}"
-                        f"=========================================================================="
-                    )
-                    c = fit_results.Parameters()[0]
-                    fit_err = fit_results.Errors()[0]
-
-                    # display fit line
-                    fit_col = (
-                        "r"
-                        if (colour is None) or (colour == "black") or (colour == "k")
-                        else colour
-                    )
-                    ax.fill_between(
-                        [self.bin_edges[0], self.bin_edges[-1]],  # type: ignore
-                        [c - fit_err],
-                        [c + fit_err],
-                        color=fit_col,
-                        alpha=0.3,
-                    )
-                    ax.axhline(c, color=fit_col, linewidth=1.0)
-
-                    if display_stats:
-                        textstr = "\n".join(
-                            (
-                                r"$\chi^2=%.3f$" % fit_results.Chi2(),
-                                r"$\mathrm{NDF}=%.3f$" % fit_results.Ndf(),
-                                r"$c=%.2f\pm%.3f$" % (c, fit_err),
-                            )
-                        )
-                        # dumb workaround to avoid the stats boxes from overlapping eachother
-                        loc = "upper left"
-                        for artist in ax.get_children():
-                            if isinstance(artist, AnchoredText):
-                                if r"$\chi^2=" in artist.get_children()[0].get_text():
-                                    loc = "lower left"
-                        stats_box = AnchoredText(
-                            textstr, loc=loc, frameon=False, prop={"fontsize": "x-small"}
-                        )
-                        ax.add_artist(stats_box)
-
-        if display_unity:
-            ax.axhline(1.0, linestyle="--", linewidth=1.0, c="k")
+        ax.axhline(1.0, linestyle="--", linewidth=1.0, c="k")
         ax.errorbar(
             h_ratio.bin_centres,
             h_ratio.bin_values(),
@@ -891,3 +853,76 @@ class Histogram1D(bh.Histogram, family=None):
             self.logger.info(f"image saved in {out_filename}")
 
         return h_ratio
+
+    def do_fit(
+        self,
+        ax: plt.Axes | None = None,
+        colour: str | tuple = "k",
+        display_stats: bool = False,
+        fit_empty: bool = False,
+        exclude_outliers: bool = False,
+    ) -> float | None:
+        """Perform chi-square fit on histogram and optionally display on axis"""
+
+        if not fit_empty:
+            fit_hist = self.non_zero_range()
+        else:
+            fit_hist = deepcopy(self)
+
+        if exclude_outliers:
+            fit_hist = fit_hist.zero_outliers()
+
+        with redirect_stdout() as fit_output:
+            opt = "FSNMultithread"
+            if self.logger.getEffectiveLevel() <= logging.DEBUG:
+                opt += "V"  # verbose
+            else:
+                opt += "Q"  # quiet mode
+            fit_results = fit_hist.TH1.Fit("pol0", "VFSNMultithread")
+
+        if not fit_output.getvalue():
+            self.logger.warning("Fit result is empty. Skipping..")
+            return None
+
+        self.logger.debug(
+            f"ROOT fit output:\n"
+            f"==========================================================================\n"
+            f"{fit_output.getvalue()}"
+            f"=========================================================================="
+        )
+        c = fit_results.Parameters()[0]
+        fit_err = fit_results.Errors()[0]
+
+        if ax is None:
+            return c
+
+        # display fit line
+        fit_col = "r" if (colour is None) or (colour == "black") or (colour == "k") else colour
+        ax.fill_between(
+            [self.bin_edges[0], self.bin_edges[-1]],  # type: ignore
+            [c - fit_err],
+            [c + fit_err],
+            color=fit_col,
+            alpha=0.3,
+        )
+        ax.axhline(c, color=fit_col, linewidth=1.0)
+
+        if display_stats:
+            textstr = "\n".join(
+                (
+                    r"$\chi^2=%.3f$" % fit_results.Chi2(),
+                    r"$\mathrm{NDF}=%.3f$" % fit_results.Ndf(),
+                    r"$c=%.2f\pm%.3f$" % (c, fit_err),
+                )
+            )
+            # dumb workaround to avoid the stats boxes from overlapping eachother
+            loc = "upper left"
+            for artist in ax.get_children():
+                if isinstance(artist, AnchoredText) and (
+                    r"$\chi^2=" in artist.get_children()[0].get_text()
+                ):
+                    loc = "lower left"
+            stats_box = AnchoredText(textstr, loc=loc, frameon=False, prop={"fontsize": "x-small"})
+            ax.add_artist(stats_box)
+
+        return c
