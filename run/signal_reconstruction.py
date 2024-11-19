@@ -149,18 +149,21 @@ selections: dict[str, list[Cut]] = {
         reco_tau,
     ],
     "vl_1prong_reco_tau": [
+        pass_truth,
         pass_presel,
         pass_matched_truth_tau,
         pass_SR_truth,
         reco_tau_1prong,
     ],
     "vl_3prong_reco_tau": [
+        pass_truth,
         pass_presel,
         pass_matched_truth_tau,
         pass_SR_truth,
         reco_tau_3prong,
     ],
     "loose_reco_tau": [
+        pass_truth,
         pass_presel,
         pass_matched_truth_tau,
         pass_SR_truth,
@@ -168,6 +171,7 @@ selections: dict[str, list[Cut]] = {
         reco_tau,
     ],
     "loose_1prong_reco_tau": [
+        pass_truth,
         pass_presel,
         pass_matched_truth_tau,
         pass_SR_truth,
@@ -175,6 +179,7 @@ selections: dict[str, list[Cut]] = {
         reco_tau_1prong,
     ],
     "loose_3prong_reco_tau": [
+        pass_truth,
         pass_presel,
         pass_matched_truth_tau,
         pass_SR_truth,
@@ -182,6 +187,7 @@ selections: dict[str, list[Cut]] = {
         reco_tau_3prong,
     ],
     "medium_reco_tau": [
+        pass_truth,
         pass_presel,
         pass_matched_truth_tau,
         pass_SR_truth,
@@ -189,6 +195,7 @@ selections: dict[str, list[Cut]] = {
         reco_tau,
     ],
     "medium_1prong_reco_tau": [
+        pass_truth,
         pass_presel,
         pass_matched_truth_tau,
         pass_SR_truth,
@@ -196,6 +203,7 @@ selections: dict[str, list[Cut]] = {
         reco_tau_1prong,
     ],
     "medium_3prong_reco_tau": [
+        pass_truth,
         pass_presel,
         pass_matched_truth_tau,
         pass_SR_truth,
@@ -203,6 +211,7 @@ selections: dict[str, list[Cut]] = {
         reco_tau_3prong,
     ],
     "tight_reco_tau": [
+        pass_truth,
         pass_presel,
         pass_matched_truth_tau,
         pass_SR_truth,
@@ -210,6 +219,7 @@ selections: dict[str, list[Cut]] = {
         reco_tau,
     ],
     "tight_1prong_reco_tau": [
+        pass_truth,
         pass_presel,
         pass_matched_truth_tau,
         pass_SR_truth,
@@ -217,6 +227,7 @@ selections: dict[str, list[Cut]] = {
         reco_tau_1prong,
     ],
     "tight_3prong_reco_tau": [
+        pass_truth,
         pass_presel,
         pass_matched_truth_tau,
         pass_SR_truth,
@@ -229,6 +240,7 @@ selections: dict[str, list[Cut]] = {
 # ========================================================================
 measurement_vars_mass = [
     "TauPt",
+    "MET_met",
     "TruthTauPt",
     "VisTruthTauPt",
     "MTW",
@@ -239,6 +251,7 @@ measurement_vars_mass = [
 measurement_vars_unitless = [
     "TauEta",
     "TauPhi",
+    "MET_phi",
     "TruthTauEta",
     "TruthTauPhi",
     "VisTruthTauEta",
@@ -266,6 +279,9 @@ reco_measurement_vars = [
 # define 2d histograms
 hists_2d = {
     "TauPt_TruthTauPt": Hist2dOpts("TauPt", "TruthTauPt"),
+    "TruthMTW_TauPt_res": Hist2dOpts("TruthMTW", "TauPt_res"),
+    "MTW_TauPt": Hist2dOpts("MTW", "TauPt"),
+    "MET_met_TruthNeutrinoPt": Hist2dOpts("MET_met", "TruthNeutrinoPt"),
 }
 for v in reco_measurement_vars:
     hists_2d[f"{v}_TauPt_res"] = Hist2dOpts(
@@ -279,12 +295,12 @@ NOMINAL_NAME = "T_s1thv_NOMINAL"
 def run_analysis() -> Analysis:
     """Run analysis"""
 
-    nedges = 11
+    nedges = 21
     return Analysis(
         datasets,
         year=2017,
-        # rerun=True,
-        # regen_histograms=True,
+        rerun=True,
+        regen_histograms=True,
         do_systematics=False,
         # regen_metadata=True,
         ttree=NOMINAL_NAME,
@@ -320,11 +336,8 @@ def run_analysis() -> Analysis:
                 "TauRNNJetScore": np.linspace(0, 1, 51),
                 "TauBDTEleScore": np.linspace(0, 1, 51),
                 "TauNCoreTracks": np.linspace(0, 4, 5),
-                "TauPt_res": np.linspace(-1, 1, nedges),
+                "TauPt_res": np.linspace(-1, 1, 51),
                 "TauPt_diff": np.linspace(-300, 300, nedges),
-            },
-            ".*_CR_.*ID": {
-                "MET_met": np.geomspace(1, 100, 51),
             },
         },
     )
@@ -383,8 +396,7 @@ if __name__ == "__main__":
     args_eff = {
         "dataset": "wtaunu",
         "systematic": NOMINAL_NAME,
-        "title": f"Reconstruction Efficiency | mc16d | {analysis.global_lumi / 1000:.3g}"
-        + r"fb$^{-1}$",
+        "title": f"Reconstruction Efficiency | mc16d | {analysis.global_lumi / 1000:.3g}fb$^{{-1}}$",
         "do_stat": True,
         "do_syst": False,
         "ratio_err": "binom",
@@ -393,7 +405,7 @@ if __name__ == "__main__":
     args_res = {
         "dataset": "wtaunu",
         "systematic": NOMINAL_NAME,
-        "title": f"Tau $p_T$ resolution | mc16d | {analysis.global_lumi / 1000:.3g}" + r"fb$^{-1}$",
+        "title": f"Tau $p_T$ resolution | mc16d | {analysis.global_lumi / 1000:.3g}fb$^{{-1}}$",
         "ylabel": r"$(p_\mathrm{T}^\mathrm{true} - p_\mathrm{T}^\mathrm{reco}) / p_\mathrm{T}^\mathrm{true}$",
         "do_stat": True,
         "do_syst": False,
@@ -475,14 +487,53 @@ if __name__ == "__main__":
                 dataset="wtaunu",
                 systematic=NOMINAL_NAME,
                 selection=selection,
-                xlabel=r"$p_\mathrm{T}^\mathrm{reco}$",
-                ylabel=r"$p_\mathrm{T}^\mathrm{true}$",
+                xlabel=r"$p_\mathrm{T}^\mathrm{reco}$ [GeV]",
+                ylabel=r"$p_\mathrm{T}^\mathrm{true}$ [GeV]",
                 logx=True,
                 logy=True,
                 title=f"Tau $p_T$ resolution | mc16d | {analysis.global_lumi / 1000:.3g}fb$^{{-1}}$",
                 norm="log",
                 label_params={"llabel": "Simulation"},
                 filename=f"TauPt_TruthTauPt_2D_{selection}.png",
+            )
+            analysis.plot_2d(
+                "TruthMTW",
+                "TauPt_res",
+                dataset="wtaunu",
+                systematic=NOMINAL_NAME,
+                selection=selection,
+                logx=True,
+                logy=False,
+                title=f"Tau $p_T$ resolution | mc16d | {analysis.global_lumi / 1000:.3g}fb$^{{-1}}$",
+                norm="log",
+                label_params={"llabel": "Simulation"},
+                filename=f"TruthMTW_TauPt_res_2D_{selection}.png",
+            )
+            analysis.plot_2d(
+                "MTW",
+                "TauPt",
+                dataset="wtaunu",
+                systematic=NOMINAL_NAME,
+                selection=selection,
+                logx=True,
+                logy=True,
+                title=f"Tau $p_T$ resolution | mc16d | {analysis.global_lumi / 1000:.3g}fb$^{{-1}}$",
+                norm="log",
+                label_params={"llabel": "Simulation"},
+                filename=f"MTW_TauPt_2D_{selection}.png",
+            )
+            analysis.plot_2d(
+                "MET_met",
+                "TruthNeutrinoPt",
+                dataset="wtaunu",
+                systematic=NOMINAL_NAME,
+                selection=selection,
+                logx=True,
+                logy=True,
+                title=f"Tau $p_T$ resolution | mc16d | {analysis.global_lumi / 1000:.3g}fb$^{{-1}}$",
+                norm="log",
+                label_params={"llabel": "Simulation"},
+                filename=f"MET_met_TruthNeutrinoPt_2D_{selection}.png",
             )
 
     # START OF PRONG LOOP
@@ -524,6 +575,16 @@ if __name__ == "__main__":
                 **args_res,
                 filename=f"{v}_TauPt_res_wp_compare.png",
             )
+            analysis.plot(
+                v,
+                dataset="wtaunu",
+                systematic=NOMINAL_NAME,
+                selection=selection,
+                label=["Very Loose", "Loose", "Medium", "Tight"],
+                logx=v in measurement_vars_mass,
+                logy=True,
+                filename=f"{v}_{nprong}wp.png",
+            )
 
     # START OF WP LOOP
     # ========================================================================
@@ -562,6 +623,16 @@ if __name__ == "__main__":
                 label=["1-prong", "3-prong"],
                 **args_res,
                 filename=f"{v}_TauPt_res_prong_compare_profile.png",
+            )
+            analysis.plot(
+                v,
+                dataset="wtaunu",
+                systematic=NOMINAL_NAME,
+                selection=selection,
+                label=["1-prong", "3-prong"],
+                logx=v in measurement_vars_mass,
+                logy=True,
+                filename=f"{v}_{wp}_prong_compare.png",
             )
 
     analysis.histogram_printout(to_file="txt")
