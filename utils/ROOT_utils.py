@@ -254,9 +254,9 @@ def get_th1_bin_edges(h: ROOT.TH1, ax: Literal["x", "y"] = "x") -> np.typing.NDA
     """Return bin edges for TH1 object hist"""
     if isinstance(h, ROOT.TH2):
         if ax == "x":
-            return np.array(h.GetXaxis().GetXbins())
+            return np.array([h.GetXaxis().GetBinLowEdge(i + 1) for i in range(h.GetNbinsX() + 1)])
         if ax == "y":
-            return np.array(h.GetYaxis().GetXbins())
+            return np.array([h.GetYaxis().GetBinLowEdge(i + 1) for i in range(h.GetNbinsY() + 1)])
         raise ValueError(f'Azis must be "x" or "y". Got: {ax}')
 
     else:
