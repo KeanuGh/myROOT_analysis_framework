@@ -229,12 +229,6 @@ def get_TH1_bin_args(
 def bayes_divide(h1: ROOT.TH1, h2: ROOT.TH1) -> ROOT.TH1:
     """Perform division on h1/h2 with output histogram errors as a bayes binominal"""
 
-    # zero any negative bins (due to negative weights at low statistics)
-    for bin_idx in range(h1.GetNbinsX()):
-        if h1.GetBinContent(bin_idx) < 0:
-            h1.SetBinContent(bin_idx, h2.GetBinContent(bin_idx))
-            h1.SetBinError(bin_idx, h2.GetBinError(bin_idx))
-
     if any(get_th1_bin_values(h1) > get_th1_bin_values(h2)):
         raise ValueError(
             f"Bins are not consistent with pass/total logic. "
