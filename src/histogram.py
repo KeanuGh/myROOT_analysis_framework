@@ -907,9 +907,10 @@ class Histogram1D(bh.Histogram, family=None):
         if display_stats:
             textstr = "\n".join(
                 (
-                    r"$\chi^2=%.3f$" % fit_results.Chi2(),
-                    r"$\mathrm{NDF}=%.3f$" % fit_results.Ndf(),
-                    r"$c=%.2f\pm%.3f$" % (c, fit_err),
+                    # r"$\chi^2=%.3f$" % fit_results.Chi2(),
+                    # r"$\mathrm{NDF}=%.3f$" % fit_results.Ndf(),
+                    r"$\epsilon=%.2f\pm%.3f$"
+                    % (c, fit_err),
                 )
             )
             # dumb workaround to avoid the stats boxes from overlapping eachother
