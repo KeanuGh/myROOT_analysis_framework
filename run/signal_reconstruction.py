@@ -2,6 +2,7 @@ from pathlib import Path
 from typing import Dict
 
 import numpy as np
+from tabulate import tabulate
 
 from src.analysis import Analysis
 from src.cutting import Cut
@@ -223,6 +224,8 @@ measurement_vars_unitless = [
     # "nJets",
     "TruthTau_nChargedTracks",
     "TruthTau_nNeutralTracks",
+    "TauPt_res_frac",
+    "TauPt_res",
     # "TauNCoreTracks",
     # "TauRNNJetScore",
     # "TauBDTEleScore",
@@ -234,17 +237,26 @@ measurement_vars_unitless = [
 measurement_vars = measurement_vars_unitless + measurement_vars_mass
 truth_measurement_vars = [v for v in measurement_vars if variable_data[v]["tag"] == "truth"]
 reco_measurement_vars = [
-    v for v in measurement_vars if (variable_data[v]["tag"] == "reco") and (v != "TauPt_res")
+    v
+    for v in measurement_vars
+    if (variable_data[v]["tag"] == "reco") and (v not in ("TauPt_res_frac", "TauPt_res"))
 ]
 
 # define 2d histograms
 hists_2d = {
     "TauPt_TruthTauPt": Hist2dOpts("TauPt", "TruthTauPt"),
+    "TauPt_VisTruthTauPt": Hist2dOpts("TauPt", "VisTruthTauPt"),
     "TauEta_TruthTauEta": Hist2dOpts("TauEta", "TruthTauEta"),
+    "TauEta_VisTruthTauEta": Hist2dOpts("TauEta", "VisTruthTauEta"),
     "MTW_TauPt": Hist2dOpts("MTW", "TauPt"),
     "MET_met_TruthNeutrinoPt": Hist2dOpts("MET_met", "TruthNeutrinoPt"),
 }
 for v in reco_measurement_vars:
+    hists_2d[f"{v}_TauPt_res_frac"] = Hist2dOpts(
+        x=v,
+        y="TauPt_res_frac",
+        weight="reco_weight",
+    )
     hists_2d[f"{v}_TauPt_res"] = Hist2dOpts(
         x=v,
         y="TauPt_res",
@@ -260,8 +272,8 @@ def run_analysis() -> Analysis:
     return Analysis(
         datasets,
         year=2017,
-        rerun=True,
-        regen_histograms=True,
+        # rerun=True,
+        # regen_histograms=True,
         do_systematics=False,
         # regen_metadata=True,
         ttree=NOMINAL_NAME,
@@ -269,7 +281,7 @@ def run_analysis() -> Analysis:
         analysis_label="signal_reconstruction",
         log_level=10,
         log_out="both",
-        extract_vars=measurement_vars + ["TauPt_res"],
+        extract_vars=measurement_vars + ["TauPt_res_frac"],
         import_missing_columns_as_nan=True,
         snapshot=False,
         hists_2d=hists_2d,
@@ -301,8 +313,8 @@ def run_analysis() -> Analysis:
                 "TauRNNJetScore": np.linspace(0, 1, 51),
                 "TauBDTEleScore": np.linspace(0, 1, 51),
                 "TauNCoreTracks": np.linspace(0, 4, 5),
-                "TauPt_res": np.linspace(-1, 1, 31),
-                "TauPt_diff": np.linspace(-300, 300, nedges),
+                "TauPt_res_frac": np.linspace(-1, 1, 31),
+                "TauPt_res": np.linspace(-300, 300, nedges),
             },
         },
     )
@@ -371,8 +383,7 @@ if __name__ == "__main__":
         "dataset": "wtaunu",
         "systematic": NOMINAL_NAME,
         "title": f"Tau $p_T$ resolution | mc16d | {analysis.global_lumi / 1000:.3g}fb$^{{-1}}$",
-        "ylabel": r"$(p_\mathrm{T}^\mathrm{true} - p_\mathrm{T}^\mathrm{reco}) / p_\mathrm{T}^\mathrm{true}$",
-        "do_stat": True,
+        "do_stat": False,
         "do_syst": False,
         "label_params": {"llabel": "Simulation", "loc": 1},
     }
@@ -436,11 +447,25 @@ if __name__ == "__main__":
             for v in reco_measurement_vars:
                 analysis.plot_2d(
                     v,
+                    "TauPt_res_frac",
+                    dataset="wtaunu",
+                    systematic=NOMINAL_NAME,
+                    selection=selection,
+                    ylabel=r"$p_\mathrm{T,res-frac}^\tau$",
+                    title=f"Tau $p_T$ resolution | mc16d | {analysis.global_lumi / 1000:.3g}fb$^{{-1}}$",
+                    norm="log",
+                    logx=True if v in measurement_vars_mass else False,
+                    logy=False,
+                    label_params={"llabel": "Simulation"},
+                    filename=f"{v}_TauPt_res_frac_2D_{selection}.png",
+                )
+                analysis.plot_2d(
+                    v,
                     "TauPt_res",
                     dataset="wtaunu",
                     systematic=NOMINAL_NAME,
                     selection=selection,
-                    ylabel=r"$(p_\mathrm{T}^\mathrm{true} - p_\mathrm{T}^\mathrm{reco}) / p_\mathrm{T}^\mathrm{true}$",
+                    ylabel=r"$p_\mathrm{T,res}^\tau$ [GeV]",
                     title=f"Tau $p_T$ resolution | mc16d | {analysis.global_lumi / 1000:.3g}fb$^{{-1}}$",
                     norm="log",
                     logx=True if v in measurement_vars_mass else False,
@@ -464,6 +489,21 @@ if __name__ == "__main__":
                 filename=f"TauPt_TruthTauPt_2D_{selection}.png",
             )
             analysis.plot_2d(
+                "TauPt",
+                "VisTruthTauPt",
+                dataset="wtaunu",
+                systematic=NOMINAL_NAME,
+                selection=selection,
+                xlabel=r"$p_\mathrm{T}^\mathrm{reco}$ [GeV]",
+                ylabel=r"$p_\mathrm{T}^\mathrm{had-vis}$ [GeV]",
+                logx=True,
+                logy=True,
+                title=f"Tau $p_T$ resolution | mc16d | {analysis.global_lumi / 1000:.3g}fb$^{{-1}}$",
+                norm="log",
+                label_params={"llabel": "Simulation"},
+                filename=f"TauPt_VisTruthTauPt_2D_{selection}.png",
+            )
+            analysis.plot_2d(
                 "TauEta",
                 "TruthTauEta",
                 dataset="wtaunu",
@@ -475,6 +515,19 @@ if __name__ == "__main__":
                 norm="log",
                 label_params={"llabel": "Simulation"},
                 filename=f"TauEta_TruthTauEta_res_2D_{selection}.png",
+            )
+            analysis.plot_2d(
+                "TauEta",
+                "VisTruthTauEta",
+                dataset="wtaunu",
+                systematic=NOMINAL_NAME,
+                selection=selection,
+                logx=False,
+                logy=False,
+                title=f"Tau $p_T$ resolution | mc16d | {analysis.global_lumi / 1000:.3g}fb$^{{-1}}$",
+                norm="log",
+                label_params={"llabel": "Simulation"},
+                filename=f"TauEta_VisTruthTauEta_res_2D_{selection}.png",
             )
             analysis.plot_2d(
                 "MTW",
@@ -527,6 +580,7 @@ if __name__ == "__main__":
         # RESOLUTION
         # ========================================================================
         analysis.paths.plot_dir = base_plotting_dir / "resolution" / nprong
+        selection = [f"{wp}_{nprong}reco_tau" for wp in working_points]
         # profiles
         for v in reco_measurement_vars:
             if v in measurement_vars_mass:
@@ -534,12 +588,12 @@ if __name__ == "__main__":
             elif v in measurement_vars_unitless:
                 args_res.update({"logx": False, "xlabel": variable_data[v]["name"]})
 
-            selection = [f"{wp}_{nprong}reco_tau" for wp in working_points]
             analysis.plot(
                 val=f"{v}_TauPt_res",
                 label=["Very Loose", "Loose", "Medium", "Tight"],
                 selection=selection,
                 **args_res,
+                logy=False,
                 filename=f"{v}_TauPt_res_wp_compare.png",
             )
             analysis.plot(
@@ -549,9 +603,29 @@ if __name__ == "__main__":
                 selection=selection,
                 label=["Very Loose", "Loose", "Medium", "Tight"],
                 logx=v in measurement_vars_mass,
-                logy=True,
+                logy=False,
                 filename=f"{v}_{nprong}wp.png",
             )
+        analysis.plot(
+            "TauPt_res",
+            dataset="wtaunu",
+            systematic=NOMINAL_NAME,
+            selection=selection,
+            label=["Very Loose", "Loose", "Medium", "Tight"],
+            logx=False,
+            logy=False,
+            filename=f"TauPt_res_{nprong}wp.png",
+        )
+        analysis.plot(
+            "TauPt_res_frac",
+            dataset="wtaunu",
+            systematic=NOMINAL_NAME,
+            selection=selection,
+            label=["Very Loose", "Loose", "Medium", "Tight"],
+            logx=False,
+            logy=False,
+            filename=f"TauPt_res_frac_{nprong}wp.png",
+        )
 
     # START OF WP LOOP
     # ========================================================================
@@ -576,6 +650,7 @@ if __name__ == "__main__":
         # RESOLUTION
         # ========================================================================
         analysis.paths.plot_dir = base_plotting_dir / "resolution" / wp
+        selection = [f"{wp}_{nprong}_reco_tau" for nprong in ("1prong", "3prong")]
         # profiles
         for v in reco_measurement_vars:
             if v in measurement_vars_mass:
@@ -583,13 +658,21 @@ if __name__ == "__main__":
             elif v in measurement_vars_unitless:
                 args_res.update({"logx": False, "xlabel": variable_data[v]["name"]})
 
-            selection = [f"{wp}_{nprong}_reco_tau" for nprong in ("1prong", "3prong")]
             analysis.plot(
                 val=f"{v}_TauPt_res",
                 selection=selection,
                 label=["1-prong", "3-prong"],
+                ylabel=r"$\left<p_\mathrm{T,res}^\tau\right>$ [GeV]",
                 **args_res,
                 filename=f"{v}_TauPt_res_prong_compare_profile.png",
+            )
+            analysis.plot(
+                val=f"{v}_TauPt_res_frac",
+                selection=selection,
+                label=["1-prong", "3-prong"],
+                ylabel=r"$\left<p_\mathrm{T,res-frac}^\tau\right>$",
+                **args_res,
+                filename=f"{v}_TauPt_res_frac_prong_compare_profile.png",
             )
             analysis.plot(
                 v,
@@ -601,6 +684,56 @@ if __name__ == "__main__":
                 logy=True,
                 filename=f"{v}_{wp}_prong_compare.png",
             )
+        analysis.plot(
+            "TauPt_res",
+            dataset="wtaunu",
+            systematic=NOMINAL_NAME,
+            selection=selection,
+            label=["1-prong", "3-prong"],
+            logx=False,
+            logy=False,
+            filename=f"TauPt_res_{wp}_prong_compare.png",
+        )
+        analysis.plot(
+            "TauPt_res_frac",
+            dataset="wtaunu",
+            systematic=NOMINAL_NAME,
+            selection=selection,
+            label=["1-prong", "3-prong"],
+            logx=False,
+            logy=False,
+            filename=f"TauPt_res_frac_{wp}_prong_compare.png",
+        )
 
-    analysis.histogram_printout(to_file="txt")
+    # just a quick calculation for overall resolution
+    res_table = []
+    frac_table = []
+    header = [
+        r"$\left<p_\mathrm{T,res}^{\tau}\right>$ [GeV]",
+        r"$\left<p_\mathrm{T,res}^{\tau_{1p}}\right>$ [GeV]",
+        r"$\left<p_\mathrm{T,res}^{\tau_{3p}}\right>$ [GeV]",
+    ]
+    for wp in working_points:
+        row_res = [wp]
+        row_frac = [wp]
+
+        for nprong in ("", "1prong_", "3prong_"):
+            pt = (
+                analysis["wtaunu"]
+                .filters[NOMINAL_NAME][f"{wp}_{nprong}reco_tau"]
+                .df.AsNumpy(["TauPt_res", "TauPt_res_frac"])
+            )
+            mean_frac = abs(pt["TauPt_res_frac"]).mean()
+            mean_res = abs(pt["TauPt_res"]).mean()
+            analysis.logger.info(f"{wp}, {nprong}: {mean_res:.3f}, {mean_frac:.3f}")
+            row_res.append(f"{mean_res:.3g}")
+            row_frac.append(f"{mean_frac:.3g}")
+        res_table.append(row_res)
+        frac_table.append(row_frac)
+
+    with open(analysis.paths.latex_dir / "resolution_res.tex", "w") as f:
+        f.write(tabulate(res_table, headers=header, tablefmt="latex_raw"))
+    with open(analysis.paths.latex_dir / "resolution_frac.tex", "w") as f:
+        f.write(tabulate(frac_table, headers=header, tablefmt="latex_raw"))
+
     analysis.logger.info("DONE.")

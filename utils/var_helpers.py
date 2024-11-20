@@ -199,17 +199,17 @@ derived_vars: Dict[str, OtherVar] = {
         "tree": "",
         "cfunc": "calc_dphi",
     },
-    "TauPt_res": {
+    "TauPt_res_frac": {
         "var_args": [
-            "MatchedTruthParticlePt",
+            "VisTruthTauPt",
             "TauPt",
         ],
         "tree": "",
         "cfunc": "calc_frac",
     },
-    "TauPt_diff": {
+    "TauPt_res": {
         "var_args": [
-            "MatchedTruthParticlePt",
+            "VisTruthTauPt",
             "TauPt",
         ],
         "tree": "",
