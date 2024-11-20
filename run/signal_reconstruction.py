@@ -5,6 +5,7 @@ import numpy as np
 
 from src.analysis import Analysis
 from src.cutting import Cut
+from utils.ROOT_utils import bayes_divide
 from utils.plotting_tools import Hist2dOpts
 from utils.variable_names import variable_data
 
@@ -27,10 +28,15 @@ datasets: Dict[str, Dict] = {
 
 # CUTS & SELECTIONS
 # ========================================================================
-pass_presel = Cut(
+pass_matched_reco = Cut(
     r"Pass preselection",
-    r"(passReco == 1) && (TauBaselineWP == 1) && (abs(TauCharge) == 1) && passMetTrigger"
-    # r"&& ((MatchedTruthParticle_isTau + MatchedTruthParticle_isElectron + MatchedTruthParticle_isMuon + MatchedTruthParticle_isPhoton) <= 1)",
+    r"(passReco == 1) && "
+    r"(TauBaselineWP == 1) && "
+    r"(abs(TauCharge) == 1) && "
+    r"passMetTrigger && "
+    r"((TauNCoreTracks == 1) || (TauNCoreTracks == 3)) &&"
+    r"(MatchedTruthParticle_isHadronicTau == true) && "
+    r"(MatchedTruthParticlePt == TruthTauPt)",
 )
 pass_trigger = Cut(
     r"Pass trigger",
@@ -46,7 +52,7 @@ pass_truth = Cut(
 )
 truth_tau = Cut(
     r"Truth Hadronic Tau",
-    r"TruthTau_isHadronic",
+    r"TruthTau_isHadronic && ((TruthTau_nChargedTracks == 1) || (TruthTau_nChargedTracks == 3))",
 )
 truth_tau_1prong = Cut(
     r"1-prong truth",
@@ -56,17 +62,13 @@ truth_tau_3prong = Cut(
     r"3-prong truth",
     r"TruthTau_nChargedTracks == 3",
 )
-reco_tau = Cut(
-    r"Reconstructed Hadronic Tau",
-    r"TauPt > 0",
-)
 reco_tau_1prong = Cut(
     r"1-prong Reconstructed Hadronic Tau",
-    "TauNCoreTracks == 1",
+    "(TauNCoreTracks == 1) && (TruthTau_nChargedTracks == 1)",
 )
 reco_tau_3prong = Cut(
     r"3-prong Reconstructed Hadronic Tau",
-    "TauNCoreTracks == 3",
+    "(TauNCoreTracks == 3) && (TruthTau_nChargedTracks == 3)",
 )
 pass_loose = Cut(
     r"\mathrm{Pass Loose ID}",
@@ -93,144 +95,104 @@ pass_SR_truth = Cut(
     r"(VisTruthTauPt > 170) && (TruthMTW > 150) && (TruthNeutrinoPt > 150)"
     r"&& ((TruthTau_nChargedTracks == 1) || (TruthTau_nChargedTracks == 3))",
 )
-pass_matched_truth_tau = Cut(
-    r"Matched Truth Tau",
-    r"(MatchedTruthParticle_isHadronicTau == true) && (MatchedTruthParticlePt == TruthTauPt)",
-)
+pass_SR = pass_SR_truth
+truth_cuts = [
+    pass_truth,
+    pass_SR,
+    truth_tau,
+]
 selections: dict[str, list[Cut]] = {
-    "truth_tau": [
-        pass_truth,
-        # pass_SR_truth,
-    ],
-    "1prong_truth_tau": [
-        pass_truth,
-        pass_SR_truth,
-        truth_tau,
+    "truth_tau": truth_cuts,
+    "1prong_truth_tau": truth_cuts
+    + [
         truth_tau_1prong,
     ],
-    "3prong_truth_tau": [
-        pass_truth,
-        pass_SR_truth,
-        truth_tau,
+    "3prong_truth_tau": truth_cuts
+    + [
         truth_tau_3prong,
     ],
-    "1prong_truth_tau_trigger": [
-        pass_truth,
-        pass_SR_truth,
-        truth_tau,
+    "1prong_truth_tau_trigger": truth_cuts
+    + [
         truth_tau_1prong,
         pass_trigger,
     ],
-    "3prong_truth_tau_trigger": [
-        pass_truth,
-        pass_SR_truth,
-        truth_tau,
+    "3prong_truth_tau_trigger": truth_cuts
+    + [
         truth_tau_3prong,
         pass_trigger,
     ],
-    "1prong_truth_tau_mettrigger": [
-        pass_truth,
-        pass_SR_truth,
-        truth_tau,
+    "1prong_truth_tau_mettrigger": truth_cuts
+    + [
         truth_tau_1prong,
         pass_met_trigger,
     ],
-    "3prong_truth_tau_mettrigger": [
-        pass_truth,
-        pass_SR_truth,
-        truth_tau,
+    "3prong_truth_tau_mettrigger": truth_cuts
+    + [
         truth_tau_3prong,
         pass_met_trigger,
     ],
-    "vl_reco_tau": [
-        pass_presel,
-        pass_matched_truth_tau,
-        pass_SR_truth,
-        reco_tau,
+    "vl_reco_tau": truth_cuts
+    + [
+        pass_matched_reco,
     ],
-    "vl_1prong_reco_tau": [
-        pass_truth,
-        pass_presel,
-        pass_matched_truth_tau,
-        pass_SR_truth,
+    "vl_1prong_reco_tau": truth_cuts
+    + [
+        pass_matched_reco,
         reco_tau_1prong,
     ],
-    "vl_3prong_reco_tau": [
-        pass_truth,
-        pass_presel,
-        pass_matched_truth_tau,
-        pass_SR_truth,
+    "vl_3prong_reco_tau": truth_cuts
+    + [
+        pass_matched_reco,
         reco_tau_3prong,
     ],
-    "loose_reco_tau": [
-        pass_truth,
-        pass_presel,
-        pass_matched_truth_tau,
-        pass_SR_truth,
+    "loose_reco_tau": truth_cuts
+    + [
+        pass_matched_reco,
         pass_loose,
-        reco_tau,
     ],
-    "loose_1prong_reco_tau": [
-        pass_truth,
-        pass_presel,
-        pass_matched_truth_tau,
-        pass_SR_truth,
+    "loose_1prong_reco_tau": truth_cuts
+    + [
+        pass_matched_reco,
         pass_loose,
         reco_tau_1prong,
     ],
-    "loose_3prong_reco_tau": [
-        pass_truth,
-        pass_presel,
-        pass_matched_truth_tau,
-        pass_SR_truth,
+    "loose_3prong_reco_tau": truth_cuts
+    + [
+        pass_matched_reco,
         pass_loose,
         reco_tau_3prong,
     ],
-    "medium_reco_tau": [
-        pass_truth,
-        pass_presel,
-        pass_matched_truth_tau,
-        pass_SR_truth,
+    "medium_reco_tau": truth_cuts
+    + [
+        pass_matched_reco,
         pass_medium,
-        reco_tau,
     ],
-    "medium_1prong_reco_tau": [
-        pass_truth,
-        pass_presel,
-        pass_matched_truth_tau,
-        pass_SR_truth,
+    "medium_1prong_reco_tau": truth_cuts
+    + [
+        pass_matched_reco,
         pass_medium,
         reco_tau_1prong,
     ],
-    "medium_3prong_reco_tau": [
-        pass_truth,
-        pass_presel,
-        pass_matched_truth_tau,
-        pass_SR_truth,
+    "medium_3prong_reco_tau": truth_cuts
+    + [
+        pass_matched_reco,
         pass_medium,
         reco_tau_3prong,
     ],
-    "tight_reco_tau": [
-        pass_truth,
-        pass_presel,
-        pass_matched_truth_tau,
-        pass_SR_truth,
+    "tight_reco_tau": truth_cuts
+    + [
+        pass_matched_reco,
         pass_tight,
-        reco_tau,
     ],
-    "tight_1prong_reco_tau": [
-        pass_truth,
-        pass_presel,
-        pass_matched_truth_tau,
-        pass_SR_truth,
+    "tight_1prong_reco_tau": truth_cuts
+    + [
+        pass_matched_reco,
         pass_tight,
         reco_tau_1prong,
     ],
-    "tight_3prong_reco_tau": [
-        pass_truth,
-        pass_presel,
-        pass_matched_truth_tau,
-        pass_SR_truth,
+    "tight_3prong_reco_tau": truth_cuts
+    + [
+        pass_matched_reco,
         pass_tight,
         reco_tau_3prong,
     ],
@@ -243,6 +205,7 @@ measurement_vars_mass = [
     "MET_met",
     "TruthTauPt",
     "VisTruthTauPt",
+    "TruthNeutrinoPt",
     "MTW",
     "TruthMTW",
     # "TruthBosonM",
@@ -256,9 +219,7 @@ measurement_vars_unitless = [
     "TruthTauPhi",
     "VisTruthTauEta",
     "VisTruthTauPhi",
-    "TruthNeutrinoPt",
     "TruthNeutrinoEta",
-    "TauPt_res",
     # "nJets",
     "TruthTau_nChargedTracks",
     "TruthTau_nNeutralTracks",
@@ -271,15 +232,15 @@ measurement_vars_unitless = [
     # "TruthTauPt_div_MET",
 ]
 measurement_vars = measurement_vars_unitless + measurement_vars_mass
-truth_measurement_vars = [v for v in measurement_vars_mass if variable_data[v]["tag"] == "truth"]
+truth_measurement_vars = [v for v in measurement_vars if variable_data[v]["tag"] == "truth"]
 reco_measurement_vars = [
-    v for v in measurement_vars_mass if (variable_data[v]["tag"] == "reco") and (v != "TauPt_res")
+    v for v in measurement_vars if (variable_data[v]["tag"] == "reco") and (v != "TauPt_res")
 ]
 
 # define 2d histograms
 hists_2d = {
     "TauPt_TruthTauPt": Hist2dOpts("TauPt", "TruthTauPt"),
-    "TruthMTW_TauPt_res": Hist2dOpts("TruthMTW", "TauPt_res"),
+    "TauEta_TruthTauEta": Hist2dOpts("TauEta", "TruthTauEta"),
     "MTW_TauPt": Hist2dOpts("MTW", "TauPt"),
     "MET_met_TruthNeutrinoPt": Hist2dOpts("MET_met", "TruthNeutrinoPt"),
 }
@@ -308,10 +269,11 @@ def run_analysis() -> Analysis:
         analysis_label="signal_reconstruction",
         log_level=10,
         log_out="both",
-        extract_vars=measurement_vars,
+        extract_vars=measurement_vars + ["TauPt_res"],
         import_missing_columns_as_nan=True,
         snapshot=False,
         hists_2d=hists_2d,
+        do_weights=False,
         binnings={
             "": {
                 "MTW": np.geomspace(150, 1000, nedges),
@@ -323,12 +285,15 @@ def run_analysis() -> Analysis:
                 "TruthTau_nChargedTracks": np.array([0.0, 1.0, 2.0, 3.0, 4.0]),
                 "TruthTau_nNeutralTracks": np.array([0.0, 1.0, 2.0, 3.0, 4.0, 5.0]),
                 "TauEta": np.linspace(-2.5, 2.5, nedges),
+                "TauPhi": np.linspace(-2.5, 2.5, nedges),
                 "TruthTauEta": np.linspace(-2.5, 2.5, nedges),
                 "TruthTauPhi": np.linspace(-2.5, 2.5, nedges),
                 "VisTruthTauEta": np.linspace(-2.5, 2.5, nedges),
                 "VisTruthTauPhi": np.linspace(-2.5, 2.5, nedges),
                 "TruthNeutrinoEta": np.linspace(-2.5, 2.5, nedges),
                 "MET_met": np.geomspace(150, 1000, nedges),
+                "MET_eta": np.linspace(-2.5, 2.5, nedges),
+                "MET_phi": np.linspace(-2.5, 2.5, nedges),
                 "DeltaPhi_tau_met": np.linspace(0, 2 * np.pi, nedges),
                 "TruthDeltaPhi_tau_met": np.linspace(0, 3.5, nedges),
                 "TauPt_div_MET": np.linspace(0, 3, nedges),
@@ -336,7 +301,7 @@ def run_analysis() -> Analysis:
                 "TauRNNJetScore": np.linspace(0, 1, 51),
                 "TauBDTEleScore": np.linspace(0, 1, 51),
                 "TauNCoreTracks": np.linspace(0, 4, 5),
-                "TauPt_res": np.linspace(-1, 1, 51),
+                "TauPt_res": np.linspace(-1, 1, 31),
                 "TauPt_diff": np.linspace(-300, 300, nedges),
             },
         },
@@ -362,9 +327,9 @@ if __name__ == "__main__":
     recon_efficiencies = {
         wp: {
             nprong: {
-                var: (
-                    analysis.get_hist(var, "wtaunu", NOMINAL_NAME, f"{wp}_{nprong}reco_tau")
-                    / analysis.get_hist(var, "wtaunu", NOMINAL_NAME, f"{nprong}truth_tau")
+                var: bayes_divide(
+                    analysis.get_hist(var, "wtaunu", NOMINAL_NAME, f"{wp}_{nprong}reco_tau"),
+                    analysis.get_hist(var, "wtaunu", NOMINAL_NAME, f"{nprong}truth_tau"),
                 )
                 for var in measurement_vars
             }
@@ -374,9 +339,9 @@ if __name__ == "__main__":
     }
     trigger_efficiencies = {
         nprong: {
-            var: (
-                analysis.get_hist(var, "wtaunu", NOMINAL_NAME, f"{nprong}truth_tau_trigger")
-                / analysis.get_hist(var, "wtaunu", NOMINAL_NAME, f"{nprong}truth_tau")
+            var: bayes_divide(
+                analysis.get_hist(var, "wtaunu", NOMINAL_NAME, f"{nprong}truth_tau_trigger"),
+                analysis.get_hist(var, "wtaunu", NOMINAL_NAME, f"{nprong}truth_tau"),
             )
             for var in measurement_vars
         }
@@ -384,9 +349,9 @@ if __name__ == "__main__":
     }
     met_trigger_efficiencies = {
         nprong: {
-            var: (
-                analysis.get_hist(var, "wtaunu", NOMINAL_NAME, f"{nprong}truth_tau_mettrigger")
-                / analysis.get_hist(var, "wtaunu", NOMINAL_NAME, f"{nprong}truth_tau")
+            var: bayes_divide(
+                analysis.get_hist(var, "wtaunu", NOMINAL_NAME, f"{nprong}truth_tau_mettrigger"),
+                analysis.get_hist(var, "wtaunu", NOMINAL_NAME, f"{nprong}truth_tau"),
             )
             for var in measurement_vars
         }
@@ -416,6 +381,7 @@ if __name__ == "__main__":
     # ========================================================================
     args_eff["selection"] = ""
     args_eff["ylabel"] = r"Trigger Efficiency $\epsilon_\mathrm{trigger}$"
+    args_eff["do_stat"] = False
 
     analysis.paths.plot_dir = base_plotting_dir / "trigger_efficiency"
     for s, effs in (("trigger", trigger_efficiencies), ("met_trigger", met_trigger_efficiencies)):
@@ -437,11 +403,12 @@ if __name__ == "__main__":
 
     # BEEEG LOOP
     # =======================================================================
+    args_eff["do_stat"] = True
     for wp in working_points:
         for nprong in working_prongs:
             # DIRECT FRACTIONS
             # =======================================================================
-            analysis.paths.plot_dir = base_plotting_dir / "efficiency/full"
+            analysis.paths.plot_dir = base_plotting_dir / "efficiency/full" / wp / nprong
             args_eff["selection"] = [f"{nprong}truth_tau", f"{wp}_{nprong}reco_tau"]
             args_eff["ylabel"] = f"Events"
             for v in truth_measurement_vars:
@@ -476,7 +443,7 @@ if __name__ == "__main__":
                     ylabel=r"$(p_\mathrm{T}^\mathrm{true} - p_\mathrm{T}^\mathrm{reco}) / p_\mathrm{T}^\mathrm{true}$",
                     title=f"Tau $p_T$ resolution | mc16d | {analysis.global_lumi / 1000:.3g}fb$^{{-1}}$",
                     norm="log",
-                    logx=True,
+                    logx=True if v in measurement_vars_mass else False,
                     logy=False,
                     label_params={"llabel": "Simulation"},
                     filename=f"{v}_TauPt_res_2D_{selection}.png",
@@ -497,17 +464,17 @@ if __name__ == "__main__":
                 filename=f"TauPt_TruthTauPt_2D_{selection}.png",
             )
             analysis.plot_2d(
-                "TruthMTW",
-                "TauPt_res",
+                "TauEta",
+                "TruthTauEta",
                 dataset="wtaunu",
                 systematic=NOMINAL_NAME,
                 selection=selection,
-                logx=True,
+                logx=False,
                 logy=False,
                 title=f"Tau $p_T$ resolution | mc16d | {analysis.global_lumi / 1000:.3g}fb$^{{-1}}$",
                 norm="log",
                 label_params={"llabel": "Simulation"},
-                filename=f"TruthMTW_TauPt_res_2D_{selection}.png",
+                filename=f"TauEta_TruthTauEta_res_2D_{selection}.png",
             )
             analysis.plot_2d(
                 "MTW",
