@@ -497,10 +497,7 @@ class Histogram1D(bh.Histogram, family=None):
 
         # errors
         if bayes:
-            tgraph = ROOT.TGraphAsymmErrors(self.TH1, other.TH1, "cl=0.683 b(1,1) mode")
-            for i in range(h.n_bins):
-                h.TH1.SetBinError(i + 1, tgraph.GetErrorY(i))
-
+            h.TH1 = ROOT_utils.bayes_divide(self.TH1, other.TH1)
         else:
             h.TH1 = h.TH1.Divide(self.TH1, other.TH1, 1, 1, "B")
 
