@@ -627,12 +627,12 @@ variable_data: Dict[str, Branch] = {
         "units": "",
         "tag": VarTag.RECO,
     },
-    "TauPt_res": {
-        "name": r"$(p_\mathrm{T}^\mathrm{true} - p_\mathrm{T}^\mathrm{reco}) / p_\mathrm{T}^\mathrm{true}$",
+    "TauPt_res_frac": {
+        "name": r"$p_\mathrm{T,res}^\tau$",
         "units": "",
         "tag": VarTag.RECO,
     },
-    "TauPt_diff": {
+    "TauPt_res": {
         "name": r"$p_\mathrm{T}^\mathrm{true} - p_\mathrm{T}^\mathrm{reco}$",
         "units": "GeV",
         "tag": VarTag.RECO,
