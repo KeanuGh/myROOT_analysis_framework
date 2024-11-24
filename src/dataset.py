@@ -568,27 +568,25 @@ class Dataset:
     def get_binnings(self, variable_name: str, selection: str | None = None) -> dict:
         """Get correct binnings for variable"""
 
-        # look for first matching key in binning dictionary
-        for k in self.binnings.keys():
-            if not selection:
-                continue
-            if re.match(k, selection):
-                selection = k
-                break
-
         # select bins
+        if selection:
+            # look for first matching key in binning dictionary that isn't ""
+            for sel_pattern in [i for i in self.binnings.keys() if i]:
+                if bool(re.match(sel_pattern, selection)) and (
+                    variable_name in self.binnings[sel_pattern]
+                ):
+                    return {"bins": self.binnings[sel_pattern][variable_name]}
+
         if (
             selection
             and (selection in self.binnings)
             and (variable_name in self.binnings[selection])
         ):
-            bin_args = {"bins": self.binnings[selection][variable_name]}
+            return {"bins": self.binnings[selection][variable_name]}
         elif variable_name in self.binnings[""]:
-            bin_args = {"bins": self.binnings[""][variable_name]}
+            return {"bins": self.binnings[""][variable_name]}
         else:
-            bin_args = self.__match_bin_args(variable_name)
-
-        return bin_args
+            return self.__match_bin_args(variable_name)
 
     def define_th1(
         self,
