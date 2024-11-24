@@ -148,7 +148,23 @@ class DatasetMetadata:
         all_files: set[str] = set()
         data_samples: set[int] = set()
         for dataset_name, dataset_dict in datasets.items():
-            files = multi_glob(dataset_dict["data_path"])
+
+            # gather files
+            if isinstance(dataset_dict["data_path"], (list, str, Path)):
+                files = multi_glob(dataset_dict["data_path"])
+            elif isinstance(dataset_dict["data_path"], dict):
+                files = []
+                for subsample_name, subsample_files in dataset_dict["data_path"].items():
+                    if isinstance(subsample_files, list):
+                        files.extend(subsample_files)
+                    elif isinstance(subsample_files, (str, Path)):
+                        files.append(subsample_files)
+                    else:
+                        raise ValueError(f"Unknown files of type {type(files)}")
+            else:
+                raise ValueError(f"Unknown files of type {type(files)}")
+            files = multi_glob(files)
+
             ttree_name = dataset_dict["ttree"] if "ttree" in dataset_dict else ttree
             all_files |= set(files)
             dsids: set[int] = set()
