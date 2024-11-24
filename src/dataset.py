@@ -774,7 +774,7 @@ class Dataset:
                         systematic=sys_name,
                         selection=selection,
                     )
-                    th1_ptr_map[selection][profile_name] = root_sys_df.Profile1D(*profile_args)
+                    th1_ptr_map[selection][profile_name] = sel_df.Profile1D(*profile_args)
 
                 # Define 2D histograms
                 # =======================================================
