@@ -399,7 +399,7 @@ def run_analysis() -> Analysis:
                 "TauRNNJetScore": np.linspace(0, 1, 51),
                 "TauBDTEleScore": np.linspace(0, 1, 51),
                 "TruthTauPt": np.geomspace(1, 1000, 21),
-                # "TauNCoreTracks": np.arange(0, 5, dtype=float),
+                "TauNCoreTracks": np.linspace(0, 4, 5),
             },
             ".*_CR_.*ID": {
                 "MET_met": np.geomspace(1, 100, 11),
@@ -623,10 +623,20 @@ if __name__ == "__main__":
         analysis.paths.plot_dir = wp_dir / "fakes_comparisons"
         for fakes_source in ["MTW", "TauPt"]:
             analysis.plot(
-                val=[f"1prong_{wp}_{fakes_source}_FF", f"3prong_{wp}_{fakes_source}_FF"],
-                label=["1-prong", "3-prong"],
+                val=[
+                    f"1prong_{wp}_{fakes_source}_FF",
+                    f"3prong_{wp}_{fakes_source}_FF",
+                    f"{wp}_{fakes_source}_FF",
+                ],
+                label=["1-prong taus", "3-prong taus", "Inclusive"],
                 xlabel=r"$p_T^\tau$ [GeV]" if fakes_source == "TauPt" else r"$m_T^W$ [GeV]",
-                do_stat=False,
+                title=smart_join(
+                    f"Fake Factor Comparisons",
+                    "2017",
+                    f"{analysis.global_lumi / 1000:.3g}fb$^{{-1}}$",
+                    sep=" | ",
+                ),
+                do_stat=True,
                 selection="",
                 logx=False,
                 logy=False,
@@ -667,19 +677,16 @@ if __name__ == "__main__":
 
         for v in measurement_vars:
             if v in measurement_vars_mass:
-                default_args.update(
-                    {"logx": True, "logy": True, "xlabel": variable_data[v]["name"] + " [GeV]"}
-                )
+                default_args.update({"logx": True, "xlabel": variable_data[v]["name"] + " [GeV]"})
             elif v in measurement_vars_unitless:
-                default_args.update(
-                    {"logx": False, "logy": False, "xlabel": variable_data[v]["name"]}
-                )
+                default_args.update({"logx": False, "xlabel": variable_data[v]["name"]})
             analysis.plot(
                 val=[
                     analysis.get_hist(variable=v, dataset="data", selection=f"{wp}_SR_passID"),
                     FF_full_bkg(v, "TauPt"),
                     FF_full_bkg(v, "MTW"),
                 ],
+                logy=True,
                 **default_args,
                 filename=f"{wp}_FF_compare_{v}_log.png",
             )
@@ -689,6 +696,7 @@ if __name__ == "__main__":
                     FF_full_bkg(v, "TauPt"),
                     FF_full_bkg(v, "MTW"),
                 ],
+                logy=False,
                 **default_args,
                 filename=f"{wp}_FF_compare_{v}_liny.png",
             )
