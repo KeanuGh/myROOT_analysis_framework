@@ -7,7 +7,7 @@ from src.analysis import Analysis
 from src.cutting import Cut
 from utils.variable_names import variable_data
 
-DTA_PATH = Path("/mnt/D/data/DTA_outputs/2024-08-28/")
+DTA_PATH = Path("/mnt/D/data/DTA_outputs/2024-09-19/")
 # DTA_PATH = Path("/eos/home-k/kghorban/DTA_OUT/2024-02-05/")
 DO_SYS = False
 
@@ -129,12 +129,12 @@ def run_analysis() -> Analysis:
     return Analysis(
         datasets,
         year=2017,
-        rerun=True,
-        regen_histograms=True,
+        # rerun=True,
+        # regen_histograms=True,
         do_systematics=DO_SYS,
         # regen_metadata=True,
         ttree=NOMINAL_NAME,
-        cuts=selections,
+        selections=selections,
         analysis_label="trigger_efficiency",
         log_level=10,
         log_out="both",
@@ -200,10 +200,11 @@ if __name__ == "__main__":
         "dataset": "wtaunu",
         "title": f"mc16d | {analysis.global_lumi / 1000:.3g}" + r"fb$^{-1}$",
         "do_stat": False,
-        "do_sys": False,
+        "do_syst": False,
         "selection": "",
         "ratio_plot": False,
         "stats_box": False,
+        "label_params": {"llabel": "Simulation"},
         "ylabel": r"Trigger Efficiency $\epsilon_\mathrm{trigger}$",
     }
 

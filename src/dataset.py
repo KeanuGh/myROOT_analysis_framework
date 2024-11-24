@@ -17,26 +17,9 @@ from src.cutting import Cut, Cutflow, FilterNode, FilterTree
 from src.histogram import Histogram1D
 from src.logger import get_logger
 from utils import ROOT_utils
-from utils.file_utils import smart_join
+from utils.helper_functions import smart_join, get_base_sys_name
+from utils.plotting_tools import ProfileOpts, Hist2dOpts
 from utils.variable_names import variable_data, VarTag
-
-
-@dataclass(slots=True)
-class ProfileOpts:
-    """
-    Options for building ROOT profile from RDataFrame columns
-
-    :param x: x-axis column name.
-    :param y: y-axis column name.
-    :param weight: name of column to apply as weight.
-    :param option: option paramter to pass to `TProfile1DModel()`
-        (see https://root.cern.ch/doc/master/classTProfile.html#a1ff9340284c73ce8762ab6e7dc0e6725)
-    """
-
-    x: str
-    y: str
-    weight: str = ""
-    option: str = ""
 
 
 @dataclass(slots=True)
@@ -52,6 +35,7 @@ class Dataset:
     :param selections: Dictionary of name: list of cuts to serve as selections/regions for analysis
     :param all_vars: set of all variables to extract from data (taken from branch names in df)
     :param profiles: dictionary of profile_name: ProfileOpts to build TProfile objects from dataframe
+    :param hists_2d: dictionary of hist_name: Hist2dOpts to build 2d histograms
     :param lumi: Dataset Luminosity scale
     :param label: Dataset label to put on plots
     :param logger: Logger object to print to. Defaults to console output at DEBUG-level
@@ -70,6 +54,7 @@ class Dataset:
     selections: dict[str, list[Cut]] = field(default_factory=list)
     all_vars: set[str] = field(default_factory=set)
     profiles: dict[str, ProfileOpts] = field(default_factory=dict)
+    hists_2d: dict[str, Hist2dOpts] = field(default_factory=dict)
     lumi: float = 139.0
     label: str = ""
     logger: logging.Logger = field(default_factory=get_logger)
@@ -79,6 +64,8 @@ class Dataset:
     is_data: bool = False
     out_file: Path = ""
     nominal_name: str = field(init=False, default="")
+    do_systematics: bool = False
+    do_weights: bool = True
     tes_sys_set: set = field(init=False, default_factory=set)
     eff_sys_set: set = field(init=False, default_factory=set)
 
@@ -92,15 +79,23 @@ class Dataset:
             for sys_name, rdf in self.rdataframes.items():
                 self.filters[sys_name] = self.gen_filters(rdf)
 
-        self.init_sys()
+        if self.do_systematics:
+            self.init_sys()
+        else:
+            self.nominal_name = next(s for s in self.rdataframes if "NOMINAL" in s)
 
     def init_sys(self) -> None:
         """initialise systematics"""
         # get list of TES systematics and name of nominal channel from ttrees
+        if self.nominal_name:
+            find_nominal = False
+        else:
+            find_nominal = True
+
         for sys_name in self.rdataframes.keys():
             # skip nominal(s)
             if ("__1up" not in sys_name) and ("__1down" not in sys_name):
-                if self.nominal_name:
+                if self.nominal_name and find_nominal:
                     raise ValueError(
                         f"Nominal '{self.nominal_name}' already found. Got another: '{sys_name}'"
                     )
@@ -118,7 +113,13 @@ class Dataset:
 
     # Import/Export
     # ===================
-    def export_dataset(self, filepath: str | Path | None = None, overwrite: bool = True) -> None:
+    def export_dataset(
+            self,
+            filepath: str | Path | None = None,
+            selections: list | str | None = None,
+            systematics: list | str | None = None,
+            overwrite: bool = True,
+    ) -> None:
         """
         Save data and histograms to ROOT file. File structure goes as:
         - systematic
@@ -129,6 +130,11 @@ class Dataset:
 
         if filepath is None:
             filepath = f"{self.name}.root"
+
+        if not isinstance(selections, list):
+            selections = [selections]
+        if not isinstance(systematics, list):
+            selections = [systematics]
 
         # Snapshotting options
         snapshot_opts = ROOT.RDF.RSnapshotOptions()
@@ -146,13 +152,24 @@ class Dataset:
                 )
 
         # save data
+        n_sys = len(systematics if systematics else self.filters)
+        n_sel = len(selections if selections else self.selections)
         self.logger.info(
-            "Saving snapshots of %s systematics in dataset '%s'...", len(self.filters), self.name
+            "Saving snapshots of %i selections for %i systematics in dataset '%s'...",
+            n_sel,
+            n_sys,
+            self.name,
         )
         t1 = time.time()
         n_ds = 0
         for sys_name, sys_selections in self.filters.items():
-            for selection in sys_selections:
+            if sys_name not in systematics:
+                continue
+
+            for selection in selections:
+                if selection not in selections:
+                    continue
+
                 self.filters[sys_name][selection].df = self.filters[sys_name][
                     selection
                 ].df.Snapshot(
@@ -298,7 +315,7 @@ class Dataset:
     # ========= PRINTOUTS ===========
     # ===============================
     def cutflow_printout(
-        self, systematic: str = "", selection: str = "", path: Path | None = None
+            self, systematic: str = "", selection: str = "", path: Path | None = None
     ) -> None:
         """Prints cutflow table. Pass path to .tex file if you want to print to latex"""
 
@@ -321,9 +338,9 @@ class Dataset:
                 self.cutflows[systematic][selection].print(latex_path=path)
 
     def histogram_printout(
-        self,
-        to_file: Literal["txt", "latex", False] = False,
-        to_dir: Path | None = None,
+            self,
+            to_file: Literal["txt", "latex", False] = False,
+            to_dir: Path | None = None,
     ) -> None:
         """Printout of histogram metadata"""
         rows = []
@@ -361,10 +378,13 @@ class Dataset:
     # ===============================
     # ========== CUTTING ============
     # ===============================
-    def gen_cutflows(self, do_print: bool = False) -> None:
+    def gen_cutflows(self, do_print: bool = False, nominal_only: bool = True) -> None:
         """Generate cutflows for each systematic-selection"""
 
-        for systematic in self.rdataframes.keys():
+        systematics = (
+            [self.nominal_name] if nominal_only else list(self.eff_sys_set | self.tes_sys_set)
+        )
+        for systematic in systematics:
             self.cutflows[systematic] = dict()
             for selection in self.selections:
                 self.logger.info(
@@ -424,16 +444,16 @@ class Dataset:
     # =========== PLOTING FUNCTION(S) ===========
     # ===========================================
     def plot_hist(
-        self,
-        var: str,
-        bins: list[float] | tuple[int, float, float] | None = None,
-        ax: plt.Axes = None,
-        yerr: ArrayLike | bool = False,
-        normalise: float | bool = False,
-        systematic: str = "T_s1hv_NOMINAL",
-        selection: str = "",
-        histtype: str = "TH1F",
-        **kwargs,
+            self,
+            var: str,
+            bins: list[float] | tuple[int, float, float] | None = None,
+            ax: plt.Axes = None,
+            yerr: ArrayLike | bool = False,
+            normalise: float | bool = False,
+            systematic: str = "T_s1hv_NOMINAL",
+            selection: str = "",
+            histtype: Literal["TH1F", "TH1D", "TH1I", "TH1C", "TH1L", "TH1S"] = "TH1F",
+            **kwargs,
     ) -> Histogram1D:
         """
         Generate 1D plots of given variables in dataframe. Returns figure object of list of figure objects.
@@ -471,7 +491,7 @@ class Dataset:
             if bins is None:
                 raise ValueError("Must pass bins if histogram not in dictionary") from e
 
-            th1 = self.gen_histogram(
+            th1 = self.gen_th1(
                 variable=var, systematic=systematic, selection=selection, histtype=histtype
             )
 
@@ -486,11 +506,11 @@ class Dataset:
     # ============== HISTOGRAMMING ==============
     # ===========================================
     def get_hist(
-        self,
-        variable,
-        systematic: str = "T_s1hv_NOMINAL",
-        selection: str = "",
-        kind: Literal["th1", "boost"] = "th1",
+            self,
+            variable,
+            systematic: str = "T_s1hv_NOMINAL",
+            selection: str = "",
+            kind: Literal["th1", "boost"] = "th1",
     ) -> ROOT.TH1 | Histogram1D:
         """Fetch histogram from internal dictionary"""
         try:
@@ -506,6 +526,9 @@ class Dataset:
 
     def _match_weight(self, var_) -> str:
         """match variable to weight"""
+        if not self.do_weights:
+            return ""
+
         try:
             match variable_data[var_]:
                 case {"tag": VarTag.TRUTH}:
@@ -555,9 +578,9 @@ class Dataset:
 
         # select bins
         if (
-            selection
-            and (selection in self.binnings)
-            and (variable_name in self.binnings[selection])
+                selection
+                and (selection in self.binnings)
+                and (variable_name in self.binnings[selection])
         ):
             bin_args = {"bins": self.binnings[selection][variable_name]}
         elif variable_name in self.binnings[""]:
@@ -568,9 +591,13 @@ class Dataset:
         return bin_args
 
     def define_th1(
-        self, variable: str, name: str = "", title: str = "", histtype="TH1F"
+            self,
+            variable: str,
+            name: str = "",
+            title: str = "",
+            histtype: Literal["TH1F", "TH1D", "TH1I", "TH1C", "TH1L", "TH1S"] = "TH1F",
     ) -> ROOT.TH1F:
-        """Define histogram from variable with correct binnings"""
+        """Define 1D histogram from variable with correct binnings"""
         allowed_histtypes = ["TH1F", "TH1D", "TH1I", "TH1C", "TH1L", "TH1S"]
         if histtype.upper() not in allowed_histtypes:
             raise ValueError(
@@ -579,19 +606,43 @@ class Dataset:
         if variable not in self.all_vars:
             raise ValueError(f"No known variable {variable} in dataset {self.name}")
 
-        bin_args = self.get_binnings(variable)
         return ROOT.__getattr__(histtype)(
             name if name else variable,
             title if title else name if name else variable,
-            *ROOT_utils.get_TH1_bin_args(**bin_args),
+            *ROOT_utils.get_TH1_bin_args(**self.get_binnings(variable)),
+        )
+
+    def define_th2(
+            self,
+            x: str,
+            y: str,
+            name: str = "",
+            title: str = "",
+            histtype: Literal["TH2F", "TH2D", "TH2I", "TH2C", "TH2L", "TH2S"] = "TH2F",
+    ) -> ROOT.TH1F:
+        """Define 2D histogram from variables with correct binnings"""
+        allowed_histtypes = ["TH2F", "TH2D", "TH2I", "TH2C", "TH2L", "TH2S"]
+        if histtype.upper() not in allowed_histtypes:
+            raise ValueError(
+                f"Unknown histogram type: {histtype}. Allowed histogram types: {allowed_histtypes}."
+            )
+        for v in (x, y):
+            if v not in self.all_vars:
+                raise ValueError(f"No known variable {v} in dataset {self.name}")
+
+        return ROOT.__getattr__(histtype)(
+            name if name else f"{x}_{y}",
+            title if title else name if name else f"{x}_{y}",
+            *ROOT_utils.get_TH1_bin_args(**self.get_binnings(x)),
+            *ROOT_utils.get_TH1_bin_args(**self.get_binnings(y)),
         )
 
     def define_profile(
-        self,
-        profile_opts: ProfileOpts,
-        profile_name: str,
-        systematic: str = "T_s1hv_NOMINAL",
-        selection: str = "",
+            self,
+            profile_opts: ProfileOpts,
+            profile_name: str,
+            systematic: str = "T_s1hv_NOMINAL",
+            selection: str = "",
     ) -> tuple[ROOT.TProfile1DModel, str, str, str] | tuple[ROOT.TProfile1DModel, str, str]:
         """Return arguments for profile creation from profile options"""
         bin_args = self.get_binnings(profile_opts.x, selection)
@@ -606,12 +657,12 @@ class Dataset:
             return profile_model, profile_opts.x, profile_opts.y, profile_opts.weight
         return profile_model, profile_opts.x, profile_opts.y
 
-    def gen_histogram(
-        self,
-        variable: str,
-        systematic: str = "T_s1thv_NOMINAL",
-        selection: str = "",
-        histtype: str = "TH1F",
+    def gen_th1(
+            self,
+            variable: str,
+            systematic: str = "T_s1thv_NOMINAL",
+            selection: str = "",
+            histtype: Literal["TH1F", "TH1D", "TH1I", "TH1C", "TH1L", "TH1S"] = "TH1F",
     ) -> ROOT.TH1:
         """Return TH1 histogram from selection for variable. Binning taken from internal binnings dictionary"""
         weight = self._match_weight(variable)
@@ -636,6 +687,10 @@ class Dataset:
 
     def gen_all_histograms(self, do_prints: bool = True) -> None:
         """Generate histograms for all variables and cuts."""
+
+        def count(d):
+            """Count number of subvalues in nested dict"""
+            return sum([count(v) if isinstance(v, dict) else 1 for v in d.values()])
 
         histograms_dict = dict()  # to store outputs
         output_histogram_variables = self.all_vars
@@ -672,7 +727,8 @@ class Dataset:
             for selection, sel_df in zip(selections, rdfs):
                 th1_ptr_map[selection] = dict()
 
-                # Define histograms from listed variables
+                # Define Histograms
+                # =======================================================
                 for variable_name in output_histogram_variables:
                     weight = self._match_weight(variable_name)
                     fill_cols = [variable_name, weight] if weight else [variable_name]
@@ -684,9 +740,9 @@ class Dataset:
 
                     # do systematic weights for reco variables in nominal tree
                     if (
-                        (self.eff_sys_set or self.tes_sys_set)
-                        and (sys_name == self.nominal_name)
-                        and (weight == "reco_weight")
+                            (self.eff_sys_set or self.tes_sys_set)
+                            and (sys_name == self.nominal_name)
+                            and (weight == "reco_weight")
                     ):
                         for sys_wgt in [
                             str(wgt)
@@ -700,11 +756,12 @@ class Dataset:
                                 th1, [variable_name, sys_wgt]
                             )
 
-                # don't want profiles for systematics
-                if sys_name == self.nominal_name:
+                # only want regular 1D histograms for systemaics
+                if sys_name != self.nominal_name:
                     continue
 
                 # Define profiles
+                # =======================================================
                 for profile_name, profile_opts in self.profiles.items():
                     if profile_name in output_histogram_variables:
                         self.logger.error(
@@ -721,9 +778,30 @@ class Dataset:
                     )
                     th1_ptr_map[selection][profile_name] = root_sys_df.Profile1D(*profile_args)
 
-            def count(d):
-                """Count number of subvalues in nested dict"""
-                return sum([count(v) if isinstance(v, dict) else 1 for v in d.values()])
+                # Define 2D histograms
+                # =======================================================
+                for hist2d_name, hist2d_opts in self.hists_2d.items():
+                    if hist2d_name in output_histogram_variables:
+                        self.logger.error(
+                            "Histogram for '%s' already exists! Skipping 2D histogram creation",
+                            hist2d_name,
+                        )
+                        continue
+
+                    fill_cols = (
+                        [hist2d_opts.x, hist2d_opts.y, hist2d_opts.weight]
+                        if hist2d_opts.weight
+                        else [hist2d_opts.x, hist2d_opts.y]
+                    )
+
+                    # define histogram
+                    hist_name = smart_join(
+                        [sys_name, selection, f"{hist2d_opts.x}_{hist2d_opts.y}"]
+                    )
+                    th2 = self.define_th2(hist2d_opts.x, hist2d_opts.y, hist_name, hist_name)
+                    th1_ptr_map[selection][f"{hist2d_opts.x}_{hist2d_opts.y}"] = sel_df.Fill(
+                        th2, fill_cols
+                    )
 
             # generate histograms
             t = time.time()
@@ -754,31 +832,21 @@ class Dataset:
                 root_sys_df.GetNRuns(),
             )
 
-        self.logger.info("Producted %d histograms.", len(histograms_dict))
+        self.logger.info("Produced %d histograms.", count(histograms_dict))
         self.histograms = histograms_dict
 
         # gen uncertainties
-        self.calculate_systematic_uncertainties()
+        if self.do_systematics:
+            self.calculate_systematic_uncertainties()
 
     # ===========================================
     # ============== UNCERTAINTIES ==============
     # ===========================================
-    @staticmethod
-    def get_base_sys_name(s: str) -> str:
-        """get the name of the base systematic"""
-        return (
-            # annoying typo: only JETID_EFF systematic doesn't have double underscore
-            s.removeprefix("weight_")
-            .removesuffix("_1up")
-            .removesuffix("_1down")
-            .removesuffix("_")
-        )
-
     def get_systematic_uncertainty(
-        self,
-        val: str,
-        selection: str = "",
-        symmetric: bool = True,
+            self,
+            val: str,
+            selection: str = "",
+            symmetric: bool = True,
     ) -> tuple[np.typing.NDArray[1] | Literal[0], np.typing.NDArray[1] | Literal[0]]:
         """Get systematic uncertainty for single variable in dataset. Returns 0s if not found"""
         nominal = self.histograms[self.nominal_name][selection][val]
@@ -828,7 +896,7 @@ class Dataset:
                 return  # only systematics for reco variables
 
             nonlocal sys_pairs
-            base_sys = self.get_base_sys_name(sys)
+            base_sys = get_base_sys_name(sys)
 
             if isinstance(sys_hist, ROOT.TProfile):
                 return  # don't want profiles
@@ -872,7 +940,7 @@ class Dataset:
             sel_dict = self.histograms[sys_name]
 
             # start collecting systemtics pairs
-            base_sys_name = self.get_base_sys_name(sys_name)
+            base_sys_name = get_base_sys_name(sys_name)
             if base_sys_name not in sys_pairs:
                 sys_pairs[base_sys_name] = dict()
 
@@ -909,8 +977,8 @@ class Dataset:
 
                     # overall summed uncertainty
                     if (
-                        f"{variable}_tot_uncert"
-                        not in self.histograms[self.nominal_name][selection]
+                            f"{variable}_tot_uncert"
+                            not in self.histograms[self.nominal_name][selection]
                     ):
                         self.histograms[self.nominal_name][selection][
                             f"{variable}_tot_uncert"
@@ -922,8 +990,8 @@ class Dataset:
 
                     # overall percent uncertainty
                     if (
-                        f"{variable}_pct_uncert"
-                        not in self.histograms[self.nominal_name][selection]
+                            f"{variable}_pct_uncert"
+                            not in self.histograms[self.nominal_name][selection]
                     ):
                         self.histograms[self.nominal_name][selection][
                             f"{variable}_pct_uncert"

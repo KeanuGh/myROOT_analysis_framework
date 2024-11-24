@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from typing import Sequence, TypedDict
 from warnings import warn
 
@@ -26,6 +27,39 @@ class PlotOpts(TypedDict):
     selections: list[str]
     labels: list[str]
     colours: list[str]
+
+
+@dataclass(slots=True)
+class ProfileOpts:
+    """
+    Options for building ROOT profile from RDataFrame columns
+
+    :param x: x-axis column name.
+    :param y: y-axis column name.
+    :param weight: name of column to apply as weight.
+    :param option: option paramter to pass to `TProfile1DModel()`
+        (see https://root.cern.ch/doc/master/classTProfile.html#a1ff9340284c73ce8762ab6e7dc0e6725)
+    """
+
+    x: str
+    y: str
+    weight: str = ""
+    option: str = ""
+
+
+@dataclass(slots=True)
+class Hist2dOpts:
+    """
+    Options for building ROOT 2D histogram from RDataFrame columns
+
+    :param x: x-axis column name.
+    :param y: y-axis column name.
+    :param weight: name of column to apply as weight.
+    """
+
+    x: str
+    y: str
+    weight: str = ""
 
 
 # ===============================
@@ -126,11 +160,14 @@ def set_axis_options(
     logy: bool = False,
     x_axlim: tuple[float, float] | None = None,
     y_axlim: tuple[float, float] | None = None,
+    label_params: dict | None = None,
 ) -> None:
     """Set axis options for plot"""
 
     # let mplhep handle the easy stuff
-    hep.atlas.label(italic=(True, True, False), ax=ax, loc=0, llabel="Internal", rlabel=title)
+    if label_params is None:
+        label_params = {}
+    set_hep_label(ax=ax, title=title, **label_params)
 
     # get axis labels from variable names if possible
     # it'll error out when plotting if the histogram edges aren't equal
@@ -153,6 +190,9 @@ def set_axis_options(
     # Main plot yaxis options
     if y_axlim:
         ax.set_ylim(*y_axlim)
+
+    if logx:
+        ax.semilogx()
     if logy:
         ax.semilogy()
     else:
@@ -185,9 +225,32 @@ def set_axis_options(
         else:
             ratio_ax.set_xlim(*bin_range)
 
-        # just in case (I do not trust matplotlib)
-        ax.set_xticklabels([])
-        ax.set_xlabel("")
+        # i hate matplotlib i hate matplotlib i hate matplotlib i hate matplotlib i hate maplotlib i
+        if logx:
+            ax.semilogx()
+            ax.xaxis.set_minor_formatter(
+                ticker.LogFormatter(labelOnlyBase=True, minor_thresholds=(0, 0))
+            )
+            ax.xaxis.set_major_formatter(
+                ticker.LogFormatter(labelOnlyBase=True, minor_thresholds=(0, 0))
+            )
+        ax.xaxis.set_ticklabels([])
+
+
+def set_hep_label(ax: plt.Axes, title: str = "", **label_params) -> None:
+    """
+    Sets the mplhep label on axis.
+    """
+    label_args = dict(
+        italic=(True, True, False),
+        ax=ax,
+        loc=0,
+        llabel="Preliminary",
+        rlabel=title,
+    )
+    if label_params:
+        label_args.update(label_params)
+    hep.atlas.label(**label_args)
 
 
 # ===============================

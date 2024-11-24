@@ -3,7 +3,7 @@ import logging
 import pickle as pkl
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Type, Iterable
+from typing import Type, Iterable, Literal
 
 import ROOT  # type: ignore
 import boost_histogram as bh
@@ -226,9 +226,41 @@ def get_TH1_bin_args(
     raise ValueError("Bins should be list of bin edges or tuple like (nbins, xmin, xmax)")
 
 
-def get_th1_bin_edges(h: ROOT.TH1) -> np.typing.NDArray[float]:
+def bayes_divide(h1: ROOT.TH1, h2: ROOT.TH1) -> ROOT.TH1:
+    """Perform division on h1/h2 with output histogram errors as a bayes binominal"""
+
+    # zero any negative bins (due to negative weights at low statistics)
+    for bin_idx in range(h1.GetNbinsX()):
+        if h1.GetBinContent(bin_idx) < 0:
+            h1.SetBinContent(bin_idx, h2.GetBinContent(bin_idx))
+            h1.SetBinError(bin_idx, h2.GetBinError(bin_idx))
+
+    if any(get_th1_bin_values(h1) > get_th1_bin_values(h2)):
+        raise ValueError(
+            f"Bins are not consistent with pass/total logic. "
+            f"One or more bins of pass histogram: {h1.GetName()} "
+            f"is higher than that of total histogram: {h2.GetName()}"
+        )
+
+    h_new = h1 / h2
+    tgraph = ROOT.TGraphAsymmErrors(h1, h2, "cl=0.683 b(1,1) mode")
+    for i in range(h_new.GetNbinsX()):
+        h_new.SetBinError(i + 1, tgraph.GetErrorY(i))
+
+    return h_new
+
+
+def get_th1_bin_edges(h: ROOT.TH1, ax: Literal["x", "y"] = "x") -> np.typing.NDArray[float]:
     """Return bin edges for TH1 object hist"""
-    return np.array([h.GetBinLowEdge(i + 1) for i in range(h.GetNbinsX() + 1)])
+    if isinstance(h, ROOT.TH2):
+        if ax == "x":
+            return np.array([h.GetXaxis().GetBinLowEdge(i + 1) for i in range(h.GetNbinsX() + 1)])
+        if ax == "y":
+            return np.array([h.GetYaxis().GetBinLowEdge(i + 1) for i in range(h.GetNbinsY() + 1)])
+        raise ValueError(f'Azis must be "x" or "y". Got: {ax}')
+
+    else:
+        return np.array([h.GetBinLowEdge(i + 1) for i in range(h.GetNbinsX() + 1)])
 
 
 def get_th1_bin_values(h: ROOT.TH1, flow: bool = False) -> np.typing.NDArray[float]:

@@ -10,6 +10,7 @@ import ROOT
 import matplotlib.pyplot as plt
 import mplhep as hep
 import numpy as np
+from matplotlib import ticker
 from numpy.typing import ArrayLike
 from tabulate import tabulate
 
@@ -20,7 +21,7 @@ from src.histogram import Histogram1D
 from src.logger import get_logger
 from utils import plotting_tools, ROOT_utils
 from utils.context import handle_dataset_arg
-from utils.file_utils import smart_join
+from utils.helper_functions import smart_join
 
 
 @dataclass(slots=True)
@@ -75,20 +76,21 @@ class Analysis:
     )
 
     def __init__(
-        self,
-        data_dict: dict[str, dict],
-        analysis_label: str,
-        global_lumi: float | None = 139.0,
-        output_dir: Path | str | None = None,
-        log_level: int = 20,
-        log_out: str = "both",
-        timedatelog: bool = True,
-        separate_loggers: bool = False,
-        rerun: bool = False,
-        regen_histograms: bool = False,
-        regen_metadata: bool = False,
-        year: int = 2017,
-        **kwargs,
+            self,
+            data_dict: dict[str, dict],
+            analysis_label: str,
+            global_lumi: float | None = 139.0,
+            output_dir: Path | str | None = None,
+            log_level: int = 20,
+            log_out: str = "both",
+            timedatelog: bool = True,
+            separate_loggers: bool = False,
+            rerun: bool = False,
+            regen_histograms: bool = False,
+            regen_metadata: bool = False,
+            snapshot: bool | dict = False,
+            year: int = 2017,
+            **kwargs,
     ):
         """
         :param data_dict: Dictionary of dictionaries containing paths to root files and the tree to extract from each.
@@ -103,7 +105,7 @@ class Analysis:
         :param rerun: Whether to rerun full analysis
         :param regen_histograms: Whether to regenerate all histograms for all datasets (can be applied separately)
         :param regen_metadata: Whether to regenerate DSID metadata (requires connection to pyami)
-        :param snapshot: Whether to save a snapshot of datasets to disk
+        :param snapshot: whether to snapshot generated datasets into root output file. If dictinoary, pass as argument to export function
         :param year: Data-year. One of 2016, 2017, 2018
         :param kwargs: Options arguments to pass to all dataset builders
         """
@@ -252,12 +254,9 @@ class Analysis:
             dataset = builder.build(**self._match_params(args, DatasetBuilder.build))
 
             # apply some manual settings
-            for manual_setting in [
-                "binnings",
-                "profiles",
-            ]:
+            for manual_setting in ["binnings", "profiles", "hists_2d", "do_weights"]:
                 if manual_setting in args:
-                    dataset.__setattr__(manual_setting, args[manual_setting])
+                    dataset.__setattr__(manual_setting, args.pop(manual_setting))
 
             if separate_loggers:
                 # set new logger to append to analysis logger
@@ -269,13 +268,21 @@ class Analysis:
             if indiv_rerun_files or not dataset_file.is_file():
                 dataset.gen_all_histograms()
                 dataset.gen_cutflows()
-                dataset.export_dataset(dataset_file)
+                if snapshot:
+                    if isinstance(snapshot, dict):
+                        dataset.export_dataset(dataset_file, **snapshot)
+                    else:
+                        dataset.export_dataset(dataset_file)
                 dataset.export_histograms(dataset_file)
             elif indiv_regen_hists:
                 dataset.import_dataset(dataset_file)
                 dataset.reset_cutflows()
                 dataset.gen_all_histograms()
-                dataset.export_histograms()
+                if snapshot:
+                    if isinstance(snapshot, dict):
+                        dataset.export_dataset(dataset_file, **snapshot)
+                    else:
+                        dataset.export_dataset(dataset_file)
             else:
                 dataset.import_dataset(dataset_file)
                 dataset.reset_cutflows()
@@ -343,38 +350,39 @@ class Analysis:
     # =========== PLOTS =============
     # ===============================
     def plot(
-        self,
-        val: str | Histogram1D | ROOT.TH1 | Sequence[str | Histogram1D | ROOT.TH1],
-        dataset: str | Sequence[str | None] | None = None,
-        systematic: str | Sequence[str] = "T_s1thv_NOMINAL",
-        selection: str | Sequence[str] = "",
-        label: str | None | Sequence[str | None] = None,
-        colour: str | None | Sequence[str | None] = None,
-        do_stat: bool = True,
-        do_syst: bool = False,
-        symmetric_uncert: bool = True,
-        logx: bool = False,
-        logy: bool = False,
-        xlabel: str = "",
-        ylabel: str = "",
-        title: str = "",
-        scale_by_bin_width: bool = False,
-        stats_box: bool = False,
-        x_axlim: tuple[float, float] | None = None,
-        y_axlim: tuple[float, float] | None = None,
-        legend_params: dict | None = None,
-        ratio_plot: bool = False,
-        ratio_fit: bool = False,
-        ratio_axlim: float | tuple[float, float] | None = None,
-        ratio_label: str = "Ratio",
-        ratio_err: str = "sumw2",
-        filename: str | Path | None = None,
-        sort: bool = True,
-        kind: str = "overlay",
-        flow: bool = False,
-        suffix: str = "",
-        prefix: str = "",
-        **kwargs,
+            self,
+            val: str | Histogram1D | ROOT.TH1 | Sequence[str | Histogram1D | ROOT.TH1],
+            dataset: str | Sequence[str | None] | None = None,
+            systematic: str | Sequence[str] = "T_s1thv_NOMINAL",
+            selection: str | Sequence[str] = "",
+            label: str | None | Sequence[str | None] = None,
+            colour: str | tuple | None | Sequence[str | tuple | None] = None,
+            do_stat: bool = True,
+            do_syst: bool = False,
+            symmetric_uncert: bool = True,
+            logx: bool = False,
+            logy: bool = False,
+            xlabel: str = "",
+            ylabel: str = "",
+            title: str = "",
+            scale_by_bin_width: bool = False,
+            stats_box: bool = False,
+            x_axlim: tuple[float, float] | None = None,
+            y_axlim: tuple[float, float] | None = None,
+            legend_params: dict | None = None,
+            label_params: dict | None = None,
+            ratio_plot: bool = False,
+            ratio_fit: bool = False,
+            ratio_axlim: float | tuple[float, float] | None = None,
+            ratio_label: str = "Ratio",
+            ratio_err: str = "sumw2",
+            filename: str | Path | None = None,
+            sort: bool = True,
+            kind: str = "overlay",
+            flow: bool = False,
+            suffix: str = "",
+            prefix: str = "",
+            **kwargs,
     ) -> None:
         """
         Plot same variable from different datasets.
@@ -401,6 +409,7 @@ class Analysis:
         :param x_axlim: x-axis limits. If None matplolib decides
         :param y_axlim: x-axis limits. If None matplolib decides
         :param legend_params: dictionary of options for legend drawing. Supports font size, loc, ncol
+        :param label_params: dictionary of options to pass to mplhep.atlas.label
         :param ratio_plot: If True, adds ratio of the first plot with each subseqent plot below
         :param ratio_fit: If True, fits ratio plot to a 0-degree polynomial and display line, chi-square and p-value
         :param ratio_axlim: pass to yax_lim in rato plotter
@@ -446,11 +455,19 @@ class Analysis:
         # remove data & signal histogram if stacking, so it can be handled separately
         data_plot_args = {}
         signal_plot_args = {}
-        if (kind == "stack") and (self.data_sample in per_hist_vars["datasets"]):
+        if (
+                self.data_sample
+                and (kind == "stack")
+                and (self.data_sample in per_hist_vars["datasets"])
+        ):
             idx = per_hist_vars["datasets"].index(self.data_sample)
             for v in per_hist_vars.keys():
                 data_plot_args[v] = per_hist_vars[v].pop(idx)  # type: ignore
-        if (kind == "stack") and (self.signal_sample in per_hist_vars["datasets"]):
+        if (
+                self.signal_sample
+                and (kind == "stack")
+                and (self.signal_sample in per_hist_vars["datasets"])
+        ):
             idx = per_hist_vars["datasets"].index(self.signal_sample)
             for v in per_hist_vars:
                 signal_plot_args[v] = per_hist_vars[v].pop(idx)  # type: ignore
@@ -532,7 +549,7 @@ class Analysis:
                             if n_plottables > 2
                             else None
                         ),
-                        colour=per_hist_vars["colours"][i],
+                        colour=None if n_plottables == 2 else per_hist_vars["colours"][i],
                         fit=ratio_fit,
                         yax_lim=ratio_axlim,
                         display_stats=len(per_hist_vars["hists"]) <= 3,
@@ -547,10 +564,10 @@ class Analysis:
         # ============================
         # legend: limit to 4 rows and reverse order (so more important samples go in front)
         ncols = (
-            len(per_hist_vars["hists"])
-            + bool(do_stat + do_syst)
-            + bool(data_plot_args)
-            + bool(signal_plot_args)
+                len(per_hist_vars["hists"])
+                + bool(do_stat + do_syst)
+                + bool(data_plot_args)
+                + bool(signal_plot_args)
         )
         ncols = max(ncols // 4, 1)  # need at least one column!
         legend_kwargs = {"ncols": ncols, "loc": "upper right", "fontsize": 10}
@@ -571,6 +588,7 @@ class Analysis:
             logy=logy,
             x_axlim=x_axlim,
             y_axlim=y_axlim,
+            label_params=label_params,
         )
 
         # SAVE
@@ -580,16 +598,16 @@ class Analysis:
         else:
             # naming template for file/histogram name
             def _srep(
-                s: Literal[
-                    "vals",
-                    "hists",
-                    "datasets",
-                    "systematics",
-                    "selections",
-                    "labels",
-                    "colours",
-                ],
-                init_: bool = True,
+                    s: Literal[
+                        "vals",
+                        "hists",
+                        "datasets",
+                        "systematics",
+                        "selections",
+                        "labels",
+                        "colours",
+                    ],
+                    init_: bool = True,
             ) -> str:
                 """String rep. of combinations of histogram definitions"""
                 out = [el for el in per_hist_vars[s] if (el is not None) and isinstance(el, str)]
@@ -603,18 +621,110 @@ class Analysis:
                 return ""
 
             filename = (
-                smart_join(
-                    [
-                        prefix,
-                        _srep("vals", init_=False),
-                        _srep("datasets"),
-                        _srep("selections"),
-                        "BIN_SCALED" * scale_by_bin_width,
-                        "STACKED" * (kind == "stack"),
-                        suffix,
-                    ]
-                )
-                + ".png"
+                    smart_join(
+                        [
+                            prefix,
+                            _srep("vals", init_=False),
+                            _srep("datasets"),
+                            _srep("selections"),
+                            "BIN_SCALED" * scale_by_bin_width,
+                            "STACKED" * (kind == "stack"),
+                            suffix,
+                        ]
+                    )
+                    + ".png"
+            )
+            filepath = self.paths.plot_dir / filename
+
+        fig.savefig(filepath, bbox_inches="tight")
+        self.logger.info(f"Saved plot to {filepath}")
+        plt.close(fig)
+
+    def plot_2d(
+            self,
+            xvar: str,
+            yvar: str,
+            dataset: str | None = None,
+            systematic: str = "T_s1thv_NOMINAL",
+            selection: str = "",
+            logx: bool = False,
+            logy: bool = False,
+            xlabel: str = "",
+            ylabel: str = "",
+            title: str = "",
+            filename: str | Path = "",
+            suffix: str = "",
+            prefix: str = "",
+            label_params: dict | None = None,
+            **kwargs,
+    ):
+        """2D plot using mplhep"""
+
+        # get hist values
+        # =========================================================================
+        h = self.get_hist(
+            f"{xvar}_{yvar}",
+            dataset=dataset,
+            systematic=systematic,
+            selection=selection,
+        )
+
+        nbinsx = h.GetNbinsX()
+        nbinsy = h.GetNbinsY()
+        bin_edgesx = ROOT_utils.get_th1_bin_edges(h, "x")
+        bin_edgesy = ROOT_utils.get_th1_bin_edges(h, "y")
+
+        bin_values = np.empty((nbinsx, nbinsy))
+        for i in range(nbinsx):
+            for j in range(nbinsy):
+                bin_values[i][j] = h.GetBinContent(i + 1, j + 1)
+
+        # plot
+        # =========================================================================
+        fig, ax = plt.subplots()
+        hep.hist2dplot(
+            H=bin_values,
+            xbins=bin_edgesx,
+            ybins=bin_edgesy,
+            ax=ax,
+            **kwargs,
+        )
+
+        # axis format
+        # =========================================================================
+        if label_params is None:
+            label_params = {}
+        plotting_tools.set_hep_label(ax=ax, title=title, **label_params)
+        if logx:
+            ax.semilogx()
+            ax.xaxis.set_minor_formatter(ticker.LogFormatter())
+            ax.xaxis.set_major_formatter(ticker.LogFormatter())
+        if logy:
+            ax.semilogy()
+            ax.yaxis.set_minor_formatter(ticker.LogFormatter())
+            ax.yaxis.set_major_formatter(ticker.LogFormatter())
+        ax.set_xlabel(xlabel if xlabel else plotting_tools.get_axis_labels(xvar)[0])
+        ax.set_ylabel(ylabel if ylabel else plotting_tools.get_axis_labels(yvar)[0])
+
+        # save
+        # =========================================================================
+        if filename:
+            filepath = self.paths.plot_dir / filename
+        else:
+            filename = (
+                    smart_join(
+                        [
+                            prefix,
+                            xvar,
+                            yvar,
+                            "2D",
+                            dataset,
+                            systematic,
+                            selection,
+                            suffix,
+                        ]
+                    )
+                    + ".png"
             )
             filepath = self.paths.plot_dir / filename
 
@@ -623,19 +733,19 @@ class Analysis:
         plt.close(fig)
 
     def _plot_stack(
-        self,
-        ax: plt.Axes,
-        per_hist_vars: plotting_tools.PlotOpts,
-        ratio_ax: None | plt.Axes = None,
-        signal_hist: Histogram1D | None = None,
-        data_hist: Histogram1D | None = None,
-        sort: bool = False,
-        do_stat: bool = False,
-        do_syst: bool = False,
-        symmetric_uncert: bool = True,
-        flow: bool = False,
-        ratio_axlim: float | tuple[float, float] | None = None,
-        **kwargs,
+            self,
+            ax: plt.Axes,
+            per_hist_vars: plotting_tools.PlotOpts,
+            ratio_ax: None | plt.Axes = None,
+            signal_hist: Histogram1D | None = None,
+            data_hist: Histogram1D | None = None,
+            sort: bool = False,
+            do_stat: bool = False,
+            do_syst: bool = False,
+            symmetric_uncert: bool = True,
+            flow: bool = False,
+            ratio_axlim: float | tuple[float, float] | None = None,
+            **kwargs,
     ) -> None:
         # Sort lists based on integral of histograms so smallest histograms sit at bottom
         if sort:
@@ -714,11 +824,11 @@ class Analysis:
                 data_hist.bin_centres,
                 data_hist.bin_values(flow),
                 xerr=data_hist.bin_widths / 2,
-                yerr=data_hist.error(flow),
+                yerr=data_hist.error(flow) if do_stat else None,
                 linestyle="None",
                 color="black",
                 marker=".",
-                label=self["data"].label,
+                label=self[self.data_sample].label,
             )
 
         # handle ratio plot options
@@ -781,11 +891,10 @@ class Analysis:
                 ax=ratio_ax,
                 yerr=True,
                 yax_lim=ratio_axlim,
-                display_unity=False,
             )
 
     def _process_plot_variables(
-        self, var_dict: dict[str, Any]
+            self, var_dict: dict[str, Any]
     ) -> tuple[int, plotting_tools.PlotOpts]:
         """
         Make sure per-plottable variables in `plot()` are either all the same length,
@@ -803,11 +912,10 @@ class Analysis:
                     raise ValueError(f"Empty value for '{var}'! Check arguments.")
                 else:
                     if n_plottables not in (1, n_val):
-                        d_ = {k: len(v) for k, v in var_dict.items()}
                         raise ValueError(
                             f"Lengths of variables: {list(var_dict.keys())} must match in length"
                             f" or be single values to apply to all histograms.\n"
-                            f"Got: {d_}"
+                            f"Got: {var_dict}"
                         )
                     n_plottables = len(val)
 
@@ -863,11 +971,11 @@ class Analysis:
         return n_plottables, var_dict
 
     def _process_val_args(
-        self,
-        val: str | Histogram1D | ROOT.TH1,
-        dataset: str | None = None,
-        systematic: str | None = None,
-        selection: str | None = None,
+            self,
+            val: str | Histogram1D | ROOT.TH1,
+            dataset: str | None = None,
+            systematic: str | None = None,
+            selection: str | None = None,
     ) -> Histogram1D:
         """Get Histogram1D object from val argument in plot"""
         if isinstance(val, Histogram1D):
@@ -885,18 +993,18 @@ class Analysis:
     # ===== HISTOGRAM HANDLING ======
     # ===============================
     def gen_histogram(
-        self,
-        variable: str,
-        dataset: str,
-        systematic: str = "T_s1hv_NOMINAL",
-        selection: str = "",
-        histtype: str = "TH1F",
-        save: bool = True,
+            self,
+            variable: str,
+            dataset: str,
+            systematic: str = "T_s1hv_NOMINAL",
+            selection: str = "",
+            histtype: Literal["TH1F", "TH1D", "TH1I", "TH1C", "TH1L", "TH1S"] = "TH1F",
+            save: bool = True,
     ) -> ROOT.TH1:
         """
         Generate histogram on-the-fly from given options
         """
-        h = self[dataset].gen_histogram(variable, systematic, selection, histtype)
+        h = self[dataset].gen_th1(variable, systematic, selection, histtype)
 
         if save:
             self[dataset].histograms[systematic][selection][variable] = h
@@ -904,13 +1012,13 @@ class Analysis:
         return h
 
     def get_hist(
-        self,
-        variable: str,
-        dataset: str | None = None,
-        systematic: str | None = None,
-        selection: str = "",
-        allow_generation: bool = False,
-        TH1: bool = True,
+            self,
+            variable: str,
+            dataset: str | None = None,
+            systematic: str | None = None,
+            selection: str = "",
+            allow_generation: bool = False,
+            TH1: bool = True,
     ) -> Histogram1D | ROOT.TH1:
         """Get TH1 histogram from histogram dict or internal dataset"""
 
@@ -927,7 +1035,7 @@ class Analysis:
             )
 
         # otherwise, get from dataset
-        if systematic is None:
+        if not systematic:
             systematic = self[dataset].nominal_name
         try:
             return self[dataset].get_hist(
@@ -941,7 +1049,7 @@ class Analysis:
                 self.logger.info(
                     f"Generating histogram for {variable} in {dataset} with selection: {selection}.."
                 )
-                h = self[dataset].gen_histogram(variable, systematic, selection)
+                h = self[dataset].gen_th1(variable, systematic, selection)
                 self[dataset].histograms[systematic][selection][variable] = h
                 return h
             raise ValueError(
@@ -977,15 +1085,15 @@ class Analysis:
         return h
 
     def get_systematic_uncertainty(
-        self,
-        val: str,
-        dataset: str | None = None,
-        selection: str = "",
-        symmetric: bool = True,
+            self,
+            val: str,
+            dataset: str | None = None,
+            selection: str = "",
+            symmetric: bool = True,
     ) -> tuple[np.typing.NDArray[float] | Literal[0], np.typing.NDArray[float] | Literal[0]]:
         """Get systematic uncertainty for single variable in dataframe"""
-        if not dataset:
-            self.logger.debug("No systematic uncertainties for histograms outside a dataset")
+        if (not dataset) or (selection is None):
+            # self.logger.debug("No systematic uncertainties for histograms outside a dataset")
             return 0, 0
 
         return self[dataset].get_systematic_uncertainty(
@@ -993,22 +1101,22 @@ class Analysis:
         )
 
     def get_full_systematic_uncertainty(
-        self, per_hist_vars: plotting_tools.PlotOpts, symmetric: bool = True
+            self, per_hist_vars: plotting_tools.PlotOpts, symmetric: bool = True
     ) -> tuple[np.typing.NDArray[float] | Literal[0], np.typing.NDArray[float] | Literal[0]]:
         """Calculate full systematic uncertainties. Outputs int 0 if no systematics are found"""
 
         sys_errs_up = []
         sys_errs_down = []
         for ds, sel, v in zip(
-            per_hist_vars["datasets"],
-            per_hist_vars["selections"],
-            per_hist_vars["vals"],
+                per_hist_vars["datasets"],
+                per_hist_vars["selections"],
+                per_hist_vars["vals"],
         ):
             sys_err_down, sys_err_up = self.get_systematic_uncertainty(
                 v, ds, sel, symmetric=symmetric
             )
             if (np.isscalar(sys_err_down) and sys_err_down == 0) and (
-                np.isscalar(sys_err_up) and sys_err_up == 0
+                    np.isscalar(sys_err_up) and sys_err_up == 0
             ):
                 continue  # skip no errors
             sys_errs_down.append(sys_err_down)
@@ -1033,20 +1141,20 @@ class Analysis:
     # ========== ANALYSES ===========
     # ===============================
     def do_fakes_estimate(
-        self,
-        fakes_source_var: str,
-        fakes_target_vars: Sequence[str],
-        CR_passID_data: str = "CR_passID",
-        CR_failID_data: str = "CR_failID",
-        SR_passID_data: str = "SR_passID",
-        SR_failID_data: str = "SR_failID",
-        CR_passID_mc: str = "trueTau_CR_passID",
-        CR_failID_mc: str = "trueTau_CR_failID",
-        SR_passID_mc: str = "trueTau_SR_passID",
-        SR_failID_mc: str = "trueTau_SR_failID",
-        name: str = "",
-        systematic: str = "T_s1hv_NOMINAL",
-        save_intermediates: bool = False,
+            self,
+            fakes_source_var: str,
+            fakes_target_vars: Sequence[str],
+            CR_passID_data: str = "CR_passID",
+            CR_failID_data: str = "CR_failID",
+            SR_passID_data: str = "SR_passID",
+            SR_failID_data: str = "SR_failID",
+            CR_passID_mc: str = "trueTau_CR_passID",
+            CR_failID_mc: str = "trueTau_CR_failID",
+            SR_passID_mc: str = "trueTau_SR_passID",
+            SR_failID_mc: str = "trueTau_SR_failID",
+            name: str = "",
+            systematic: str = "T_s1hv_NOMINAL",
+            save_intermediates: bool = False,
     ) -> None:
         """
         Perform fakes estimate
@@ -1225,11 +1333,11 @@ class Analysis:
         self[datasets].cutflow_printout(path=self.paths.latex_dir if latex else None)
 
     def full_cutflow_printout(
-        self,
-        datasets: list[str],
-        systematic: str = "T_s1thv_NOMINAL",
-        selections: list[str] | str | None = None,
-        filename: str | Path | None = None,
+            self,
+            datasets: list[str],
+            systematic: str = "T_s1thv_NOMINAL",
+            selections: list[str] | str | None = None,
+            filename: str | Path | None = None,
     ) -> None:
         """Prints full cutflows for all passed datasets"""
 
@@ -1247,10 +1355,10 @@ class Analysis:
             # header
             latex_str += "\\hline\n"
             latex_str += (
-                " & ".join(
-                    [f"Cut ({sanitised_str})"] + [self[dataset].label for dataset in datasets]
-                )
-                + "\\\\\n"
+                    " & ".join(
+                        [f"Cut ({sanitised_str})"] + [self[dataset].label for dataset in datasets]
+                    )
+                    + "\\\\\n"
             )
             latex_str += "\\hline\n"
 
@@ -1275,10 +1383,10 @@ class Analysis:
             f.write(latex_str)
 
     def print_metadata_table(
-        self,
-        datasets: list[str] | None = None,
-        columns: list[str] | str = "all",
-        filename: str | Path | None = None,
+            self,
+            datasets: list[str] | None = None,
+            columns: list[str] | str = "all",
+            filename: str | Path | None = None,
     ) -> None:
         """Print a latex table containing metadata for all datasets"""
 
@@ -1313,8 +1421,8 @@ class Analysis:
         # table build loop
         latex_str = f"\\begin{{tabular}}{{{'l' * (len(columns) + 1)}}}\n"
         latex_str += (
-            " & ".join(["Dataset"] + [header_names[col] for col in columns])
-            + "\\\\\n\\hline\\hline\n"
+                " & ".join(["Dataset"] + [header_names[col] for col in columns])
+                + "\\\\\n\\hline\\hline\n"
         )
 
         # loop over wanted datasets
@@ -1343,7 +1451,7 @@ class Analysis:
             f.write(latex_str)
 
     def histogram_printout(
-        self, to_file: Literal["txt", "latex", False] = False, to_dir: Path | None = None
+            self, to_file: Literal["txt", "latex", False] = False, to_dir: Path | None = None
     ) -> None:
         """Printout of histogram metadata"""
         rows = []
