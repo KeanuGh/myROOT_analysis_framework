@@ -7,7 +7,7 @@ from matplotlib import pyplot as plt
 from src.analysis import Analysis
 from src.cutting import Cut
 from src.histogram import Histogram1D
-from utils.helper_functions import get_base_sys_name
+from utils.helper_functions import get_base_sys_name, smart_join
 from utils.variable_names import variable_data
 
 DTA_PATH = Path("/mnt/D/data/DTA_outputs/2024-09-19/")
@@ -330,7 +330,7 @@ def run_analysis() -> Analysis:
         # regen_histograms=True,
         do_systematics=DO_SYS,
         # regen_metadata=True,
-        output_dir="/eos/home-k/kghorban/framework_outputs/analysis_main",
+        # output_dir="/eos/home-k/kghorban/framework_outputs/analysis_main",
         ttree=NOMINAL_NAME,
         analysis_label="analysis_main",
         log_level=10,
@@ -353,7 +353,7 @@ def run_analysis() -> Analysis:
         #     },
         #     ".*_CR_.*ID": {
         #         "MET_met": np.geomspace(1, 100, n_edges),
-        #     },
+        #
         binnings={
             "": {
                 "MTW": np.geomspace(150, 1000, 11),
@@ -367,6 +367,7 @@ def run_analysis() -> Analysis:
                 "TauRNNJetScore": np.linspace(0, 1, 51),
                 "TauBDTEleScore": np.linspace(0, 1, 51),
                 "TruthTauPt": np.geomspace(1, 1000, 21),
+                # "TauNCoreTracks": np.arange(0, 5, dtype=float),
             },
             ".*_CR_.*ID": {
                 "MET_met": np.geomspace(1, 100, 11),
@@ -728,8 +729,14 @@ if __name__ == "__main__":
             f"3prong_{wp}_CR_passID",
             f"3prong_{wp}_CR_failID",
         ]:
-            default_args["title"] = (
-                f"Data 2017 | {wp.title()} Tau ID | {analysis.global_lumi / 1000:.3g}fb$^{{-1}}$",
+            default_args["title"] = smart_join(
+                "Data 2017",
+                "3-prong Taus"
+                if "3prong" in selection
+                else ("1-prong Taus" if "1prong" in selection else ""),
+                f"{wp.title()} Tau ID",
+                f"{analysis.global_lumi / 1000: .3g}fb$ ^ {{-1}}$",
+                sep=" | ",
             )
             analysis.paths.plot_dir = wp_dir / "no_fakes" / selection
             default_args["selection"] = selection
