@@ -622,15 +622,13 @@ class Analysis:
 
             filename = (
                 smart_join(
-                    [
-                        prefix,
-                        _srep("vals", init_=False),
-                        _srep("datasets"),
-                        _srep("selections"),
-                        "BIN_SCALED" * scale_by_bin_width,
-                        "STACKED" * (kind == "stack"),
-                        suffix,
-                    ]
+                    prefix,
+                    _srep("vals", init_=False),
+                    _srep("datasets"),
+                    _srep("selections"),
+                    "BIN_SCALED" * scale_by_bin_width,
+                    "STACKED" * (kind == "stack"),
+                    suffix,
                 )
                 + ".png"
             )
@@ -713,16 +711,14 @@ class Analysis:
         else:
             filename = (
                 smart_join(
-                    [
-                        prefix,
-                        xvar,
-                        yvar,
-                        "2D",
-                        dataset,
-                        systematic,
-                        selection,
-                        suffix,
-                    ]
+                    prefix,
+                    xvar,
+                    yvar,
+                    "2D",
+                    dataset,
+                    systematic,
+                    selection,
+                    suffix,
                 )
                 + ".png"
             )

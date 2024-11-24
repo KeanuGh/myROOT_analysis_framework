@@ -53,7 +53,7 @@ def multi_glob(paths: Path | list[Path] | str | list[str]) -> list[str]:
 
 
 # didn't know where else to put this
-def smart_join(s: list[str | None], sep: str = "_") -> str:
+def smart_join(*s: str | None, sep: str = "_") -> str:
     """Concatenated string with separator, ignoring any blank strings or None"""
     return sep.join(filter(None, s))
 
