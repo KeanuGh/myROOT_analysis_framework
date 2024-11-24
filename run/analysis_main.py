@@ -203,6 +203,8 @@ wanted_variables = {
     "MTW",
     "TauRNNJetScore",
     "TauBDTEleScore",
+    # "DeltaPhi_tau_met",
+    "TauNCoreTracks",
 }
 measurement_vars_mass = [
     "TauPt",
@@ -213,6 +215,9 @@ measurement_vars_unitless = [
     "TauEta",
     "TauPhi",
     "TauBDTEleScore",
+    "TauRNNJetScore",
+    # "DeltaPhi_tau_met",
+    "TauNCoreTracks",
 ]
 measurement_vars = measurement_vars_unitless + measurement_vars_mass
 NOMINAL_NAME = "T_s1thv_NOMINAL"
@@ -227,8 +232,8 @@ datasets: Dict[str, Dict] = {
         "is_data": True,
         "selections": selections_notruth,
         "snapshot": {"selections": selections_notruth, "systematics": NOMINAL_NAME},
-        "rerun": True,
-        "regen_histograms": True,
+        # "rerun": True,
+        # "regen_histograms": True,
     },
     # SIGNAL
     # ====================================================================
@@ -317,6 +322,7 @@ datasets: Dict[str, Dict] = {
 
 def run_analysis() -> Analysis:
     """Run analysis"""
+    n_edges = 16
     return Analysis(
         datasets,
         year=2017,
@@ -330,6 +336,23 @@ def run_analysis() -> Analysis:
         log_out="both",
         extract_vars=wanted_variables,
         import_missing_columns_as_nan=True,
+        # binnings={
+        #     "": {
+        #         "MTW": np.geomspace(150, 1000, n_edges),
+        #         "TauPt": np.geomspace(170, 1000, n_edges),
+        #         "TauEta": np.linspace(-2.5, 2.5, n_edges),
+        #         "EleEta": np.linspace(-2.5, 2.5, n_edges),
+        #         "MuonEta": np.linspace(-2.5, 2.5, n_edges),
+        #         "MET_met": np.geomspace(150, 1000, n_edges),
+        #         "DeltaPhi_tau_met": np.linspace(0, 3.5, n_edges),
+        #         "TauPt_div_MET": np.linspace(0, 3, 21),
+        #         "TauRNNJetScore": np.linspace(0, 1, 36),
+        #         "TauBDTEleScore": np.linspace(0, 1, 36),
+        #         "TruthTauPt": np.geomspace(1, 1000, 21),
+        #     },
+        #     ".*_CR_.*ID": {
+        #         "MET_met": np.geomspace(1, 100, n_edges),
+        #     },
         binnings={
             "": {
                 "MTW": np.geomspace(150, 1000, 11),
@@ -496,10 +519,10 @@ if __name__ == "__main__":
                     "colour": [analysis[ds].colour for ds in all_samples] + [analysis.fakes_colour],
                     "title": f"{fakes_source} fakes binning | data17 | mc16d | {analysis.global_lumi / 1000:.3g}fb$^{{-1}}$",
                     "do_stat": True,
-                    "do_syst": False,
+                    "do_syst": True,
                     "suffix": "fake_scaled_log",
                     "ratio_plot": True,
-                    "ratio_axlim": (0.8, 1.2),
+                    "ratio_axlim": (0.5, 2),
                     "kind": "stack",
                 }
 
@@ -520,13 +543,13 @@ if __name__ == "__main__":
                     analysis.plot(
                         val=FF_vars(v),
                         **default_args,
-                        logy=False,
+                        logy=True,
                         filename=f"{nprong}{wp}_{v}_fakes_stack_{fakes_source}_log.png",
                     )
                     analysis.plot(
                         val=FF_vars(v),
                         **default_args,
-                        logy=True,
+                        logy=False,
                         filename=f"{nprong}{wp}_{v}_fakes_stack_{fakes_source}_liny.png",
                     )
 
@@ -680,37 +703,56 @@ if __name__ == "__main__":
 
         # NO FAKES
         # ===========================================================================
-        analysis.paths.plot_dir = wp_dir / "no_fakes"
         default_args = {
             "dataset": all_samples,
-            "title": f"data17 | mc16d | {analysis.global_lumi / 1000:.3g}fb$^{{-1}}$",
             "do_stat": True,
             "do_syst": False,
-            "selection": f"{wp}_SR_passID",
             "ratio_plot": True,
             "ratio_axlim": (0.8, 1.2),
             "kind": "stack",
         }
 
-        # mass-like variables
-        for var in measurement_vars:
-            if var in measurement_vars_mass:
-                default_args.update({"logx": True, "xlabel": variable_data[v]["name"] + " [GeV]"})
-            elif var in measurement_vars_unitless:
-                default_args.update({"logx": False, "xlabel": variable_data[v]["name"]})
+        # see try different selections
+        for selection in [
+            f"{wp}_SR_passID",
+            f"{wp}_SR_failID",
+            f"{wp}_CR_passID",
+            f"{wp}_CR_failID",
+            f"1prong_{wp}_SR_passID",
+            f"1prong_{wp}_SR_failID",
+            f"1prong_{wp}_CR_passID",
+            f"1prong_{wp}_CR_failID",
+            f"3prong_{wp}_SR_passID",
+            f"3prong_{wp}_SR_failID",
+            f"3prong_{wp}_CR_passID",
+            f"3prong_{wp}_CR_failID",
+        ]:
+            default_args["title"] = (
+                f"Data 2017 | {wp.title()} Tau ID | {analysis.global_lumi / 1000:.3g}fb$^{{-1}}$",
+            )
+            analysis.paths.plot_dir = wp_dir / "no_fakes" / selection
+            default_args["selection"] = selection
 
-            analysis.plot(
-                val=var,
-                **default_args,
-                logy=True,
-                filename=f"{wp}_{var}_stack_no_fakes_log.png",
-            )
-            analysis.plot(
-                val=var,
-                **default_args,
-                logy=False,
-                filename=f"{wp}_{var}_stack_no_fakes_liny.png",
-            )
+            for var in measurement_vars:
+                if var in measurement_vars_mass:
+                    default_args.update(
+                        {"logx": True, "xlabel": variable_data[var]["name"] + " [GeV]"}
+                    )
+                elif var in measurement_vars_unitless:
+                    default_args.update({"logx": False, "xlabel": variable_data[var]["name"]})
+
+                analysis.plot(
+                    val=var,
+                    **default_args,
+                    logy=True,
+                    filename=f"{wp}_{var}_stack_no_fakes_log.png",
+                )
+                analysis.plot(
+                    val=var,
+                    **default_args,
+                    logy=False,
+                    filename=f"{wp}_{var}_stack_no_fakes_liny.png",
+                )
 
     analysis.histogram_printout(to_file="txt")
     analysis.logger.info("DONE.")
