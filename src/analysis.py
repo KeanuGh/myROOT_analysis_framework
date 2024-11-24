@@ -117,7 +117,13 @@ class Analysis:
         if not output_dir:
             # root in the directory above this one
             output_dir = Path(__file__).absolute().parent.parent / "outputs" / analysis_label
+        else:
+            output_dir = Path(output_dir)
         self.paths = AnalysisPath(output_dir)
+
+        # allow manualy setting specific paths
+        for k, v in self._match_params(kwargs, AnalysisPath.__init__).items():
+            self.paths.__setattr__(k, v)
 
         # LOGGING
         # ============================

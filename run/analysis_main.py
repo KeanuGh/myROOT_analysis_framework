@@ -314,6 +314,7 @@ def run_analysis() -> Analysis:
         # regen_histograms=True,
         do_systematics=DO_SYS,
         # regen_metadata=True,
+        output_dir="/eos/home-k/kghorban/framework_outputs/analysis_main",
         ttree=NOMINAL_NAME,
         analysis_label="analysis_main",
         log_level=10,
