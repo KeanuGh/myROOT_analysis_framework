@@ -357,6 +357,8 @@ class Analysis:
         selection: str | Sequence[str] = "",
         label: str | None | Sequence[str | None] = None,
         colour: str | tuple | None | Sequence[str | tuple | None] = None,
+        plot_as_data: Histogram1D | ROOT.TH1 = None,
+        data_label: str = "data",
         do_stat: bool = True,
         do_syst: bool = False,
         symmetric_uncert: bool = True,
@@ -396,6 +398,8 @@ class Analysis:
         :param selection: string or list of strings corresponding to selection(s) applied to variable
         :param label: list of labels for plot legend corresponding to each line
         :param colour: list of colours for histograms
+        :param plot_as_data: histogram to be used as the "data" overlay in a stack plot
+        :param data_label: label to use for "Data" overlay in stack plot
         :param do_stat: include statistical uncertainties in error bars
         :param do_syst: include systematic uncertainties in error bars
         :param symmetric_uncert: whether to use symmetric (mean around nominal) rather than absolute uncertainties
@@ -451,6 +455,8 @@ class Analysis:
         )
         if scale_by_bin_width:
             per_hist_vars["hists"] = [h / h.bin_widths for h in per_hist_vars["hists"]]
+        if (plot_as_data is not None) and isinstance(plot_as_data, ROOT.TH1):
+            plot_as_data = Histogram1D(th1=plot_as_data)
 
         # remove data & signal histogram if stacking, so it can be handled separately
         data_plot_args = {}
@@ -499,6 +505,7 @@ class Analysis:
                 per_hist_vars=per_hist_vars,
                 signal_hist=signal_plot_args["hists"] if signal_plot_args else None,
                 data_hist=data_plot_args["hists"] if data_plot_args else None,
+                plot_as_data=plot_as_data,
                 sort=sort,
                 do_stat=do_stat,
                 do_syst=do_syst,
@@ -735,6 +742,8 @@ class Analysis:
         ratio_ax: None | plt.Axes = None,
         signal_hist: Histogram1D | None = None,
         data_hist: Histogram1D | None = None,
+        plot_as_data: Histogram1D | None = None,
+        data_label: str = "data",
         sort: bool = False,
         do_stat: bool = False,
         do_syst: bool = False,
@@ -815,7 +824,9 @@ class Analysis:
             )
 
         # handle data separately
-        if data_hist:
+        if plot_as_data is not None:
+            data_hist = plot_as_data
+        elif data_hist:
             ax.errorbar(
                 data_hist.bin_centres,
                 data_hist.bin_values(flow),
@@ -824,7 +835,7 @@ class Analysis:
                 linestyle="None",
                 color="black",
                 marker=".",
-                label=self[self.data_sample].label,
+                label=data_label,
             )
 
         # handle ratio plot options
