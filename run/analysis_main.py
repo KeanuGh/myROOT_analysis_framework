@@ -80,6 +80,10 @@ pass_truetau = Cut(
     r"True Tau",
     "MatchedTruthParticle_isHadronicTau == true || MatchedTruthParticle_isMuon == true || MatchedTruthParticle_isElectron == true",
 )
+fail_truetau = Cut(
+    r"Fake Tau",
+    "!(MatchedTruthParticle_isHadronicTau == true || MatchedTruthParticle_isMuon == true || MatchedTruthParticle_isElectron == true)",
+)
 
 # selections
 selections_loose: dict[str, list[Cut]] = {
@@ -191,6 +195,34 @@ for selection, cut_list in zip(selections_list, selections_cuts):
         ]
 # for data
 selections_notruth = {n: s for n, s in selections.items() if not n.startswith("trueTau_")}
+
+# to compare fakes
+selections |= {
+    "fakeTau_loose_SR_passID": [
+        pass_presel,
+        pass_taupt170,
+        pass_mtw150,
+        pass_loose,
+        pass_met150,
+        fail_truetau,
+    ],
+    "fakeTau_medium_SR_passID": [
+        pass_presel,
+        pass_taupt170,
+        pass_mtw150,
+        pass_loose,
+        pass_met150,
+        fail_truetau,
+    ],
+    "fakeTau_tight_SR_passID": [
+        pass_presel,
+        pass_taupt170,
+        pass_mtw150,
+        pass_loose,
+        pass_met150,
+        fail_truetau,
+    ],
+}
 
 # VARIABLES
 # ========================================================================
@@ -517,12 +549,17 @@ if __name__ == "__main__":
                         + [f"trueTau_{nprong}{wp}_SR_passID"] * len(mc_samples)
                         + [None]
                     ),
-                    "label": [analysis[ds].label for ds in all_samples] + ["Multijet"],
+                    "label": [analysis[ds].label for ds in all_samples] + ["Fake Jet Estimate"],
                     "colour": [analysis[ds].colour for ds in all_samples] + [analysis.fakes_colour],
-                    "title": f"{fakes_source} fakes binning | data17 | mc16d | {analysis.global_lumi / 1000:.3g}fb$^{{-1}}$",
+                    "title": smart_join(
+                        f"{fakes_source} fakes binning",
+                        f"{wp.title} ID Signal Region",
+                        "2017",
+                        f"{analysis.global_lumi / 1000:.3g}fb$^{{-1}}$",
+                        sep=" | ",
+                    ),
                     "do_stat": True,
                     "do_syst": True,
-                    "suffix": "fake_scaled_log",
                     "ratio_plot": True,
                     "ratio_axlim": (0.5, 2),
                     "kind": "stack",
@@ -553,6 +590,33 @@ if __name__ == "__main__":
                         **default_args,
                         logy=False,
                         filename=f"{nprong}{wp}_{v}_fakes_stack_{fakes_source}_liny.png",
+                    )
+
+                    # compare fake factors to "true tau" MC selections
+                    analysis.plot(
+                        val=v,
+                        dataset=mc_samples,
+                        selection=f"fakeTau_{nprong}{wp}_SR_passID",
+                        plot_as_data=analysis.histograms[
+                            f"{nprong}{wp}_{v}_fakes_bkg_{fakes_source}_src"
+                        ],
+                        title=smart_join(
+                            f"{fakes_source} fakes binning",
+                            f"{wp.title} ID Signal Region",
+                            "2017",
+                            f"{analysis.global_lumi / 1000:.3g}fb$^{{-1}}$",
+                            sep=" | ",
+                        ),
+                        data_label="Fake Jet Estimate",
+                        do_stat=True,
+                        do_syst=False,
+                        logy=False,
+                        ratio_plot=True,
+                        ratio_label="Fake Est. / MC",
+                        ratio_axlim=(0.5, 2),
+                        logx=True if v in measurement_vars_mass else False,
+                        kind="stack",
+                        filename=f"{nprong}{wp}_{v}_fakes_stack_{fakes_source}_multijet_est_true.png",
                     )
 
         # compare fake factors
