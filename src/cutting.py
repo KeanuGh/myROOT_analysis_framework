@@ -375,6 +375,9 @@ class Cutflow:
         # 0    cut1
         # 1    cut2     cut1
         # 2             cut2
+        # ...  ...      ...
+        # n-1  cut_n    cut_n-1
+        # n             cut_n
         cutflow: list[CutflowItem] = []
         for i, cut in enumerate(cuts):
             npass = hist.GetBinContent(i + 1)
