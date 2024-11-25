@@ -277,3 +277,12 @@ def th1_abs(h: ROOT.TH1) -> ROOT.TH1:
     for i in range(h.GetNbinsX()):
         th1.SetBinContent(i + 1, abs(h.GetBinContent(i + 1)))
     return th1
+
+
+def sum_th1s(self, *h: ROOT.TH1) -> ROOT.TH1 | None:
+    """Sum together any number of TH1s"""
+    hist_out = h[0].Clone()
+    for hist_to_sum in h[1:]:
+        hist_out.Add(hist_to_sum)
+
+    return hist_out

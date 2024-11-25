@@ -295,15 +295,13 @@ class Dataset:
         if len(self.histograms) == 0:
             raise ValueError("Must generate or load histograms before resetting cutflow")
 
-        for systematic in self.rdataframes.keys():
-            self.cutflows[systematic] = dict()
-
-            for selection in self.selections:
-                self.cutflows[systematic][selection] = Cutflow(logger=self.logger)
-                self.cutflows[systematic][selection].import_cutflow(
-                    self.histograms[systematic][selection]["cutflow"],
-                    self.selections[selection],
-                )
+        self.cutflows[self.nominal_name] = dict()
+        for selection in self.selections:
+            self.cutflows[self.nominal_name][selection] = Cutflow(logger=self.logger)
+            self.cutflows[self.nominal_name][selection].import_cutflow(
+                self.histograms[self.nominal_name][selection]["cutflow"],
+                self.selections[selection],
+            )
 
     def gen_filters(self, df: ROOT.RDataFrame) -> dict[str, FilterNode]:
         """Generate end nodes of filter tree from selections for given dataframe"""
@@ -846,35 +844,30 @@ class Dataset:
         self,
         val: str,
         selection: str = "",
-        symmetric: bool = True,
     ) -> tuple[np.typing.NDArray[1] | Literal[0], np.typing.NDArray[1] | Literal[0]]:
-        """Get systematic uncertainty for single variable in dataset. Returns 0s if not found"""
-        nominal = self.histograms[self.nominal_name][selection][val]
+        """
+        Get symmetric systematic uncertainty for single variable in dataset.
+        Returns 0s if not found.
+        """
+        all_sys = set(get_base_sys_name(s) for s in self.tes_sys_set | self.eff_sys_set)
 
         try:
-            if symmetric:
-                uncert_halved = self.histograms[self.nominal_name][selection][
-                    f"{val}_tot_uncert"
-                ].Clone()
-                uncert_halved.Scale(0.5)
-                sys_up = uncert_halved
-                sys_down = uncert_halved
-            else:
-                sys_up = ROOT_utils.th1_abs(
-                    self.histograms[self.nominal_name][selection][f"{val}_1up_uncert"] - nominal
-                )
-                sys_down = ROOT_utils.th1_abs(
-                    self.histograms[self.nominal_name][selection][f"{val}_1down_uncert"] - nominal
-                )
+            tot_uncert = ROOT_utils.sum_th1s(
+                *[
+                    self.histograms[self.nominal_name][selection][f"{val}_{sys}_tot_uncert"]
+                    for sys in all_sys
+                ]
+            )
         except KeyError:
             self.logger.debug(
                 "No systematic for histogram: v:%s, ds: %s, sel: %s", val, self.name, selection
             )
             return 0, 0
 
-        return ROOT_utils.get_th1_bin_values(sys_down), ROOT_utils.get_th1_bin_values(sys_up)
+        tot_uncert.Scale(0.5)
+        return ROOT_utils.get_th1_bin_values(tot_uncert), ROOT_utils.get_th1_bin_values(tot_uncert)
 
-    def calculate_systematic_uncertainties(self) -> None:
+    def calculate_systematic_uncertainties(self, exclude_sys: list[str] | None = None) -> None:
         """
         Calculate systematic uncertainties from variables in systematic trees
 
@@ -884,12 +877,13 @@ class Dataset:
             - percentage sys uncertainty for each sys: {var}_{sys}_pct_uncert
         """
         self.logger.info("Calculating systematic uncertainties...")
+        if exclude_sys is None:
+            exclude_sys = []
 
         def handle_sys(var: str, sel: str, sys: str, sys_hist: ROOT.TH1) -> None:
             """
             calculate systematics:
                 - "{var}_1(up/down)_uncert": the sum of every systematic uncertainty for var
-                - "{var}_1(up/down)_{sys}_diff": absolute difference between nominal and systematic
                 - "{var}_1(up/down)_{sys}_pct": percentage difference between nominal and systematic
             """
             if (var not in variable_data) or (variable_data[var]["tag"] != VarTag.RECO):
@@ -917,13 +911,7 @@ class Dataset:
                 raise ValueError(f"Systematic '{sys}' isn't 1up or 1down?")
 
             # save diff between nominal and systematic
-            nominal = self.histograms[self.nominal_name][sel][var]
-            diff_hist = sys_hist - nominal
-            self.histograms[self.nominal_name][sel][f"{var}_{sys}_diff"] = diff_hist
-
-            # save pct between nominal and systematic
-            pct_hist = 100 * diff_hist / nominal
-            self.histograms[self.nominal_name][sel][f"{var}_{sys}_pct"] = pct_hist
+            diff_hist = sys_hist - self.histograms[self.nominal_name][sel][var]
 
             # sum for full systematics
             if full_sys_name not in self.histograms[self.nominal_name][sel][var]:
@@ -937,6 +925,9 @@ class Dataset:
         # SYSTEMATICS LOOP FOR INDIVIDUAL SYSTEMATICS
         # ================================================================
         for sys_name in self.eff_sys_set | self.tes_sys_set:
+            if (sys_name in exclude_sys) or (get_base_sys_name(sys_name) in exclude_sys):
+                continue
+
             sel_dict = self.histograms[sys_name]
 
             # start collecting systemtics pairs
@@ -953,16 +944,20 @@ class Dataset:
                 for variable, syst_histogram in selection_dict.items():
                     handle_sys(variable, selection, sys_name, syst_histogram)
 
-        # FULL UNCERTAINTY
+        # FULL UNCERTAINTIES
         # ==================================
         # final loop for full uncertainty
         for sys_name, _ in sys_pairs.items():
             for selection, __ in _.items():
                 for variable, pair in __.items():
                     nominal_hist = self.histograms[self.nominal_name][selection][variable]
-                    uncert_up = ROOT_utils.th1_abs(pair["1up"] - nominal_hist)
-                    undert_down = ROOT_utils.th1_abs(pair["1down"] - nominal_hist)
-                    tot_uncert = undert_down + uncert_up
+
+                    # rescale center to be at nominal
+                    uncert_centre = pair["1up"] + pair["1down"]
+                    uncert_centre.Scale(0.5)
+                    sf = nominal_hist / uncert_centre
+
+                    tot_uncert = ROOT_utils.th1_abs(sf * (pair["1up"] - pair["1down"]))
                     pct_uncert = (tot_uncert / nominal_hist) * 100
 
                     # total uncert for systematic
@@ -974,31 +969,5 @@ class Dataset:
                     self.histograms[self.nominal_name][selection][
                         f"{variable}_{sys_name}_pct_uncert"
                     ] = pct_uncert
-
-                    # overall summed uncertainty
-                    if (
-                        f"{variable}_tot_uncert"
-                        not in self.histograms[self.nominal_name][selection]
-                    ):
-                        self.histograms[self.nominal_name][selection][
-                            f"{variable}_tot_uncert"
-                        ] = tot_uncert
-                    else:
-                        self.histograms[self.nominal_name][selection][
-                            f"{variable}_tot_uncert"
-                        ] += tot_uncert
-
-                    # overall percent uncertainty
-                    if (
-                        f"{variable}_pct_uncert"
-                        not in self.histograms[self.nominal_name][selection]
-                    ):
-                        self.histograms[self.nominal_name][selection][
-                            f"{variable}_pct_uncert"
-                        ] = pct_uncert
-                    else:
-                        self.histograms[self.nominal_name][selection][
-                            f"{variable}_pct_uncert"
-                        ] += pct_uncert
 
         self.logger.info("Done.")

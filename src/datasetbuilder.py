@@ -216,6 +216,7 @@ class DatasetBuilder:
         """Build DataFrame from given files and TTree/branch combinations from DTA output"""
 
         extract_variables.add("passReco")  # we'll need this later
+        is_nominal = all(["nominal" in tree.lower() for tree in ttrees])
 
         # make rdataframe
         self.logger.info(f"Initiating RDataFrame from trees: %s..", ttrees)
@@ -253,7 +254,7 @@ class DatasetBuilder:
             )
 
         # systematics weights
-        if self.do_systematics:
+        if is_nominal and self.do_systematics:
             # factor systematic weights with reco weight
             for sys_wgt in [
                 str(w)

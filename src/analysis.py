@@ -361,7 +361,6 @@ class Analysis:
         data_label: str = "data",
         do_stat: bool = True,
         do_syst: bool = False,
-        symmetric_uncert: bool = True,
         logx: bool = False,
         logy: bool = False,
         xlabel: str = "",
@@ -402,7 +401,6 @@ class Analysis:
         :param data_label: label to use for "Data" overlay in stack plot
         :param do_stat: include statistical uncertainties in error bars
         :param do_syst: include systematic uncertainties in error bars
-        :param symmetric_uncert: whether to use symmetric (mean around nominal) rather than absolute uncertainties
         :param logx: whether log scale x-axis
         :param logy: whether log scale y-axis
         :param xlabel: x label
@@ -509,7 +507,6 @@ class Analysis:
                 sort=sort,
                 do_stat=do_stat,
                 do_syst=do_syst,
-                symmetric_uncert=symmetric_uncert,
                 flow=flow,
                 ratio_axlim=ratio_axlim,
                 **kwargs,
@@ -531,7 +528,6 @@ class Analysis:
                         per_hist_vars["vals"][i],
                         per_hist_vars["datasets"][i],
                         per_hist_vars["selections"][i],
-                        symmetric=symmetric_uncert,
                     )
                     errs[0, :] += sys_down
                     errs[1, :] += sys_up
@@ -747,7 +743,6 @@ class Analysis:
         sort: bool = False,
         do_stat: bool = False,
         do_syst: bool = False,
-        symmetric_uncert: bool = True,
         flow: bool = False,
         ratio_axlim: float | tuple[float, float] | None = None,
         **kwargs,
@@ -801,9 +796,7 @@ class Analysis:
             err_label += "Stat. "
 
         if do_syst:
-            sys_up, sys_down = self.get_full_systematic_uncertainty(
-                per_hist_vars, symmetric=symmetric_uncert
-            )
+            sys_up, sys_down = self.get_full_systematic_uncertainty(per_hist_vars)
             err_top = err_top + sys_up
             err_bottom = err_bottom - sys_down
             err_label += "+ Sys. "
@@ -1081,11 +1074,7 @@ class Analysis:
                 else:
                     raise ValueError(f"Unknown histogram: {h}")
 
-        h = hists[0].Clone()
-
-        for hist_to_sum in hists[1:]:
-            h.Add(hist_to_sum)
-
+        h = ROOT_utils.sum_th1s(*hists)
         if save_as:
             self.histograms[save_as] = h
 
@@ -1096,19 +1085,16 @@ class Analysis:
         val: str,
         dataset: str | None = None,
         selection: str = "",
-        symmetric: bool = True,
     ) -> tuple[np.typing.NDArray[float] | Literal[0], np.typing.NDArray[float] | Literal[0]]:
         """Get systematic uncertainty for single variable in dataframe"""
-        if (not dataset) or (selection is None):
+        if (not isinstance(val, str)) or (not dataset) or (selection is None):
             # self.logger.debug("No systematic uncertainties for histograms outside a dataset")
             return 0, 0
 
-        return self[dataset].get_systematic_uncertainty(
-            val=val, selection=selection, symmetric=symmetric
-        )
+        return self[dataset].get_systematic_uncertainty(val=val, selection=selection)
 
     def get_full_systematic_uncertainty(
-        self, per_hist_vars: plotting_tools.PlotOpts, symmetric: bool = True
+        self, per_hist_vars: plotting_tools.PlotOpts
     ) -> tuple[np.typing.NDArray[float] | Literal[0], np.typing.NDArray[float] | Literal[0]]:
         """Calculate full systematic uncertainties. Outputs int 0 if no systematics are found"""
 
@@ -1119,9 +1105,7 @@ class Analysis:
             per_hist_vars["selections"],
             per_hist_vars["vals"],
         ):
-            sys_err_down, sys_err_up = self.get_systematic_uncertainty(
-                v, ds, sel, symmetric=symmetric
-            )
+            sys_err_down, sys_err_up = self.get_systematic_uncertainty(v, ds, sel)
             if (np.isscalar(sys_err_down) and sys_err_down == 0) and (
                 np.isscalar(sys_err_up) and sys_err_up == 0
             ):
