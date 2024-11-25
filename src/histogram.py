@@ -628,6 +628,8 @@ class Histogram1D(bh.Histogram, family=None):
             yerr = hist.root_sumw2()
         elif (yerr is not None) and not isinstance(yerr, bool) and not hasattr(yerr, "__len__"):
             raise TypeError(f"yerr should be a bool or iterable of values. Got {yerr}")
+        if yerr is not None:
+            yerr = yerr.clip(0)  # prevent negative uncertainties
 
         if not ax:
             _, ax = plt.subplots()
