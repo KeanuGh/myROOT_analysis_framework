@@ -357,8 +357,9 @@ class Analysis:
         selection: str | Sequence[str] = "",
         label: str | None | Sequence[str | None] = None,
         colour: str | tuple | None | Sequence[str | tuple | None] = None,
-        plot_as_data: Histogram1D | ROOT.TH1 = None,
-        data_label: str = "data",
+        plot_as_data: Histogram1D | ROOT.TH1 | list[Histogram1D | ROOT.TH1] | None = None,
+        data_label: str | list[str] = "data",
+        data_colour: str | list[str] = "k",
         do_stat: bool = True,
         do_syst: bool = False,
         logx: bool = False,
@@ -453,8 +454,6 @@ class Analysis:
         )
         if scale_by_bin_width:
             per_hist_vars["hists"] = [h / h.bin_widths for h in per_hist_vars["hists"]]
-        if (plot_as_data is not None) and isinstance(plot_as_data, ROOT.TH1):
-            plot_as_data = Histogram1D(th1=plot_as_data)
 
         # remove data & signal histogram if stacking, so it can be handled separately
         data_plot_args = {}
@@ -463,10 +462,12 @@ class Analysis:
             self.data_sample
             and (kind == "stack")
             and (self.data_sample in per_hist_vars["datasets"])
+            and plot_as_data is None
         ):
             idx = per_hist_vars["datasets"].index(self.data_sample)
             for v in per_hist_vars.keys():
                 data_plot_args[v] = per_hist_vars[v].pop(idx)  # type: ignore
+            plot_as_data = data_plot_args["hists"]
         if (
             self.signal_sample
             and (kind == "stack")
@@ -475,6 +476,13 @@ class Analysis:
             idx = per_hist_vars["datasets"].index(self.signal_sample)
             for v in per_hist_vars:
                 signal_plot_args[v] = per_hist_vars[v].pop(idx)  # type: ignore
+
+        # handle custom data?
+        if not isinstance(plot_as_data, (list, tuple, set)):
+            plot_as_data = [plot_as_data]
+        for i, p in enumerate(plot_as_data):
+            if (plot_as_data[i] is not None) and isinstance(plot_as_data[i], ROOT.TH1):
+                plot_as_data[i] = Histogram1D(th1=plot_as_data[i])
 
         # unset options that depend on multiple histograms
         if n_plottables == 1:
@@ -502,8 +510,13 @@ class Analysis:
                 ratio_ax=ratio_ax,
                 per_hist_vars=per_hist_vars,
                 signal_hist=signal_plot_args["hists"] if signal_plot_args else None,
-                data_hist=data_plot_args["hists"] if data_plot_args else None,
-                plot_as_data=plot_as_data,
+                data_hist=plot_as_data
+                if plot_as_data
+                else [data_plot_args["hists"]]
+                if data_plot_args
+                else None,
+                data_label=data_label,
+                data_colour=data_colour,
                 sort=sort,
                 do_stat=do_stat,
                 do_syst=do_syst,
@@ -737,9 +750,9 @@ class Analysis:
         per_hist_vars: plotting_tools.PlotOpts,
         ratio_ax: None | plt.Axes = None,
         signal_hist: Histogram1D | None = None,
-        data_hist: Histogram1D | None = None,
-        plot_as_data: Histogram1D | None = None,
-        data_label: str = "data",
+        data_hist: Histogram1D | list[Histogram1D] | None = None,
+        data_label: str | list[str] = "data",
+        data_colour: str | list[str] = "k",
         sort: bool = False,
         do_stat: bool = False,
         do_syst: bool = False,
@@ -817,22 +830,24 @@ class Analysis:
             )
 
         # handle data separately
-        if plot_as_data is not None:
-            data_hist = plot_as_data
-        elif data_hist:
-            ax.errorbar(
-                data_hist.bin_centres,
-                data_hist.bin_values(flow),
-                xerr=data_hist.bin_widths / 2,
-                yerr=data_hist.error(flow) if do_stat else None,
-                linestyle="None",
-                color="black",
-                marker=".",
-                label=data_label,
-            )
+        if data_hist is None:
+            return
+
+        if isinstance(data_hist, Histogram1D):
+            data_hists = [data_hist]
+        else:
+            data_hists = data_hist
+        if isinstance(data_label, str):
+            data_labels = [data_label]
+        else:
+            data_labels = data_label
+        if isinstance(data_colour, str):
+            data_colours = [data_colour]
+        else:
+            data_colours = data_colour
 
         # handle ratio plot options
-        if ratio_ax:
+        if data_hist and ratio_ax:
             all_mc_hist = reduce((lambda x, y: x + y), per_hist_vars["hists"] + [signal_hist])
             all_mc_bin_vals = all_mc_hist.bin_values()
 
@@ -886,12 +901,25 @@ class Analysis:
                 colors="r",
             )
 
-            all_mc_hist.plot_ratio(
-                data_hist,
-                ax=ratio_ax,
-                yerr=True,
-                yax_lim=ratio_axlim,
+        for data_hist, data_label, data_colour in zip(data_hists, data_labels, data_colours):
+            ax.errorbar(
+                data_hist.bin_centres,
+                data_hist.bin_values(flow),
+                xerr=data_hist.bin_widths / 2,
+                yerr=data_hist.error(flow) if do_stat else None,
+                linestyle="None",
+                color=data_colour,
+                marker=".",
+                label=data_label,
             )
+            if ratio_ax:
+                all_mc_hist.plot_ratio(
+                    data_hist,
+                    ax=ratio_ax,
+                    yerr=True,
+                    yax_lim=ratio_axlim,
+                    colour=data_colour,
+                )
 
     def _process_plot_variables(
         self, var_dict: dict[str, Any]

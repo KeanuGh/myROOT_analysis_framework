@@ -2,12 +2,10 @@ from pathlib import Path
 from typing import Dict
 
 import numpy as np
-from matplotlib import pyplot as plt
 
 from src.analysis import Analysis
 from src.cutting import Cut
-from src.histogram import Histogram1D
-from utils.helper_functions import get_base_sys_name, smart_join
+from utils.helper_functions import smart_join
 from utils.variable_names import variable_data
 
 DTA_PATH = Path("/mnt/D/data/DTA_outputs/2024-09-19/")
@@ -19,7 +17,8 @@ DO_SYS = True
 pass_presel = Cut(
     r"Pass preselection",
     r"(passReco == 1) && (TauBaselineWP == 1) && (abs(TauCharge) == 1) && passMetTrigger"
-    r"&& ((MatchedTruthParticle_isTau + MatchedTruthParticle_isElectron + MatchedTruthParticle_isMuon + MatchedTruthParticle_isPhoton) <= 1)",
+    r"&& ((MatchedTruthParticle_isTau + MatchedTruthParticle_isElectron + MatchedTruthParticle_isMuon + MatchedTruthParticle_isPhoton) <= 1)"
+    r"&& ((TauNCoreTracks == 1) || (TauNCoreTracks == 3))",
 )
 pass_taupt170 = Cut(
     r"$p_T^\tau > 170$",
@@ -369,40 +368,23 @@ def run_analysis() -> Analysis:
         log_out="both",
         extract_vars=wanted_variables,
         import_missing_columns_as_nan=True,
-        # binnings={
-        #     "": {
-        #         "MTW": np.geomspace(150, 1000, n_edges),
-        #         "TauPt": np.geomspace(170, 1000, n_edges),
-        #         "TauEta": np.linspace(-2.5, 2.5, n_edges),
-        #         "EleEta": np.linspace(-2.5, 2.5, n_edges),
-        #         "MuonEta": np.linspace(-2.5, 2.5, n_edges),
-        #         "MET_met": np.geomspace(150, 1000, n_edges),
-        #         "DeltaPhi_tau_met": np.linspace(0, 3.5, n_edges),
-        #         "TauPt_div_MET": np.linspace(0, 3, 21),
-        #         "TauRNNJetScore": np.linspace(0, 1, 36),
-        #         "TauBDTEleScore": np.linspace(0, 1, 36),
-        #         "TruthTauPt": np.geomspace(1, 1000, 21),
-        #     },
-        #     ".*_CR_.*ID": {
-        #         "MET_met": np.geomspace(1, 100, n_edges),
-        #
         binnings={
             "": {
-                "MTW": np.geomspace(150, 1000, 11),
-                "TauPt": np.geomspace(170, 1000, 11),
-                "TauEta": np.linspace(-2.5, 2.5, 11),
-                "EleEta": np.linspace(-2.5, 2.5, 11),
-                "MuonEta": np.linspace(-2.5, 2.5, 11),
-                "MET_met": np.geomspace(150, 1000, 11),
-                "DeltaPhi_tau_met": np.linspace(0, 3.5, 11),
+                "MTW": np.geomspace(150, 1000, n_edges),
+                "TauPt": np.geomspace(170, 1000, n_edges),
+                "TauEta": np.linspace(-2.5, 2.5, n_edges),
+                "EleEta": np.linspace(-2.5, 2.5, n_edges),
+                "MuonEta": np.linspace(-2.5, 2.5, n_edges),
+                "MET_met": np.geomspace(150, 1000, n_edges),
+                "DeltaPhi_tau_met": np.linspace(0, 3.5, n_edges),
                 "TauPt_div_MET": np.linspace(0, 3, 21),
-                "TauRNNJetScore": np.linspace(0, 1, 51),
-                "TauBDTEleScore": np.linspace(0, 1, 51),
+                "TauRNNJetScore": np.linspace(0, 1, 36),
+                "TauBDTEleScore": np.linspace(0, 1, 36),
+                # "TauNCoreTracks": np.linspace(0, 4, 5),
                 "TruthTauPt": np.geomspace(1, 1000, 21),
-                "TauNCoreTracks": np.linspace(0, 4, 5),
             },
             ".*_CR_.*ID": {
-                "MET_met": np.geomspace(1, 100, 11),
+                "MET_met": np.geomspace(1, 100, n_edges),
             },
         },
     )
@@ -417,6 +399,8 @@ if __name__ == "__main__":
     mc_samples = analysis.mc_samples
     analysis.full_cutflow_printout(datasets=all_samples)
     analysis.print_metadata_table(datasets=mc_samples)
+    for mc in mc_samples:
+        analysis[mc].calculate_systematic_uncertainties()
     # for dataset in analysis:
     #     ROOT.RDF.SaveGraph(
     #         dataset.filters["T_s1thv_NOMINAL"]["loose_SR_passID"].df,
@@ -426,19 +410,33 @@ if __name__ == "__main__":
     # # print histograms
     # for dataset in analysis:
     #     dataset.histogram_printout(to_file="txt", to_dir=analysis.paths.latex_dir)
+    wps = (
+        # "loose",
+        "medium",
+        # "tight",
+    )
+    prongs = (
+        # "1prong",
+        # "3prong",
+        "",
+    )
+    fakes_sources = (
+        "TauPt",
+        "MTW",
+    )
 
     # START OF WP LOOP
     # ========================================================================
     # loop over each working point
-    for wp in ("loose", "medium", "tight"):
+    for wp in wps:
         wp_dir = base_plotting_dir / wp
 
         # FAKES ESTIMATE
         # ========================================================================
-        for prong_str in ["1prong", "3prong", ""]:
+        for prong_str in prongs:
             nprong = prong_str + "_" if prong_str else ""
 
-            for fakes_source in ["TauPt", "MTW"]:
+            for fakes_source in fakes_sources:
                 analysis.do_fakes_estimate(
                     fakes_source,
                     measurement_vars,
@@ -553,7 +551,7 @@ if __name__ == "__main__":
                     "colour": [analysis[ds].colour for ds in all_samples] + [analysis.fakes_colour],
                     "title": smart_join(
                         f"{fakes_source} fakes binning",
-                        f"{wp.title} ID Signal Region",
+                        f"{wp.title()} ID Signal Region",
                         "2017",
                         f"{analysis.global_lumi / 1000:.3g}fb$^{{-1}}$",
                         sep=" | ",
@@ -561,7 +559,7 @@ if __name__ == "__main__":
                     "do_stat": True,
                     "do_syst": True,
                     "ratio_plot": True,
-                    "ratio_axlim": (0.5, 2),
+                    "ratio_axlim": (0.5, 1.5),
                     "kind": "stack",
                 }
 
@@ -592,247 +590,256 @@ if __name__ == "__main__":
                         filename=f"{nprong}{wp}_{v}_fakes_stack_{fakes_source}_liny.png",
                     )
 
-                    # compare fake factors to "true tau" MC selections
-                    analysis.plot(
-                        val=v,
-                        dataset=mc_samples,
-                        selection=f"fakeTau_{nprong}{wp}_SR_passID",
-                        plot_as_data=analysis.histograms[
-                            f"{nprong}{wp}_{v}_fakes_bkg_{fakes_source}_src"
-                        ],
-                        title=smart_join(
-                            f"{fakes_source} fakes binning",
-                            f"{wp.title} ID Signal Region",
-                            "2017",
-                            f"{analysis.global_lumi / 1000:.3g}fb$^{{-1}}$",
-                            sep=" | ",
-                        ),
-                        data_label="Fake Jet Estimate",
-                        do_stat=True,
-                        do_syst=False,
-                        logy=False,
-                        ratio_plot=True,
-                        ratio_label="Fake Est. / MC",
-                        ratio_axlim=(0.5, 2),
-                        logx=True if v in measurement_vars_mass else False,
-                        kind="stack",
-                        filename=f"{nprong}{wp}_{v}_fakes_stack_{fakes_source}_multijet_est_true.png",
-                    )
-
-        # compare fake factors
+        # # compare fake factors
         analysis.paths.plot_dir = wp_dir / "fakes_comparisons"
-        for fakes_source in ["MTW", "TauPt"]:
+        # for fakes_source in fakes_sources:
+        #     analysis.plot(
+        #         val=[
+        #             f"1prong_{wp}_{fakes_source}_FF",
+        #             f"3prong_{wp}_{fakes_source}_FF",
+        #             f"{wp}_{fakes_source}_FF",
+        #         ],
+        #         label=["1-prong taus", "3-prong taus", "Inclusive"],
+        #         xlabel=r"$p_T^\tau$ [GeV]" if fakes_source == "TauPt" else r"$m_T^W$ [GeV]",
+        #         title=smart_join(
+        #             f"Fake Factor Comparisons",
+        #             "2017",
+        #             f"{analysis.global_lumi / 1000:.3g}fb$^{{-1}}$",
+        #             sep=" | ",
+        #         ),
+        #         do_stat=True,
+        #         selection="",
+        #         logx=False,
+        #         logy=False,
+        #         ylabel="Fake factor",
+        #         filename=f"{fakes_source}_{wp}_FF_compare.png",
+        #     )
+
+        for v in measurement_vars:
+            # compare fake factors to "true tau" MC selections
+            # TODO: prongs?
             analysis.plot(
-                val=[
-                    f"1prong_{wp}_{fakes_source}_FF",
-                    f"3prong_{wp}_{fakes_source}_FF",
-                    f"{wp}_{fakes_source}_FF",
+                val=v,
+                dataset=mc_samples,
+                selection=f"fakeTau_{wp}_SR_passID",
+                plot_as_data=[
+                    analysis.histograms[f"{wp}_{v}_fakes_bkg_{fakes_source}_src"]
+                    for fakes_source in fakes_sources
                 ],
-                label=["1-prong taus", "3-prong taus", "Inclusive"],
-                xlabel=r"$p_T^\tau$ [GeV]" if fakes_source == "TauPt" else r"$m_T^W$ [GeV]",
                 title=smart_join(
-                    f"Fake Factor Comparisons",
+                    f"{wp.title()} ID Signal Region",
                     "2017",
                     f"{analysis.global_lumi / 1000:.3g}fb$^{{-1}}$",
                     sep=" | ",
                 ),
+                data_label=[
+                    r"$m_\mathrm{T}^W$ Fake Jet Estimate",
+                    r"$p_\mathrm{T}^\tau$ Fake Jet Estimate",
+                ],
+                data_colour=[
+                    "springgreen",
+                    "magenta",
+                ],
                 do_stat=True,
-                selection="",
-                logx=False,
+                do_syst=False,
                 logy=False,
-                ylabel="Fake factor",
-                filename=f"{fakes_source}_{wp}_FF_compare.png",
+                ratio_plot=True,
+                ratio_label="Fake Est. / MC",
+                ratio_axlim=(0.5, 1.5),
+                logx=True if v in measurement_vars_mass else False,
+                kind="stack",
+                filename=f"{wp}_{v}_fakes_stack_multijet_est_true.png",
             )
 
-        # Direct data scaling comparison
-        # ----------------------------------------------------------------------------
-        # log axes
-        default_args = {
-            "title": f"data17 | mc16d | {analysis.global_lumi / 1000:.3g}fb$^{{-1}}$",
-            "label": ["Data SR", "MC + TauPt Fakes", "MC + MTW Fakes"],
-            "colour": ["k", "b", "r"],
-            "do_stat": True,
-            "do_syst": DO_SYS,
-            "suffix": "fake_scaled_log",
-            "ratio_plot": True,
-            "ratio_axlim": (0.8, 1.2),
-        }
+        # # Direct data scaling comparison
+        # # ----------------------------------------------------------------------------
+        # # log axes
+        # default_args = {
+        #     "title": f"data17 | mc16d | {analysis.global_lumi / 1000:.3g}fb$^{{-1}}$",
+        #     "label": ["Data SR", "MC + TauPt Fakes", "MC + MTW Fakes"],
+        #     "colour": ["k", "b", "r"],
+        #     "do_stat": True,
+        #     "do_syst": DO_SYS,
+        #     "suffix": "fake_scaled_log",
+        #     "ratio_plot": True,
+        #     "ratio_axlim": (0.8, 1.2),
+        # }
+        #
+        # def FF_full_bkg(variable: str, t: str) -> Histogram1D:
+        #     """Sum of all backgrounds + signal + FF"""
+        #     return Histogram1D(
+        #         th1=analysis.sum_hists(
+        #             [
+        #                 analysis.get_hist(
+        #                     variable=variable,
+        #                     dataset=ds_,
+        #                     systematic=NOMINAL_NAME,
+        #                     selection=f"trueTau_{wp}_SR_passID",
+        #                 )
+        #                 for ds_ in mc_samples
+        #             ]
+        #         )
+        #         + analysis.get_hist(f"{wp}_{variable}_fakes_bkg_{t}_src")
+        #     )
+        #
+        # # for v in measurement_vars:
+        # #     if v in measurement_vars_mass:
+        # #         default_args.update({"logx": True, "xlabel": variable_data[v]["name"] + " [GeV]"})
+        # #     elif v in measurement_vars_unitless:
+        # #         default_args.update({"logx": False, "xlabel": variable_data[v]["name"]})
+        # #     analysis.plot(
+        # #         val=[
+        # #             analysis.get_hist(variable=v, dataset="data", selection=f"{wp}_SR_passID"),
+        # #             FF_full_bkg(v, "TauPt"),
+        # #             FF_full_bkg(v, "MTW"),
+        # #         ],
+        # #         logy=True,
+        # #         **default_args,
+        # #         filename=f"{wp}_FF_compare_{v}_log.png",
+        # #     )
+        # #     analysis.plot(
+        # #         val=[
+        # #             analysis.get_hist(variable=v, dataset="data", selection=f"{wp}_SR_passID"),
+        # #             FF_full_bkg(v, "TauPt"),
+        # #             FF_full_bkg(v, "MTW"),
+        # #         ],
+        # #         logy=False,
+        # #         **default_args,
+        # #         filename=f"{wp}_FF_compare_{v}_liny.png",
+        # #     )
 
-        def FF_full_bkg(variable: str, t: str) -> Histogram1D:
-            """Sum of all backgrounds + signal + FF"""
-            return Histogram1D(
-                th1=analysis.sum_hists(
-                    [
-                        analysis.get_hist(
-                            variable=variable,
-                            dataset=ds_,
-                            systematic=NOMINAL_NAME,
-                            selection=f"trueTau_{wp}_SR_passID",
-                        )
-                        for ds_ in mc_samples
-                    ]
-                )
-                + analysis.get_hist(f"{wp}_{variable}_fakes_bkg_{t}_src")
-            )
-
-        for v in measurement_vars:
-            if v in measurement_vars_mass:
-                default_args.update({"logx": True, "xlabel": variable_data[v]["name"] + " [GeV]"})
-            elif v in measurement_vars_unitless:
-                default_args.update({"logx": False, "xlabel": variable_data[v]["name"]})
-            analysis.plot(
-                val=[
-                    analysis.get_hist(variable=v, dataset="data", selection=f"{wp}_SR_passID"),
-                    FF_full_bkg(v, "TauPt"),
-                    FF_full_bkg(v, "MTW"),
-                ],
-                logy=True,
-                **default_args,
-                filename=f"{wp}_FF_compare_{v}_log.png",
-            )
-            analysis.plot(
-                val=[
-                    analysis.get_hist(variable=v, dataset="data", selection=f"{wp}_SR_passID"),
-                    FF_full_bkg(v, "TauPt"),
-                    FF_full_bkg(v, "MTW"),
-                ],
-                logy=False,
-                **default_args,
-                filename=f"{wp}_FF_compare_{v}_liny.png",
-            )
-
-        if DO_SYS:
-            # SYSTEMATIC UNCERTAINTIES
-            # ===========================================================================
-            # list of systematic variations
-            sys_list_eff = sorted(set(get_base_sys_name(s) for s in analysis["wtaunu"].eff_sys_set))
-            sys_list_tes = sorted(set(get_base_sys_name(s) for s in analysis["wtaunu"].tes_sys_set))
-            default_args = {
-                "do_stat": False,
-                "do_syst": False,
-                "ratio_plot": False,
-                "logy": False,
-                "legend_params": {"ncols": 1, "fontsize": 8},
-            }
-            cmap = plt.get_cmap("jet")
-            colours_eff = [tuple(c) for c in cmap(np.linspace(0, 1.0, len(sys_list_eff)))]
-            colours_tes = [tuple(c) for c in cmap(np.linspace(0, 1.0, len(sys_list_tes)))]
-            selection = f"{wp}_SR_passID"
-
-            # for each sample
-            for mc_sample in mc_samples:
-                analysis.paths.plot_dir = wp_dir / "systematics" / mc_sample
-                default_args["title"] = (
-                    f"{mc_sample} | "
-                    f"Signal Region | "
-                    f"mc16d | "
-                    f"{analysis.global_lumi / 1000:.3g}fb$^{{-1}}$"
-                )
-
-                # mass variables
-                for s in ("pct", "tot"):
-                    if s == "pct":
-                        ylabel = "Percentage uncertainty / %"
-                    else:
-                        ylabel = "Absolute uncertainty"
-
-                    for v in measurement_vars:
-                        if v in measurement_vars_mass:
-                            default_args.update(
-                                {"logx": True, "xlabel": variable_data[v]["name"] + " [GeV]"}
-                            )
-                        elif v in measurement_vars_unitless:
-                            default_args.update({"logx": False, "xlabel": variable_data[v]["name"]})
-
-                        analysis.plot(
-                            val=[
-                                analysis[mc_sample].get_hist(
-                                    variable=f"{v}_{sys_name}_{s}_uncert",
-                                    systematic=NOMINAL_NAME,
-                                    selection=selection,
-                                )
-                                for sys_name in sys_list_eff
-                            ],
-                            label=sys_list_eff,
-                            ylabel=ylabel,
-                            colour=colours_eff,
-                            **default_args,
-                            filename=f"{v}_sys_eff_{s}_uncert_liny.png",
-                        )
-                        analysis.plot(
-                            val=[
-                                analysis[mc_sample].get_hist(
-                                    variable=f"{v}_{sys_name}_{s}_uncert",
-                                    systematic=NOMINAL_NAME,
-                                    selection=selection,
-                                )
-                                for sys_name in sys_list_tes
-                            ],
-                            label=sys_list_tes,
-                            ylabel=ylabel,
-                            colour=colours_tes,
-                            **default_args,
-                            filename=f"{v}_sys_tes_{s}_uncert_liny.png",
-                        )
-
-        # NO FAKES
-        # ===========================================================================
-        default_args = {
-            "dataset": all_samples,
-            "do_stat": True,
-            "do_syst": False,
-            "ratio_plot": True,
-            "ratio_axlim": (0.8, 1.2),
-            "kind": "stack",
-        }
-
-        # see try different selections
-        for selection in [
-            f"{wp}_SR_passID",
-            f"{wp}_SR_failID",
-            f"{wp}_CR_passID",
-            f"{wp}_CR_failID",
-            f"1prong_{wp}_SR_passID",
-            f"1prong_{wp}_SR_failID",
-            f"1prong_{wp}_CR_passID",
-            f"1prong_{wp}_CR_failID",
-            f"3prong_{wp}_SR_passID",
-            f"3prong_{wp}_SR_failID",
-            f"3prong_{wp}_CR_passID",
-            f"3prong_{wp}_CR_failID",
-        ]:
-            default_args["title"] = smart_join(
-                "Data 2017",
-                "3-prong Taus"
-                if "3prong" in selection
-                else ("1-prong Taus" if "1prong" in selection else ""),
-                f"{wp.title()} Tau ID",
-                f"{analysis.global_lumi / 1000: .3g}fb$ ^ {{-1}}$",
-                sep=" | ",
-            )
-            analysis.paths.plot_dir = wp_dir / "no_fakes" / selection
-            default_args["selection"] = selection
-
-            for var in measurement_vars:
-                if var in measurement_vars_mass:
-                    default_args.update(
-                        {"logx": True, "xlabel": variable_data[var]["name"] + " [GeV]"}
-                    )
-                elif var in measurement_vars_unitless:
-                    default_args.update({"logx": False, "xlabel": variable_data[var]["name"]})
-
-                analysis.plot(
-                    val=var,
-                    **default_args,
-                    logy=True,
-                    filename=f"{wp}_{var}_stack_no_fakes_log.png",
-                )
-                analysis.plot(
-                    val=var,
-                    **default_args,
-                    logy=False,
-                    filename=f"{wp}_{var}_stack_no_fakes_liny.png",
-                )
+        # if DO_SYS:
+        #     # SYSTEMATIC UNCERTAINTIES
+        #     # ===========================================================================
+        #     # list of systematic variations
+        #     sys_list_eff = sorted(set(get_base_sys_name(s) for s in analysis["wtaunu"].eff_sys_set))
+        #     sys_list_tes = sorted(set(get_base_sys_name(s) for s in analysis["wtaunu"].tes_sys_set))
+        #     default_args = {
+        #         "do_stat": False,
+        #         "do_syst": False,
+        #         "ratio_plot": False,
+        #         "logy": False,
+        #         "legend_params": {"ncols": 1, "fontsize": 8},
+        #     }
+        #     cmap = plt.get_cmap("jet")
+        #     colours_eff = [tuple(c) for c in cmap(np.linspace(0, 1.0, len(sys_list_eff)))]
+        #     colours_tes = [tuple(c) for c in cmap(np.linspace(0, 1.0, len(sys_list_tes)))]
+        #     selection = f"{wp}_SR_passID"
+        #
+        #     # for each sample
+        #     for mc_sample in mc_samples:
+        #         analysis.paths.plot_dir = wp_dir / "systematics" / mc_sample
+        #         default_args["title"] = (
+        #             f"{mc_sample} | "
+        #             f"Signal Region | "
+        #             f"mc16d | "
+        #             f"{analysis.global_lumi / 1000:.3g}fb$^{{-1}}$"
+        #         )
+        #
+        #         # mass variables
+        #         for s in ("pct", "tot"):
+        #             if s == "pct":
+        #                 ylabel = "Percentage uncertainty / %"
+        #             else:
+        #                 ylabel = "Absolute uncertainty"
+        #
+        #             for v in measurement_vars:
+        #                 if v in measurement_vars_mass:
+        #                     default_args.update(
+        #                         {"logx": True, "xlabel": variable_data[v]["name"] + " [GeV]"}
+        #                     )
+        #                 elif v in measurement_vars_unitless:
+        #                     default_args.update({"logx": False, "xlabel": variable_data[v]["name"]})
+        #
+        #                 analysis.plot(
+        #                     val=[
+        #                         analysis[mc_sample].get_hist(
+        #                             variable=f"{v}_{sys_name}_{s}_uncert",
+        #                             systematic=NOMINAL_NAME,
+        #                             selection=selection,
+        #                         )
+        #                         for sys_name in sys_list_eff
+        #                     ],
+        #                     label=sys_list_eff,
+        #                     ylabel=ylabel,
+        #                     colour=colours_eff,
+        #                     **default_args,
+        #                     filename=f"{v}_sys_eff_{s}_uncert_liny.png",
+        #                 )
+        #                 analysis.plot(
+        #                     val=[
+        #                         analysis[mc_sample].get_hist(
+        #                             variable=f"{v}_{sys_name}_{s}_uncert",
+        #                             systematic=NOMINAL_NAME,
+        #                             selection=selection,
+        #                         )
+        #                         for sys_name in sys_list_tes
+        #                     ],
+        #                     label=sys_list_tes,
+        #                     ylabel=ylabel,
+        #                     colour=colours_tes,
+        #                     **default_args,
+        #                     filename=f"{v}_sys_tes_{s}_uncert_liny.png",
+        #                 )
+        #
+        # # NO FAKES
+        # # ===========================================================================
+        # default_args = {
+        #     "dataset": all_samples,
+        #     "do_stat": True,
+        #     "do_syst": False,
+        #     "ratio_plot": True,
+        #     "ratio_axlim": (0.8, 1.2),
+        #     "kind": "stack",
+        # }
+        #
+        # # see try different selections
+        # for selection in [
+        #     f"{wp}_SR_passID",
+        #     f"{wp}_SR_failID",
+        #     f"{wp}_CR_passID",
+        #     f"{wp}_CR_failID",
+        #     # f"1prong_{wp}_SR_passID",
+        #     # f"1prong_{wp}_SR_failID",
+        #     # f"1prong_{wp}_CR_passID",
+        #     # f"1prong_{wp}_CR_failID",
+        #     # f"3prong_{wp}_SR_passID",
+        #     # f"3prong_{wp}_SR_failID",
+        #     # f"3prong_{wp}_CR_passID",
+        #     # f"3prong_{wp}_CR_failID",
+        # ]:
+        #     default_args["title"] = smart_join(
+        #         "Data 2017",
+        #         "3-prong Taus"
+        #         if "3prong" in selection
+        #         else ("1-prong Taus" if "1prong" in selection else ""),
+        #         f"{wp.title()} Tau ID",
+        #         f"{analysis.global_lumi / 1000: .3g}fb$ ^ {{-1}}$",
+        #         sep=" | ",
+        #     )
+        #     analysis.paths.plot_dir = wp_dir / "no_fakes" / selection
+        #     default_args["selection"] = selection
+        #
+        #     for var in measurement_vars:
+        #         if var in measurement_vars_mass:
+        #             default_args.update(
+        #                 {"logx": True, "xlabel": variable_data[var]["name"] + " [GeV]"}
+        #             )
+        #         elif var in measurement_vars_unitless:
+        #             default_args.update({"logx": False, "xlabel": variable_data[var]["name"]})
+        #
+        #         analysis.plot(
+        #             val=var,
+        #             **default_args,
+        #             logy=True,
+        #             filename=f"{wp}_{var}_stack_no_fakes_log.png",
+        #         )
+        #         analysis.plot(
+        #             val=var,
+        #             **default_args,
+        #             logy=False,
+        #             filename=f"{wp}_{var}_stack_no_fakes_liny.png",
+        #         )
 
     analysis.histogram_printout(to_file="txt")
     analysis.logger.info("DONE.")
