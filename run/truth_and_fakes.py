@@ -6,6 +6,7 @@ import numpy as np
 
 from src.analysis import Analysis
 from src.cutting import Cut
+from utils.helper_functions import smart_join
 from utils.plotting_tools import get_axis_labels, ProfileOpts
 
 DTA_PATH = Path("/mnt/D/data/DTA_outputs/2024-09-19/")
@@ -91,7 +92,8 @@ datasets: Dict[str, Dict] = {
 pass_presel = Cut(
     r"Pass preselection",
     r"(passReco == 1) && (TauBaselineWP == 1) && (abs(TauCharge) == 1) && passMetTrigger"
-    r"&& ((MatchedTruthParticle_isTau + MatchedTruthParticle_isElectron + MatchedTruthParticle_isMuon + MatchedTruthParticle_isPhoton) <= 1)",
+    r"&& ((MatchedTruthParticle_isTau + MatchedTruthParticle_isElectron + MatchedTruthParticle_isMuon + MatchedTruthParticle_isPhoton) <= 1)"
+    r"&& ((TauNCoreTracks == 1) || (TauNCoreTracks == 3))",
 )
 pass_taupt170 = Cut(
     r"$p_T^\tau > 170$",
@@ -248,7 +250,6 @@ wanted_variables = {
     "MatchedTruthParticle_isTau",
     "MatchedTruthParticle_isElectron",
     "MatchedTruthParticle_isMuon",
-    "MatchedTruthParticle_isPhoton",
     "MatchedTruthParticle_isJet",
 }
 measurement_vars_mass = [
@@ -268,7 +269,6 @@ profile_vars = [
     "MatchedTruthParticle_isTau",
     "MatchedTruthParticle_isElectron",
     "MatchedTruthParticle_isMuon",
-    "MatchedTruthParticle_isPhoton",
     "MatchedTruthParticle_isJet",
 ]
 # define which profiles to calculate
@@ -280,6 +280,36 @@ for measurement_var in measurement_vars:
             y=prof_var,
             weight="" if "MatchedTruthParticle" in prof_var else "reco_weight",
         )
+binnings = {
+    "": {
+        "MTW": np.geomspace(150, 1000, 21),
+        "TauPt": np.geomspace(170, 1000, 21),
+        "MatchedTruthParticlePt": np.geomspace(170, 1000, 21),
+        "TauEta": np.linspace(-2.5, 2.5, 21),
+        "MET_met": np.geomspace(150, 1000, 21),
+        "DeltaPhi_tau_met": np.linspace(0, 3.5, 21),
+        "TauPt_div_MET": np.linspace(0, 3, 61),
+        "TauRNNJetScore": np.linspace(0, 1, 51),
+        "TauBDTEleScore": np.linspace(0, 1, 51),
+        "TruthTauPt": np.geomspace(1, 1000, 21),
+        "TauNCoreTracks": np.linspace(0, 4, 5),
+        "TauPt_res": np.linspace(-1, 1, 51),
+        "TauPt_diff": np.linspace(-300, 300, 51),
+        "badJet": (2, 0, 2),
+    },
+    ".*_CR_.*ID": {
+        "MET_met": np.geomspace(10, 100, 51),
+    },
+    "loose_.*failID": {
+        "TauRNNJetScore": np.linspace(0, 0.3, 41),
+    },
+    "medium_.*failID": {
+        "TauRNNJetScore": np.linspace(0, 0.45, 41),
+    },
+    "tight_.*failID": {
+        "TauRNNJetScore": np.linspace(0, 0.6, 41),
+    },
+}
 NOMINAL_NAME = "T_s1thv_NOMINAL"
 
 
@@ -300,28 +330,7 @@ def run_analysis() -> Analysis:
         extract_vars=wanted_variables,
         import_missing_columns_as_nan=True,
         profiles=profiles,
-        binnings={
-            "": {
-                "MTW": np.geomspace(150, 1000, 21),
-                "TauPt": np.geomspace(170, 1000, 21),
-                "MatchedTruthParticlePt": np.geomspace(170, 1000, 21),
-                "EleEta": np.linspace(-2.5, 2.5, 21),
-                "MuonEta": np.linspace(-2.5, 2.5, 21),
-                "MET_met": np.geomspace(150, 1000, 21),
-                "DeltaPhi_tau_met": np.linspace(0, 3.5, 21),
-                "TauPt_div_MET": np.linspace(0, 3, 61),
-                "TauRNNJetScore": np.linspace(0, 1, 51),
-                "TauBDTEleScore": np.linspace(0, 1, 51),
-                "TruthTauPt": np.geomspace(1, 1000, 21),
-                "TauNCoreTracks": np.linspace(0, 4, 5),
-                "TauPt_res": np.linspace(-1, 1, 51),
-                "TauPt_diff": np.linspace(-300, 300, 51),
-                "badJet": (2, 0, 2),
-            },
-            ".*_CR_.*ID": {
-                "MET_met": np.geomspace(1, 100, 51),
-            },
-        },
+        binnings=binnings,
     )
 
 
@@ -368,18 +377,6 @@ if __name__ == "__main__":
                 ],
                 f"all_mc_{var}_MatchedTruthParticle_isMuon_{sel}_PROFILE",
             )
-            wtaunu_ph_fakes = analysis.sum_hists(
-                [
-                    analysis.get_hist(
-                        f"{var}_MatchedTruthParticle_isPhoton",
-                        dataset=d,
-                        selection=sel,
-                        systematic=NOMINAL_NAME,
-                    )
-                    for d in mc_samples
-                ],
-                f"all_mc_{var}_MatchedTruthParticle_isPhoton_{sel}_PROFILE",
-            )
             wtaunu_jet_fakes = analysis.sum_hists(
                 [
                     analysis.get_hist(
@@ -405,29 +402,37 @@ if __name__ == "__main__":
                 f"all_mc_{var}_MatchedTruthParticle_isTau_{sel}_PROFILE",
             )
             analysis.paths.plot_dir = wp_dir / "fakes_distributions"
+
             analysis.plot(
                 [
                     wtaunu_jet_fakes,
-                    wtaunu_ph_fakes,
                     wtaunu_mu_fakes,
                     wtaunu_el_fakes,
                     wtaunu_true_taus,
                 ],
                 label=[
-                    "Jet-matched fake taus",
-                    "Photon-matched fake taus",
-                    "Muon-matched fake taus",
-                    "electron-matched fake taus",
+                    "Jet fakes",
+                    "Muon fakes",
+                    "Electron fakes",
                     "True taus",
                 ],
                 systematic=NOMINAL_NAME,
                 sort=False,
                 do_stat=False,
-                colour=list(plt.rcParams["axes.prop_cycle"].by_key()["color"])[:5],
-                title=f"Fake fractions for {var} in {sel} for all MC in SR",
+                colour=list(plt.rcParams["axes.prop_cycle"].by_key()["color"])[:4],
+                title=smart_join(
+                    ("Fail " if "fail" in sel else "")
+                    + ("Loose" if "loose" in sel else ("Medium" if "medium" in sel else "Tight"))
+                    + (" SR" if "SR" in sel else " CR"),
+                    "MC 2017",
+                    f"{analysis.global_lumi / 1000:.3g}fb$^{{-1}}$",
+                    sep=" | ",
+                ),
                 y_axlim=(0, 1),
                 kind="stack",
                 xlabel=xlabel,
+                logx=True if var in measurement_vars_mass else False,
+                label_params={"llabel": "Simulation"},
                 ylabel="Fraction of fake matched taus in signal MC",
                 filename=f"all_mc_{var}_{sel}_fake_fractions.png",
             )
@@ -438,23 +443,21 @@ if __name__ == "__main__":
                 analysis.paths.plot_dir = base_plotting_dir / sel / mc
                 el_fakes = analysis.get_hist(f"{var}_MatchedTruthParticle_isElectron", **args)
                 mu_fakes = analysis.get_hist(f"{var}_MatchedTruthParticle_isMuon", **args)
-                ph_fakes = analysis.get_hist(f"{var}_MatchedTruthParticle_isPhoton", **args)
                 jet_fakes = analysis.get_hist(f"{var}_MatchedTruthParticle_isJet", **args)
                 true_taus = analysis.get_hist(f"{var}_MatchedTruthParticle_isTau", **args)
 
                 analysis.plot(
-                    [jet_fakes, ph_fakes, mu_fakes, el_fakes, true_taus],
+                    [jet_fakes, mu_fakes, el_fakes, true_taus],
                     label=[
-                        "Jet Fakes",
-                        "Photon Fakes",
-                        "Muon Fakes",
-                        "Electron Fakes",
+                        "Jet fakes",
+                        "Muon fakes",
+                        "Electron fakes",
                         "True taus",
                     ],
                     sort=False,
                     do_stat=False,
                     systematic=NOMINAL_NAME,
-                    colour=list(plt.rcParams["axes.prop_cycle"].by_key()["color"])[:5],
+                    colour=list(plt.rcParams["axes.prop_cycle"].by_key()["color"])[:4],
                     title=f"Fake fractions for {var} in {mc} for SR",
                     y_axlim=(0, 1),
                     kind="stack",

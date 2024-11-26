@@ -1,24 +1,32 @@
 from pathlib import Path
 from typing import Dict
 
-import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib import pyplot as plt
 
-from dataset import Dataset
 from src.analysis import Analysis
 from src.cutting import Cut
 from utils import ROOT_utils
+from utils.helper_functions import get_base_sys_name
 from utils.variable_names import variable_data
 
 DTA_PATH = Path("/mnt/D/data/DTA_outputs/2024-08-28/")
 NOMINAL_NAME = "T_s1thv_NOMINAL"
 
 if __name__ == "__main__":
+    DTA_PATH = Path("/mnt/D/data/DTA_outputs/2024-09-19/")
+    # DTA_PATH = Path("/eos/home-k/kghorban/DTA_OUT/2024-02-05/")
+
     datasets: Dict[str, Dict] = {
         # SIGNAL
         # ====================================================================
         "wtaunu": {
-            "data_path": "/mnt/D/data/DTA_outputs/2024-09-19/user.kghorban.Sh_2211_Wtaunu_H_maxHTpTV2_BFilter.e8351.MC16d.v1.2024-09-19_histograms.root/user.kghorban.41345350._000001.histograms.root",
+            # "data_path": "/mnt/D/data/DTA_outputs/2024-09-19/user.kghorban.Sh_2211_Wtaunu_H_maxHTpTV2_BFilter.e8351.MC16d.v1.2024-09-19_histograms.root/user.kghorban.41345350._000001.histograms.root",
+            "data_path": {  # full MC
+                "lm_cut": DTA_PATH / "*Sh_2211_Wtaunu_*_maxHTpTV2*/*.root",
+                "full": DTA_PATH / "*Sh_2211_Wtaunu_mW_120*/*.root",
+            },
+            "hard_cut": {"lm_cut": "TruthBosonM < 120"},
             "label": r"$W\rightarrow\tau\nu$",
             "is_signal": True,
         },
@@ -74,7 +82,13 @@ if __name__ == "__main__":
         ],
     }
 
-    wanted_variables = {"TauPt", "MTW", "eventNumber"}
+    wanted_variables = {
+        "TauPt",
+        # "TauPt_res",
+        "MTW",
+        "MET_met",
+        "eventNumber",
+    }
 
     # RUN
     # ========================================================================
@@ -91,6 +105,7 @@ if __name__ == "__main__":
         dataset_type="dta",
         log_level=10,
         log_out="both",
+        # profiles={"TauPt_TauPt_res_profile": ProfileOpts("TauPt", "TauPt_res", "reco_weight")},
         extract_vars=wanted_variables,
         import_missing_columns_as_nan=True,
         binnings={
@@ -99,32 +114,22 @@ if __name__ == "__main__":
             },
         },
     )
-    print("TAUS_TRUEHADTAU_SME_TES_DETECTOR_Endcap_LowPt:")
-    hist_sys_down = analysis["wtaunu"].get_hist(
-        "TauPt", "TAUS_TRUEHADTAU_SME_TES_DETECTOR_Endcap_LowPt__1down", "SR_passID"
-    )
-    hist_nom = analysis["wtaunu"].get_hist("TauPt", "T_s1thv_NOMINAL", "SR_passID")
-    hist_sys_up = analysis["wtaunu"].get_hist(
-        "TauPt", "TAUS_TRUEHADTAU_SME_TES_DETECTOR_Endcap_LowPt__1up", "SR_passID"
-    )
+    analysis["wtaunu"].calculate_systematic_uncertainties()
+    # # profile
+    # p = analysis["wtaunu"].histograms[NOMINAL_NAME]["SR_passID"]["TauPt_TauPt_res_profile"]
+    # print("Profile values: ")
+    # print(ROOT_utils.get_th1_bin_values(p))
 
-    print("sys_down: ", ROOT_utils.get_th1_bin_values(hist_sys_down))
-    print("nominal: ", ROOT_utils.get_th1_bin_values(hist_nom))
-    print("sys_up: ", ROOT_utils.get_th1_bin_values(hist_sys_up))
-
-    print("TAUS_TRUEHADTAU_EFF_RECO_TOTAL:")
-    hist_sys_down = analysis["wtaunu"].get_hist(
-        "TauPt", "TAUS_TRUEHADTAU_EFF_RECO_TOTAL__1down", "SR_passID"
-    )
+    tes_sys = "TAUS_TRUEHADTAU_SME_TES_DETECTOR_Barrel_HighPt"
+    print(f"{tes_sys}:")
+    hist_sys_down = analysis["wtaunu"].get_hist("TauPt", f"{tes_sys}__1down", "SR_passID")
     hist_nom = analysis["wtaunu"].get_hist("TauPt", "T_s1thv_NOMINAL", "SR_passID")
-    hist_sys_up = analysis["wtaunu"].get_hist(
-        "TauPt", "TAUS_TRUEHADTAU_EFF_RECO_TOTAL__1up", "SR_passID"
-    )
+    hist_sys_up = analysis["wtaunu"].get_hist("TauPt", f"{tes_sys}__1up", "SR_passID")
     hist_sys_tot = analysis["wtaunu"].get_hist(
-        "TauPt_TAUS_TRUEHADTAU_EFF_RECO_TOTAL_tot_uncert", NOMINAL_NAME, "SR_passID"
+        f"TauPt_{tes_sys}_tot_uncert", NOMINAL_NAME, "SR_passID"
     )
     hist_sys_pct = analysis["wtaunu"].get_hist(
-        "TauPt_TAUS_TRUEHADTAU_EFF_RECO_TOTAL_pct_uncert", NOMINAL_NAME, "SR_passID"
+        f"TauPt_{tes_sys}_pct_uncert", NOMINAL_NAME, "SR_passID"
     )
 
     print("sys_down: ", ROOT_utils.get_th1_bin_values(hist_sys_down))
@@ -132,6 +137,83 @@ if __name__ == "__main__":
     print("sys_up: ", ROOT_utils.get_th1_bin_values(hist_sys_up))
     print("tot_uncert: ", ROOT_utils.get_th1_bin_values(hist_sys_tot))
     print("pct_uncert: ", ROOT_utils.get_th1_bin_values(hist_sys_pct))
+
+    # set sum
+    sys_base = set(
+        get_base_sys_name(s)
+        for s in analysis["wtaunu"].tes_sys_set | analysis["wtaunu"].eff_sys_set
+    )
+    tot = 0
+    nominal_bin1 = ROOT_utils.get_th1_bin_values(
+        analysis["wtaunu"].histograms["T_s1thv_NOMINAL"]["SR_passID"][f"TauPt"]
+    )[0]
+    print(f"NOMINAL bin1: {nominal_bin1}")
+    for sys in sys_base:
+        print(f"sys: {sys}")
+        uncert = analysis["wtaunu"].histograms["T_s1thv_NOMINAL"]["SR_passID"][
+            f"TauPt_{sys}_tot_uncert"
+        ]
+        bin1 = ROOT_utils.get_th1_bin_values(uncert)[0]
+        tot += bin1
+        print(bin1)
+    print("total uncert: ", tot)
+    print("upper bound: ", (tot / 2) + nominal_bin1)
+    print(
+        "calculated uncert upper bound for bin 1: ",
+        analysis["wtaunu"].get_systematic_uncertainty("TauPt", "SR_passID")[1][0],
+    )
+
+    analysis.plot(
+        val=[
+            hist_sys_down,
+            "TauPt",
+            hist_sys_up,
+        ],
+        dataset="wtaunu",
+        selection="SR_passID",
+        label=["sys_down", "nominal", "sys_up"],
+        xlabel=variable_data["TauPt"]["name"] + " [GeV]",
+        ylabel="Events",
+        do_stat=False,
+        do_syst=False,
+        filename="TauPt_sys_tes_compare.png",
+    )
+
+    print("##########################################################################")
+
+    eff_sys = "TAUS_TRUEHADTAU_EFF_RECO_TOTAL"
+    print(f"{eff_sys}:")
+    hist_sys_down = analysis["wtaunu"].get_hist("TauPt", f"{eff_sys}__1down", "SR_passID")
+    hist_nom = analysis["wtaunu"].get_hist("TauPt", "T_s1thv_NOMINAL", "SR_passID")
+    hist_sys_up = analysis["wtaunu"].get_hist("TauPt", f"{eff_sys}__1up", "SR_passID")
+    hist_sys_tot = analysis["wtaunu"].get_hist(
+        f"TauPt_{eff_sys}_tot_uncert", NOMINAL_NAME, "SR_passID"
+    )
+    hist_sys_pct = analysis["wtaunu"].get_hist(
+        f"TauPt_{eff_sys}_pct_uncert", NOMINAL_NAME, "SR_passID"
+    )
+
+    print("sys_down: ", ROOT_utils.get_th1_bin_values(hist_sys_down))
+    print("nominal: ", ROOT_utils.get_th1_bin_values(hist_nom))
+    print("sys_up: ", ROOT_utils.get_th1_bin_values(hist_sys_up))
+    print("tot_uncert: ", ROOT_utils.get_th1_bin_values(hist_sys_tot))
+    print("pct_uncert: ", ROOT_utils.get_th1_bin_values(hist_sys_pct))
+
+    analysis.plot(
+        val=[
+            hist_sys_down,
+            "TauPt",
+            hist_sys_up,
+        ],
+        dataset="wtaunu",
+        selection="SR_passID",
+        label=["sys_down", "nominal", "sys_up"],
+        xlabel=variable_data["TauPt"]["name"] + " [GeV]",
+        ylabel="Events",
+        do_stat=False,
+        do_syst=False,
+        filename="TauPt_sys_eff_compare.png",
+    )
 
     # try summing manually
     sys_up_sum = analysis["wtaunu"].get_hist(
@@ -145,7 +227,6 @@ if __name__ == "__main__":
         if sys.endswith("_1down"):
             continue
         sys_up_sum += analysis["wtaunu"].get_hist(f"TauPt_{sys}_diff", NOMINAL_NAME, "SR_passID")
-
     print("sys_up_sum: ", ROOT_utils.get_th1_bin_values(sys_up_sum))
 
     analysis.plot(
@@ -156,23 +237,10 @@ if __name__ == "__main__":
         ylabel="Events",
         do_stat=False,
         do_syst=True,
-        symmetric_uncert=True,
-        filename="TauPt_symmetric_uncert.png",
+        filename="TauPt_uncert.png",
     )
 
-    analysis.plot(
-        val="TauPt",
-        dataset="wtaunu",
-        selection="SR_passID",
-        xlabel=variable_data["TauPt"]["name"] + " [GeV]",
-        ylabel="Events",
-        do_stat=False,
-        do_syst=True,
-        symmetric_uncert=False,
-        filename="TauPt_unsymmetric_uncert.png",
-    )
-
-    eff_sys = [Dataset.get_base_sys_name(s) for s in analysis["wtaunu"].eff_sys_set]
+    eff_sys = sorted(list(set(get_base_sys_name(s) for s in analysis["wtaunu"].eff_sys_set)))
     sys_hists = [
         analysis["wtaunu"].histograms[NOMINAL_NAME]["SR_passID"][f"TauPt_{sys}_pct_uncert"]
         for sys in eff_sys
@@ -192,7 +260,7 @@ if __name__ == "__main__":
         filename="TauPt_eff_uncerts.png",
     )
 
-    tes_sys = [Dataset.get_base_sys_name(s) for s in analysis["wtaunu"].tes_sys_set]
+    tes_sys = sorted(list(set(get_base_sys_name(s) for s in analysis["wtaunu"].tes_sys_set)))
     sys_hists = [
         analysis["wtaunu"].histograms[NOMINAL_NAME]["SR_passID"][f"TauPt_{sys}_pct_uncert"]
         for sys in tes_sys
@@ -214,7 +282,7 @@ if __name__ == "__main__":
 
     # desperate!
     all_sys = [
-        Dataset.get_base_sys_name(s)
+        get_base_sys_name(s)
         for s in sorted(list(analysis["wtaunu"].eff_sys_set | analysis["wtaunu"].tes_sys_set))
     ]
     sys_map = {}
@@ -223,16 +291,16 @@ if __name__ == "__main__":
             analysis["wtaunu"].histograms[NOMINAL_NAME]["SR_passID"][f"TauPt_{sys}_tot_uncert"]
         )
 
-    # analysis.plot(
-    #     val=[hist_sys_down, hist_nom, hist_sys_up],
-    #     xlabel=variable_data["TauPt"]["name"] + " [GeV]",
-    #     label=["sys_down", "nominal", "sys_up"],
-    #     ylabel="Events",
-    #     kind="overlay",
-    #     do_stat=False,
-    #     do_sys=False,
-    #     filename="TauPt_and_systematics.png",
-    # )
+    analysis.plot(
+        val=[hist_sys_down, hist_nom, hist_sys_up],
+        xlabel=variable_data["TauPt"]["name"] + " [GeV]",
+        label=["sys_down", "nominal", "sys_up"],
+        ylabel="Events",
+        kind="overlay",
+        do_stat=False,
+        do_syst=False,
+        filename="TauPt_and_systematics.png",
+    )
 
     # # SYSTEMATIC UNCERTAINTIES
     # # ===========================================================================
