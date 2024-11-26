@@ -1101,12 +1101,14 @@ class Analysis:
                     hists[i] = self.histograms[h]
                 else:
                     raise ValueError(f"Unknown histogram: {h}")
+            elif isinstance(h, Histogram1D):
+                hists[i] = h.TH1
 
-        h = ROOT_utils.sum_th1s(*hists)
+        out_h = ROOT_utils.sum_th1s(*hists)
         if save_as:
             self.histograms[save_as] = h
 
-        return h
+        return out_h
 
     def get_systematic_uncertainty(
         self,
