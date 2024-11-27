@@ -433,7 +433,7 @@ if __name__ == "__main__":
                 xlabel=xlabel,
                 logx=True if var in measurement_vars_mass else False,
                 label_params={"llabel": "Simulation"},
-                ylabel="Fraction of fake matched taus in signal MC",
+                ylabel="Fraction of reco. tau origin in MC",
                 filename=f"all_mc_{var}_{sel}_fake_fractions.png",
             )
 

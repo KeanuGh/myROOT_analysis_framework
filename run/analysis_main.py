@@ -362,8 +362,8 @@ def run_analysis() -> Analysis:
     return Analysis(
         datasets,
         year=2017,
-        rerun=True,
-        regen_histograms=True,
+        # rerun=True,
+        # regen_histograms=True,
         do_systematics=DO_SYS,
         # regen_metadata=True,
         # output_dir="/eos/home-k/kghorban/framework_outputs/analysis_main",
@@ -421,8 +421,8 @@ if __name__ == "__main__":
         "tight",
     )
     prongs = (
-        # "1prong",
-        # "3prong",
+        "1prong",
+        "3prong",
         "",
     )
     fakes_sources = (
@@ -430,8 +430,8 @@ if __name__ == "__main__":
         "TauPt",
     )
     source_colours = [
-        "darkorchid",
-        "midnightblue",
+        "darkviolet",
+        "mediumblue",
     ]
 
     # START OF WP LOOP
@@ -491,47 +491,54 @@ if __name__ == "__main__":
                 SR_failID_mc = analysis.get_hist(
                     f"{nprong}{wp}_all_mc_{fakes_source}_trueTau_{nprong}{wp}_SR_failID"
                 )
+                default_args = {
+                    "do_stat": False,
+                    "logx": True,
+                    "logy": True,
+                    "xlabel": variable_data[fakes_source]["name"] + " [GeV]",
+                    "ylabel": "Weighted events",
+                    "title": smart_join(
+                        f"{variable_data[fakes_source]['name']} fakes binning",
+                        wp.title(),
+                        "2017",
+                        f"{analysis.global_lumi / 1000:.3g}fb$^{{-1}}$",
+                        sep=" | ",
+                    ),
+                }
 
                 analysis.paths.plot_dir = wp_dir / "fakes_intermediates"
                 analysis.plot(
                     [CR_passID_data, CR_failID_data, CR_passID_mc, CR_failID_mc],
-                    label=["CR_passID_data", "CR_failID_data", "CR_passID_mc", "CR_failID_mc"],
-                    do_stat=False,
-                    logy=True,
-                    logx=True,
-                    xlabel=fakes_source,
-                    ratio_plot=False,
+                    label=[
+                        r"$N^{\mathrm{CR}}_{\mathrm{passID,data}}$",
+                        r"$N^{\mathrm{CR}}_{\mathrm{failID,data}}$",
+                        r"$N^{\mathrm{CR}}_{\mathrm{passID,MC}}$",
+                        r"$N^{\mathrm{CR}}_{\mathrm{failID,MC}}$",
+                    ],
+                    **default_args,
                     filename=f"{nprong}{wp}_FF_histograms_{fakes_source}.png",
                 )
                 analysis.plot(
                     [CR_failID_data - CR_failID_mc, CR_passID_data - CR_passID_mc],
-                    label=["CR_failID_data - CR_failID_mc", "CR_passID_data - CR_passID_mc"],
-                    do_stat=False,
-                    logy=True,
-                    logx=True,
-                    xlabel=fakes_source,
+                    label=[
+                        r"$N^{\mathrm{CR}}_{\mathrm{failID,data}} - N^{\mathrm{CR}}_{\mathrm{failID,MC}}$",
+                        r"$N^{\mathrm{CR}}_{\mathrm{passID,data}} - N^{\mathrm{CR}}_{\mathrm{passID,MC}}$",
+                    ],
+                    **default_args,
                     ratio_plot=True,
                     filename=f"{nprong}{wp}_FF_histograms_diff_{fakes_source}.png",
-                    ratio_label="Fake Factor",
+                    ratio_label="FF",
                 )
                 analysis.plot(
                     [SR_failID_data, SR_failID_mc],
                     label=["SR_failID_data", "SR_failID_mc"],
-                    do_stat=False,
-                    logy=True,
-                    logx=True,
-                    xlabel=fakes_source,
-                    ratio_plot=False,
+                    **default_args,
                     filename=f"{nprong}{wp}_FF_calculation_{fakes_source}.png",
                 )
                 analysis.plot(
                     SR_failID_data - SR_failID_mc,
                     label="SR_failID_data - SR_failID_mc",
-                    do_stat=False,
-                    logy=True,
-                    logx=True,
-                    xlabel=fakes_source,
-                    ratio_plot=False,
+                    **default_args,
                     filename=f"{nprong}{wp}_FF_calculation_delta_SR_fail_{fakes_source}.png",
                 )
 
@@ -563,8 +570,7 @@ if __name__ == "__main__":
                     "label": [analysis[ds].label for ds in all_samples] + ["Fake Jet Estimate"],
                     "colour": [analysis[ds].colour for ds in all_samples] + [analysis.fakes_colour],
                     "title": smart_join(
-                        f"{fakes_source} fakes binning",
-                        f"{wp.title()} ID Signal Region",
+                        f"{wp.title()} ID SR",
                         "2017",
                         f"{analysis.global_lumi / 1000:.3g}fb$^{{-1}}$",
                         sep=" | ",
@@ -603,30 +609,34 @@ if __name__ == "__main__":
                         filename=f"{nprong}{wp}_{v}_fakes_stack_{fakes_source}_liny.png",
                     )
 
-        # # compare fake factors
-        # analysis.paths.plot_dir = wp_dir / "fakes_comparisons"
-        # for fakes_source in fakes_sources:
-        #     analysis.plot(
-        #         val=[
-        #             f"1prong_{wp}_{fakes_source}_FF",
-        #             f"3prong_{wp}_{fakes_source}_FF",
-        #             f"{wp}_{fakes_source}_FF",
-        #         ],
-        #         label=["1-prong taus", "3-prong taus", "Inclusive"],
-        #         xlabel=r"$p_T^\tau$ [GeV]" if fakes_source == "TauPt" else r"$m_T^W$ [GeV]",
-        #         title=smart_join(
-        #             f"Fake Factor Comparisons",
-        #             "2017",
-        #             f"{analysis.global_lumi / 1000:.3g}fb$^{{-1}}$",
-        #             sep=" | ",
-        #         ),
-        #         do_stat=True,
-        #         selection="",
-        #         logx=False,
-        #         logy=False,
-        #         ylabel="Fake factor",
-        #         filename=f"{fakes_source}_{wp}_FF_compare.png",
-        #     )
+        # Fake factors
+        # ----------------------------------------------------------------------------
+        analysis.paths.plot_dir = wp_dir / "fakes_comparisons"
+        for fakes_source in fakes_sources:
+            analysis.plot(
+                val=[
+                    f"1prong_{wp}_{fakes_source}_FF",
+                    f"3prong_{wp}_{fakes_source}_FF",
+                    f"{wp}_{fakes_source}_FF",
+                ],
+                label=[
+                    "1-prong",
+                    "3-prong",
+                    "Inclusive",
+                ],
+                title=smart_join(
+                    f"{wp.title()} ID",
+                    "2017",
+                    f"{analysis.global_lumi / 1000:.3g}fb$^{{-1}}$",
+                    sep=" | ",
+                ),
+                xlabel=r"$p_T^\tau$ [GeV]" if fakes_source == "TauPt" else r"$m_T^W$ [GeV]",
+                do_stat=True,
+                logx=True,
+                logy=False,
+                ylabel="Fake factor",
+                filename=f"{wp}_{fakes_source}_FF_prong_compare.png",
+            )
 
         for v in measurement_vars:
             # compare fake factors to "true tau" MC selections
@@ -665,9 +675,9 @@ if __name__ == "__main__":
         # ----------------------------------------------------------------------------
         # log axes
         default_args = {
-            "title": f"data17 | mc16d | {analysis.global_lumi / 1000:.3g}fb$^{{-1}}$",
-            "label": ["Data SR", "MC + TauPt Fakes", "MC + MTW Fakes"],
-            "colour": ["k"] + source_colours,
+            "title": f"{wp.title()} ID | 2017 | {analysis.global_lumi / 1000:.3g}fb$^{{-1}}$",
+            "label": ["Data SR", "MC + MTW Fakes", "MC + TauPt Fakes", "MC w/ no Fakes"],
+            "colour": ["k"] + source_colours + ["teal"],
             "do_stat": True,
             "do_syst": DO_SYS,
             "suffix": "fake_scaled_log",
@@ -675,9 +685,9 @@ if __name__ == "__main__":
             "ratio_axlim": (0.8, 1.2),
         }
 
-        def FF_full_bkg(variable: str, t: str) -> Histogram1D:
+        def full_bkg(variable: str, t: str | None = None) -> Histogram1D:
             """Sum of all backgrounds + signal + FF"""
-            return Histogram1D(
+            h = Histogram1D(
                 th1=analysis.sum_hists(
                     [
                         analysis.get_hist(
@@ -689,8 +699,10 @@ if __name__ == "__main__":
                         for ds_ in mc_samples
                     ]
                 )
-                + analysis.get_hist(f"{wp}_{variable}_fakes_bkg_{t}_src")
             )
+            if t:
+                h += Histogram1D(th1=analysis.get_hist(f"{wp}_{variable}_fakes_bkg_{t}_src"))
+            return h
 
         for v in measurement_vars:
             if v in measurement_vars_mass:
@@ -700,8 +712,9 @@ if __name__ == "__main__":
             analysis.plot(
                 val=[
                     analysis.get_hist(variable=v, dataset="data", selection=f"{wp}_SR_passID"),
-                    FF_full_bkg(v, "TauPt"),
-                    FF_full_bkg(v, "MTW"),
+                    full_bkg(v, "MTW"),
+                    full_bkg(v, "TauPt"),
+                    full_bkg(v, None),
                 ],
                 logy=True,
                 **default_args,
@@ -710,8 +723,9 @@ if __name__ == "__main__":
             analysis.plot(
                 val=[
                     analysis.get_hist(variable=v, dataset="data", selection=f"{wp}_SR_passID"),
-                    FF_full_bkg(v, "TauPt"),
-                    FF_full_bkg(v, "MTW"),
+                    full_bkg(v, "MTW"),
+                    full_bkg(v, "TauPt"),
+                    full_bkg(v, None),
                 ],
                 logy=False,
                 **default_args,
@@ -809,14 +823,14 @@ if __name__ == "__main__":
             f"{wp}_SR_failID",
             f"{wp}_CR_passID",
             f"{wp}_CR_failID",
-            # f"1prong_{wp}_SR_passID",
-            # f"1prong_{wp}_SR_failID",
-            # f"1prong_{wp}_CR_passID",
-            # f"1prong_{wp}_CR_failID",
-            # f"3prong_{wp}_SR_passID",
-            # f"3prong_{wp}_SR_failID",
-            # f"3prong_{wp}_CR_passID",
-            # f"3prong_{wp}_CR_failID",
+            f"1prong_{wp}_SR_passID",
+            f"1prong_{wp}_SR_failID",
+            f"1prong_{wp}_CR_passID",
+            f"1prong_{wp}_CR_failID",
+            f"3prong_{wp}_SR_passID",
+            f"3prong_{wp}_SR_failID",
+            f"3prong_{wp}_CR_passID",
+            f"3prong_{wp}_CR_failID",
         ]:
             default_args["title"] = smart_join(
                 "Data 2017",
