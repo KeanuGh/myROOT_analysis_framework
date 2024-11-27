@@ -824,10 +824,6 @@ class Analysis:
                 step="post",
             )
 
-        # handle data separately
-        if data_hist is None:
-            return
-
         if isinstance(data_hist, Histogram1D):
             data_hists = [data_hist]
         else:
@@ -840,6 +836,9 @@ class Analysis:
             data_colours = [data_colour]
         else:
             data_colours = data_colour
+
+        if all([h is None for h in data_hists]):
+            return
 
         # handle ratio plot options
         if data_hist and ratio_ax:
@@ -1322,9 +1321,12 @@ class Analysis:
                 msg_args = (target_var,)
             info_msg += "..."
             self.logger.info(info_msg, *msg_args)
-            self.histograms[f"{prefix}{target_var}_fakes_bkg_{ff_var}_src"] = reduce(
-                lambda x, y: x + y, [ptr.GetValue() for ptr in hist.values()]
-            )
+            jet_est_h = reduce(lambda x, y: x + y, [ptr.GetValue() for ptr in hist.values()])
+            # set error at 10%
+            for i in range(jet_est_h.GetNbinsX()):
+                jet_est_h.SetBinError(i + 1, jet_est_h.GetBinContent(i + 1) * 0.1)
+
+            self.histograms[f"{prefix}{target_var}_fakes_bkg_{ff_var}_src"] = jet_est_h
 
         if save_intermediates:
             self.histograms[f"{prefix}all_mc_{ff_var}_{CR_passID_mc}"] = hCR_passID_mc
