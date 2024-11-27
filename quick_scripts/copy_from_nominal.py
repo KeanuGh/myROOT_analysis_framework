@@ -2,7 +2,7 @@ import multiprocessing as mp
 
 import ROOT
 
-from utils.file_utils import multi_glob
+from utils.helper_functions import multi_glob
 
 
 def copy_from_nominal(filepath: str, variables: list[str] | str, exist_ok: bool = False) -> None:
@@ -82,7 +82,7 @@ if __name__ == "__main__":
     # file = "test_data/user.kghorban.40997791._000001.histograms.root"
     # copy_met_linear(file)
 
-    files_path = "/data/DTA_outputs/2024-09-19/**/*.root"
+    files_path = "/data/DTA_outputs/MC16a/**/*.root"
     n_workers = mp.cpu_count() // 2
     files = [f for f in multi_glob(files_path) if "user.kghorban.data" not in f]
     with mp.Pool(n_workers) as pool:
