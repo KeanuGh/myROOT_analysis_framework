@@ -102,19 +102,19 @@ class DatasetMetadata:
         except FileNotFoundError:
             try:
                 self.logger.info(
-                    f"File not found. Looking for backup at '%s'...", self._PMG_DB_BACKUP
+                    f"File not found at: %s\n. Looking for backup at '%s'...",
+                    self._PMG_DB,
+                    self._PMG_DB_BACKUP,
                 )
                 return __read_pmg(self._PMG_DB_BACKUP)
             except FileNotFoundError as e:
                 raise FileNotFoundError(f"Could not find PMG database file '{self._PMG_DB}'") from e
 
-    def fetch_metadata(
-        self, datasets: dict, ttree: str = "T_s1thv_NOMINAL", data_year: int = 2017
-    ) -> None:
+    def fetch_metadata(self, datasets: dict, ttree: str | None = None) -> None:
         """fetch metadata for current datasets based on dataset IDs in passed ROOT files"""
 
         if self.__check_id_dict():
-            self.logger.info("Regenerating DSID metadata for data-year %s...", data_year)
+            self.logger.info("Regenerating DSID metadata for dataset '%s'...", dataset)
 
         # load and test modules first
         try:
@@ -149,6 +149,13 @@ class DatasetMetadata:
         data_samples: set[int] = set()
         for dataset_name, dataset_dict in datasets.items():
 
+            if "ttree" in dataset_dict:
+                ttree = dataset_dict["ttree"]
+            elif ttree is None:
+                raise ValueError(
+                    f"'ttree' not provided for dataset '{dataset_name}' and not passed as argument."
+                )
+
             # gather files
             if isinstance(dataset_dict["data_path"], (list, str, Path)):
                 files = multi_glob(dataset_dict["data_path"])
@@ -178,8 +185,9 @@ class DatasetMetadata:
                         raise ValueError(f"Are you sure data file {file} is a data sample?")
 
                     # save data-period as unique integer as pretend dataset ID
-                    period = re.compile(r"data[0-9]+\.period(\w)\.").search(file).group(1)
-                    dsid = self._period_to_int(data_year, period)
+                    year, period = re.compile(r"data([0-9]+)\.period(\w)\.").search(file).group(1, 2)
+                    year = int(year) + 2000  # it's the little things that get me
+                    dsid = self._period_to_int(year, period)
 
                     dsids.add(dsid)
                     data_samples.add(dsid)
@@ -187,6 +195,18 @@ class DatasetMetadata:
                         self._dsid_meta_dict[dsid] = DatasetIdMetaContainer(dsid=dsid, sumw=0)
 
                     continue
+
+                elif (match := re.compile(r".*\.(MC16.)\.v1.*").search(file)):
+                    year = {
+                        "MC16a": 2016,
+                        "MC16d": 2018,
+                        "MC16e": 2017,
+                    }[match.group(1)]
+                    period = None
+                
+                else:
+                    raise ValueError(f"Unknown year in filename: {file}")
+
 
                 with ROOT.TFile(file, "read") as tfile:
                     if not tfile.GetListOfKeys().Contains(ttree_name):
@@ -268,14 +288,14 @@ class DatasetMetadata:
                 # r-tag?
                 try:
                     rtag = {
-                        2015: "r9364",
-                        2016: "r9364",
-                        2017: "r10201",
-                        2018: "r10724",
-                    }[data_year]
+                        15: "r9364",
+                        16: "r9364",
+                        17: "r10201",
+                        18: "r10724",
+                    }[year]
                 except KeyError as e:
                     raise ValueError(
-                        f"Missing dataset year: {data_year}. Pass one of ['2015', '2016', '2017', '2018']"
+                        f"Missing dataset year: {year}. Pass one of ['2015', '2016', '2017', '2018']"
                     ) from e
 
                 # s-tag?
@@ -293,30 +313,41 @@ class DatasetMetadata:
 
                 res = atlas_api.list_datasets(client, patterns=pattern, ami_status="VALID")
                 if not res:
-                    raise ValueError(f"No matching datasets: {pattern}")
-
-                available_ptags = [ds["ldn"].split("_")[-1] for ds in res if "ldn" in ds]
-                ptag_matches = [p for p in possible_ptags if p in available_ptags]
-                if not len(ptag_matches):
-                    raise ValueError(
-                        f"No matching ptags in: {possible_ptags} for dataset: {pattern}"
+                    self.logger.error(
+                        "No valid dataset for: %",
+                        pattern,
                     )
+                    nevents = 0
+                    ds_size = 0
 
-                ptag = ptag_matches[0]  # get first (latest) ptag
-                ds_name = f"mc16_13TeV.{dsid}.{short}.deriv.DAOD_PHYS.{etag}_{stag}_{rtag}_{ptag}"
+                else:
+                    available_ptags = [ds["ldn"].split("_")[-1] for ds in res if "ldn" in ds]
+                    ptag_matches = [p for p in possible_ptags if p in available_ptags]
+                    if len(ptag_matches):
+                        ptag = ptag_matches[0]  # get first (latest) ptag
+                        ds_name = f"mc16_13TeV.{dsid}.{short}.deriv.DAOD_PHYS.{etag}_{stag}_{rtag}_{ptag}"
 
-                # look for matching dataset
-                self.logger.info("Fetching info from AMI for dataset: %s", ds_name)
-                ds_info = atlas_api.get_dataset_info(client, dataset=ds_name)[0]
+                        # look for matching dataset
+                        self.logger.info("Fetching info from AMI for dataset: %s", ds_name)
+                        ds_info = atlas_api.get_dataset_info(client, dataset=ds_name)[0]
+                        nevents = ds_info["totalEvents"]
+                        ds_size = self._convert_size(int(ds_info["totalSize"]))
+
+                    else:
+                        logger.error(
+                            "No matching ptags in: %s for dataset: %s",
+                            possible_ptags,
+                            pattern,
+                        )
+                        nevents = 0
+                        ds_size = 0
 
                 # save info
                 self._dsid_meta_dict[dsid].rtag = rtag
                 self._dsid_meta_dict[dsid].stag = stag
                 self._dsid_meta_dict[dsid].ptag = ptag
-                self._dsid_meta_dict[dsid].total_events = ds_info["totalEvents"]
-                self._dsid_meta_dict[dsid].total_size = self._convert_size(
-                    int(ds_info["totalSize"])
-                )
+                self._dsid_meta_dict[dsid].total_events = nevents
+                self._dsid_meta_dict[dsid].total_size = ds_size
 
     @property
     def periods(self) -> dict[int, list[str]]:

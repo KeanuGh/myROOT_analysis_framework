@@ -145,7 +145,8 @@ class Analysis:
                 self.global_lumi = LUMI_YEAR[self.year]
             except KeyError as e:
                 raise KeyError(
-                    f"Unknown data-year: {self.year}. Known data-years: {list(LUMI_YEAR.keys())}"
+                    f"Unknown data-year: {self.year}. "
+                    f"Known data-years: {list(LUMI_YEAR.keys())}"
                 ) from e
         else:
             self.global_lumi = global_lumi
@@ -158,13 +159,7 @@ class Analysis:
 
         if (not dsid_metadata_cache.is_file()) or regen_metadata:
             # fetch and save metadata
-            if "ttree" in kwargs:
-                self.metadata.fetch_metadata(
-                    datasets=data_dict, ttree=kwargs["ttree"], data_year=self.year
-                )
-            else:
-                self.metadata.fetch_metadata(datasets=data_dict, data_year=self.year)
-
+            self.metadata.fetch_metadata(datasets=data_dict, ttree=kwargs.get("ttree"))
             self.metadata.save_metadata(dsid_metadata_cache)
             self.logger.debug("Saved metadata cache in %s", dsid_metadata_cache)
 
