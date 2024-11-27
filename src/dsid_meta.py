@@ -114,7 +114,7 @@ class DatasetMetadata:
         """fetch metadata for current datasets based on dataset IDs in passed ROOT files"""
 
         if self.__check_id_dict():
-            self.logger.info("Regenerating DSID metadata for dataset '%s'...", dataset)
+            self.logger.info("Regenerating DSID metadata...")
 
         # load and test modules first
         try:
@@ -148,7 +148,6 @@ class DatasetMetadata:
         all_files: set[str] = set()
         data_samples: set[int] = set()
         for dataset_name, dataset_dict in datasets.items():
-
             if "ttree" in dataset_dict:
                 ttree = dataset_dict["ttree"]
             elif ttree is None:
@@ -169,7 +168,7 @@ class DatasetMetadata:
                     else:
                         raise ValueError(f"Unknown files of type {type(files)}")
             else:
-                raise ValueError(f"Unknown files of type {type(files)}")
+                raise ValueError(f"Unknown files of type {type(dataset_dict['data_path'])}")
             files = multi_glob(files)
 
             ttree_name = dataset_dict["ttree"] if "ttree" in dataset_dict else ttree
@@ -185,7 +184,9 @@ class DatasetMetadata:
                         raise ValueError(f"Are you sure data file {file} is a data sample?")
 
                     # save data-period as unique integer as pretend dataset ID
-                    year, period = re.compile(r"data([0-9]+)\.period(\w)\.").search(file).group(1, 2)
+                    year, period = (
+                        re.compile(r"data([0-9]+)\.period(\w)\.").search(file).group(1, 2)
+                    )
                     year = int(year) + 2000  # it's the little things that get me
                     dsid = self._period_to_int(year, period)
 
@@ -196,17 +197,16 @@ class DatasetMetadata:
 
                     continue
 
-                elif (match := re.compile(r".*\.(MC16.)\.v1.*").search(file)):
+                elif match := re.compile(r".*\.(MC16.)\.v1.*").search(file):
                     year = {
                         "MC16a": 2016,
                         "MC16d": 2018,
                         "MC16e": 2017,
                     }[match.group(1)]
                     period = None
-                
+
                 else:
                     raise ValueError(f"Unknown year in filename: {file}")
-
 
                 with ROOT.TFile(file, "read") as tfile:
                     if not tfile.GetListOfKeys().Contains(ttree_name):
@@ -319,13 +319,16 @@ class DatasetMetadata:
                     )
                     nevents = 0
                     ds_size = 0
+                    ptag = ""
 
                 else:
                     available_ptags = [ds["ldn"].split("_")[-1] for ds in res if "ldn" in ds]
                     ptag_matches = [p for p in possible_ptags if p in available_ptags]
                     if len(ptag_matches):
                         ptag = ptag_matches[0]  # get first (latest) ptag
-                        ds_name = f"mc16_13TeV.{dsid}.{short}.deriv.DAOD_PHYS.{etag}_{stag}_{rtag}_{ptag}"
+                        ds_name = (
+                            f"mc16_13TeV.{dsid}.{short}.deriv.DAOD_PHYS.{etag}_{stag}_{rtag}_{ptag}"
+                        )
 
                         # look for matching dataset
                         self.logger.info("Fetching info from AMI for dataset: %s", ds_name)
@@ -341,6 +344,7 @@ class DatasetMetadata:
                         )
                         nevents = 0
                         ds_size = 0
+                        ptag = ""
 
                 # save info
                 self._dsid_meta_dict[dsid].rtag = rtag
