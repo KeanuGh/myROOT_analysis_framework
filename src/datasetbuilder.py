@@ -63,6 +63,7 @@ class DatasetBuilder:
     is_signal: bool = False
     import_missing_columns_as_nan: bool = False
     do_systematics: bool = False
+    skip_sys: set[str] = field(default_factory=set)
     nominal_tree_name: str = "T_s1thv_NOMINAL"
 
     _subsamples: set[str] = field(init=False, default_factory=set)
@@ -75,10 +76,10 @@ class DatasetBuilder:
             self.lumi = LUMI_YEAR[self.year]
 
     def build(
-        self,
-        data_path: Path | list[Path] | dict[str, list[Path] | Path],
-        selections: list[Cut] | dict[str, list[Cut]],
-        extract_vars: set[str] | None = None,
+            self,
+            data_path: Path | list[Path] | dict[str, list[Path] | Path],
+            selections: list[Cut] | dict[str, list[Cut]],
+            extract_vars: set[str] | None = None,
     ) -> Dataset:
         """
         Builds a dataframe from cut inputs.
@@ -207,11 +208,11 @@ class DatasetBuilder:
     # ===== DATAFRAME FUNCTIONS =====
     # ==============================
     def __build_dataset(
-        self,
-        sample_paths: dict[str, list[Path] | Path],
-        ttrees: set[str],
-        extract_variables: set[str],
-        calculate_variables: set[str],
+            self,
+            sample_paths: dict[str, list[Path] | Path],
+            ttrees: set[str],
+            extract_variables: set[str],
+            calculate_variables: set[str],
     ) -> dict[str, ROOT.RDataFrame]:
         """Build DataFrame from given files and TTree/branch combinations from DTA output"""
 
@@ -260,6 +261,7 @@ class DatasetBuilder:
                 str(w)
                 for w in Rdf.GetColumnNames()
                 if str(w).startswith("weight_TAUS_TRUEHADTAU_EFF_")
+                   and not any(re.match(p, str(w)) for p in self.skip_sys)
             ]:
                 Rdf = Rdf.Redefine(sys_wgt, f"{sys_wgt} * reco_weight / selectionSF")
 
@@ -344,4 +346,5 @@ class DatasetBuilder:
                 if systematic_tree.endswith(systematic)
             }
             for systematic in all_systematics
+            if not any(re.match(p, systematic) for p in self.skip_sys)
         }
