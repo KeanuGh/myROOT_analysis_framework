@@ -112,7 +112,7 @@ class Dataset:
         self.eff_sys_set = {
             str(wgt).removeprefix("weight_")
             for wgt in self.rdataframes[self.nominal_name].GetColumnNames()
-            if wgt.startswith("weight_TAUS_TRUEHADTAU_EFF_") and not self._skip_sys(wgt)
+            if wgt.startswith("weight_TAUS_TRUEHADTAU_EFF_") and not self._skip_sys(str(wgt))
         }
         self.logger.info(f"Initialised dataset: {self.name}")
 

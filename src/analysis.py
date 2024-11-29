@@ -254,7 +254,6 @@ class Analysis:
                 "profiles",
                 "hists_2d",
                 "do_weights",
-                "skip_sys",
             ]:
                 if manual_setting in args:
                     dataset.__setattr__(manual_setting, args.pop(manual_setting))
