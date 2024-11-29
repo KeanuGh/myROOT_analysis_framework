@@ -707,7 +707,7 @@ class Histogram1D(bh.Histogram, family=None):
         self,
         other: Histogram1D,
         ax: plt.Axes = None,
-        yerr: ArrayLike | bool | str = True,
+        yerr: ArrayLike | bool | str | None = None,
         normalise: bool = False,
         label: str | None = None,
         fit: bool = False,
@@ -792,9 +792,11 @@ class Histogram1D(bh.Histogram, family=None):
                     fit_empty=fit_empty,
                     exclude_outliers=exclude_outliers,
                 )
+        # take out linestyle to apply to actual errorbar
+        linestyle = kwargs.pop("linestyle", None)
 
         ax.axhline(1.0, linestyle="--", linewidth=1.0, c="k")
-        ax.errorbar(
+        eb = ax.errorbar(
             h_ratio.bin_centres,
             h_ratio.bin_values(),
             xerr=h_ratio.bin_widths / 2,  # type: ignore
@@ -805,6 +807,8 @@ class Histogram1D(bh.Histogram, family=None):
             c=colour if colour else "k",
             **kwargs,
         )
+        if linestyle:
+            eb[-1][0].set_linestyle(linestyle)
 
         if yax_lim:
             if isinstance(yax_lim, tuple):

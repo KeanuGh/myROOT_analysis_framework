@@ -352,6 +352,7 @@ class Analysis:
         selection: str | Sequence[str] = "",
         label: str | None | Sequence[str | None] = None,
         colour: str | tuple | None | Sequence[str | tuple | None] = None,
+        linestyle: str | None | Sequence[str | None] = None,
         plot_as_data: Histogram1D | ROOT.TH1 | list[Histogram1D | ROOT.TH1] | None = None,
         data_label: str | list[str] = "data",
         data_colour: str | list[str] = "k",
@@ -372,7 +373,7 @@ class Analysis:
         ratio_fit: bool = False,
         ratio_axlim: float | tuple[float, float] | None = None,
         ratio_label: str = "Ratio",
-        ratio_err: str = "sumw2",
+        ratio_err: str | None = None,
         filename: str | Path | None = None,
         sort: bool = True,
         kind: str = "overlay",
@@ -393,8 +394,10 @@ class Analysis:
         :param selection: string or list of strings corresponding to selection(s) applied to variable
         :param label: list of labels for plot legend corresponding to each line
         :param colour: list of colours for histograms
+        :param linestyle: list of linestyles for  histograms
         :param plot_as_data: histogram to be used as the "data" overlay in a stack plot
         :param data_label: label to use for "Data" overlay in stack plot
+        :param data_colour: colour to use for "Data" overlay in stack plot
         :param do_stat: include statistical uncertainties in error bars
         :param do_syst: include systematic uncertainties in error bars
         :param logx: whether log scale x-axis
@@ -424,11 +427,10 @@ class Analysis:
 
         # PREAMBLE
         # ============================
-
         # check options
         _allowed_options: dict[str, set[str]] = {
             "kind": {"stack", "overlay"},
-            "ratio_err": {"sumw2", "binom", "carry"},
+            "ratio_err": {"sumw2", "binom", "carry", None, True, False},
         }
         _opt_err_msg = "Valid options for '{}' are: {}. Got '{}'."
         _plot_vars = locals()
@@ -445,6 +447,7 @@ class Analysis:
                 "selections": copy.copy(selection),
                 "labels": copy.copy(label),
                 "colours": copy.copy(colour),
+                "linestyles": copy.copy(linestyle),
             }
         )
         if scale_by_bin_width:
@@ -546,6 +549,7 @@ class Analysis:
                     stats_box=stats_box,
                     label=per_hist_vars["labels"][i],
                     color=per_hist_vars["colours"][i],
+                    linestyle=per_hist_vars["linestyles"][i],
                     **kwargs,
                 )
 
@@ -561,12 +565,11 @@ class Analysis:
                             else None
                         ),
                         colour=None if n_plottables == 2 else per_hist_vars["colours"][i],
+                        linestyle=None if n_plottables == 2 else per_hist_vars["linestyles"][i],
                         fit=ratio_fit,
                         yax_lim=ratio_axlim,
                         display_stats=len(per_hist_vars["hists"]) <= 3,
                     )
-                    if n_plottables > 2:
-                        ratio_ax.legend()
 
         else:
             raise ValueError(f"Unknown plot type: '{kind}'")
@@ -776,6 +779,7 @@ class Analysis:
             bins=hist_list[-1].bin_edges,
             ax=ax,
             color=per_hist_vars["colours"],
+            linestyle=per_hist_vars["linestyles"],
             alpha=alpha_list if alpha_list else None,
             edgecolor=edgecolour_list if edgecolour_list else None,
             linewidth=1 if edgecolour_list else 0,
@@ -841,10 +845,9 @@ class Analysis:
             return
 
         # handle ratio plot options
-        if data_hist and ratio_ax:
-            all_mc_hist = reduce((lambda x, y: x + y), per_hist_vars["hists"] + [signal_hist])
-            all_mc_bin_vals = all_mc_hist.bin_values()
-
+        all_mc_hist = reduce((lambda x, y: x + y), per_hist_vars["hists"] + [signal_hist])
+        all_mc_bin_vals = all_mc_hist.bin_values()
+        if ratio_ax:
             # MC errors
             err_bottom = np.ones_like(all_mc_bin_vals)
             err_top = np.ones_like(all_mc_bin_vals)
@@ -910,7 +913,7 @@ class Analysis:
                 all_mc_hist.plot_ratio(
                     data_hist,
                     ax=ratio_ax,
-                    yerr=True,
+                    yerr=do_stat or do_syst,
                     yax_lim=ratio_axlim,
                     colour=data_colour,
                 )
@@ -987,6 +990,9 @@ class Analysis:
                     var_dict["labels"][i] = self[var_dict["datasets"][i]].label
                 elif n_plottables > 1:
                     raise ValueError(f"Missing label for {i}th plot! Check arguments to plot()")
+
+            if var_dict["linestyles"][i] is None:
+                var_dict["linestyles"][i] = "solid"
 
         var_dict["hists"] = hists
 
