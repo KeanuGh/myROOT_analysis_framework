@@ -957,6 +957,13 @@ class Dataset:
                     uncert_centre.Scale(0.5)
                     sf = nominal_hist / uncert_centre
 
+                    # save rescaled uncert
+                    if "SME_TES" in sys_name:
+                        self.histograms[sys_name + "__1up"][selection][variable] = pair["1up"] * sf
+                        self.histograms[sys_name + "__1down"][selection][variable] = (
+                            pair["1down"] * sf
+                        )
+
                     tot_uncert = ROOT_utils.th1_abs(sf * (pair["1up"] - pair["1down"]))
                     pct_uncert = (tot_uncert / nominal_hist) * 100
 
