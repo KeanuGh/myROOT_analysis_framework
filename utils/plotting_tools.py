@@ -26,7 +26,8 @@ class PlotOpts(TypedDict):
     systematics: list[str]
     selections: list[str]
     labels: list[str]
-    colours: list[str]
+    colours: list[str | tuple]
+    linestyles: list[str]
 
 
 @dataclass(slots=True)
@@ -216,8 +217,8 @@ def set_axis_options(
         axis_.set_xlabel(xlabel)
 
     if ratio_ax is not None:
-        if len(per_hist_vars["hists"]) > 2:  # don't show legend if there's only two plots
-            ratio_ax.legend(fontsize=10, loc=1)
+        # if len(per_hist_vars["hists"]) > 2:  # don't show legend if there's only two plots
+        #     ratio_ax.legend(fontsize=10, loc=1)
         ratio_ax.set_ylabel(ratio_label)
 
         if x_axlim:
