@@ -12,6 +12,7 @@ from utils.variable_names import variable_data
 
 DTA_PATH = Path("/mnt/D/data/DTA_outputs/2024-09-19/")
 # DTA_PATH = Path("/eos/home-k/kghorban/DTA_OUT/2024-02-05/")
+YEAR = 2017
 DO_SYS = True
 
 # CUTS & SELECTIONS
@@ -361,7 +362,7 @@ def run_analysis() -> Analysis:
     n_edges = 16
     return Analysis(
         datasets,
-        year=2017,
+        year=YEAR,
         # rerun=True,
         # regen_histograms=True,
         do_systematics=DO_SYS,
@@ -373,6 +374,10 @@ def run_analysis() -> Analysis:
         log_out="both",
         extract_vars=wanted_variables,
         import_missing_columns_as_nan=True,
+        skip_sys={
+            r".*TAUS_TRUEHADTAU_EFF_RNNID_.*",
+            r".*TAUS_TRUEHADTAU_EFF_JETID_.*",
+        },
         binnings={
             "": {
                 "MTW": np.geomspace(150, 1000, n_edges),
@@ -500,7 +505,7 @@ if __name__ == "__main__":
                     "title": smart_join(
                         f"{variable_data[fakes_source]['name']} fakes binning",
                         wp.title(),
-                        "2017",
+                        str(YEAR),
                         f"{analysis.global_lumi / 1000:.3g}fb$^{{-1}}$",
                         sep=" | ",
                     ),
@@ -571,10 +576,11 @@ if __name__ == "__main__":
                     "colour": [analysis[ds].colour for ds in all_samples] + [analysis.fakes_colour],
                     "title": smart_join(
                         f"{wp.title()} ID SR",
-                        "2017",
+                        str(2017),
                         f"{analysis.global_lumi / 1000:.3g}fb$^{{-1}}$",
                         sep=" | ",
                     ),
+                    "ylabel": "Events",
                     "do_stat": True,
                     "do_syst": True,
                     "ratio_plot": True,
@@ -626,7 +632,7 @@ if __name__ == "__main__":
                 ],
                 title=smart_join(
                     f"{wp.title()} ID",
-                    "2017",
+                    str(2017),
                     f"{analysis.global_lumi / 1000:.3g}fb$^{{-1}}$",
                     sep=" | ",
                 ),
@@ -651,7 +657,7 @@ if __name__ == "__main__":
                 ],
                 title=smart_join(
                     f"{wp.title()} ID Signal Region",
-                    "2017",
+                    str(2017),
                     f"{analysis.global_lumi / 1000:.3g}fb$^{{-1}}$",
                     sep=" | ",
                 ),
@@ -675,7 +681,7 @@ if __name__ == "__main__":
         # ----------------------------------------------------------------------------
         # log axes
         default_args = {
-            "title": f"{wp.title()} ID | 2017 | {analysis.global_lumi / 1000:.3g}fb$^{{-1}}$",
+            "title": f"{wp.title()} ID | {YEAR} | {analysis.global_lumi / 1000:.3g}fb$^{{-1}}$",
             "label": ["Data SR", "MC + MTW Fakes", "MC + TauPt Fakes", "MC w/ no Fakes"],
             "colour": ["k"] + source_colours + ["teal"],
             "do_stat": True,
@@ -735,39 +741,43 @@ if __name__ == "__main__":
         if DO_SYS:
             # SYSTEMATIC UNCERTAINTIES
             # ===========================================================================
+
+            def strip_sys_prefix(s: str) -> str:
+                """remove prefix from sys names"""
+                return (
+                    s.removeprefix("TAUS_TRUEHADTAU_").removeprefix("TES_SME").removeprefix("EFF_")
+                )
+
             # list of systematic variations
             sys_list_eff = sorted(set(get_base_sys_name(s) for s in analysis["wtaunu"].eff_sys_set))
             sys_list_tes = sorted(set(get_base_sys_name(s) for s in analysis["wtaunu"].tes_sys_set))
-            default_args = {
-                "do_stat": False,
-                "do_syst": False,
-                "ratio_plot": False,
-                "logy": False,
-                "legend_params": {"ncols": 1, "fontsize": 8},
-            }
             cmap = plt.get_cmap("jet")
             colours_eff = [tuple(c) for c in cmap(np.linspace(0, 1.0, len(sys_list_eff)))]
             colours_tes = [tuple(c) for c in cmap(np.linspace(0, 1.0, len(sys_list_tes)))]
-            selection = f"{wp}_SR_passID"
 
             # for each sample
             for mc_sample in mc_samples:
-                analysis.paths.plot_dir = wp_dir / "systematics" / mc_sample
-                default_args["title"] = (
-                    f"{mc_sample} | "
-                    f"Signal Region | "
-                    f"mc16d | "
-                    f"{analysis.global_lumi / 1000:.3g}fb$^{{-1}}$"
-                )
-
                 # mass variables
-                for s in ("pct", "tot"):
-                    if s == "pct":
-                        ylabel = "Percentage uncertainty / %"
-                    else:
-                        ylabel = "Absolute uncertainty"
+                for nprong in ("", "1prong_", "3prong_"):
+                    selection = f"{nprong}{wp}_SR_passID"
 
                     for v in measurement_vars:
+                        analysis.paths.plot_dir = wp_dir / "systematics" / mc_sample / nprong
+                        default_args = {
+                            "do_stat": False,
+                            "do_syst": False,
+                            "ratio_plot": False,
+                            "ratio_err": None,
+                            "logy": False,
+                            "legend_params": {"ncols": 1, "fontsize": 8},
+                            "ylabel": "Percentage uncertainty / %",
+                            "title": (
+                                f"{datasets[mc_sample]['label']} | "
+                                f"Signal Region | "
+                                f"{YEAR} | "
+                                f"{analysis.global_lumi / 1000:.3g}fb$^{{-1}}$"
+                            ),
+                        }
                         if v in measurement_vars_mass:
                             default_args.update(
                                 {"logx": True, "xlabel": variable_data[v]["name"] + " [GeV]"}
@@ -778,32 +788,136 @@ if __name__ == "__main__":
                         analysis.plot(
                             val=[
                                 analysis[mc_sample].get_hist(
-                                    variable=f"{v}_{sys_name}_{s}_uncert",
+                                    variable=f"{v}_{sys_name}_pct_uncert",
                                     systematic=NOMINAL_NAME,
                                     selection=selection,
                                 )
                                 for sys_name in sys_list_eff
                             ],
-                            label=sys_list_eff,
-                            ylabel=ylabel,
+                            label=[strip_sys_prefix(sys) for sys in sys_list_eff],
                             colour=colours_eff,
+                            y_axlim=(0, 20),
                             **default_args,
-                            filename=f"{v}_sys_eff_{s}_uncert_liny.png",
+                            filename=f"{v}_sys_eff_pct_uncert_liny.png",
                         )
                         analysis.plot(
                             val=[
                                 analysis[mc_sample].get_hist(
-                                    variable=f"{v}_{sys_name}_{s}_uncert",
+                                    variable=f"{v}_{sys_name}_pct_uncert",
                                     systematic=NOMINAL_NAME,
                                     selection=selection,
                                 )
                                 for sys_name in sys_list_tes
                             ],
-                            label=sys_list_tes,
-                            ylabel=ylabel,
+                            label=[strip_sys_prefix(sys) for sys in sys_list_tes],
+                            y_axlim=(0, 50),
                             colour=colours_tes,
                             **default_args,
-                            filename=f"{v}_sys_tes_{s}_uncert_liny.png",
+                            filename=f"{v}_sys_tes_pct_uncert_liny.png",
+                        )
+
+                        # detector systematics
+                        default_args.update(
+                            {
+                                "selection": selection,
+                                "dataset": mc_sample,
+                                "ratio_plot": True,
+                                "ratio_label": "sys/nominal",
+                                "ratio_axlim": (0.8, 1.2),
+                                "logx": True if v in measurement_vars_mass else False,
+                                "ylabel": "Weighted Entries",
+                            }
+                        )
+                        analysis.plot(
+                            val=v,
+                            systematic=[
+                                NOMINAL_NAME,
+                                "TAUS_TRUEHADTAU_SME_TES_DETECTOR_Endcap_LowPt__1up",
+                                "TAUS_TRUEHADTAU_SME_TES_DETECTOR_Endcap_LowPt__1down",
+                                "TAUS_TRUEHADTAU_SME_TES_DETECTOR_Endcap_HighPt__1up",
+                                "TAUS_TRUEHADTAU_SME_TES_DETECTOR_Endcap_HighPt__1down",
+                                "TAUS_TRUEHADTAU_SME_TES_DETECTOR_Barrel_LowPt__1up",
+                                "TAUS_TRUEHADTAU_SME_TES_DETECTOR_Barrel_LowPt__1down",
+                                "TAUS_TRUEHADTAU_SME_TES_DETECTOR_Barrel_HighPt__1up",
+                                "TAUS_TRUEHADTAU_SME_TES_DETECTOR_Barrel_HighPt__1down",
+                            ],
+                            label=[
+                                "Nominal",
+                                "Endcap_LowPt__1up",
+                                "Endcap_LowPt__1down",
+                                "Endcap_HighPt__1up",
+                                "Endcap_HighPt__1down",
+                                "Barrel_LowPt__1up",
+                                "Barrel_LowPt__1down",
+                                "Barrel_HighPt__1up",
+                                "Barrel_HighPt__1down",
+                            ],
+                            colour=[
+                                "k",
+                                (0.0, 0.0, 0.5, 1.0),
+                                (0.0, 0.0, 0.5, 1.0),
+                                (0.0, 0.8333333333333334, 1.0, 1.0),
+                                (0.0, 0.8333333333333334, 1.0, 1.0),
+                                (1.0, 0.9012345679012348, 0.0, 1.0),
+                                (1.0, 0.9012345679012348, 0.0, 1.0),
+                                (0.5, 0.0, 0.0, 1.0),
+                                (0.5, 0.0, 0.0, 1.0),
+                            ],
+                            linestyle=[
+                                "solid",
+                                "solid",
+                                "dotted",
+                                "solid",
+                                "dotted",
+                                "solid",
+                                "dotted",
+                                "solid",
+                                "dotted",
+                            ],
+                            **default_args,
+                            filename=f"{v}_sys_DETECTOR.png",
+                        )
+                        # TRIGGER systematics
+                        analysis.plot(
+                            val=v,
+                            systematic=[
+                                NOMINAL_NAME,
+                                "TAUS_TRUEHADTAU_EFF_TRIGGER_SYST161718__1up",
+                                "TAUS_TRUEHADTAU_EFF_TRIGGER_SYST161718__1down",
+                                "TAUS_TRUEHADTAU_EFF_TRIGGER_STATMC161718__1up",
+                                "TAUS_TRUEHADTAU_EFF_TRIGGER_STATMC161718__1down",
+                                "TAUS_TRUEHADTAU_EFF_TRIGGER_STATDATA161718__1up",
+                                "TAUS_TRUEHADTAU_EFF_TRIGGER_STATDATA161718__1down",
+                            ],
+                            label=[
+                                "Nominal",
+                                "TRIGGER_SYST161718__1up",
+                                "TRIGGER_SYST161718__1down",
+                                "TRIGGER_STATMC161718_1up",
+                                "TRIGGER_STATMC161718_1down",
+                                "TRIGGER_STATDATA161718__1up",
+                                "TRIGGER_STATDATA161718__1down",
+                            ],
+                            colour=[
+                                "k",
+                                (0.0, 0.0, 0.5, 1.0),
+                                (0.0, 0.0, 0.5, 1.0),
+                                (0.4901960784313725, 1.0, 0.4775458570524984, 1.0),
+                                (0.4901960784313725, 1.0, 0.4775458570524984, 1.0),
+                                (0.5, 0.0, 0.0, 1.0),
+                                (0.5, 0.0, 0.0, 1.0),
+                            ],
+                            linestyle=[
+                                "solid",
+                                "solid",
+                                "dotted",
+                                "solid",
+                                "dotted",
+                                "solid",
+                                "dotted",
+                            ],
+                            **default_args,
+                            filename=f"{v}_sys_TRIGGER.png",
                         )
 
         # NO FAKES
@@ -833,7 +947,7 @@ if __name__ == "__main__":
             f"3prong_{wp}_CR_failID",
         ]:
             default_args["title"] = smart_join(
-                "Data 2017",
+                f"Data {YEAR}",
                 "3-prong Taus"
                 if "3prong" in selection
                 else ("1-prong Taus" if "1prong" in selection else ""),
