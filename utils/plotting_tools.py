@@ -162,6 +162,7 @@ def set_axis_options(
     x_axlim: tuple[float, float] | None = None,
     y_axlim: tuple[float, float] | None = None,
     label_params: dict | None = None,
+    font_size: int = 12,
 ) -> None:
     """Set axis options for plot"""
 
@@ -200,12 +201,16 @@ def set_axis_options(
         # if there are no negative yvalues, set limit at origin
         ax.set_ylim(bottom=0)
     if ylabel:
-        ax.set_ylabel(ylabel)
+        ax.set_ylabel(ylabel, fontsize=font_size)
 
     if x_axlim:
-        ax.set_xlim(*x_axlim)
+        ax.set_xlim(*x_axlim, fontsize=font_size)
     else:
         ax.set_xlim(*bin_range)
+
+    ax.tick_params(axis="both", labelsize=font_size)
+    ax.get_xaxis().get_offset_text().set_fontsize(font_size)
+    ax.get_yaxis().get_offset_text().set_fontsize(font_size)
 
     # set some xaxis options only on bottom xaxis (ie ratio plot if it exists else regular plot)
     axis_ = ratio_ax if (ratio_ax is not None) else ax
@@ -214,12 +219,15 @@ def set_axis_options(
         axis_.xaxis.set_minor_formatter(ticker.LogFormatter())
         axis_.xaxis.set_major_formatter(ticker.LogFormatter())
     if xlabel:
-        axis_.set_xlabel(xlabel)
+        axis_.set_xlabel(xlabel, fontsize=font_size)
 
     if ratio_ax is not None:
         # if len(per_hist_vars["hists"]) > 2:  # don't show legend if there's only two plots
         #     ratio_ax.legend(fontsize=10, loc=1)
-        ratio_ax.set_ylabel(ratio_label)
+        ratio_ax.set_ylabel(ratio_label, fontsize=font_size)
+        ratio_ax.tick_params(axis="both", labelsize=font_size)
+        ratio_ax.get_xaxis().get_offset_text().set_fontsize(font_size)
+        ratio_ax.get_yaxis().get_offset_text().set_fontsize(font_size)
 
         if x_axlim:
             ratio_ax.set_xlim(*x_axlim)
@@ -235,6 +243,7 @@ def set_axis_options(
             ax.xaxis.set_major_formatter(
                 ticker.LogFormatter(labelOnlyBase=True, minor_thresholds=(0, 0))
             )
+            ax.tick_params(axis="both", labelsize=font_size)
         ax.xaxis.set_ticklabels([])
 
 
