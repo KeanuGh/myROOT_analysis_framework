@@ -1,3 +1,4 @@
+import re
 from glob import glob
 from pathlib import Path
 from warnings import warn
@@ -33,3 +34,13 @@ def get_base_sys_name(s: str) -> str:
         .removesuffix("_1down")
         .removesuffix("_")
     )
+
+
+def match_any(patterns: list | set | tuple, s: str) -> bool:
+    """Match string s to any of the given patterns"""
+    return any(re.match(p, s) for p in patterns)
+
+
+def count_nested_values(d: dict) -> int:
+    """Count number of subvalues in nested dict"""
+    return sum([count_nested_values(v) if isinstance(v, dict) else 1 for v in d.values()])

@@ -72,7 +72,7 @@ class Analysis:
         "data_sample",
         "signal_sample",
         "binnings",
-        "fakes_colour",
+        "c_iter",
     )
 
     def __init__(
@@ -254,6 +254,7 @@ class Analysis:
                 "profiles",
                 "hists_2d",
                 "do_weights",
+                "systematics_for_selection",
             ]:
                 if manual_setting in args:
                     dataset.__setattr__(manual_setting, args.pop(manual_setting))
@@ -276,7 +277,6 @@ class Analysis:
                 dataset.export_histograms(dataset_file)
             elif indiv_regen_hists:
                 dataset.import_dataset(dataset_file)
-                dataset.reset_cutflows()
                 dataset.gen_all_histograms()
                 if snapshot:
                     if isinstance(snapshot, dict):
@@ -285,7 +285,6 @@ class Analysis:
                         dataset.export_dataset(dataset_file)
             else:
                 dataset.import_dataset(dataset_file)
-                dataset.reset_cutflows()
 
             self[dataset_name] = dataset  # save to analysis
 
@@ -295,14 +294,13 @@ class Analysis:
             self.logger.info("")
 
         # set colours for samples
-        c_iter = iter(plt.rcParams["axes.prop_cycle"].by_key()["color"])
+        self.c_iter = iter(plt.rcParams["axes.prop_cycle"].by_key()["color"])
         for ds in self.mc_samples:
-            c = next(c_iter)
+            c = next(self.c_iter)
             if not self[ds].colour:
                 self[ds].colour = c
         if self.data_sample:  # data is always black
             self[self.data_sample].colour = "k"
-        self.fakes_colour = next(c_iter)
 
         self.logger.info("=" * (len(analysis_label) + 23))
         self.logger.info(f"ANALYSIS '{analysis_label}' INITIALISED")

@@ -78,7 +78,7 @@ class DatasetBuilder:
     def build(
         self,
         data_path: Path | list[Path] | dict[str, list[Path] | Path],
-        selections: list[Cut] | dict[str, list[Cut]],
+        selections: list[Cut] | dict[str, list[Cut]] | None = None,
         extract_vars: set[str] | None = None,
     ) -> Dataset:
         """
@@ -96,6 +96,8 @@ class DatasetBuilder:
         # sanitise inputs
         if isinstance(selections, list):
             selections = {"": selections}
+        elif selections is None:
+            selections = {}
         if not isinstance(self.ttree, list):
             self.ttree = {self.ttree}
         if (extract_vars is not None) and (not isinstance(extract_vars, set)):
@@ -219,6 +221,10 @@ class DatasetBuilder:
 
         extract_variables.add("passReco")  # we'll need this later
         is_nominal = all(["nominal" in tree.lower() for tree in ttrees])
+
+        # remove truth variables if passed tree(s) is systematic
+        if not is_nominal:
+            extract_variables = {v for v in extract_variables if variable_data[v]["tag"] != "truth"}
 
         # make rdataframe
         self.logger.info(f"Initiating RDataFrame from trees: %s..", ttrees)

@@ -11,7 +11,6 @@ import logging
 import re
 from copy import deepcopy
 from dataclasses import dataclass, field
-from logging import Logger
 from pathlib import Path
 from typing import List, Generator, Final
 
@@ -19,7 +18,6 @@ import ROOT  # type: ignore
 import numpy as np
 from tabulate import tabulate  # type: ignore
 
-from src.logger import get_logger
 from utils.var_helpers import derived_vars
 from utils.variable_names import variable_data, VarTag
 
@@ -264,14 +262,17 @@ class CutflowItem:
     cut: Cut
 
 
-@dataclass(slots=True)
 class Cutflow:
     """
     Cutflow object. `_cutflow` attribute contains list of cutflow items that defines a cutflow
     """
 
-    _cutflow: List[CutflowItem] = field(init=False, default_factory=list)
-    logger: Logger = field(default_factory=get_logger)
+    __slots__ = ("_cutflow", "_report", "logger")
+
+    def __init__(self, df: ROOT.RDataFrame, logger: logging.Logger) -> None:
+        self._report = df.Report()
+        self.logger = logger
+        self._cutflow = []
 
     def __getitem__(self, idx: int) -> CutflowItem:
         return self._cutflow[idx]
@@ -329,25 +330,24 @@ class Cutflow:
             raise AttributeError("Must have generated cutflow in order to obtain number of events")
         return self._cutflow[0].npass
 
-    def gen_cutflow(self, filter_node: FilterNode) -> None:
+    def get_cutflow(self, filter_node: FilterNode) -> None:
         """
         Generate cutflow - forces an event loop to run if not already.
 
         :param filter_node: node of filtered root dataframe
         """
-        report = filter_node.df.Report()
         cuts = filter_node.get_cuts()
 
         if self.logger.level <= logging.DEBUG:
             self.logger.debug(
                 "Full report (internal):\n%s",
-                "\n".join([f"{cut.name}: {report.At(cut.name).GetPass()}" for cut in cuts]),
+                "\n".join([f"{cut.name}: {self._report.At(cut.name).GetPass()}" for cut in cuts]),
             )
 
         self._cutflow = [
             CutflowItem(
-                npass=report.At(cut.name).GetPass(),
-                eff=report.At(cut.name).GetEff(),
+                npass=self._report.At(cut.name).GetPass(),
+                eff=self._report.At(cut.name).GetEff(),
                 ceff=0.0,  # calculate this next
                 cut=cut,
             )

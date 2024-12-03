@@ -17,7 +17,7 @@ from src.cutting import Cut, Cutflow, FilterNode, FilterTree
 from src.histogram import Histogram1D
 from src.logger import get_logger
 from utils import ROOT_utils
-from utils.helper_functions import smart_join, get_base_sys_name
+from utils.helper_functions import smart_join, get_base_sys_name, match_any, count_nested_values
 from utils.plotting_tools import ProfileOpts, Hist2dOpts
 from utils.variable_names import variable_data, VarTag
 
@@ -67,6 +67,7 @@ class Dataset:
     do_systematics: bool = False
     do_weights: bool = True
     skip_sys: set[str] = field(default_factory=set)
+    systematics_for_selection: str = field(default_factory=set)
     tes_sys_set: set = field(init=False, default_factory=set)
     eff_sys_set: set = field(init=False, default_factory=set)
 
@@ -79,6 +80,11 @@ class Dataset:
             self.logger.debug("Generating filters trees for dataframes...")
             for sys_name, rdf in self.rdataframes.items():
                 self.filters[sys_name] = self.gen_filters(rdf)
+
+                # set up cutflow for later
+                self.cutflows[sys_name] = {}
+                for sel, node in self.filters[sys_name].items():
+                    self.cutflows[sys_name][sel] = Cutflow(node.df, self.logger)
 
         if self.do_systematics:
             self.init_sys()
@@ -95,7 +101,7 @@ class Dataset:
 
         for sys_name in self.rdataframes.keys():
             # skip skippy
-            if self._skip_sys(sys_name):
+            if match_any(self.skip_sys, sys_name):
                 continue
 
             # skip nominal(s)
@@ -112,7 +118,8 @@ class Dataset:
         self.eff_sys_set = {
             str(wgt).removeprefix("weight_")
             for wgt in self.rdataframes[self.nominal_name].GetColumnNames()
-            if wgt.startswith("weight_TAUS_TRUEHADTAU_EFF_") and not self._skip_sys(str(wgt))
+            if wgt.startswith("weight_TAUS_TRUEHADTAU_EFF_")
+            and not match_any(self.skip_sys, str(wgt))
         }
         self.logger.info(f"Initialised dataset: {self.name}")
 
@@ -189,7 +196,7 @@ class Dataset:
     def export_histograms(self, filepath: str | Path | None = None) -> None:
         """export histograms to output root file"""
 
-        n_hists = sum(len(hists) for hists in self.histograms.values())
+        n_hists = count_nested_values(self.histograms)
         self.logger.info(f"Saving %d histograms...", n_hists)
         t1 = time.time()
         with ROOT.TFile(str(filepath), "UPDATE") as file:
@@ -230,7 +237,7 @@ class Dataset:
                     continue
 
                 sys_name = str(sys_key.GetName()).removeprefix("data_")
-                if self._skip_sys(sys_name):
+                if match_any(self.skip_sys, sys_name):
                     self.logger.debug(f"Skipping systematic: {sys_name}")
                     continue
 
@@ -290,6 +297,14 @@ class Dataset:
                                 f"'{sys_name}/{sel_key.GetName()}' subdirectory of file: {in_file}"
                             )
 
+        # import cutflows
+        for sys in self.rdataframes:
+            for selection in self.selections:
+                self.cutflows[sys][selection].import_cutflow(
+                    self.histograms[sys][selection]["cutflow"],
+                    self.selections[selection],
+                )
+
         self.logger.info(
             "%d histograms and %d RDataFrames successfully "
             "imported into dataset '%s' from file: %s",
@@ -298,19 +313,6 @@ class Dataset:
             self.name,
             in_file,
         )
-
-    def reset_cutflows(self) -> None:
-        """(re)set cutflows from cutflow histograms and cuts"""
-        if len(self.histograms) == 0:
-            raise ValueError("Must generate or load histograms before resetting cutflow")
-
-        self.cutflows[self.nominal_name] = dict()
-        for selection in self.selections:
-            self.cutflows[self.nominal_name][selection] = Cutflow(logger=self.logger)
-            self.cutflows[self.nominal_name][selection].import_cutflow(
-                self.histograms[self.nominal_name][selection]["cutflow"],
-                self.selections[selection],
-            )
 
     def gen_filters(self, df: ROOT.RDataFrame) -> dict[str, FilterNode]:
         """Generate end nodes of filter tree from selections for given dataframe"""
@@ -388,11 +390,7 @@ class Dataset:
     def gen_cutflows(self, do_print: bool = False, nominal_only: bool = True) -> None:
         """Generate cutflows for each systematic-selection"""
 
-        systematics = (
-            [self.nominal_name] if nominal_only else list(self.eff_sys_set | self.tes_sys_set)
-        )
-        for systematic in systematics:
-            self.cutflows[systematic] = dict()
+        for systematic in self.rdataframes:
             for selection in self.selections:
                 self.logger.info(
                     "Generating cutflow in dataset '%s' "
@@ -401,13 +399,12 @@ class Dataset:
                     selection,
                     systematic,
                 )
-                cutflow = Cutflow(logger=self.logger)
-                cutflow.gen_cutflow(self.filters[systematic][selection])
-
-                self.cutflows[systematic][selection] = cutflow
-                self.histograms[systematic][selection]["cutflow"] = cutflow.gen_histogram(
-                    name=f"{systematic}_{selection}"
+                self.cutflows[systematic][selection].get_cutflow(
+                    self.filters[systematic][selection]
                 )
+                self.histograms[systematic][selection]["cutflow"] = self.cutflows[systematic][
+                    selection
+                ].gen_histogram(name=f"{systematic}_{selection}")
 
         if do_print:
             self.cutflow_printout()
@@ -436,8 +433,10 @@ class Dataset:
         )
         self.histograms[systematic][name] = dict()
         self.selections[name] = self.filters[systematic][name].get_cuts()
-        self.cutflows[systematic][name] = Cutflow(logger=self.logger)
-        self.cutflows[systematic][name].gen_cutflow(self.filters[systematic][name])
+        self.cutflows[systematic][name] = Cutflow(
+            self.filters[systematic][name].df,
+            logger=self.logger,
+        )
 
         # propagate binnings
         if selection in self.binnings:
@@ -693,10 +692,6 @@ class Dataset:
     def gen_all_histograms(self, do_prints: bool = True) -> None:
         """Generate histograms for all variables and cuts."""
 
-        def count(d):
-            """Count number of subvalues in nested dict"""
-            return sum([count(v) if isinstance(v, dict) else 1 for v in d.values()])
-
         histograms_dict = dict()  # to store outputs
         output_histogram_variables = self.all_vars
         self.logger.info(f"Defining histograms for dataset {self.name}...")
@@ -735,6 +730,11 @@ class Dataset:
                 # Define Histograms
                 # =======================================================
                 for variable_name in output_histogram_variables:
+                    if (sys_name != self.nominal_name) and (
+                        variable_data[variable_name]["tag"] == "truth"
+                    ):
+                        continue
+
                     weight = self._match_weight(variable_name)
                     fill_cols = [variable_name, weight] if weight else [variable_name]
 
@@ -813,7 +813,10 @@ class Dataset:
             # generate histograms
             t = time.time()
             self.logger.info(
-                "Producing %s histograms for %s in %s...", count(th1_ptr_map), sys_name, self.name
+                "Producing %s histograms for %s in %s...",
+                count_nested_values(th1_ptr_map),
+                sys_name,
+                self.name,
             )
 
             histograms_dict[sys_name] = dict()
@@ -823,6 +826,11 @@ class Dataset:
                     # put EFF. sys in their own systematics key
                     if "TAUS_TRUEHADTAU_EFF_" in hist_name:
                         var_name, eff_sys_name = hist_name.split("|")
+
+                        # skip if variable is truth
+                        if variable_data[var_name]["tag"] == "truth":
+                            continue
+
                         if eff_sys_name not in histograms_dict:
                             histograms_dict[eff_sys_name] = dict()
                         if selection not in histograms_dict[eff_sys_name]:
@@ -835,11 +843,10 @@ class Dataset:
             self.logger.info(
                 "Took %.3fs to produce %d histograms over %d run(s).",
                 time.time() - t,
-                count(histograms_dict),
+                count_nested_values(th1_ptr_map),
                 root_sys_df.GetNRuns(),
             )
 
-        self.logger.info("Produced %d histograms.", count(histograms_dict))
         self.histograms = histograms_dict
 
         # gen uncertainties
@@ -859,6 +866,9 @@ class Dataset:
         Returns 0s if not found.
         """
         all_sys = set(get_base_sys_name(s) for s in self.tes_sys_set | self.eff_sys_set)
+        if not all_sys:
+            self.logger.warning("No systematic uncertainty in dataset %s", self.name)
+            return 0, 0
 
         try:
             tot_uncert = ROOT_utils.sum_th1s(
@@ -932,7 +942,7 @@ class Dataset:
         # SYSTEMATICS LOOP FOR INDIVIDUAL SYSTEMATICS
         # ================================================================
         for sys_name in self.eff_sys_set | self.tes_sys_set:
-            if self._skip_sys(sys_name):
+            if match_any(self.skip_sys, sys_name):
                 continue
 
             sel_dict = self.histograms[sys_name]
@@ -985,6 +995,3 @@ class Dataset:
                     ] = pct_uncert
 
         self.logger.info("Done.")
-
-    def _skip_sys(self, s: str) -> bool:
-        return any(re.match(p, s) for p in self.skip_sys)
