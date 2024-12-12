@@ -377,7 +377,7 @@ variable_data: Dict[str, Branch] = {
         "tag": VarTag.RECO,
     },
     "met_phi": {
-        "name": r"$E_\mathrm{T}^\mathrm{miss} \phi$",
+        "name": r"$\phi^\mathrm{miss}$",
         "units": "",
         "tag": VarTag.RECO,
     },
@@ -488,7 +488,7 @@ variable_data: Dict[str, Branch] = {
         "tag": VarTag.RECO,
     },
     "TauPt": {
-        "name": r"Tau $p_\mathrm{T}$",
+        "name": r"$p_\mathrm{T}^\mathrm{had-vis}$",
         "units": "GeV",
         "tag": VarTag.RECO,
     },
@@ -568,7 +568,7 @@ variable_data: Dict[str, Branch] = {
         "tag": VarTag.RECO,
     },
     "MET_phi": {
-        "name": r"$E_\mathrm{T}^\mathrm{miss} \phi$",
+        "name": r"$\phi^\mathrm{miss}$",
         "units": "",
         "tag": VarTag.RECO,
     },
@@ -1052,7 +1052,7 @@ variable_data: Dict[str, Branch] = {
         "tag": VarTag.TRUTH,
     },
     "VisTruthTauPt": {
-        "name": r"Visible truth tau products $p_\mathrm{T}$",
+        "name": r"Truth $p^\mathrm{had-vis}_\mathrm{T}$",
         "units": "GeV",
         "tag": VarTag.TRUTH,
     },
@@ -1067,7 +1067,7 @@ variable_data: Dict[str, Branch] = {
         "tag": VarTag.TRUTH,
     },
     "TruthTauPt_div_MET": {
-        "name": r"Truth $p^\tau_{mathrmT{}/p^\nu_\mathrm{T}$",
+        "name": r"Truth $p^\tau_{mathrm{T}/p^\nu_\mathrm{T}$",
         "units": "",
         "tag": VarTag.TRUTH,
     },
