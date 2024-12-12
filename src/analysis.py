@@ -11,7 +11,6 @@ import matplotlib.pyplot as plt
 import mplhep as hep
 import numpy as np
 from matplotlib import ticker
-from numpy.typing import ArrayLike
 from tabulate import tabulate
 
 from src.dataset import Dataset
@@ -89,7 +88,6 @@ class Analysis:
         regen_histograms: bool = False,
         regen_metadata: bool = False,
         snapshot: bool | dict = False,
-        year: int = 2017,
         **kwargs,
     ):
         """
@@ -139,13 +137,12 @@ class Analysis:
 
         # SET OTHER GLOBAL OPTIONS
         # ============================
-        self.year = year
-        if self.year:
+        if "year" in kwargs:
             try:
-                self.global_lumi = LUMI_YEAR[self.year]
+                self.global_lumi = LUMI_YEAR[kwargs["year"]]
             except KeyError as e:
                 raise KeyError(
-                    f"Unknown data-year: {self.year}. "
+                    f"Unknown data-year: {kwargs['year']}. "
                     f"Known data-years: {list(LUMI_YEAR.keys())}"
                 ) from e
         else:
@@ -366,6 +363,8 @@ class Analysis:
         xlabel: str = "",
         ylabel: str = "",
         title: str = "",
+        hline_at: list[float] | float | None = None,
+        vline_at: list[float] | float | None = None,
         scale_by_bin_width: bool = False,
         stats_box: bool = False,
         x_axlim: tuple[float, float] | None = None,
@@ -408,6 +407,8 @@ class Analysis:
         :param xlabel: x label
         :param ylabel: y label
         :param title: plot title
+        :param hline_at: horizontal line at
+        :param vline_at: vertical line at
         :param scale_by_bin_width: divide histogram bin values by bin width
         :param stats_box: display stats box
         :param x_axlim: x-axis limits. If None matplolib decides
@@ -479,7 +480,7 @@ class Analysis:
                 signal_plot_args[v] = per_hist_vars[v].pop(idx)  # type: ignore
 
         # handle custom data?
-        if not isinstance(plot_as_data, (list, tuple, set)):
+        if not isinstance(plot_as_data, (list, tuple)):
             plot_as_data = [plot_as_data]
         for i, p in enumerate(plot_as_data):
             if (plot_as_data[i] is not None) and isinstance(plot_as_data[i], ROOT.TH1):
@@ -503,6 +504,19 @@ class Analysis:
             fig, ax = plt.subplots()
             ratio_ax = None
 
+        # do lines
+        colours = ["k", "b", "g", "r", "y", "o"]
+        if vline_at:
+            if not hasattr(vline_at, "__iter__"):
+                vline_at = [vline_at]
+            for i, vpos in enumerate(vline_at):
+                ax.axvline(vpos, linestyle="--", linewidth=1.0, c=colours[i])
+        if hline_at:
+            if not hasattr(hline_at, "__iter__"):
+                hline_at = [hline_at]
+            for i, hpos in enumerate(hline_at):
+                ax.axhline(hpos, linestyle="--", linewidth=1.0, c=colours[i])
+
         # STACK PLOT
         # ============================
         if kind == "stack":
@@ -523,6 +537,7 @@ class Analysis:
                 do_syst=do_syst,
                 flow=flow,
                 ratio_axlim=ratio_axlim,
+                scale_by_bin_width=scale_by_bin_width,
                 **kwargs,
             )
             if ratio_plot:
@@ -545,6 +560,10 @@ class Analysis:
                     )
                     errs[0, :] += sys_down
                     errs[1, :] += sys_up
+
+                if scale_by_bin_width:
+                    errs[0, :] /= hist.bin_widths
+                    errs[1, :] /= hist.bin_widths
 
                 hist.plot(
                     ax=ax,
@@ -593,8 +612,8 @@ class Analysis:
         ax.legend(reversed(legend_handles), reversed(legend_labels), **legend_kwargs)
 
         plotting_tools.set_axis_options(
-            per_hist_vars=per_hist_vars,
             ax=ax,
+            per_hist_vars=per_hist_vars,
             ratio_ax=ratio_ax,
             ratio_label=ratio_label,
             scale_by_bin_width=scale_by_bin_width,
@@ -671,6 +690,7 @@ class Analysis:
         suffix: str = "",
         prefix: str = "",
         label_params: dict | None = None,
+        labels: bool = False,
         **kwargs,
     ):
         """2D plot using mplhep"""
@@ -684,15 +704,9 @@ class Analysis:
             selection=selection,
         )
 
-        nbinsx = h.GetNbinsX()
-        nbinsy = h.GetNbinsY()
         bin_edgesx = ROOT_utils.get_th1_bin_edges(h, "x")
         bin_edgesy = ROOT_utils.get_th1_bin_edges(h, "y")
-
-        bin_values = np.empty((nbinsx, nbinsy))
-        for i in range(nbinsx):
-            for j in range(nbinsy):
-                bin_values[i][j] = h.GetBinContent(i + 1, j + 1)
+        bin_values = ROOT_utils.get_th2_bin_values(h)
 
         # plot
         # =========================================================================
@@ -702,8 +716,15 @@ class Analysis:
             xbins=bin_edgesx,
             ybins=bin_edgesy,
             ax=ax,
+            labels=None if not labels else bin_values.astype(int),
+            cbar=not labels,
             **kwargs,
         )
+        if labels:
+            # change the font size for the labels
+            for child in ax.get_children():
+                if isinstance(child, plt.Text):
+                    child.set_fontsize(10)
 
         # axis format
         # =========================================================================
@@ -758,6 +779,7 @@ class Analysis:
         do_stat: bool = False,
         do_syst: bool = False,
         flow: bool = False,
+        scale_by_bin_width: bool = False,
         ratio_axlim: float | tuple[float, float] | None = None,
         **kwargs,
     ) -> None:
@@ -812,6 +834,9 @@ class Analysis:
 
         if do_syst:
             sys_up, sys_down = self.get_full_systematic_uncertainty(per_hist_vars)
+            if scale_by_bin_width:
+                sys_up /= full_stack.bin_widths
+                sys_down /= full_stack.bin_widths
             err_top = err_top + sys_up
             err_bottom = err_bottom - sys_down
             err_label += "+ Sys. "
@@ -875,6 +900,9 @@ class Analysis:
                 err_bottom = err_bottom - (sys_down / all_mc_bin_vals)
                 err_top = err_top + (sys_up / all_mc_bin_vals)
                 err_label += "+ Sys. "
+                if scale_by_bin_width:
+                    sys_up /= full_stack.bin_widths
+                    sys_down /= full_stack.bin_widths
 
             if do_stat or do_syst:
                 ratio_ax.fill_between(
@@ -1006,7 +1034,7 @@ class Analysis:
         val: str | Histogram1D | ROOT.TH1,
         dataset: str | None = None,
         systematic: str | None = None,
-        selection: str | None = None,
+        selection: str = "",
     ) -> Histogram1D:
         """Get Histogram1D object from val argument in plot"""
         if isinstance(val, Histogram1D):
@@ -1347,6 +1375,32 @@ class Analysis:
 
         self.logger.info("Completed fakes estimate")
 
+    def get_response_histogram(
+        self,
+        varname_reco: str,
+        varname_truth: str,
+        dataset: str,
+        selection: str,
+        systematic: str = "T_s1thv_NOMINAL",
+    ) -> ROOT.RooUnfoldResponse:
+        """Get unfolding response histogram from signal resconstruction analysis"""
+
+        response_file = self.paths.output_dir.parent / f"signal_reconstruction/root/{dataset}.root"
+        if not response_file.is_file():
+            raise FileNotFoundError(f"No file found at {response_file}")
+
+        with ROOT.TFile(str(response_file)) as file:
+            hist_reco = file[f"{systematic}/{selection}"].Get(varname_reco)
+            hist_reco.SetDirectory(0)
+
+            hist_truth = file[f"{systematic}/truth_tau"].Get(varname_truth)
+            hist_truth.SetDirectory(0)
+
+            h_response = file[f"{systematic}/{selection}"].Get(f"{varname_reco}_{varname_truth}")
+            h_response.SetDirectory(0)
+
+            return ROOT.RooUnfoldResponse(hist_reco, hist_truth, h_response)
+
     # ===============================
     # ========= PRINTOUTS ===========
     # ===============================
@@ -1478,7 +1532,9 @@ class Analysis:
             f.write(latex_str)
 
     def histogram_printout(
-        self, to_file: Literal["txt", "latex", False] = False, to_dir: Path | None = None
+        self,
+        to_file: Literal["txt", "latex", False] = False,
+        to_dir: Path | None = None,
     ) -> None:
         """Printout of histogram metadata"""
         rows = []
@@ -1501,3 +1557,16 @@ class Analysis:
                 with open(filepath, "w") as f:
                     f.write(tabulate(rows, headers=header, tablefmt="latex_raw"))
                     self.logger.info(f"Saved LaTeX histogram table to {filepath}")
+
+    def save_hists(self, filename: str | Path | None = None) -> None:
+        """Save histograms to file"""
+
+        if filename is None:
+            filename = self.name
+        path = self.paths.root_dir / f"{Path(filename)}.root"
+
+        with ROOT.TFile(str(path), "UPDATE") as file:
+            for hist in self.histograms.values():
+                file.WriteObject(hist, hist.GetName(), "OVERWRITE")
+
+        self.logger.info("Saved %s histograms to file %s", len(self.histograms), path)
