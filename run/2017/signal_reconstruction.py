@@ -29,6 +29,12 @@ datasets: Dict[str, Dict] = {
 
 # CUTS & SELECTIONS
 # ========================================================================
+pass_reco = Cut(
+    r"Pass preselection",
+    r"(passReco == 1) && (TauBaselineWP == 1) && (abs(TauCharge) == 1) && passMetTrigger"
+    r"&& ((MatchedTruthParticle_isTau + MatchedTruthParticle_isElectron + MatchedTruthParticle_isMuon + MatchedTruthParticle_isPhoton) <= 1)"
+    r"&& ((TauNCoreTracks == 1) || (TauNCoreTracks == 3))",
+)
 pass_matched_reco = Cut(
     r"Pass preselection",
     r"(passReco == 1) && "
@@ -93,7 +99,7 @@ pass_SR_reco = Cut(
 )
 pass_SR_truth = Cut(
     r"Pass SR Truth",
-    r"(VisTruthTauPt > 170) && (TruthMTW > 150) && (TruthNeutrinoPt > 150)"
+    r"(VisTruthTauPt > 170) && (TruthMTW > 350) && (TruthNeutrinoPt > 170)"
     r"&& ((TruthTau_nChargedTracks == 1) || (TruthTau_nChargedTracks == 3))",
 )
 pass_SR = pass_SR_truth
@@ -102,7 +108,13 @@ truth_cuts = [
     pass_SR,
     truth_tau,
 ]
+reco_cuts = [
+    pass_reco,
+    pass_SR_reco,
+]
 selections: dict[str, list[Cut]] = {
+    # TRUTH RECO
+    # ================================================
     "truth_tau": truth_cuts,
     "1prong_truth_tau": truth_cuts
     + [
@@ -132,66 +144,54 @@ selections: dict[str, list[Cut]] = {
         truth_tau_3prong,
         pass_met_trigger,
     ],
-    "vl_reco_tau": truth_cuts
-    + [
-        pass_matched_reco,
-    ],
-    "vl_1prong_reco_tau": truth_cuts
-    + [
-        pass_matched_reco,
-        reco_tau_1prong,
-    ],
-    "vl_3prong_reco_tau": truth_cuts
-    + [
-        pass_matched_reco,
-        reco_tau_3prong,
-    ],
-    "loose_reco_tau": truth_cuts
+    # MATCHED TRUTH AND RECO
+    # ================================================
+    "loose_matched_reco_tau": truth_cuts
     + [
         pass_matched_reco,
         pass_loose,
     ],
-    "loose_1prong_reco_tau": truth_cuts
+    "loose_1prong_matched_reco_tau": truth_cuts
     + [
         pass_matched_reco,
         pass_loose,
         reco_tau_1prong,
     ],
-    "loose_3prong_reco_tau": truth_cuts
+    "loose_3prong_matched_reco_tau": truth_cuts
     + [
         pass_matched_reco,
         pass_loose,
         reco_tau_3prong,
     ],
-    "medium_reco_tau": truth_cuts
+    "medium_matched_reco_tau": truth_cuts
     + [
         pass_matched_reco,
         pass_medium,
     ],
-    "medium_1prong_reco_tau": truth_cuts
+    "medium_1prong_matched_reco_tau": truth_cuts
     + [
         pass_matched_reco,
         pass_medium,
         reco_tau_1prong,
     ],
-    "medium_3prong_reco_tau": truth_cuts
+    "medium_3prong_matched_reco_tau": truth_cuts
     + [
         pass_matched_reco,
         pass_medium,
         reco_tau_3prong,
     ],
-    "tight_reco_tau": truth_cuts
+    "tight_matched_reco_tau": truth_cuts
     + [
         pass_matched_reco,
         pass_tight,
     ],
-    "tight_1prong_reco_tau": truth_cuts
+    "tight_1prong_matched_reco_tau": truth_cuts
     + [
         pass_matched_reco,
         pass_tight,
         reco_tau_1prong,
     ],
-    "tight_3prong_reco_tau": truth_cuts
+    "tight_3prong_matched_reco_tau": truth_cuts
     + [
         pass_matched_reco,
         pass_tight,
@@ -249,6 +249,8 @@ hists_2d = {
     "TauEta_TruthTauEta": Hist2dOpts("TauEta", "TruthTauEta"),
     "TauEta_VisTruthTauEta": Hist2dOpts("TauEta", "VisTruthTauEta"),
     "MTW_TauPt": Hist2dOpts("MTW", "TauPt"),
+    "MTW_TruthMTW": Hist2dOpts("MTW", "TruthMTW"),
+    "TauPhi_TruthTauPhi": Hist2dOpts("TauPhi", "TruthTauPhi"),
     "MET_met_TruthNeutrinoPt": Hist2dOpts("MET_met", "TruthNeutrinoPt"),
 }
 for v in reco_measurement_vars:
@@ -263,17 +265,19 @@ for v in reco_measurement_vars:
         weight="reco_weight",
     )
 NOMINAL_NAME = "T_s1thv_NOMINAL"
+mtw_bins = np.array([350, 375, 400, 430, 465, 500, 550, 600, 700, 800, 1000, 2000], dtype="double")
+taupt_bins = np.array([170, 200, 250, 300, 350, 425, 500, 600, 750, 900, 1000], dtype="double")
 
 
 def run_analysis() -> Analysis:
     """Run analysis"""
 
-    nedges = 21
+    nedges = 16
     return Analysis(
         datasets,
         year=2017,
-        # rerun=True,
-        # regen_histograms=True,
+        rerun=True,
+        regen_histograms=True,
         do_systematics=False,
         # regen_metadata=True,
         ttree=NOMINAL_NAME,
@@ -288,22 +292,22 @@ def run_analysis() -> Analysis:
         do_weights=False,
         binnings={
             "": {
-                "MTW": np.geomspace(150, 1000, nedges),
-                "TruthMTW": np.geomspace(150, 1000, nedges),
-                "TauPt": np.geomspace(170, 1000, nedges),
-                "TruthTauPt": np.geomspace(170, 1000, nedges),
-                "VisTruthTauPt": np.geomspace(170, 1000, nedges),
+                "MTW": mtw_bins,
+                "TruthMTW": mtw_bins,
+                "TauPt": taupt_bins,
+                "TruthTauPt": taupt_bins,
+                "VisTruthTauPt": taupt_bins,
                 "TruthNeutrinoPt": np.geomspace(170, 1000, nedges),
                 "TruthTau_nChargedTracks": np.array([0.0, 1.0, 2.0, 3.0, 4.0]),
                 "TruthTau_nNeutralTracks": np.array([0.0, 1.0, 2.0, 3.0, 4.0, 5.0]),
                 "TauEta": np.linspace(-2.5, 2.5, nedges),
-                "TauPhi": np.linspace(-2.5, 2.5, nedges),
+                "TauPhi": np.linspace(-np.pi, np.pi, nedges),
                 "TruthTauEta": np.linspace(-2.5, 2.5, nedges),
                 "TruthTauPhi": np.linspace(-2.5, 2.5, nedges),
                 "VisTruthTauEta": np.linspace(-2.5, 2.5, nedges),
                 "VisTruthTauPhi": np.linspace(-2.5, 2.5, nedges),
                 "TruthNeutrinoEta": np.linspace(-2.5, 2.5, nedges),
-                "MET_met": np.geomspace(150, 1000, nedges),
+                "MET_met": np.geomspace(170, 1000, nedges),
                 "MET_eta": np.linspace(-2.5, 2.5, nedges),
                 "MET_phi": np.linspace(-2.5, 2.5, nedges),
                 "DeltaPhi_tau_met": np.linspace(0, 2 * np.pi, nedges),
@@ -331,7 +335,7 @@ if __name__ == "__main__":
     for dataset in analysis:
         dataset.histogram_printout(to_file="txt", to_dir=analysis.paths.latex_dir)
 
-    working_points = ("vl", "loose", "medium", "tight")
+    working_points = ("loose", "medium", "tight")
     working_prongs = ("", "1prong_", "3prong_")
 
     # CALCULATE EFFICIENCIES
@@ -340,7 +344,9 @@ if __name__ == "__main__":
         wp: {
             nprong: {
                 var: bayes_divide(
-                    analysis.get_hist(var, "wtaunu", NOMINAL_NAME, f"{wp}_{nprong}reco_tau"),
+                    analysis.get_hist(
+                        var, "wtaunu", NOMINAL_NAME, f"{wp}_{nprong}matched_reco_tau"
+                    ),
                     analysis.get_hist(var, "wtaunu", NOMINAL_NAME, f"{nprong}truth_tau"),
                 )
                 for var in measurement_vars
@@ -420,7 +426,7 @@ if __name__ == "__main__":
             # DIRECT FRACTIONS
             # =======================================================================
             analysis.paths.plot_dir = base_plotting_dir / "efficiency/full" / wp / nprong
-            args_eff["selection"] = [f"{nprong}truth_tau", f"{wp}_{nprong}reco_tau"]
+            args_eff["selection"] = [f"{nprong}truth_tau", f"{wp}_{nprong}matched_reco_tau"]
             args_eff["ylabel"] = f"Events"
             for v in truth_measurement_vars:
                 if v in measurement_vars_mass:
@@ -442,7 +448,7 @@ if __name__ == "__main__":
             # 2D RESOLUTION PLOTS
             # ========================================================================
             analysis.paths.plot_dir = base_plotting_dir / "resolution/full"
-            selection = f"{wp}_{nprong}reco_tau"
+            selection = f"{wp}_{nprong}matched_reco_tau"
             # profiles
             for v in reco_measurement_vars:
                 analysis.plot_2d(
@@ -572,7 +578,7 @@ if __name__ == "__main__":
 
             analysis.plot(
                 val=[recon_efficiencies[wp][nprong][v] for wp in working_points],
-                label=["Very Loose", "Loose", "Medium", "Tight"],
+                label=["Loose", "Medium", "Tight"],
                 **args_eff,
                 filename=f"{v}_{nprong}_efficiency_wp_compare.png",
             )
@@ -580,7 +586,7 @@ if __name__ == "__main__":
         # RESOLUTION
         # ========================================================================
         analysis.paths.plot_dir = base_plotting_dir / "resolution" / nprong
-        selection = [f"{wp}_{nprong}reco_tau" for wp in working_points]
+        selection = [f"{wp}_{nprong}matched_reco_tau" for wp in working_points]
         # profiles
         for v in reco_measurement_vars:
             if v in measurement_vars_mass:
@@ -590,7 +596,7 @@ if __name__ == "__main__":
 
             analysis.plot(
                 val=f"{v}_TauPt_res",
-                label=["Very Loose", "Loose", "Medium", "Tight"],
+                label=["Loose", "Medium", "Tight"],
                 selection=selection,
                 **args_res,
                 logy=False,
@@ -601,7 +607,7 @@ if __name__ == "__main__":
                 dataset="wtaunu",
                 systematic=NOMINAL_NAME,
                 selection=selection,
-                label=["Very Loose", "Loose", "Medium", "Tight"],
+                label=["Loose", "Medium", "Tight"],
                 logx=v in measurement_vars_mass,
                 logy=False,
                 filename=f"{v}_{nprong}wp.png",
@@ -611,7 +617,7 @@ if __name__ == "__main__":
             dataset="wtaunu",
             systematic=NOMINAL_NAME,
             selection=selection,
-            label=["Very Loose", "Loose", "Medium", "Tight"],
+            label=["Loose", "Medium", "Tight"],
             logx=False,
             logy=False,
             filename=f"TauPt_res_{nprong}wp.png",
@@ -621,7 +627,7 @@ if __name__ == "__main__":
             dataset="wtaunu",
             systematic=NOMINAL_NAME,
             selection=selection,
-            label=["Very Loose", "Loose", "Medium", "Tight"],
+            label=["Loose", "Medium", "Tight"],
             logx=False,
             logy=False,
             filename=f"TauPt_res_frac_{nprong}wp.png",
@@ -650,7 +656,7 @@ if __name__ == "__main__":
         # RESOLUTION
         # ========================================================================
         analysis.paths.plot_dir = base_plotting_dir / "resolution" / wp
-        selection = [f"{wp}_{nprong}_reco_tau" for nprong in ("1prong", "3prong")]
+        selection = [f"{wp}_{nprong}_matched_reco_tau" for nprong in ("1prong", "3prong")]
         # profiles
         for v in reco_measurement_vars:
             if v in measurement_vars_mass:
@@ -720,7 +726,7 @@ if __name__ == "__main__":
         for nprong in ("", "1prong_", "3prong_"):
             pt = (
                 analysis["wtaunu"]
-                .filters[NOMINAL_NAME][f"{wp}_{nprong}reco_tau"]
+                .filters[NOMINAL_NAME][f"{wp}_{nprong}matched_reco_tau"]
                 .df.AsNumpy(["TauPt_res", "TauPt_res_frac"])
             )
             mean_frac = abs(pt["TauPt_res_frac"]).mean()

@@ -82,7 +82,7 @@ if __name__ == "__main__":
     # file = "test_data/user.kghorban.40997791._000001.histograms.root"
     # copy_met_linear(file)
 
-    files_path = "/data/DTA_outputs/MC16a/**/*.root"
+    files_path = "/data/DTA_outputs/MC16e/**/*.root"
     n_workers = mp.cpu_count() // 2
     files = [f for f in multi_glob(files_path) if "user.kghorban.data" not in f]
     with mp.Pool(n_workers) as pool:
