@@ -100,8 +100,7 @@ class DatasetBuilder:
             selections = {}
         if not isinstance(self.ttree, list):
             self.ttree = {self.ttree}
-        if (extract_vars is not None) and (not isinstance(extract_vars, set)):
-            extract_vars = set(extract_vars)
+        extract_vars = set(extract_vars or [])
         if self.do_systematics and self.is_data:
             self.logger.warning("No systematic uncertainties for data!")
             self.do_systematics = False
@@ -134,6 +133,10 @@ class DatasetBuilder:
         self._vars_to_calc |= {var for var in all_vars if var in derived_vars}
         self._vars_to_extract |= {var for var in all_vars if var not in derived_vars}
 
+        # add dependencies
+        for derived_var in self._vars_to_calc:
+            self._vars_to_extract |= set(derived_vars[derived_var]["var_args"])
+
         # define sets of systematics
         systematic_tree_sets = {self.nominal_tree_name: self.ttree}
         if self.do_systematics:
@@ -152,6 +155,7 @@ class DatasetBuilder:
         self.logger.debug("Input ROOT file(s):  %s", sample_paths)
         self.logger.debug("Hard cut(s) applied: %s", self.hard_cut)
         self.logger.debug("Defined subsamples:\n\t- %s", "\n\t- ".join(self._subsamples))
+        self.logger.debug("Luminosity %s", self.lumi)
         self.logger.debug(
             "Defined systematics:\n\t- %s", "\n\t- ".join(systematic_tree_sets.keys())
         )
@@ -301,6 +305,7 @@ class DatasetBuilder:
                             is_invalid = True
                             break
                         raise ValueError(f"Missing argument column for '{derived_var}': '{arg}'")
+                    extract_variables.add(arg)
 
                 if not is_invalid:
                     func_str = f"{function}({','.join(args)})"
