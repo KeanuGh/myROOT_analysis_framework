@@ -384,11 +384,11 @@ class Cutflow:
             try:
                 eff = 100 * npass / hist.GetBinContent(i)
             except ZeroDivisionError:
-                eff = np.NAN
+                eff = np.nan
             try:
                 ceff = 100 * npass / hist.GetBinContent(1)
             except ZeroDivisionError:
-                ceff = np.NAN
+                ceff = np.nan
 
             cutflow.append(CutflowItem(npass=npass, eff=eff, ceff=ceff, cut=cut))
 
