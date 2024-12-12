@@ -149,8 +149,8 @@ def get_axis(
 
 
 def set_axis_options(
-    per_hist_vars: PlotOpts,
     ax: plt.Axes,
+    per_hist_vars: PlotOpts | None = None,
     ratio_ax: plt.Axes | None = None,
     title: str = "",
     ratio_label: str = "",
@@ -162,7 +162,7 @@ def set_axis_options(
     x_axlim: tuple[float, float] | None = None,
     y_axlim: tuple[float, float] | None = None,
     label_params: dict | None = None,
-    font_size: int = 12,
+    font_size: int = 16,
 ) -> None:
     """Set axis options for plot"""
 
@@ -173,21 +173,23 @@ def set_axis_options(
 
     # get axis labels from variable names if possible
     # it'll error out when plotting if the histogram edges aren't equal
-    bin_range = (
-        per_hist_vars["hists"][0].bin_edges[0],
-        per_hist_vars["hists"][0].bin_edges[-1],
-    )
-    if (
-        all(isinstance(val, str) for val in per_hist_vars["vals"])
-        and len(val_name := set(per_hist_vars["vals"])) == 1
-    ):
-        val_name = next(iter(val_name))
-        if val_name in variable_data:
-            _xlabel, _ylabel = get_axis_labels(val_name, diff_xs=scale_by_bin_width)
-            if not xlabel:
-                xlabel = _xlabel
-            if not ylabel:
-                ylabel = _ylabel
+    if per_hist_vars:
+        bin_range = (
+            per_hist_vars["hists"][0].bin_edges[0],
+            per_hist_vars["hists"][0].bin_edges[-1],
+        )
+        if (
+            all(isinstance(val, str) for val in per_hist_vars["vals"])
+            and len(val_name := set(per_hist_vars["vals"])) == 1
+        ):
+            val_name = next(iter(val_name))
+            if val_name in variable_data:
+                _xlabel, _ylabel = get_axis_labels(val_name, diff_xs=scale_by_bin_width)
+                if not xlabel:
+                    xlabel = _xlabel
+                if not ylabel:
+                    ylabel = _ylabel
+        ax.set_xlim(*bin_range)
 
     # Main plot yaxis options
     if y_axlim:
@@ -204,11 +206,9 @@ def set_axis_options(
         ax.set_ylabel(ylabel, fontsize=font_size)
 
     if x_axlim:
-        ax.set_xlim(*x_axlim, fontsize=font_size)
-    else:
-        ax.set_xlim(*bin_range)
+        ax.set_xlim(*x_axlim)
 
-    ax.tick_params(axis="both", labelsize=font_size)
+    ax.tick_params(axis="both", which="both", labelsize=font_size)
     ax.get_xaxis().get_offset_text().set_fontsize(font_size)
     ax.get_yaxis().get_offset_text().set_fontsize(font_size)
 
@@ -218,6 +218,7 @@ def set_axis_options(
         axis_.semilogx()
         axis_.xaxis.set_minor_formatter(ticker.LogFormatter())
         axis_.xaxis.set_major_formatter(ticker.LogFormatter())
+        axis_.tick_params(axis="both", which="both", labelsize=font_size)
     if xlabel:
         axis_.set_xlabel(xlabel, fontsize=font_size)
 
@@ -225,14 +226,12 @@ def set_axis_options(
         # if len(per_hist_vars["hists"]) > 2:  # don't show legend if there's only two plots
         #     ratio_ax.legend(fontsize=10, loc=1)
         ratio_ax.set_ylabel(ratio_label, fontsize=font_size)
-        ratio_ax.tick_params(axis="both", labelsize=font_size)
+        ratio_ax.tick_params(axis="both", which="both", labelsize=font_size)
         ratio_ax.get_xaxis().get_offset_text().set_fontsize(font_size)
         ratio_ax.get_yaxis().get_offset_text().set_fontsize(font_size)
 
         if x_axlim:
             ratio_ax.set_xlim(*x_axlim)
-        else:
-            ratio_ax.set_xlim(*bin_range)
 
         # i hate matplotlib i hate matplotlib i hate matplotlib i hate matplotlib i hate maplotlib i
         if logx:
@@ -243,7 +242,6 @@ def set_axis_options(
             ax.xaxis.set_major_formatter(
                 ticker.LogFormatter(labelOnlyBase=True, minor_thresholds=(0, 0))
             )
-            ax.tick_params(axis="both", labelsize=font_size)
         ax.xaxis.set_ticklabels([])
 
 
@@ -261,56 +259,3 @@ def set_hep_label(ax: plt.Axes, title: str = "", **label_params) -> None:
     if label_params:
         label_args.update(label_params)
     hep.atlas.label(**label_args)
-
-
-# ===============================
-# ==== BUILDING HISTOGRAMS ======
-# ===============================
-def histplot_2d(
-    var_x: pd.Series,
-    var_y: pd.Series,
-    xbins: Sequence[float | int],
-    ybins: Sequence[float | int],
-    weights: pd.Series,
-    ax: plt.axes,
-    fig: plt.figure,
-    n_threads: int = -1,
-    is_z_log: bool = True,
-    is_square: bool = True,
-) -> bh.Histogram:
-    """
-    Plots and prints out 2d histogram. Does not support axis transforms (yet!)
-
-    :param var_x: pandas series of var to plot on x-axis
-    :param var_y: pandas series of var to plot on y-axis
-    :param xbins: tuple of bins in x (n_bins, start, stop) or list of bin edges
-    :param ybins: tuple of bins in y (n_bins, start, stop) or list of bin edges
-    :param weights: series of weights to apply to axes
-    :param ax: axis to plot on
-    :param fig: figure to plot on (for colourbar)
-    :param n_threads: number of threads for filling
-    :param is_z_log: whether z-axis should be scaled logarithmically
-    :param is_square: whether to set square aspect ratio
-    :return: histogram
-    """
-    # setup and fill histogram
-    hist_2d = bh.Histogram(get_axis(xbins), get_axis(ybins))
-    hist_2d.fill(var_x, var_y, weight=weights, threads=n_threads)
-
-    if is_z_log:
-        norm = LogNorm()
-    else:
-        norm = None
-
-    # setup mesh differently depending on bh storage
-    if hasattr(hist_2d.view(), "value"):
-        mesh = ax.pcolormesh(*hist_2d.axes.edges.T, hist_2d.view().value.T, norm=norm)
-    else:
-        mesh = ax.pcolormesh(*hist_2d.axes.edges.T, hist_2d.view().T, norm=norm)
-
-    fig.colorbar(mesh, ax=ax, fraction=0.046, pad=0.04)
-
-    if is_square:  # square aspect ratio
-        ax.set_aspect(1 / ax.get_data_ratio())
-
-    return hist_2d
