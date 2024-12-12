@@ -26,6 +26,9 @@ def load_ROOT_settings(set_batch: bool = True, th1_dir: bool = False, optstat: i
     ROOT.gSystem.Load(func_file)
     ROOT.gInterpreter.ProcessLine(f'#include "{func_file}"')
 
+    # load RooUnfold (if it exists)
+    ROOT.gSystem.Load("~/Programs/RooUnfold/build/libRooUnfold.so")
+
 
 # this dictionary decides which ROOT constructor needs to be called based on hist type and dimension
 # call it with TH1_constructor[type][n_dims](name, title, *n_bins, *bin_edges) where 'type' is in {'F','D','I','C','S'}
@@ -286,3 +289,19 @@ def sum_th1s(*h: ROOT.TH1) -> ROOT.TH1 | None:
         hist_out.Add(hist_to_sum)
 
     return hist_out
+
+
+def get_th2_bin_values(h: ROOT.TH2, flow: bool = False) -> np.typing.NDArray[float]:
+    """Return bin contents for TH2 object hist"""
+    nbinsx = h.GetNbinsX()
+    nbinsy = h.GetNbinsY()
+    if flow:
+        nbinsx += 2
+        nbinsy += 2
+
+    init_bin = 0 if flow else 1
+    bin_values = np.empty((nbinsx, nbinsy))
+    for i in range(nbinsx):
+        for j in range(nbinsy):
+            bin_values[i][j] = h.GetBinContent(i + init_bin, j + init_bin)
+    return bin_values
