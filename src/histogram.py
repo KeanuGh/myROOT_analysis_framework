@@ -378,7 +378,7 @@ class Histogram1D(bh.Histogram, family=None):
         return self.axes[0].extent
 
     @property
-    def bin_widths(self) -> np.typing.NDArray[1, float]:
+    def bin_widths(self) -> np.typing.NDArray[float]:
         """get bin widths"""
         return self.axes[0].widths
 
@@ -388,12 +388,12 @@ class Histogram1D(bh.Histogram, family=None):
         return self.bin_edges[-1] - self.bin_edges[0]  # type: ignore
 
     @property
-    def bin_edges(self) -> np.typing.NDArray[1, float]:
+    def bin_edges(self) -> np.typing.NDArray[float]:
         """get bin edges"""
         return self.axes[0].edges
 
     @property
-    def bin_centres(self) -> np.typing.NDArray[1, float]:
+    def bin_centres(self) -> np.typing.NDArray[float]:
         """get bin centres"""
         return self.axes[0].centers
 
@@ -406,7 +406,7 @@ class Histogram1D(bh.Histogram, family=None):
         """get effective number of entries"""
         return self.bin_sum(flow) * self.bin_sum(flow) / sum(self.sumw2(flow))  # type: ignore
 
-    def sumw2(self, flow: bool = False) -> np.typing.NDArray[1, float]:
+    def sumw2(self, flow: bool = False) -> np.typing.NDArray[float]:
         """get squared sum of weights"""
         return self.view(flow).variance  # type: ignore
 
@@ -414,20 +414,20 @@ class Histogram1D(bh.Histogram, family=None):
         """Get ROOT error of bin"""
         return self.TH1.GetBinError(idx + 1)
 
-    def error(self, flow: bool = False) -> np.typing.NDArray[1, float]:
+    def error(self, flow: bool = False) -> np.typing.NDArray[float]:
         """get ROOT error"""
         return np.array(ROOT_utils.get_th1_bin_errors(self.TH1, flow))
 
-    def root_sumw2(self, flow: bool = False) -> np.typing.NDArray[1, float]:
+    def root_sumw2(self, flow: bool = False) -> np.typing.NDArray[float]:
         """get squared sum of weights"""
         return np.sqrt(self.sumw2(flow))
 
-    def bin_values(self, flow: bool = False) -> np.typing.NDArray[1, float]:
+    def bin_values(self, flow: bool = False) -> np.typing.NDArray[float]:
         """get bin values"""
         return self.values(flow)
 
     @property
-    def areas(self) -> np.typing.NDArray[1, float]:
+    def areas(self) -> np.typing.NDArray[float]:
         """get bin areas"""
         return self.bin_values() * self.bin_widths  # type: ignore
 
@@ -706,7 +706,7 @@ class Histogram1D(bh.Histogram, family=None):
     def plot_ratio(
         self,
         other: Histogram1D,
-        ax: plt.Axes = None,
+        ax: plt.Axes | None = None,
         yerr: ArrayLike | bool | str | None = None,
         normalise: bool = False,
         label: str | None = None,
