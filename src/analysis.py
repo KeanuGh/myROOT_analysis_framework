@@ -151,33 +151,34 @@ class Analysis:
 
         # HANDLE METADATA
         # ============================
-        self.metadata = DatasetMetadata(logger=self.logger)
-        dsid_metadata_cache = output_dir / "dsid_meta_cache.json"
+        if data_dict:
+            self.metadata = DatasetMetadata(logger=self.logger)
+            dsid_metadata_cache = output_dir / "dsid_meta_cache.json"
 
-        if (not dsid_metadata_cache.is_file()) or regen_metadata:
-            # fetch and save metadata
-            self.metadata.fetch_metadata(datasets=data_dict, ttree=kwargs.get("ttree"))
-            self.metadata.save_metadata(dsid_metadata_cache)
-            self.logger.debug("Saved metadata cache in %s", dsid_metadata_cache)
+            if (not dsid_metadata_cache.is_file()) or regen_metadata:
+                # fetch and save metadata
+                self.metadata.fetch_metadata(datasets=data_dict, ttree=kwargs.get("ttree"))
+                self.metadata.save_metadata(dsid_metadata_cache)
+                self.logger.debug("Saved metadata cache in %s", dsid_metadata_cache)
 
-        else:
-            # load metadata
-            self.metadata.read_metadata(dsid_metadata_cache)
-            self.logger.debug("Loaded metadata cache from %s", dsid_metadata_cache)
+            else:
+                # load metadata
+                self.metadata.read_metadata(dsid_metadata_cache)
+                self.logger.debug("Loaded metadata cache from %s", dsid_metadata_cache)
 
-        # create c++ maps for calculation of weights in datasets
-        sumws = [(dsid, meta.sumw) for (dsid, meta) in self.metadata]
-        pmgfs = [
-            (dsid, meta.cross_section * meta.kfactor * meta.filter_eff)
-            for (dsid, meta) in self.metadata
-        ]
-        ROOT.gInterpreter.Declare(
-            f"""
-                std::map<int, float> dsid_sumw{{{','.join(f'{{{dsid}, {sumw}}}' for (dsid, sumw) in sumws)}}};
-                std::map<int, float> dsid_pmgf{{{','.join(f'{{{dsid}, {pmgf}}}' for (dsid, pmgf) in pmgfs)}}};
-            """
-        )
-        self.logger.debug("Declared metadata maps in ROOT")
+            # create c++ maps for calculation of weights in datasets
+            sumws = [(dsid, meta.sumw) for (dsid, meta) in self.metadata]
+            pmgfs = [
+                (dsid, meta.cross_section * meta.kfactor * meta.filter_eff)
+                for (dsid, meta) in self.metadata
+            ]
+            ROOT.gInterpreter.Declare(
+                f"""
+                    std::map<int, float> dsid_sumw{{{','.join(f'{{{dsid}, {sumw}}}' for (dsid, sumw) in sumws)}}};
+                    std::map<int, float> dsid_pmgf{{{','.join(f'{{{dsid}, {pmgf}}}' for (dsid, pmgf) in pmgfs)}}};
+                """
+            )
+            self.logger.debug("Declared metadata maps in ROOT")
 
         # BUILD DATASETS
         # ===============================
@@ -250,7 +251,7 @@ class Analysis:
                 "binnings",
                 "profiles",
                 "hists_2d",
-                "do_weights",
+                "do_unweighted",
                 "systematics_for_selection",
             ]:
                 if manual_setting in args:
@@ -356,6 +357,11 @@ class Analysis:
         plot_as_data: Histogram1D | ROOT.TH1 | list[Histogram1D | ROOT.TH1] | None = None,
         data_label: str | list[str] = "data",
         data_colour: str | list[str] = "k",
+        uncert: Histogram1D
+        | ROOT.TH1
+        | np.ndarray
+        | None
+        | Sequence[Histogram1D | ROOT.TH1 | np.ndarray | None] = None,
         do_stat: bool = True,
         do_syst: bool = False,
         logx: bool = False,
@@ -375,7 +381,7 @@ class Analysis:
         ratio_fit: bool = False,
         ratio_axlim: float | tuple[float, float] | None = None,
         ratio_label: str = "Ratio",
-        ratio_err: str | None = None,
+        ratio_err: str | Sequence = None,
         filename: str | Path | None = None,
         sort: bool = True,
         kind: str = "overlay",
@@ -400,6 +406,7 @@ class Analysis:
         :param plot_as_data: histogram to be used as the "data" overlay in a stack plot
         :param data_label: label to use for "Data" overlay in stack plot
         :param data_colour: colour to use for "Data" overlay in stack plot
+        :param uncert: absolute uncertainty to apply to histogram(s). Bypasses do_stat and do_syst
         :param do_stat: include statistical uncertainties in error bars
         :param do_syst: include systematic uncertainties in error bars
         :param logx: whether log scale x-axis
@@ -434,7 +441,6 @@ class Analysis:
         # check options
         _allowed_options: dict[str, set[str]] = {
             "kind": {"stack", "overlay"},
-            "ratio_err": {"sumw2", "binom", "carry", None, True, False},
         }
         _opt_err_msg = "Valid options for '{}' are: {}. Got '{}'."
         _plot_vars = locals()
@@ -449,6 +455,7 @@ class Analysis:
                 "datasets": copy.copy(dataset),
                 "systematics": copy.copy(systematic),
                 "selections": copy.copy(selection),
+                "uncert": copy.copy(uncert),
                 "labels": copy.copy(label),
                 "colours": copy.copy(colour),
                 "linestyles": copy.copy(linestyle),
@@ -459,7 +466,6 @@ class Analysis:
 
         # remove data & signal histogram if stacking, so it can be handled separately
         data_plot_args = {}
-        signal_plot_args = {}
         if (
             self.data_sample
             and (kind == "stack")
@@ -470,14 +476,6 @@ class Analysis:
             for v in per_hist_vars.keys():
                 data_plot_args[v] = per_hist_vars[v].pop(idx)  # type: ignore
             plot_as_data = data_plot_args["hists"]
-        if (
-            self.signal_sample
-            and (kind == "stack")
-            and (self.signal_sample in per_hist_vars["datasets"])
-        ):
-            idx = per_hist_vars["datasets"].index(self.signal_sample)
-            for v in per_hist_vars:
-                signal_plot_args[v] = per_hist_vars[v].pop(idx)  # type: ignore
 
         # handle custom data?
         if not isinstance(plot_as_data, (list, tuple)):
@@ -505,7 +503,7 @@ class Analysis:
             ratio_ax = None
 
         # do lines
-        colours = ["k", "b", "g", "r", "y", "o"]
+        colours = ["k", "r", "b", "g", "y", "o"]
         if vline_at:
             if not hasattr(vline_at, "__iter__"):
                 vline_at = [vline_at]
@@ -524,7 +522,6 @@ class Analysis:
                 ax=ax,
                 ratio_ax=ratio_ax,
                 per_hist_vars=per_hist_vars,
-                signal_hist=signal_plot_args["hists"] if signal_plot_args else None,
                 data_hist=plot_as_data
                 if plot_as_data
                 else [data_plot_args["hists"]]
@@ -549,6 +546,9 @@ class Analysis:
             for i, hist in enumerate(per_hist_vars["hists"]):
                 # do errors (if necessary
                 errs = np.zeros((2, len(hist.bin_values())))
+                errs[0, :] += per_hist_vars["uncert"][i]
+                errs[1, :] += per_hist_vars["uncert"][i]
+
                 if do_stat:
                     errs[0, :] += hist.error() / 2
                     errs[1, :] += hist.error() / 2
@@ -599,12 +599,7 @@ class Analysis:
         # AXIS OPTIONS SETTING
         # ============================
         # legend: limit to 4 rows and reverse order (so more important samples go in front)
-        ncols = (
-            len(per_hist_vars["hists"])
-            + bool(do_stat + do_syst)
-            + bool(data_plot_args)
-            + bool(signal_plot_args)
-        )
+        ncols = len(per_hist_vars["hists"]) + bool(do_stat + do_syst) + bool(data_plot_args)
         ncols = max(ncols // 4, 1)  # need at least one column!
         legend_kwargs = {"ncols": ncols, "loc": "upper right", "fontsize": 10}
         legend_kwargs.update(legend_params if legend_params is not None else {})  # allow overwrite
@@ -671,7 +666,7 @@ class Analysis:
             filepath = self.paths.plot_dir / filename
 
         fig.savefig(filepath, bbox_inches="tight")
-        self.logger.info(f"Saved plot to {filepath}")
+        self.logger.info(f"Saved plot to {filepath.relative_to(self.paths.output_dir)}")
         plt.close(fig)
 
     def plot_2d(
@@ -771,7 +766,6 @@ class Analysis:
         ax: plt.Axes,
         per_hist_vars: plotting_tools.PlotOpts,
         ratio_ax: None | plt.Axes = None,
-        signal_hist: Histogram1D | None = None,
         data_hist: Histogram1D | list[Histogram1D] | None = None,
         data_label: str | list[str] = "data",
         data_colour: str | list[str] = "k",
@@ -783,6 +777,14 @@ class Analysis:
         ratio_axlim: float | tuple[float, float] | None = None,
         **kwargs,
     ) -> None:
+        # separate signal just for dealing with errors
+        per_hist_vars_errs = deepcopy(per_hist_vars)
+        signal_plot_args = {}
+        if self.signal_sample and (self.signal_sample in per_hist_vars_errs["datasets"]):
+            idx = per_hist_vars_errs["datasets"].index(self.signal_sample)
+            for v in per_hist_vars_errs:
+                signal_plot_args[v] = per_hist_vars[v].pop(idx)  # type: ignore
+
         # Sort lists based on integral of histograms so smallest histograms sit at bottom
         if sort:
             for val in per_hist_vars.keys():
@@ -790,6 +792,10 @@ class Analysis:
                     per_hist_vars[val],  # type: ignore
                     key=lambda ls: per_hist_vars["hists"][
                         per_hist_vars[val].index(ls)  # type: ignore
+                    ].integral
+                    if not isinstance(ls, np.ndarray)
+                    else per_hist_vars["hists"][
+                        int(np.argwhere(per_hist_vars[val] == ls)[0][0])  # type: ignore
                     ].integral,
                 )
 
@@ -817,8 +823,8 @@ class Analysis:
         )
 
         # handle signal seperately
-        if signal_hist:
-            full_stack += signal_hist
+        if signal_plot_args:
+            full_stack += signal_plot_args["hists"]
             full_stack.plot(ax=ax, yerr=None, color="r", label=self[self.signal_sample].label)
 
         # handle errors
@@ -826,6 +832,15 @@ class Analysis:
         err_top = full_stack.values()
         err_bottom = full_stack.values()
         err_label = ""
+        if per_hist_vars_errs["uncert"]:
+            for uncert in per_hist_vars_errs["uncert"]:
+                if not uncert.any():
+                    continue
+                if scale_by_bin_width:
+                    uncert /= full_stack.bin_widths
+                err_top += uncert
+                err_bottom -= uncert
+
         if do_stat:
             full_stack_errs = full_stack.error(flow)
             err_top = err_top + (full_stack_errs / 2)
@@ -833,7 +848,7 @@ class Analysis:
             err_label += "Stat. "
 
         if do_syst:
-            sys_up, sys_down = self.get_full_systematic_uncertainty(per_hist_vars)
+            sys_up, sys_down = self.get_full_systematic_uncertainty(per_hist_vars_errs)
             if scale_by_bin_width:
                 sys_up /= full_stack.bin_widths
                 sys_down /= full_stack.bin_widths
@@ -873,42 +888,48 @@ class Analysis:
             return
 
         # handle ratio plot options
-        all_mc_hist = reduce((lambda x, y: x + y), per_hist_vars["hists"] + [signal_hist])
+        all_mc_hist = reduce((lambda x, y: x + y), per_hist_vars_errs["hists"])
         all_mc_bin_vals = all_mc_hist.bin_values()
         if ratio_ax:
             # MC errors
-            err_bottom = np.ones_like(all_mc_bin_vals)
-            err_top = np.ones_like(all_mc_bin_vals)
-            err_label = ""
+            ratio_err_bottom = np.ones_like(all_mc_bin_vals)
+            ratio_err_top = np.ones_like(all_mc_bin_vals)
+            ratio_err_label = ""
 
             # errors
             # --------------------------------------------
+            if per_hist_vars_errs["uncert"]:
+                for uncert in per_hist_vars_errs["uncert"]:
+                    if not any(uncert):
+                        continue
+
+                    ratio_err_top += uncert / all_mc_bin_vals
+                    ratio_err_bottom -= uncert / all_mc_bin_vals
+
             if do_stat:
                 # errors are sum of MC errors
                 stat_err_arr = np.sum(
-                    [hist.error() for hist in per_hist_vars["hists"]] + [signal_hist.error()],
+                    [hist.error() for hist in per_hist_vars_errs["hists"]],
                     axis=0,
                 )
-                err_bottom -= stat_err_arr / (2 * all_mc_bin_vals)
-                err_top += stat_err_arr / (2 * all_mc_bin_vals)
-                err_label += "Stat. "
+                ratio_err_bottom -= stat_err_arr / (2 * all_mc_bin_vals)
+                ratio_err_top += stat_err_arr / (2 * all_mc_bin_vals)
+                ratio_err_label += "Stat. "
 
             # do systematic errors
             if do_syst:
                 if (sys_up is None) or (sys_down is None):
                     raise TypeError("How did this happen??")
-                err_bottom = err_bottom - (sys_down / all_mc_bin_vals)
-                err_top = err_top + (sys_up / all_mc_bin_vals)
-                err_label += "+ Sys. "
-                if scale_by_bin_width:
-                    sys_up /= full_stack.bin_widths
-                    sys_down /= full_stack.bin_widths
+                syst_err = sys_down / all_mc_bin_vals
+                ratio_err_bottom -= syst_err
+                ratio_err_top += syst_err
+                ratio_err_label += "+ Sys. "
 
             if do_stat or do_syst:
                 ratio_ax.fill_between(
-                    x=per_hist_vars["hists"][0].bin_edges,
-                    y1=np.append(err_top, err_top[-1]),
-                    y2=np.append(err_bottom, err_bottom[-1]),
+                    x=per_hist_vars_errs["hists"][0].bin_edges,
+                    y1=np.append(ratio_err_top, ratio_err_top[-1]),
+                    y2=np.append(ratio_err_bottom, ratio_err_bottom[-1]),
                     alpha=0.3,
                     color="grey",
                     hatch="/",
@@ -918,8 +939,8 @@ class Analysis:
 
             # it'll error out when plotting if the histogram edges aren't equal
             bin_range = (
-                per_hist_vars["hists"][0].bin_edges[0],
-                per_hist_vars["hists"][0].bin_edges[-1],
+                per_hist_vars_errs["hists"][0].bin_edges[0],
+                per_hist_vars_errs["hists"][0].bin_edges[-1],
             )
             # add line for MC
             ratio_ax.hlines(
@@ -944,7 +965,7 @@ class Analysis:
                 all_mc_hist.plot_ratio(
                     data_hist,
                     ax=ratio_ax,
-                    yerr=do_stat or do_syst,
+                    yerr=data_hist.error(flow) / data_hist.bin_values(flow),
                     yax_lim=ratio_axlim,
                     colour=data_colour,
                 )
@@ -984,18 +1005,26 @@ class Analysis:
                 var_dict[var] = val * n_plottables
 
         # check variables individually
-        hists = []
+        var_dict["hists"] = []
         c_iter = iter(plt.rcParams["axes.prop_cycle"].by_key()["color"])
         for i in range(n_plottables):
-            hists.append(
-                self._process_val_args(
-                    val=var_dict["vals"][i],
-                    dataset=var_dict["datasets"][i],
-                    systematic=var_dict["systematics"][i],
-                    selection=var_dict["selections"][i],
-                )
+            hist = self._process_val_args(
+                val=var_dict["vals"][i],
+                dataset=var_dict["datasets"][i],
+                systematic=var_dict["systematics"][i],
+                selection=var_dict["selections"][i],
             )
+            var_dict["hists"].append(hist)
 
+            # uncertainty
+            if isinstance(var_dict["uncert"][i], Histogram1D):
+                var_dict["uncert"][i] = var_dict["uncert"][i].bin_values()
+            elif isinstance(var_dict["uncert"][i], ROOT.TH1):
+                var_dict["uncert"][i] = ROOT_utils.get_th1_bin_values(var_dict["uncert"][i])
+            elif var_dict["uncert"][i] is None:
+                var_dict["uncert"][i] = np.zeros(hist.n_bins)
+
+            # colours
             if var_dict["colours"][i] is None:
                 if all(c is None for c in var_dict["colours"]):
                     # just do all at once
@@ -1016,16 +1045,16 @@ class Analysis:
                             ) from e
                     var_dict["colours"][i] = c
 
+            # labels
             if var_dict["labels"][i] is None:
                 if var_dict["datasets"][i]:
                     var_dict["labels"][i] = self[var_dict["datasets"][i]].label
                 elif n_plottables > 1:
                     raise ValueError(f"Missing label for {i}th plot! Check arguments to plot()")
 
+            # style
             if var_dict["linestyles"][i] is None:
                 var_dict["linestyles"][i] = "solid"
-
-        var_dict["hists"] = hists
 
         return n_plottables, var_dict
 
@@ -1044,8 +1073,13 @@ class Analysis:
         elif val in self.histograms:
             # allow getting histogram from a string if it exists internally
             return Histogram1D(th1=self.histograms[val])
-        return self.get_hist(
-            variable=val, dataset=dataset, systematic=systematic, selection=selection, TH1=False
+        return Histogram1D(
+            th1=self.get_hist(
+                variable=val,
+                dataset=dataset,
+                systematic=systematic,
+                selection=selection,
+            )
         )
 
     # ===============================
@@ -1077,16 +1111,13 @@ class Analysis:
         systematic: str | None = None,
         selection: str = "",
         allow_generation: bool = False,
-        TH1: bool = True,
     ) -> Histogram1D | ROOT.TH1:
         """Get TH1 histogram from histogram dict or internal dataset"""
 
         # look in internal dictionary
         if variable in self.histograms:
             h = self.histograms[variable]
-            if TH1:
-                return h
-            return Histogram1D(th1=h)
+            return h
         elif dataset is None:
             raise ValueError(
                 f"Histogram named {variable} is not in internal dictionary, "
@@ -1101,7 +1132,6 @@ class Analysis:
                 variable,
                 systematic=systematic,
                 selection=selection,
-                kind="th1" if TH1 else "boost",
             )
         except KeyError as e:
             if allow_generation:
@@ -1143,24 +1173,28 @@ class Analysis:
 
     def get_systematic_uncertainty(
         self,
-        val: str,
+        val: str | Histogram1D | ROOT.TH1,
         dataset: str | None = None,
         selection: str = "",
-    ) -> tuple[np.typing.NDArray[float] | Literal[0], np.typing.NDArray[float] | Literal[0]]:
+    ) -> tuple[np.typing.NDArray[float], np.typing.NDArray[float]]:
         """Get systematic uncertainty for single variable in dataframe"""
         if (not isinstance(val, str)) or (not dataset) or (selection is None):
             # self.logger.debug("No systematic uncertainties for histograms outside a dataset")
-            return 0, 0
-
+            if isinstance(val, Histogram1D):
+                return np.zeros_like(val.bin_values()), np.zeros_like(val.bin_values())
+            elif isinstance(val, ROOT.TH1):
+                return np.zeros(val.GetNbinsX()), np.zeros(val.GetNbinsX())
+            else:
+                raise TypeError(f"Unknown histogram type: {type(val)}")
         return self[dataset].get_systematic_uncertainty(val=val, selection=selection)
 
     def get_full_systematic_uncertainty(
         self, per_hist_vars: plotting_tools.PlotOpts
-    ) -> tuple[np.typing.NDArray[float] | Literal[0], np.typing.NDArray[float] | Literal[0]]:
+    ) -> tuple[np.typing.NDArray[float]]:
         """Calculate full systematic uncertainties. Outputs int 0 if no systematics are found"""
 
-        sys_errs_up = []
-        sys_errs_down = []
+        sys_errs_up = np.zeros_like(per_hist_vars["hists"][0].bin_values())
+        sys_errs_down = np.zeros_like(per_hist_vars["hists"][0].bin_values())
         for ds, sel, v in zip(
             per_hist_vars["datasets"],
             per_hist_vars["selections"],
@@ -1171,16 +1205,10 @@ class Analysis:
                 np.isscalar(sys_err_up) and sys_err_up == 0
             ):
                 continue  # skip no errors
-            sys_errs_down.append(sys_err_down)
-            sys_errs_up.append(sys_err_up)
+            sys_errs_down += sys_err_down
+            sys_errs_up += sys_err_up
 
-        if (len(sys_errs_up) == 0) or (len(sys_errs_down) == 0):
-            self.logger.error("No systematic uncertainties found for any plottables!")
-            return 0, 0
-
-        sys_errs_up = np.sum(np.array(sys_errs_up), axis=0)
-        sys_err_down = np.sum(np.array(sys_errs_down), axis=0)
-        return sys_err_down, sys_errs_up
+        return sys_errs_down, sys_errs_up
 
     def __verify_same_cuts(self, datasets: list[str]):
         """check that all datasets to be plotted have the same sets of cuts"""
@@ -1380,23 +1408,28 @@ class Analysis:
         varname_reco: str,
         varname_truth: str,
         dataset: str,
-        selection: str,
+        wp: str,
+        nprong: str,
         systematic: str = "T_s1thv_NOMINAL",
     ) -> ROOT.RooUnfoldResponse:
         """Get unfolding response histogram from signal resconstruction analysis"""
 
-        response_file = self.paths.output_dir.parent / f"signal_reconstruction/root/{dataset}.root"
+        response_file = (
+            self.paths.output_dir.parent / f"efficiency_and_acceptance/root/{dataset}.root"
+        )
         if not response_file.is_file():
             raise FileNotFoundError(f"No file found at {response_file}")
 
         with ROOT.TFile(str(response_file)) as file:
-            hist_reco = file[f"{systematic}/{selection}"].Get(varname_reco)
+            hist_reco = file[f"{systematic}/{wp}_{nprong}reco_tau"].Get(varname_reco)
             hist_reco.SetDirectory(0)
 
             hist_truth = file[f"{systematic}/truth_tau"].Get(varname_truth)
             hist_truth.SetDirectory(0)
 
-            h_response = file[f"{systematic}/{selection}"].Get(f"{varname_reco}_{varname_truth}")
+            h_response = file[f"{systematic}/{wp}_{nprong}truth_reco_tau"].Get(
+                f"{varname_reco}_{varname_truth}"
+            )
             h_response.SetDirectory(0)
 
             return ROOT.RooUnfoldResponse(hist_reco, hist_truth, h_response)
