@@ -757,7 +757,7 @@ class Histogram1D(bh.Histogram, family=None):
         # create ratio histogram
         if normalise:
             h_ratio = other.normalised() / self.normalised()
-        elif yerr == "binom":
+        elif isinstance(yerr, str) and (yerr == "binom"):
             h_ratio = other.divide_binom(self)
             yerr = True
         else:
@@ -770,16 +770,16 @@ class Histogram1D(bh.Histogram, family=None):
         # set errors
         if yerr is True:  # default
             err = h_ratio.error()
-        elif yerr == "sumw2":
+        elif isinstance(yerr, str) and (yerr == "sumw2"):
             err = h_ratio.sumw2()
-        elif yerr == "carry":
+        elif isinstance(yerr, str) and (yerr == "carry"):
             err = (self.root_sumw2() / self.bin_values()) * h_ratio.bin_values()  # type: ignore
             for i in range(h_ratio.TH1.GetNbinsX()):
                 h_ratio.TH1.SetBinError(i + 1, yerr[i])  # type: ignore
         elif isinstance(yerr, str):
             raise ValueError(f"Unknown error type {yerr}")
         else:
-            err = np.zeros(self.n_bins)
+            err = yerr
 
         if fit:
             if h_ratio.TH1.GetEntries() == 0:
@@ -800,7 +800,7 @@ class Histogram1D(bh.Histogram, family=None):
             h_ratio.bin_centres,
             h_ratio.bin_values(),
             xerr=h_ratio.bin_widths / 2,  # type: ignore
-            yerr=err,
+            yerr=np.clip(err, 0, None) if isinstance(yerr, np.ndarray) else yerr,
             linestyle="None",
             label=label,
             marker=".",
