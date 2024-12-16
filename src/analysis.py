@@ -1599,7 +1599,7 @@ class Analysis:
         path = self.paths.root_dir / f"{Path(filename)}.root"
 
         with ROOT.TFile(str(path), "UPDATE") as file:
-            for hist in self.histograms.values():
-                file.WriteObject(hist, hist.GetName(), "OVERWRITE")
+            for name, hist in self.histograms.items():
+                file.WriteObject(hist, name, "OVERWRITE")
 
         self.logger.info("Saved %s histograms to file %s", len(self.histograms), path)
