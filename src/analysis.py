@@ -1,6 +1,7 @@
 import copy
 import inspect
 import itertools
+from copy import deepcopy
 from dataclasses import dataclass, field
 from functools import reduce
 from pathlib import Path
