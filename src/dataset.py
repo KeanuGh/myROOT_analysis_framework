@@ -65,9 +65,9 @@ class Dataset:
     out_file: Path = ""
     nominal_name: str = field(init=False, default="")
     do_systematics: bool = False
-    do_weights: bool = True
+    do_unweighted: bool = False
     skip_sys: set[str] = field(default_factory=set)
-    systematics_for_selection: str = field(default_factory=set)
+    systematics_for_selection: set[str] = field(default_factory=set)
     tes_sys_set: set = field(init=False, default_factory=set)
     eff_sys_set: set = field(init=False, default_factory=set)
 
@@ -516,25 +516,15 @@ class Dataset:
         variable,
         systematic: str = "T_s1hv_NOMINAL",
         selection: str = "",
-        kind: Literal["th1", "boost"] = "th1",
     ) -> ROOT.TH1 | Histogram1D:
         """Fetch histogram from internal dictionary"""
         try:
-            h = self.histograms[systematic][selection][variable]
+            return self.histograms[systematic][selection][variable]
         except KeyError:
             raise KeyError(f"No histogram in {self.name} for {systematic} {selection} {variable}")
 
-        if kind == "th1":
-            return h
-        elif kind == "boost":
-            return Histogram1D(th1=h, logger=self.logger)
-        raise ValueError(f"Unknown histogram type '{kind}'")
-
     def _match_weight(self, var_) -> str:
         """match variable to weight"""
-        if not self.do_weights:
-            return ""
-
         try:
             match variable_data[var_]:
                 case {"tag": VarTag.TRUTH}:
@@ -667,10 +657,14 @@ class Dataset:
         systematic: str = "T_s1thv_NOMINAL",
         selection: str = "",
         histtype: Literal["TH1F", "TH1D", "TH1I", "TH1C", "TH1L", "TH1S"] = "TH1F",
+        weighted: bool = True,
     ) -> ROOT.TH1:
         """Return TH1 histogram from selection for variable. Binning taken from internal binnings dictionary"""
-        weight = self._match_weight(variable)
-        fill_cols = [variable, weight] if weight else [variable]
+        if weighted:
+            weight = self._match_weight(variable)
+            fill_cols = [variable, weight] if weight else [variable]
+        else:
+            fill_cols = [variable]
 
         self.logger.debug(
             "Generating %s histogram in %s " f"for systematic '%s' and selection '%s'...",
@@ -743,6 +737,15 @@ class Dataset:
                     th1 = self.define_th1(variable_name, hist_name, hist_name)
                     th1_ptr_map[selection][variable_name] = sel_df.Fill(th1, fill_cols)
 
+                    if self.do_unweighted:
+                        hist_name_unweighted = hist_name + "_unweighted"
+                        th1_unweighted = self.define_th1(
+                            variable_name, hist_name_unweighted, hist_name
+                        )
+                        th1_ptr_map[selection][variable_name + "_unweighted"] = sel_df.Fill(
+                            th1_unweighted, [variable_name]
+                        )
+
                     # do systematic weights for reco variables in nominal tree
                     if (
                         (self.eff_sys_set or self.tes_sys_set)
@@ -809,6 +812,18 @@ class Dataset:
                     th1_ptr_map[selection][f"{hist2d_opts.x}_{hist2d_opts.y}"] = sel_df.Fill(
                         th2, fill_cols
                     )
+
+                    # define histogram
+                    if self.do_unweighted and hist2d_opts.weight:  # not if it's already unweighted
+                        hist_name_unweighted = smart_join(
+                            sys_name, selection, f"{hist2d_opts.x}_{hist2d_opts.y}", "unweighted"
+                        )
+                        th2_unweighted = self.define_th2(
+                            hist2d_opts.x, hist2d_opts.y, hist_name_unweighted, hist_name
+                        )
+                        th1_ptr_map[selection][
+                            f"{hist2d_opts.x}_{hist2d_opts.y}_unweighted"
+                        ] = sel_df.Fill(th2_unweighted, [hist2d_opts.x, hist2d_opts.y])
 
             # generate histograms
             t = time.time()
