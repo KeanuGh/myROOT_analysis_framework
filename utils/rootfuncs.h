@@ -82,6 +82,12 @@ double calc_dphi(double phi1, double phi2) {
 	return dphi;
 }
 
+double calc_abs_dphi(double phi1, double phi2) {
+	double dphi = std::abs(phi1 - phi2);
+	if (dphi > PI) dphi = 2 * PI - dphi;
+	return std::abs(dphi);
+}
+
 double mt(double l1_pt, double l2_pt, double l1_phi, double l2_phi) {
 	return std::sqrt(2.0 * l1_pt * l2_pt * (1 - std::cos(calc_dphi(l1_phi, l2_phi))));
 };

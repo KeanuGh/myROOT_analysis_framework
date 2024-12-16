@@ -284,7 +284,12 @@ variable_data: Dict[str, Branch] = {
         "tag": VarTag.RECO,
     },
     "DeltaPhi_tau_met": {
-        "name": r"$\Delta\phi(p^\tau_\mathrm{T},E_\mathrm{T}^\mathrm{miss})$",
+        "name": r"$\Delta\phi(\tau,E_\mathrm{T}^\mathrm{miss})$",
+        "units": "",
+        "tag": VarTag.RECO,
+    },
+    "AbsDeltaPhi_tau_met": {
+        "name": r"$|\Delta\phi(\tau,E_\mathrm{T}^\mathrm{miss})|$",
         "units": "",
         "tag": VarTag.RECO,
     },
@@ -1067,12 +1072,17 @@ variable_data: Dict[str, Branch] = {
         "tag": VarTag.TRUTH,
     },
     "TruthTauPt_div_MET": {
-        "name": r"Truth $p^\tau_{mathrm{T}/p^\nu_\mathrm{T}$",
+        "name": r"Truth $p^\tau_mathrm{T}/p^\nu_\mathrm{T}$",
         "units": "",
         "tag": VarTag.TRUTH,
     },
     "TruthDeltaPhi_tau_met": {
-        "name": r"Truth $\Delta\phi(p^\tau_\mathrm{T},E_\mathrm{T}^\mathrm{miss})$",
+        "name": r"Truth $\Delta\phi(\tau,E_\mathrm{T}^\mathrm{miss})$",
+        "units": "",
+        "tag": VarTag.TRUTH,
+    },
+    "TruthAbsDeltaPhi_tau_met": {
+        "name": r"Truth $|\Delta\phi(\tau,E_\mathrm{T}^\mathrm{miss})|$",
         "units": "",
         "tag": VarTag.TRUTH,
     },
