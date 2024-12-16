@@ -282,7 +282,7 @@ def th1_abs(h: ROOT.TH1) -> ROOT.TH1:
     return th1
 
 
-def sum_th1s(*h: ROOT.TH1) -> ROOT.TH1 | None:
+def sum_th1s(*h: ROOT.TH1) -> ROOT.TH1:
     """Sum together any number of TH1s"""
     hist_out = h[0].Clone()
     for hist_to_sum in h[1:]:
@@ -305,3 +305,13 @@ def get_th2_bin_values(h: ROOT.TH2, flow: bool = False) -> np.typing.NDArray[flo
         for j in range(nbinsy):
             bin_values[i][j] = h.GetBinContent(i + init_bin, j + init_bin)
     return bin_values
+
+
+def get_th1_axis_range(h: ROOT.TH1, start: int = 0, end: int = -1) -> ROOT.TH1:
+    """Return axis subset of TH1 from range"""
+    if end == -1:
+        end = h.GetNbinsX()
+
+    h_boost = TH1_to_bh(h)
+    h_boost = h_boost[start:end]
+    return bh_to_TH1(h_boost, name=h.GetName(), title=h.GetTitle())
