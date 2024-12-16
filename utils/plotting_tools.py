@@ -6,6 +6,7 @@ import ROOT
 import boost_histogram as bh
 import matplotlib.pyplot as plt  # type: ignore
 import mplhep as hep  # type: ignore
+import numpy as np
 import pandas as pd  # type: ignore
 from matplotlib import ticker
 from matplotlib.colors import LogNorm  # type: ignore
@@ -25,6 +26,7 @@ class PlotOpts(TypedDict):
     datasets: list[str]
     systematics: list[str]
     selections: list[str]
+    uncert: list[np.ndarray]
     labels: list[str]
     colours: list[str | tuple]
     linestyles: list[str]
@@ -190,10 +192,8 @@ def set_axis_options(
                 if not ylabel:
                     ylabel = _ylabel
         ax.set_xlim(*bin_range)
-
-    # Main plot yaxis options
-    if y_axlim:
-        ax.set_ylim(*y_axlim)
+        if ratio_ax:
+            ratio_ax.set_xlim(*bin_range)
 
     if logx:
         ax.semilogx()
@@ -205,8 +205,13 @@ def set_axis_options(
     if ylabel:
         ax.set_ylabel(ylabel, fontsize=font_size)
 
+    # Main plot axis options
+    if y_axlim:
+        ax.set_ylim(*y_axlim)
     if x_axlim:
         ax.set_xlim(*x_axlim)
+        if ratio_ax:
+            ratio_ax.set_xlim(*x_axlim)
 
     ax.tick_params(axis="both", which="both", labelsize=font_size)
     ax.get_xaxis().get_offset_text().set_fontsize(font_size)
@@ -229,9 +234,6 @@ def set_axis_options(
         ratio_ax.tick_params(axis="both", which="both", labelsize=font_size)
         ratio_ax.get_xaxis().get_offset_text().set_fontsize(font_size)
         ratio_ax.get_yaxis().get_offset_text().set_fontsize(font_size)
-
-        if x_axlim:
-            ratio_ax.set_xlim(*x_axlim)
 
         # i hate matplotlib i hate matplotlib i hate matplotlib i hate matplotlib i hate maplotlib i
         if logx:
