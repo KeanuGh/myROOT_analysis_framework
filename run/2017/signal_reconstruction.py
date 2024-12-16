@@ -1,9 +1,9 @@
 from pathlib import Path
 from typing import Dict
 
-import numpy as np
 from tabulate import tabulate
 
+from binnings import BINNINGS
 from src.analysis import Analysis
 from src.cutting import Cut
 from utils.ROOT_utils import bayes_divide
@@ -229,10 +229,11 @@ measurement_vars_unitless = [
     # "TauNCoreTracks",
     # "TauRNNJetScore",
     # "TauBDTEleScore",
-    # "DeltaPhi_tau_met",
+    "AbsDeltaPhi_tau_met",
+    "TruthAbsDeltaPhi_tau_met",
     # "TruthDeltaPhi_tau_met",
-    # "TauPt_div_MET",
-    # "TruthTauPt_div_MET",
+    "TauPt_div_MET",
+    "TruthTauPt_div_MET",
 ]
 measurement_vars = measurement_vars_unitless + measurement_vars_mass
 truth_measurement_vars = [v for v in measurement_vars if variable_data[v]["tag"] == "truth"]
@@ -252,6 +253,10 @@ hists_2d = {
     "MTW_TruthMTW": Hist2dOpts("MTW", "TruthMTW"),
     "TauPhi_TruthTauPhi": Hist2dOpts("TauPhi", "TruthTauPhi"),
     "MET_met_TruthNeutrinoPt": Hist2dOpts("MET_met", "TruthNeutrinoPt"),
+    "AbsDeltaPhi_tau_met_TruthAbsDeltaPhi_tau_met": Hist2dOpts(
+        "AbsDeltaPhi_tau_met", "TruthAbsDeltaPhi_tau_met"
+    ),
+    "TauPt_div_MET_TruthTauPt_div_MET": Hist2dOpts("TauPt_div_MET", "TruthTauPt_div_MET"),
 }
 for v in reco_measurement_vars:
     hists_2d[f"{v}_TauPt_res_frac"] = Hist2dOpts(
@@ -265,8 +270,6 @@ for v in reco_measurement_vars:
         weight="reco_weight",
     )
 NOMINAL_NAME = "T_s1thv_NOMINAL"
-mtw_bins = np.array([350, 375, 400, 430, 465, 500, 550, 600, 700, 800, 1000, 2000], dtype="double")
-taupt_bins = np.array([170, 200, 250, 300, 350, 425, 500, 600, 750, 900, 1000], dtype="double")
 
 
 def run_analysis() -> Analysis:
@@ -291,35 +294,7 @@ def run_analysis() -> Analysis:
         hists_2d=hists_2d,
         do_weights=False,
         binnings={
-            "": {
-                "MTW": mtw_bins,
-                "TruthMTW": mtw_bins,
-                "TauPt": taupt_bins,
-                "TruthTauPt": taupt_bins,
-                "VisTruthTauPt": taupt_bins,
-                "TruthNeutrinoPt": np.geomspace(170, 1000, nedges),
-                "TruthTau_nChargedTracks": np.array([0.0, 1.0, 2.0, 3.0, 4.0]),
-                "TruthTau_nNeutralTracks": np.array([0.0, 1.0, 2.0, 3.0, 4.0, 5.0]),
-                "TauEta": np.linspace(-2.5, 2.5, nedges),
-                "TauPhi": np.linspace(-np.pi, np.pi, nedges),
-                "TruthTauEta": np.linspace(-2.5, 2.5, nedges),
-                "TruthTauPhi": np.linspace(-2.5, 2.5, nedges),
-                "VisTruthTauEta": np.linspace(-2.5, 2.5, nedges),
-                "VisTruthTauPhi": np.linspace(-2.5, 2.5, nedges),
-                "TruthNeutrinoEta": np.linspace(-2.5, 2.5, nedges),
-                "MET_met": np.geomspace(170, 1000, nedges),
-                "MET_eta": np.linspace(-2.5, 2.5, nedges),
-                "MET_phi": np.linspace(-2.5, 2.5, nedges),
-                "DeltaPhi_tau_met": np.linspace(0, 2 * np.pi, nedges),
-                "TruthDeltaPhi_tau_met": np.linspace(0, 3.5, nedges),
-                "TauPt_div_MET": np.linspace(0, 3, nedges),
-                "TruthTauPt_div_MET": np.linspace(0, 3, nedges),
-                "TauRNNJetScore": np.linspace(0, 1, 51),
-                "TauBDTEleScore": np.linspace(0, 1, 51),
-                "TauNCoreTracks": np.linspace(0, 4, 5),
-                "TauPt_res_frac": np.linspace(-1, 1, 31),
-                "TauPt_res": np.linspace(-300, 300, nedges),
-            },
+            "": BINNINGS,
         },
     )
 

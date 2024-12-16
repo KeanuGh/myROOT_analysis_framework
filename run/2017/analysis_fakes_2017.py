@@ -3,6 +3,7 @@ from typing import Dict
 
 import numpy as np
 
+from binnings import BINNINGS, nedges
 from src.analysis import Analysis
 from src.cutting import Cut
 from utils.helper_functions import smart_join
@@ -209,8 +210,9 @@ wanted_variables = {
     "MTW",
     "TauRNNJetScore",
     "TauBDTEleScore",
-    # "DeltaPhi_tau_met",
     "TauNCoreTracks",
+    "AbsDeltaPhi_tau_met",
+    "TruthAbsDeltaPhi_tau_met",
 }
 measurement_vars_mass = [
     "TauPt",
@@ -223,6 +225,8 @@ measurement_vars_unitless = [
     "TauBDTEleScore",
     "TauRNNJetScore",
     # "DeltaPhi_tau_met",
+    "AbsDeltaPhi_tau_met",
+    "TruthAbsDeltaPhi_tau_met",
     "TauNCoreTracks",
 ]
 measurement_vars = measurement_vars_unitless + measurement_vars_mass
@@ -324,15 +328,10 @@ datasets: Dict[str, Dict] = {
         "selections": selections,
     },
 }
-mtw_bins = np.array(
-    [350, 375, 400, 430, 465, 500, 550, 600, 700, 850, 1000, 1400, 2000], dtype="double"
-)
-taupt_bins = np.array([170, 200, 250, 300, 350, 425, 500, 600, 750, 900, 1000], dtype="double")
 
 
 def run_analysis() -> Analysis:
     """Run analysis"""
-    n_edges = 16
     return Analysis(
         datasets,
         year=YEAR,
@@ -353,18 +352,9 @@ def run_analysis() -> Analysis:
             r".*TAUS_TRUEHADTAU_EFF_JETID_.*",
         },
         binnings={
-            "": {
-                "MTW": mtw_bins,
-                "TauPt": taupt_bins,
-                "TauEta": np.linspace(-2.5, 2.5, n_edges),
-                "TauPhi": np.linspace(-np.pi, np.pi, n_edges),
-                "MET_met": np.geomspace(170, 1000, n_edges),
-                "TauRNNJetScore": np.linspace(0, 1, 36),
-                "TauBDTEleScore": np.linspace(0, 1, 36),
-                "TauNCoreTracks": np.linspace(0, 4, 5),
-            },
+            "": BINNINGS,
             ".*_CR_.*ID": {
-                "MET_met": np.geomspace(1, 100, n_edges),
+                "MET_met": np.geomspace(1, 100, nedges),
             },
         },
     )

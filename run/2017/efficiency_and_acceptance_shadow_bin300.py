@@ -1,8 +1,6 @@
 from pathlib import Path
 from typing import Dict
 
-import numpy as np
-
 from binnings import BINNINGS
 from src.analysis import Analysis
 from src.cutting import Cut
@@ -95,12 +93,12 @@ pass_tight = Cut(
 )
 pass_SR_reco = Cut(
     r"Pass SR Reco",
-    r"(TauPt > 170) && (MET_met > 170) && (MTW > 350)"
+    r"(TauPt > 150) && (MET_met > 150) && (MTW > 300)"
     r"&& ((TauNCoreTracks == 1) || (TauNCoreTracks == 3))",
 )
 pass_SR_truth = Cut(
     r"Pass SR Truth",
-    r"(VisTruthTauPt > 170) && (TruthMTW > 350) && (TruthNeutrinoPt > 170)"
+    r"(VisTruthTauPt > 150) && (TruthMTW > 300) && (TruthNeutrinoPt > 150)"
     r"&& ((TruthTau_nChargedTracks == 1) || (TruthTau_nChargedTracks == 3))",
 )
 pass_SR = pass_SR_truth
@@ -174,30 +172,29 @@ reco_measurement_vars = [
 
 # define 2d histograms
 hists_2d = {
-    "TauPt_VisTruthTauPt": Hist2dOpts("TauPt", "VisTruthTauPt", "reco_weight"),
-    "TauEta_VisTruthTauEta": Hist2dOpts("TauEta", "VisTruthTauEta", "reco_weight"),
-    "TauPhi_VisTruthTauPhi": Hist2dOpts("TauPhi", "VisTruthTauPhi", "reco_weight"),
-    "MTW_TruthMTW": Hist2dOpts("MTW", "TruthMTW", "reco_weight"),
-    "MET_met_TruthNeutrinoPt": Hist2dOpts("MET_met", "TruthNeutrinoPt", "reco_weight"),
-    "MET_phi_TruthNeutrinoPhi": Hist2dOpts("MET_phi", "TruthNeutrinoPhi", "reco_weight"),
+    "TauPt_VisTruthTauPt": Hist2dOpts("TauPt", "VisTruthTauPt"),
+    "TauEta_VisTruthTauEta": Hist2dOpts("TauEta", "VisTruthTauEta"),
+    "TauPhi_VisTruthTauPhi": Hist2dOpts("TauPhi", "VisTruthTauPhi"),
+    "MTW_TruthMTW": Hist2dOpts("MTW", "TruthMTW"),
+    "MET_met_TruthNeutrinoPt": Hist2dOpts("MET_met", "TruthNeutrinoPt"),
+    "MET_phi_TruthNeutrinoPhi": Hist2dOpts("MET_phi", "TruthNeutrinoPhi"),
     "AbsDeltaPhi_tau_met_TruthAbsDeltaPhi_tau_met": Hist2dOpts(
         "AbsDeltaPhi_tau_met", "TruthAbsDeltaPhi_tau_met"
     ),
     "TauPt_div_MET_TruthTauPt_div_MET": Hist2dOpts("TauPt_div_MET", "TruthTauPt_div_MET"),
 }
 NOMINAL_NAME = "T_s1thv_NOMINAL"
-mtw_bins = np.array([350, 375, 400, 430, 465, 500, 550, 600, 700, 850, 1000, 2000], dtype="double")
-taupt_bins = np.array([170, 200, 250, 300, 350, 425, 500, 600, 750, 900, 1000], dtype="double")
 
 
 def run_analysis() -> Analysis:
     """Run analysis"""
 
+    nedges = 16
     return Analysis(
         datasets,
         year=2017,
-        # rerun=True,
-        # regen_histograms=True,
+        rerun=True,
+        regen_histograms=True,
         do_systematics=False,
         # regen_metadata=True,
         ttree=NOMINAL_NAME,
@@ -233,7 +230,6 @@ if __name__ == "__main__":
         "AbsDeltaPhi_tau_met": "TruthAbsDeltaPhi_tau_met",
         "TauPt_div_MET": "TruthTauPt_div_MET",
     }
-
     # print histograms
     for dataset in analysis:
         dataset.histogram_printout(to_file="txt", to_dir=analysis.paths.latex_dir)

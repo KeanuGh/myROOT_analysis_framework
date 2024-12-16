@@ -1,8 +1,7 @@
 from pathlib import Path
 from typing import Dict
 
-import numpy as np
-
+from binnings import BINNINGS
 from src.analysis import Analysis
 from src.cutting import Cut
 from utils.ROOT_utils import bayes_divide
@@ -159,6 +158,10 @@ measurement_vars_unitless = [
     "VisTruthTauPhi",
     "TruthNeutrinoPhi",
     "MET_phi",
+    "AbsDeltaPhi_tau_met",
+    "TruthAbsDeltaPhi_tau_met",
+    "TauPt_div_MET",
+    "TruthTauPt_div_MET",
 ]
 measurement_vars = measurement_vars_unitless + measurement_vars_mass
 reco_measurement_vars = [
@@ -175,23 +178,22 @@ hists_2d = {
     "MTW_TruthMTW": Hist2dOpts("MTW", "TruthMTW"),
     "MET_met_TruthNeutrinoPt": Hist2dOpts("MET_met", "TruthNeutrinoPt"),
     "MET_phi_TruthNeutrinoPhi": Hist2dOpts("MET_phi", "TruthNeutrinoPhi"),
+    "AbsDeltaPhi_tau_met_TruthAbsDeltaPhi_tau_met": Hist2dOpts(
+        "AbsDeltaPhi_tau_met", "TruthAbsDeltaPhi_tau_met"
+    ),
+    "TauPt_div_MET_TruthTauPt_div_MET": Hist2dOpts("TauPt_div_MET", "TruthTauPt_div_MET"),
 }
 NOMINAL_NAME = "T_s1thv_NOMINAL"
-mtw_bins = np.array(
-    [200, 350, 375, 400, 430, 465, 500, 550, 600, 700, 850, 1000, 2000], dtype="double"
-)
-taupt_bins = np.array([100, 170, 200, 250, 300, 350, 425, 500, 600, 750, 900, 1000], dtype="double")
 
 
 def run_analysis() -> Analysis:
     """Run analysis"""
 
-    nedges = 16
     return Analysis(
         datasets,
         year=2017,
-        rerun=True,
-        regen_histograms=True,
+        # rerun=True,
+        # regen_histograms=True,
         do_systematics=False,
         # regen_metadata=True,
         ttree=NOMINAL_NAME,
@@ -203,22 +205,9 @@ def run_analysis() -> Analysis:
         import_missing_columns_as_nan=True,
         snapshot=False,
         hists_2d=hists_2d,
-        do_weights=False,
+        do_unweighted=True,
         binnings={
-            "": {
-                "MTW": mtw_bins,
-                "TruthMTW": mtw_bins,
-                "TauPt": taupt_bins,
-                "VisTruthTauPt": taupt_bins,
-                "TauEta": np.linspace(-2.5, 2.5, nedges),
-                "TauPhi": np.linspace(-np.pi, np.pi, nedges),
-                "VisTruthTauEta": np.linspace(-2.5, 2.5, nedges),
-                "VisTruthTauPhi": np.linspace(-np.pi, np.pi, nedges),
-                "TruthNeutrinoPhi": np.linspace(-np.pi, np.pi, nedges),
-                "MET_phi": np.linspace(-np.pi, np.pi, nedges),
-                "MET_met": np.geomspace(100, 1000, nedges),
-                "TruthNeutrinoPt": np.geomspace(100, 1000, nedges),
-            },
+            "": BINNINGS,
         },
     )
 
@@ -237,6 +226,8 @@ if __name__ == "__main__":
         "TauPhi": "VisTruthTauPhi",
         "MET_met": "TruthNeutrinoPt",
         "MET_phi": "TruthNeutrinoPhi",
+        "AbsDeltaPhi_tau_met": "TruthAbsDeltaPhi_tau_met",
+        "TauPt_div_MET": "TruthTauPt_div_MET",
     }
 
     # print histograms
@@ -253,28 +244,27 @@ if __name__ == "__main__":
             for var in reco_measurement_vars:
                 analysis.histograms[f"{wp}_{nprong}{var}_efficiency"] = bayes_divide(
                     analysis.get_hist(
-                        var,
+                        var + "_unweighted",
                         "wtaunu",
                         NOMINAL_NAME,
                         f"{wp}_{nprong}truth_reco_tau",
                     ),
                     analysis.get_hist(
-                        var,
+                        var + "_unweighted",
                         "wtaunu",
                         NOMINAL_NAME,
                         f"{nprong}truth_tau",
                     ),
                 )
-
                 analysis.histograms[f"{wp}_{nprong}{var}_acceptance"] = bayes_divide(
                     analysis.get_hist(
-                        var,
+                        var + "_unweighted",
                         "wtaunu",
                         NOMINAL_NAME,
                         f"{wp}_{nprong}truth_reco_tau",
                     ),
                     analysis.get_hist(
-                        var,
+                        var + "_unweighted",
                         "wtaunu",
                         NOMINAL_NAME,
                         f"{wp}_{nprong}reco_tau",
