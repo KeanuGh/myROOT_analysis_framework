@@ -258,8 +258,7 @@ class DatasetBuilder:
         else:
             Rdf = Rdf.Define(
                 "truth_weight",
-                f"(mcWeight * rwCorr * {self.lumi} * prwWeight * dsid_pmgf[mcChannel]) "
-                f"/ dsid_sumw[mcChannel]",
+                f"(mcWeight * {self.lumi} * dsid_pmgf[mcChannel]) / dsid_sumw[mcChannel]",
             ).Define(
                 "reco_weight",
                 f"(weight * {self.lumi} * dsid_pmgf[mcChannel]) / dsid_sumw[mcChannel]",
