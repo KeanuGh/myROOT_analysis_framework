@@ -672,8 +672,8 @@ class Analysis:
 
     def plot_2d(
         self,
-        xvar: str,
-        yvar: str,
+        xvar: str | ROOT.TH2,
+        yvar: str | None = None,
         dataset: str | None = None,
         systematic: str = "T_s1thv_NOMINAL",
         selection: str = "",
@@ -690,15 +690,20 @@ class Analysis:
         **kwargs,
     ):
         """2D plot using mplhep"""
+        if isinstance(xvar, str) and yvar is None:
+            raise TypeError("Must provide both xvar and yvar")
 
         # get hist values
         # =========================================================================
-        h = self.get_hist(
-            f"{xvar}_{yvar}",
-            dataset=dataset,
-            systematic=systematic,
-            selection=selection,
-        )
+        if isinstance(xvar, str) and isinstance(yvar, str):
+            h = self.get_hist(
+                f"{xvar}_{yvar}",
+                dataset=dataset,
+                systematic=systematic,
+                selection=selection,
+            )
+        else:
+            h = xvar
 
         bin_edgesx = ROOT_utils.get_th1_bin_edges(h, "x")
         bin_edgesy = ROOT_utils.get_th1_bin_edges(h, "y")
@@ -1112,7 +1117,7 @@ class Analysis:
         systematic: str | None = None,
         selection: str = "",
         allow_generation: bool = False,
-    ) -> Histogram1D | ROOT.TH1:
+    ) -> ROOT.TH1:
         """Get TH1 histogram from histogram dict or internal dataset"""
 
         # look in internal dictionary
