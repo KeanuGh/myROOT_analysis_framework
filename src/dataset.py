@@ -997,6 +997,7 @@ class Dataset:
                         )
 
                     tot_uncert = ROOT_utils.th1_abs(sf * (pair["1up"] - pair["1down"]))
+                    tot_uncert.Scale(0.5)
                     pct_uncert = (tot_uncert / nominal_hist) * 100
 
                     # total uncert for systematic
