@@ -22,7 +22,7 @@ DO_SYS = True
 # ========================================================================
 pass_presel = Cut(
     r"Pass preselection",
-    r"(passReco == 1) && (TauBaselineWP == 1) && (abs(TauCharge) == 1) && passMetTrigger"
+    r"(passReco == 1) && (TauBaselineWP == 1) && (abs(TauCharge) == 1) && passMetTrigger && (badJet == 0)"
     r"&& ((MatchedTruthParticle_isTau + MatchedTruthParticle_isElectron + MatchedTruthParticle_isMuon + MatchedTruthParticle_isPhoton) <= 1)"
     r"&& ((TauNCoreTracks == 1) || (TauNCoreTracks == 3))",
 )
@@ -126,6 +126,8 @@ for selection, cut_list in zip(selections_list, selections_cuts):
     for cutstr, cut_name in [
         ("TauNCoreTracks == 1", "1prong"),
         ("TauNCoreTracks == 3", "3prong"),
+        ("TauCharge == 1", "tauplus"),
+        ("TauCharge == -1", "tauminus"),
     ]:
         selections[f"{cut_name}_{selection}"] = cut_list + [Cut(cut_name, cutstr)]
 
@@ -237,8 +239,6 @@ datasets: Dict[str, Dict] = {
         "selections": selections,
     },
 }
-mtw_bins = np.array([350, 375, 400, 430, 465, 500, 550, 600, 700, 850, 1000, 2000], dtype="double")
-taupt_bins = np.array([170, 200, 250, 300, 350, 425, 500, 600, 750, 900, 1000], dtype="double")
 
 
 def run_analysis() -> Analysis:
@@ -278,6 +278,8 @@ if __name__ == "__main__":
     base_plotting_dir = analysis.paths.plot_dir
     all_samples = [analysis.data_sample] + analysis.mc_samples
     mc_samples = analysis.mc_samples
+    for mc in mc_samples:
+        analysis[mc].calculate_systematic_uncertainties()
     analysis.full_cutflow_printout(datasets=all_samples)
     analysis.print_metadata_table(datasets=mc_samples)
     fakes_colour = next(analysis.c_iter)
@@ -288,10 +290,17 @@ if __name__ == "__main__":
         "TauEta": "VisTruthTauEta",
         "TauPhi": "VisTruthTauPhi",
     }
+    sec_labels = {
+        "": "",
+        "1prong_": "1-prong taus",
+        "3prong_": "3-prong taus",
+        "tauplus_": r"$\tau^+$",
+        "tauminus_": r"$\tau^-$",
+    }
 
     for wp in ("loose", "medium", "tight"):
-        for nprong in ("", "1prong_", "3prong_"):
-            wp_dir = base_plotting_dir / wp / nprong
+        for sec in ("", "1prong_", "3prong_", "tauplus_", "tauminus_"):
+            wp_dir = base_plotting_dir / wp / sec
 
             for var in measurement_vars:
                 if var not in truths:
@@ -302,18 +311,18 @@ if __name__ == "__main__":
             def get_entries(s: str) -> float:
                 return (
                     analysis[s]
-                    .histograms[NOMINAL_NAME][f"{nprong}{wp}_SR_passID"]["MTW"]
+                    .histograms[NOMINAL_NAME][f"{sec}{wp}_SR_passID"]["MTW"]
                     .GetEffectiveEntries()
                 )
 
             def get_stat_err(s: str) -> float:
                 return sum(
                     analysis[s]
-                    .histograms[NOMINAL_NAME][f"{nprong}{wp}_SR_passID"]["MTW"]
+                    .histograms[NOMINAL_NAME][f"{sec}{wp}_SR_passID"]["MTW"]
                     .GetBinError(bin_i + 1)
                     for bin_i in range(
                         analysis[s]
-                        .histograms[NOMINAL_NAME][f"{nprong}{wp}_SR_passID"]["MTW"]
+                        .histograms[NOMINAL_NAME][f"{sec}{wp}_SR_passID"]["MTW"]
                         .GetNbinsX()
                     )
                 )
@@ -326,10 +335,10 @@ if __name__ == "__main__":
             fig, ax = plt.subplots()
             ax.pie(percentages, labels=labels, autopct="%1.1f%%", colors=colours)
             fig.savefig(
-                analysis.paths.output_dir / "plots" / f"{nprong}{wp}_signal_contribution_pie.png",
+                analysis.paths.output_dir / "plots" / f"{sec}{wp}_signal_contribution_pie.png",
                 bbox_inches="tight",
             )
-            analysis.logger.info(f"saved plot: {nprong}{wp}_signal_contribution_pie.png")
+            analysis.logger.info(f"saved plot: {sec}{wp}_signal_contribution_pie.png")
 
             # Table of numbers of events
             # -------------------------------------------------------------------
@@ -354,7 +363,7 @@ if __name__ == "__main__":
                 "Data 2017",
             ]
             table = np.array([categories, sample_evt_counts]).T
-            table_path = analysis.paths.latex_dir / f"{wp}_{nprong}_event_numbers.tex"
+            table_path = analysis.paths.latex_dir / f"{wp}_{sec}_event_numbers.tex"
             with open(table_path, "w") as f:
                 f.write(
                     tabulate.tabulate(
@@ -369,15 +378,13 @@ if __name__ == "__main__":
             # ===========================================================================
             default_args = {
                 "dataset": mc_samples + [None, "data"],
-                "selection": f"{nprong}{wp}_SR_passID",
+                "selection": f"{sec}{wp}_SR_passID",
                 "label": [analysis[ds].label for ds in mc_samples] + ["Fake Jets", "Data"],
                 "colour": [analysis[ds].colour for ds in mc_samples] + [fakes_colour, "k"],
                 "title": smart_join(
                     f"Data {YEAR}",
                     f"{wp.title()} Tau ID",
-                    "1-prong"
-                    if nprong == "1prong_"
-                    else ("3-prong" if nprong == "3prong_" else ""),
+                    sec_labels[sec],
                     f"{analysis.global_lumi / 1000: .3g}fb$^{{-1}}$",
                     sep=" | ",
                 ),
@@ -419,7 +426,7 @@ if __name__ == "__main__":
                         / f"analysis_fakes_{YEAR}/root/analysis_fakes_{YEAR}.root"
                     )
                 ) as file:
-                    fakes_hist = file.Get(f"{nprong}{wp}_{var}_fakes_bkg_TauPt_src")
+                    fakes_hist = file.Get(f"{sec}{wp}_{var}_fakes_bkg_TauPt_src")
                     fakes_hist.SetDirectory(0)
 
                 def FF_vars(s: str) -> list[str]:
@@ -430,13 +437,13 @@ if __name__ == "__main__":
                     val=FF_vars(var),
                     **default_args,
                     logy=True,
-                    filename=f"{nprong}{wp}_{var}_stack_fakes_log.png",
+                    filename=f"{sec}{wp}_{var}_stack_fakes_log.png",
                 )
                 analysis.plot(
                     val=FF_vars(var),
                     **default_args,
                     logy=False,
-                    filename=f"{nprong}{wp}_{var}_stack_fakes_liny.png",
+                    filename=f"{sec}{wp}_{var}_stack_fakes_liny.png",
                 )
 
             # NO FAKES
@@ -451,7 +458,7 @@ if __name__ == "__main__":
             }
 
             # see try different selections
-            selection = f"{nprong}{wp}_SR_passID"
+            selection = f"{sec}{wp}_SR_passID"
             default_args["title"] = smart_join(
                 f"Data {YEAR}",
                 f"{wp.title()} Tau ID",
@@ -488,13 +495,13 @@ if __name__ == "__main__":
                     val=var,
                     **default_args,
                     logy=True,
-                    filename=f"{nprong}{wp}_{var}_stack_no_fakes_log.png",
+                    filename=f"{sec}{wp}_{var}_stack_no_fakes_log.png",
                 )
                 analysis.plot(
                     val=var,
                     **default_args,
                     logy=False,
-                    filename=f"{nprong}{wp}_{var}_stack_no_fakes_liny.png",
+                    filename=f"{sec}{wp}_{var}_stack_no_fakes_liny.png",
                 )
 
             # SYSTEMATIC UNCERTAINTIES
@@ -509,7 +516,7 @@ if __name__ == "__main__":
             # for each sample
             for mc_sample in mc_samples:
                 # mass variables
-                selection = f"{nprong}{wp}_SR_passID"
+                selection = f"{sec}{wp}_SR_passID"
 
                 for v in measurement_vars:
                     analysis.paths.plot_dir = wp_dir / "systematics" / mc_sample
@@ -536,7 +543,7 @@ if __name__ == "__main__":
                         default_args.update({"logx": False, "xlabel": variable_data[v]["name"]})
 
                     # save these for later
-                    uncert_name = f"{v}_{nprong}{wp}_{mc_sample}_uncert"
+                    uncert_name = f"{v}_{sec}{wp}_{mc_sample}_uncert"
                     h = analysis[mc_sample].get_hist(
                         variable=v,
                         systematic=NOMINAL_NAME,

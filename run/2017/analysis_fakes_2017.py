@@ -17,7 +17,7 @@ YEAR = 2017
 # ========================================================================
 pass_presel = Cut(
     r"Pass preselection",
-    r"(passReco == 1) && (TauBaselineWP == 1) && (abs(TauCharge) == 1) && passMetTrigger"
+    r"(passReco == 1) && (TauBaselineWP == 1) && (abs(TauCharge) == 1) && passMetTrigger && (badJet == 0)"
     r"&& ((MatchedTruthParticle_isTau + MatchedTruthParticle_isElectron + MatchedTruthParticle_isMuon + MatchedTruthParticle_isPhoton) <= 1)"
     r"&& ((TauNCoreTracks == 1) || (TauNCoreTracks == 3))",
 )
@@ -190,6 +190,8 @@ for selection, cut_list in zip(selections_list, selections_cuts):
     for cutstr, cut_name in [
         ("TauNCoreTracks == 1", "1prong"),
         ("TauNCoreTracks == 3", "3prong"),
+        ("TauCharge == 1", "tauplus"),
+        ("TauCharge == -1", "tauminus"),
     ]:
         selections[f"{cut_name}_{selection}"] = cut_list + [Cut(cut_name, cutstr)]
         selections[f"trueTau_{cut_name}_{selection}"] = cut_list + [
@@ -211,8 +213,9 @@ wanted_variables = {
     "TauRNNJetScore",
     "TauBDTEleScore",
     "TauNCoreTracks",
+    "nJets",
     "AbsDeltaPhi_tau_met",
-    "TruthAbsDeltaPhi_tau_met",
+    "TauPt_div_MET",
 }
 measurement_vars_mass = [
     "TauPt",
@@ -226,7 +229,7 @@ measurement_vars_unitless = [
     "TauRNNJetScore",
     # "DeltaPhi_tau_met",
     "AbsDeltaPhi_tau_met",
-    "TruthAbsDeltaPhi_tau_met",
+    "TauPt_div_MET",
     "TauNCoreTracks",
 ]
 measurement_vars = measurement_vars_unitless + measurement_vars_mass
@@ -378,7 +381,9 @@ if __name__ == "__main__":
         "medium",
         "tight",
     )
-    prongs = (
+    sections = (
+        "tauminus",
+        "tauplus",
         "1prong",
         "3prong",
         "",
@@ -400,22 +405,22 @@ if __name__ == "__main__":
 
         # FAKES ESTIMATE
         # ========================================================================
-        for prong_str in prongs:
-            nprong = prong_str + "_" if prong_str else ""
+        for sec_str in sections:
+            sec = sec_str + "_" if sec_str else ""
 
             for fakes_source in fakes_sources:
                 analysis.do_fakes_estimate(
                     fakes_source,
                     measurement_vars,
-                    f"{nprong}{wp}_CR_passID",
-                    f"{nprong}{wp}_CR_failID",
-                    f"{nprong}{wp}_SR_passID",
-                    f"{nprong}{wp}_SR_failID",
-                    f"trueTau_{nprong}{wp}_CR_passID",
-                    f"trueTau_{nprong}{wp}_CR_failID",
-                    f"trueTau_{nprong}{wp}_SR_passID",
-                    f"trueTau_{nprong}{wp}_SR_failID",
-                    name=f"{nprong}{wp}",
+                    f"{sec}{wp}_CR_passID",
+                    f"{sec}{wp}_CR_failID",
+                    f"{sec}{wp}_SR_passID",
+                    f"{sec}{wp}_SR_failID",
+                    f"trueTau_{sec}{wp}_CR_passID",
+                    f"trueTau_{sec}{wp}_CR_failID",
+                    f"trueTau_{sec}{wp}_SR_passID",
+                    f"trueTau_{sec}{wp}_SR_failID",
+                    name=f"{sec}{wp}",
                     systematic=NOMINAL_NAME,
                     save_intermediates=True,
                 )
@@ -426,28 +431,28 @@ if __name__ == "__main__":
                     fakes_source,
                     "data",
                     systematic=NOMINAL_NAME,
-                    selection=f"{nprong}{wp}_CR_passID",
+                    selection=f"{sec}{wp}_CR_passID",
                 )
                 CR_failID_data = analysis.get_hist(
                     fakes_source,
                     "data",
                     systematic=NOMINAL_NAME,
-                    selection=f"{nprong}{wp}_CR_failID",
+                    selection=f"{sec}{wp}_CR_failID",
                 )
                 SR_failID_data = analysis.get_hist(
                     fakes_source,
                     "data",
                     systematic=NOMINAL_NAME,
-                    selection=f"{nprong}{wp}_SR_failID",
+                    selection=f"{sec}{wp}_SR_failID",
                 )
                 CR_passID_mc = analysis.get_hist(
-                    f"{nprong}{wp}_all_mc_{fakes_source}_trueTau_{nprong}{wp}_CR_passID"
+                    f"{sec}{wp}_all_mc_{fakes_source}_trueTau_{sec}{wp}_CR_passID"
                 )
                 CR_failID_mc = analysis.get_hist(
-                    f"{nprong}{wp}_all_mc_{fakes_source}_trueTau_{nprong}{wp}_CR_failID"
+                    f"{sec}{wp}_all_mc_{fakes_source}_trueTau_{sec}{wp}_CR_failID"
                 )
                 SR_failID_mc = analysis.get_hist(
-                    f"{nprong}{wp}_all_mc_{fakes_source}_trueTau_{nprong}{wp}_SR_failID"
+                    f"{sec}{wp}_all_mc_{fakes_source}_trueTau_{sec}{wp}_SR_failID"
                 )
                 default_args = {
                     "do_stat": False,
@@ -474,7 +479,7 @@ if __name__ == "__main__":
                         r"$N^{\mathrm{CR}}_{\mathrm{failID,MC}}$",
                     ],
                     **default_args,
-                    filename=f"{nprong}{wp}_FF_histograms_{fakes_source}.png",
+                    filename=f"{sec}{wp}_FF_histograms_{fakes_source}.png",
                 )
                 analysis.plot(
                     [CR_failID_data - CR_failID_mc, CR_passID_data - CR_passID_mc],
@@ -484,33 +489,33 @@ if __name__ == "__main__":
                     ],
                     **default_args,
                     ratio_plot=True,
-                    filename=f"{nprong}{wp}_FF_histograms_diff_{fakes_source}.png",
+                    filename=f"{sec}{wp}_FF_histograms_diff_{fakes_source}.png",
                     ratio_label="FF",
                 )
                 analysis.plot(
                     [SR_failID_data, SR_failID_mc],
                     label=["SR_failID_data", "SR_failID_mc"],
                     **default_args,
-                    filename=f"{nprong}{wp}_FF_calculation_{fakes_source}.png",
+                    filename=f"{sec}{wp}_FF_calculation_{fakes_source}.png",
                 )
                 analysis.plot(
                     SR_failID_data - SR_failID_mc,
                     label="SR_failID_data - SR_failID_mc",
                     **default_args,
-                    filename=f"{nprong}{wp}_FF_calculation_delta_SR_fail_{fakes_source}.png",
+                    filename=f"{sec}{wp}_FF_calculation_delta_SR_fail_{fakes_source}.png",
                 )
 
                 # Fake factors
                 # ----------------------------------------------------------------------------
                 analysis.paths.plot_dir = wp_dir / "fake_factors"
                 analysis.plot(
-                    val=f"{nprong}{wp}_{fakes_source}_FF",
+                    val=f"{sec}{wp}_{fakes_source}_FF",
                     xlabel=r"$p_T^\tau$ [GeV]" if fakes_source == "TauPt" else r"$m_T^W$ [GeV]",
                     do_stat=False,
                     logx=False,
                     logy=False,
                     ylabel="Fake factor",
-                    filename=f"{nprong}{wp}_{fakes_source}_FF.png",
+                    filename=f"{sec}{wp}_{fakes_source}_FF.png",
                 )
 
                 # Stacks with Fakes background
@@ -521,8 +526,8 @@ if __name__ == "__main__":
                     "dataset": all_samples + [None],
                     "systematic": NOMINAL_NAME,
                     "selection": (
-                        [f"{nprong}{wp}_SR_passID"]
-                        + [f"{nprong}{wp}_SR_passID"] * len(mc_samples)
+                        [f"{sec}{wp}_SR_passID"]
+                        + [f"{sec}{wp}_SR_passID"] * len(mc_samples)
                         + [None]
                     ),
                     "label": [analysis[ds].label for ds in all_samples] + ["Fake Jet Estimate"],
@@ -544,7 +549,7 @@ if __name__ == "__main__":
                 def FF_vars(s: str) -> list[str]:
                     """List of variable names for each sample"""
                     return [s] * (len(all_samples)) + [
-                        f"{nprong}{wp}_{s}_fakes_bkg_{fakes_source}_src"
+                        f"{sec}{wp}_{s}_fakes_bkg_{fakes_source}_src"
                     ]
 
                 # mass variables
@@ -559,13 +564,13 @@ if __name__ == "__main__":
                         val=FF_vars(v),
                         **default_args,
                         logy=True,
-                        filename=f"{nprong}{wp}_{v}_fakes_stack_{fakes_source}_log.png",
+                        filename=f"{sec}{wp}_{v}_fakes_stack_{fakes_source}_log.png",
                     )
                     analysis.plot(
                         val=FF_vars(v),
                         **default_args,
                         logy=False,
-                        filename=f"{nprong}{wp}_{v}_fakes_stack_{fakes_source}_liny.png",
+                        filename=f"{sec}{wp}_{v}_fakes_stack_{fakes_source}_liny.png",
                     )
 
         # Fake factors

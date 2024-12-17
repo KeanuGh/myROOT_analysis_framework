@@ -12,13 +12,13 @@ from utils.variable_names import variable_data
 # VARIABLES
 # ========================================================================
 measurement_vars_mass = [
-    "TauPt",
+    # "TauPt",
     "MTW",
-    "MET_met",
+    # "MET_met",
 ]
 measurement_vars_unitless = [
-    "TauEta",
-    "TauPhi",
+    # "TauEta",
+    # "TauPhi",
     # "TauBDTEleScore",
     # "TauRNNJetScore",
     # "TauNCoreTracks",
@@ -39,6 +39,7 @@ VARS = [
     "MET_met",
 ]
 ITER = [
+    0,
     1,
     2,
     4,
@@ -65,6 +66,12 @@ if __name__ == "__main__":
         "TauEta": r"\eta^{\tau_\mathrm{had-vis}}",
         "TauPhi": r"\phi^{\tau_\mathrm{had-vis}}",
     }
+
+    def unfolding_label(i: int) -> str:
+        if i == 0:
+            return "Bin-By-Bin Unfolding"
+        else:
+            return f"Iterative Unfolding - {i} Iterations"
 
     for wp in WP:
         wp_dir = base_plotting_dir / wp
@@ -181,11 +188,13 @@ if __name__ == "__main__":
                 "logx": True if var in measurement_vars_mass else False,
                 "ratio_plot": True,
                 "ratio_label": "Data / MC",
-                "ratio_axlim": (0.8, 1.2),
+                "ratio_axlim": (0.5, 1.5),
                 "label_params": {"llabel": "Preliminary", "loc": 1},
             }
 
             def unfold_bayes(h: ROOT.TH1, i: int) -> ROOT.TH1:
+                if i == 0:
+                    return ROOT.RooUnfoldBinByBin(response, h).Hreco()
                 return ROOT.RooUnfoldBayes(response, h, i).Hreco()
 
             # get data and signal
@@ -265,6 +274,7 @@ if __name__ == "__main__":
                 ("shadow_bin_250", acc_hist250),
                 ("shadow_bin_300", acc_hist300),
             )
+            acc_no_shadow = Histogram1D(th1=acc_hist)
 
             # fully unfold
             # ----------------------------------------------------------------
@@ -297,19 +307,22 @@ if __name__ == "__main__":
                     signal_unfolded = Histogram1D(th1=unfold_bayes(signal, n_iter))
                     uncert_up_unfolded = Histogram1D(th1=unfold_bayes(uncert_up, n_iter))
                     uncert_down_unfolded = Histogram1D(th1=unfold_bayes(uncert_down, n_iter))
-                    uncert_sym_unfolded = (
-                        (uncert_up_unfolded - data_unfolded)
-                        + (data_unfolded - uncert_down_unfolded)
-                    ) / 2
 
-                    data_unfolded_full = data_unfolded * acc_new / LUMI
-                    signal_unfolded_full = signal_unfolded * acc_new / LUMI
-                    uncert_unfolded_full = uncert_sym_unfolded * acc_new / LUMI
+                    data_unfolded_full = data_unfolded * acc_new / (LUMI * acc_no_shadow)
+                    signal_unfolded_full = signal_unfolded * acc_new / (LUMI * acc_no_shadow)
+                    uncert_up_unfolded_full = uncert_up_unfolded * acc_new / (LUMI * acc_no_shadow)
+                    uncert_down_unfolded_full = (
+                        uncert_down_unfolded * acc_new / (LUMI * acc_no_shadow)
+                    )
+                    uncert_sym_unfolded_full = (
+                        (uncert_up_unfolded_full - data_unfolded_full)
+                        + (data_unfolded_full - uncert_down_unfolded_full)
+                    ) / 4
 
-                    ratio_err = (uncert_unfolded_full / data_unfolded_full).bin_values()
+                    ratio_err = (uncert_sym_unfolded_full / data_unfolded_full).bin_values()
                     default_args.update(
                         {
-                            "uncert": uncert_unfolded_full,
+                            "uncert": [truth.error(), uncert_sym_unfolded_full],
                             "ratio_err": ratio_err,
                         }
                     )
@@ -334,7 +347,7 @@ if __name__ == "__main__":
             for sh_bin_label, _ in shadow_bins:
                 analysis.plot(
                     val=[truth] + [hists[sh_bin_label][i] for i in ITER],
-                    label=["Truth"] + [f"{i} iterations" for i in ITER],
+                    label=["Truth"] + [unfolding_label(i) for i in ITER],
                     xlabel=(
                         variable_data[var]["name"]
                         + (" [GeV]" if var in measurement_vars_mass else "")

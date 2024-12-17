@@ -32,7 +32,7 @@ datasets: Dict[str, Dict] = {
 # ========================================================================
 pass_reco = Cut(
     r"Pass preselection",
-    r"(passReco == 1) && (TauBaselineWP == 1) && (abs(TauCharge) == 1) && passMetTrigger"
+    r"(passReco == 1) && (TauBaselineWP == 1) && (abs(TauCharge) == 1) && passMetTrigger && (badJet == 0)"
     r"&& ((MatchedTruthParticle_isTau + MatchedTruthParticle_isElectron + MatchedTruthParticle_isMuon + MatchedTruthParticle_isPhoton) <= 1)"
     r"&& ((TauNCoreTracks == 1) || (TauNCoreTracks == 3))",
 )
@@ -42,6 +42,7 @@ pass_matched_reco = Cut(
     r"(TauBaselineWP == 1) && "
     r"(abs(TauCharge) == 1) && "
     r"passMetTrigger && "
+    r"(badJet == 0) &&"
     r"((TauNCoreTracks == 1) || (TauNCoreTracks == 3)) &&"
     r"(MatchedTruthParticle_isHadronicTau == true) && "
     r"(MatchedTruthParticlePt == TruthTauPt)",
@@ -70,6 +71,14 @@ truth_tau_3prong = Cut(
     r"3-prong truth",
     r"TruthTau_nChargedTracks == 3",
 )
+truth_tau_plus = Cut(
+    r"1-prong truth",
+    r"TruthTauCharge == 1",
+)
+truth_tau_minus = Cut(
+    r"3-prong truth",
+    r"TruthTauCharge == -1",
+)
 reco_tau_1prong = Cut(
     r"1-prong Reconstructed Hadronic Tau",
     "(TauNCoreTracks == 1) && (TruthTau_nChargedTracks == 1)",
@@ -77,6 +86,14 @@ reco_tau_1prong = Cut(
 reco_tau_3prong = Cut(
     r"3-prong Reconstructed Hadronic Tau",
     "(TauNCoreTracks == 3) && (TruthTau_nChargedTracks == 3)",
+)
+reco_tau_plus = Cut(
+    r"Positive Tau",
+    "(TauCharge == 1) && (TruthTauCharge == 1)",
+)
+reco_tau_minus = Cut(
+    r"Negative Tau",
+    "(TauCharge == -1) && (TruthTauCharge == -1)",
 )
 pass_loose = Cut(
     r"\mathrm{Pass Loose ID}",
@@ -95,7 +112,7 @@ pass_tight = Cut(
 )
 pass_SR_reco = Cut(
     r"Pass SR Reco",
-    r"(TauPt > 100) && (MET_met > 100) && (MTW > 200)"
+    r"(TauPt > 125) && (MET_met > 125) && (MTW > 250)"
     r"&& ((TauNCoreTracks == 1) || (TauNCoreTracks == 3))",
 )
 pass_SR_truth = Cut(
@@ -119,28 +136,56 @@ selections: dict[str, list[Cut]] = {
     "truth_tau": truth_cuts,
     "1prong_truth_tau": truth_cuts + [truth_tau_1prong],
     "3prong_truth_tau": truth_cuts + [truth_tau_3prong],
+    "tauplus_truth_tau": truth_cuts + [truth_tau_plus],
+    "tauminus_truth_tau": truth_cuts + [truth_tau_minus],
     # PASS RECO
     # ================================================
     "loose_reco_tau": reco_cuts + [pass_loose],
     "loose_1prong_reco_tau": reco_cuts + [pass_loose, reco_tau_1prong],
     "loose_3prong_reco_tau": reco_cuts + [pass_loose, reco_tau_3prong],
+    "loose_tauplus_reco_tau": reco_cuts + [pass_loose, reco_tau_plus],
+    "loose_tauminus_reco_tau": reco_cuts + [pass_loose, reco_tau_minus],
     "medium_reco_tau": reco_cuts + [pass_medium],
     "medium_1prong_reco_tau": reco_cuts + [pass_medium, reco_tau_1prong],
     "medium_3prong_reco_tau": reco_cuts + [pass_medium, reco_tau_3prong],
+    "medium_tauplus_reco_tau": reco_cuts + [pass_medium, reco_tau_plus],
+    "medium_tauminus_reco_tau": reco_cuts + [pass_medium, reco_tau_minus],
     "tight_reco_tau": reco_cuts + [pass_tight],
     "tight_1prong_reco_tau": reco_cuts + [pass_tight, reco_tau_1prong],
     "tight_3prong_reco_tau": reco_cuts + [pass_tight, reco_tau_3prong],
+    "tight_tauplus_reco_tau": reco_cuts + [pass_tight, reco_tau_plus],
+    "tight_tauminus_reco_tau": reco_cuts + [pass_tight, reco_tau_minus],
     # PASS TRUTH AND RECO
     # ================================================
+    # fmt: off
     "loose_truth_reco_tau": truth_cuts + reco_cuts + [pass_loose],
-    "loose_1prong_truth_reco_tau": truth_cuts + reco_cuts + [pass_loose, reco_tau_1prong],
-    "loose_3prong_truth_reco_tau": truth_cuts + reco_cuts + [pass_loose, reco_tau_3prong],
+    "loose_1prong_truth_reco_tau": truth_cuts + reco_cuts + [pass_loose, truth_tau_1prong,
+                                                             reco_tau_1prong],
+    "loose_3prong_truth_reco_tau": truth_cuts + reco_cuts + [pass_loose, truth_tau_3prong,
+                                                             reco_tau_3prong],
+    "loose_tauplus_truth_reco_tau": truth_cuts + reco_cuts + [pass_loose, truth_tau_plus,
+                                                              reco_tau_plus],
+    "loose_tauminus_truth_reco_tau": truth_cuts + reco_cuts + [pass_loose, truth_tau_minus,
+                                                               reco_tau_minus],
     "medium_truth_reco_tau": truth_cuts + reco_cuts + [pass_medium],
-    "medium_1prong_truth_reco_tau": truth_cuts + reco_cuts + [pass_medium, reco_tau_1prong],
-    "medium_3prong_truth_reco_tau": truth_cuts + reco_cuts + [pass_medium, reco_tau_3prong],
+    "medium_1prong_truth_reco_tau": truth_cuts + reco_cuts + [pass_medium, truth_tau_1prong,
+                                                              reco_tau_1prong],
+    "medium_3prong_truth_reco_tau": truth_cuts + reco_cuts + [pass_medium, truth_tau_3prong,
+                                                              reco_tau_3prong],
+    "medium_tauplus_truth_reco_tau": truth_cuts + reco_cuts + [pass_medium, truth_tau_plus,
+                                                               reco_tau_plus],
+    "medium_tauminus_truth_reco_tau": truth_cuts + reco_cuts + [pass_medium, truth_tau_minus,
+                                                                reco_tau_minus],
     "tight_truth_reco_tau": truth_cuts + reco_cuts + [pass_tight],
-    "tight_1prong_truth_reco_tau": truth_cuts + reco_cuts + [pass_tight, reco_tau_1prong],
-    "tight_3prong_truth_reco_tau": truth_cuts + reco_cuts + [pass_tight, reco_tau_3prong],
+    "tight_1prong_truth_reco_tau": truth_cuts + reco_cuts + [pass_tight, truth_tau_1prong,
+                                                             reco_tau_1prong],
+    "tight_3prong_truth_reco_tau": truth_cuts + reco_cuts + [pass_tight, truth_tau_3prong,
+                                                             reco_tau_3prong],
+    "tight_tauplus_truth_reco_tau": truth_cuts + reco_cuts + [pass_tight, truth_tau_plus,
+                                                              reco_tau_plus],
+    "tight_tauminus_truth_reco_tau": truth_cuts + reco_cuts + [pass_tight, truth_tau_minus,
+                                                               reco_tau_minus],
+    # fmt: on
 }
 
 # VARIABLES
@@ -189,7 +234,7 @@ NOMINAL_NAME = "T_s1thv_NOMINAL"
 mtw_bins = np.array(
     [250, 350, 375, 400, 430, 465, 500, 550, 600, 700, 850, 1000, 2000], dtype="double"
 )
-taupt_bins = np.array([125, 170, 200, 250, 300, 350, 425, 500, 600, 750, 900, 1000], dtype="double")
+taupt_bins = np.array([125, 170, 200, 250, 300, 350, 425, 500, 600, 1000], dtype="double")
 
 
 def run_analysis() -> Analysis:
@@ -199,8 +244,8 @@ def run_analysis() -> Analysis:
     return Analysis(
         datasets,
         year=2017,
-        # rerun=True,
-        # regen_histograms=True,
+        rerun=True,
+        regen_histograms=True,
         do_systematics=False,
         # regen_metadata=True,
         ttree=NOMINAL_NAME,
@@ -214,7 +259,15 @@ def run_analysis() -> Analysis:
         hists_2d=hists_2d,
         do_unweighted=True,
         binnings={
-            "": BINNINGS,
+            "": BINNINGS
+            | {
+                "MTW": mtw_bins,
+                "TruthMTW": mtw_bins,
+                "TauPt": taupt_bins,
+                "MET_met": taupt_bins,
+                "TruthNeutrinoPt": taupt_bins,
+                "TruthTauPt": taupt_bins,
+            }
         },
     )
 
@@ -242,39 +295,39 @@ if __name__ == "__main__":
         dataset.histogram_printout(to_file="txt", to_dir=analysis.paths.latex_dir)
 
     working_points = ("loose", "medium", "tight")
-    working_prongs = ("", "1prong_", "3prong_")
+    tau_sections = ("", "1prong_", "3prong_", "tauplus_", "tauminus_")
 
     # CALCULATE EFFICIENCY AND ACCEPTANCE
     # ========================================================================
     for wp in working_points:
-        for nprong in working_prongs:
+        for sec in tau_sections:
             for var in reco_measurement_vars:
-                analysis.histograms[f"{wp}_{nprong}{var}_efficiency"] = bayes_divide(
+                analysis.histograms[f"{wp}_{sec}{var}_efficiency"] = bayes_divide(
                     analysis.get_hist(
                         var + "_unweighted",
                         "wtaunu",
                         NOMINAL_NAME,
-                        f"{wp}_{nprong}truth_reco_tau",
+                        f"{wp}_{sec}truth_reco_tau",
                     ),
                     analysis.get_hist(
                         var + "_unweighted",
                         "wtaunu",
                         NOMINAL_NAME,
-                        f"{nprong}truth_tau",
+                        f"{sec}truth_tau",
                     ),
                 )
-                analysis.histograms[f"{wp}_{nprong}{var}_acceptance"] = bayes_divide(
+                analysis.histograms[f"{wp}_{sec}{var}_acceptance"] = bayes_divide(
                     analysis.get_hist(
                         var + "_unweighted",
                         "wtaunu",
                         NOMINAL_NAME,
-                        f"{wp}_{nprong}truth_reco_tau",
+                        f"{wp}_{sec}truth_reco_tau",
                     ),
                     analysis.get_hist(
                         var + "_unweighted",
                         "wtaunu",
                         NOMINAL_NAME,
-                        f"{wp}_{nprong}reco_tau",
+                        f"{wp}_{sec}reco_tau",
                     ),
                 )
 
@@ -283,7 +336,7 @@ if __name__ == "__main__":
                 default_args = {
                     "dataset": "wtaunu",
                     "systematic": NOMINAL_NAME,
-                    "selection": f"{wp}_{nprong}reco_tau",
+                    "selection": f"{wp}_{sec}reco_tau",
                     "do_stat": True,
                     "do_syst": False,
                     "label": None,
@@ -291,14 +344,14 @@ if __name__ == "__main__":
                     "title": smart_join(
                         "2017",
                         "1-prong Taus"
-                        if (nprong == "1prong_")
-                        else ("3-prong Taus" if (nprong == "3prong_") else ""),
+                        if (sec == "1prong_")
+                        else ("3-prong Taus" if (sec == "3prong_") else ""),
                         f"{analysis.global_lumi / 1000:.3g}fb$^{{-1}}$",
                         sep=" | ",
                     ),
                 }
 
-                analysis.paths.plot_dir = base_plotting_dir / wp / nprong
+                analysis.paths.plot_dir = base_plotting_dir / wp / sec
                 if var in measurement_vars_mass:
                     default_args.update(
                         {"logx": True, "xlabel": variable_data[var]["name"] + " [GeV]"}
@@ -307,23 +360,23 @@ if __name__ == "__main__":
                     default_args.update({"logx": False, "xlabel": variable_data[var]["name"]})
 
                 # mental health
-                analysis.plot(var, **default_args, filename=f"{wp}_{nprong}{var}.png")
+                analysis.plot(var, **default_args, filename=f"{wp}_{sec}{var}.png")
 
                 default_args.update({"y_axlim": (0, 1.3), "hline_at": 1})
 
                 analysis.plot(
-                    val=analysis.histograms[f"{wp}_{nprong}{var}_efficiency"],
+                    val=analysis.histograms[f"{wp}_{sec}{var}_efficiency"],
                     ylabel=r"$\epsilon_\mathrm{selection}$",
                     colour="r",
                     **default_args,
-                    filename=f"{wp}_{nprong}{var}_efficiency.png",
+                    filename=f"{wp}_{sec}{var}_efficiency.png",
                 )
                 analysis.plot(
-                    val=analysis.histograms[f"{wp}_{nprong}{var}_acceptance"],
+                    val=analysis.histograms[f"{wp}_{sec}{var}_acceptance"],
                     ylabel=r"$f_\mathrm{in}$",
                     colour="r",
                     **default_args,
-                    filename=f"{wp}_{nprong}{var}_acceptance.png",
+                    filename=f"{wp}_{sec}{var}_acceptance.png",
                 )
                 truth_label = variable_data[truths[var]]["name"] + (
                     " [GeV]" if var in measurement_vars_mass else ""
@@ -336,28 +389,51 @@ if __name__ == "__main__":
                     truths[var],
                     dataset="wtaunu",
                     systematic=NOMINAL_NAME,
-                    selection=f"{wp}_{nprong}truth_reco_tau",
+                    selection=f"{wp}_{sec}truth_reco_tau",
                     ylabel=truth_label,
                     xlabel=reco_label,
-                    title=f"{reco_label.removesuffix(' [GeV]')} resonance | {analysis.global_lumi / 1000:.3g}fb$^{{-1}}$",
+                    title=f"{reco_label.removesuffix(' [GeV]')} Migration Matrix | {analysis.global_lumi / 1000:.3g}fb$^{{-1}}$",
                     labels=True,
                     logx=True if var in measurement_vars_mass else False,
                     logy=True if var in measurement_vars_mass else False,
                     label_params={"llabel": "Simulation"},
-                    filename=f"{wp}_{nprong}{var}_response.png",
+                    filename=f"{wp}_{sec}{var}_migration.png",
+                )
+
+                # resonance
+                response = analysis.get_hist(
+                    f"{var}_{truths[var]}",
+                    dataset="wtaunu",
+                    systematic=NOMINAL_NAME,
+                    selection=f"{wp}_{sec}truth_reco_tau",
+                ).Clone()
+                response.Scale(1 / response.GetEffectiveEntries())
+                analysis.plot_2d(
+                    response,
+                    dataset="wtaunu",
+                    systematic=NOMINAL_NAME,
+                    selection=f"{wp}_{sec}truth_reco_tau",
+                    ylabel=truth_label,
+                    xlabel=reco_label,
+                    title=f"{reco_label.removesuffix(' [GeV]')} Resonance | {analysis.global_lumi / 1000:.3g}fb$^{{-1}}$",
+                    labels=True,
+                    logx=True if var in measurement_vars_mass else False,
+                    logy=True if var in measurement_vars_mass else False,
+                    label_params={"llabel": "Simulation"},
+                    filename=f"{wp}_{sec}{var}_response.png",
                 )
 
     # START OF PRONG LOOP
     # ========================================================================
-    for nprong in working_prongs:
+    for sec in tau_sections:
         for var in reco_measurement_vars:
             default_args.update(
                 {
                     "label": ["loose", "medium", "tight"],
                     "title": smart_join(
                         "1-prong Taus"
-                        if (nprong == "1prong_")
-                        else ("3-prong Taus" if (nprong == "3prong_") else ""),
+                        if (sec == "1prong_")
+                        else ("3-prong Taus" if (sec == "3prong_") else ""),
                         "2017",
                         f"{analysis.global_lumi / 1000:.3g}fb$^{{-1}}$",
                         sep=" | ",
@@ -365,7 +441,7 @@ if __name__ == "__main__":
                 }
             )
 
-            analysis.paths.plot_dir = base_plotting_dir / nprong
+            analysis.paths.plot_dir = base_plotting_dir / sec
             if var in measurement_vars_mass:
                 default_args.update({"logx": True, "xlabel": variable_data[var]["name"] + " [GeV]"})
             elif var in measurement_vars_unitless:
@@ -373,23 +449,23 @@ if __name__ == "__main__":
 
             analysis.plot(
                 val=[
-                    analysis.histograms[f"loose_{nprong}{var}_efficiency"],
-                    analysis.histograms[f"medium_{nprong}{var}_efficiency"],
-                    analysis.histograms[f"tight_{nprong}{var}_efficiency"],
+                    analysis.histograms[f"loose_{sec}{var}_efficiency"],
+                    analysis.histograms[f"medium_{sec}{var}_efficiency"],
+                    analysis.histograms[f"tight_{sec}{var}_efficiency"],
                 ],
                 ylabel=r"$\epsilon_\mathrm{selection}$",
                 **default_args,
-                filename=f"{nprong}wp_compare_{var}_efficiency.png",
+                filename=f"{sec}wp_compare_{var}_efficiency.png",
             )
             analysis.plot(
                 val=[
-                    analysis.histograms[f"loose_{nprong}{var}_acceptance"],
-                    analysis.histograms[f"medium_{nprong}{var}_acceptance"],
-                    analysis.histograms[f"tight_{nprong}{var}_acceptance"],
+                    analysis.histograms[f"loose_{sec}{var}_acceptance"],
+                    analysis.histograms[f"medium_{sec}{var}_acceptance"],
+                    analysis.histograms[f"tight_{sec}{var}_acceptance"],
                 ],
                 ylabel=r"$f_\mathrm{in}$",
                 **default_args,
-                filename=f"{nprong}wp_compare_{var}_acceptance.png",
+                filename=f"{sec}wp_compare_{var}_acceptance.png",
             )
 
     # START OF WP LOOP

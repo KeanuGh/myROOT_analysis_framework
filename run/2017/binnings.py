@@ -1,9 +1,7 @@
 import numpy as np
 
-mtw_bins = np.array(
-    [300, 350, 375, 400, 430, 465, 500, 550, 600, 700, 850, 1000, 2000], dtype="double"
-)
-taupt_bins = np.array([150, 170, 200, 250, 300, 350, 425, 500, 600, 1000], dtype="double")
+mtw_bins = np.array([350, 375, 400, 430, 465, 500, 550, 600, 700, 850, 1000, 2000], dtype="double")
+taupt_bins = np.array([170, 200, 250, 300, 350, 425, 500, 600, 1000], dtype="double")
 nedges = 16
 BINNINGS = {
     "MTW": mtw_bins,
