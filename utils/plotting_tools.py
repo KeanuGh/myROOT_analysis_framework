@@ -30,6 +30,7 @@ class PlotOpts(TypedDict):
     labels: list[str]
     colours: list[str | tuple]
     linestyles: list[str]
+    histstyles: list[str]
 
 
 @dataclass(slots=True)
