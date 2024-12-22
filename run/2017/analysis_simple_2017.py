@@ -34,6 +34,10 @@ pass_mtw350 = Cut(
     r"$m_T^W > 350$",
     r"MTW > 350",
 )
+pass_eta = Cut(
+    r"$|\eta^{\tau_\mathrm{had-vis}}| < 1.37 || 1.52 < |\eta^{\tau_\mathrm{had-vis}}| < 2.47$",
+    r"(((abs(TauEta) < 1.37) || (1.52 < abs(TauEta))) && (abs(TauEta) < 2.47))",
+)
 pass_loose = Cut(
     r"\mathrm{Pass Loose ID}",
     r"(TauBDTEleScore > 0.05) && "
@@ -98,6 +102,7 @@ selections: dict[str, list[Cut]] = {
     "loose_SR_passID": [
         pass_presel,
         pass_taupt170,
+        pass_eta,
         pass_mtw350,
         pass_loose,
         pass_met170,
@@ -105,6 +110,7 @@ selections: dict[str, list[Cut]] = {
     "medium_SR_passID": [
         pass_presel,
         pass_taupt170,
+        pass_eta,
         pass_mtw350,
         pass_medium,
         pass_met170,
@@ -112,6 +118,7 @@ selections: dict[str, list[Cut]] = {
     "tight_SR_passID": [
         pass_presel,
         pass_taupt170,
+        pass_eta,
         pass_mtw350,
         pass_tight,
         pass_met170,
@@ -121,7 +128,6 @@ selections: dict[str, list[Cut]] = {
 selections_list = list(selections.keys())
 selections_cuts = list(selections.values())
 for selection, cut_list in zip(selections_list, selections_cuts):
-    selections[f"trueTau_{selection}"] = cut_list + [pass_truetau]
     # define selections for 1- or 3- tau prongs
     for cutstr, cut_name in [
         ("TauNCoreTracks == 1", "1prong"),
@@ -598,6 +604,8 @@ if __name__ == "__main__":
                             "ratio_axlim": (0.5, 1.5),
                             "logx": True if v in measurement_vars_mass else False,
                             "ylabel": "Weighted Entries",
+                            "do_stat": False,
+                            "do_syst": False,
                         }
                     )
                     analysis.plot(

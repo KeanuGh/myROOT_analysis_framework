@@ -25,6 +25,10 @@ pass_taupt170 = Cut(
     r"$p_T^\tau > 170$",
     r"TauPt > 170",
 )
+pass_eta = Cut(
+    r"$|\eta^{\tau_\mathrm{had-vis}}| < 1.37 || 1.52 < |\eta^{\tau_\mathrm{had-vis}}| < 2.47$",
+    r"(((abs(TauEta) < 1.37) || (1.52 < abs(TauEta))) && (abs(TauEta) < 2.47))",
+)
 pass_mtw350 = Cut(
     r"$m_T^W > 350$",
     r"MTW > 350",
@@ -93,6 +97,7 @@ selections_loose: dict[str, list[Cut]] = {
     "loose_SR_passID": [
         pass_presel,
         pass_taupt170,
+        pass_eta,
         pass_mtw350,
         pass_loose,
         pass_met170,
@@ -100,6 +105,7 @@ selections_loose: dict[str, list[Cut]] = {
     "loose_SR_failID": [
         pass_presel,
         pass_taupt170,
+        pass_eta,
         pass_mtw350,
         fail_loose,
         pass_met170,
@@ -107,6 +113,7 @@ selections_loose: dict[str, list[Cut]] = {
     "loose_CR_passID": [
         pass_presel,
         pass_taupt170,
+        pass_eta,
         pass_mtw350,
         pass_loose,
         pass_150met,
@@ -114,6 +121,7 @@ selections_loose: dict[str, list[Cut]] = {
     "loose_CR_failID": [
         pass_presel,
         pass_taupt170,
+        pass_eta,
         pass_mtw350,
         fail_loose,
         pass_150met,
@@ -123,6 +131,7 @@ selections_medium: dict[str, list[Cut]] = {
     "medium_SR_passID": [
         pass_presel,
         pass_taupt170,
+        pass_eta,
         pass_mtw350,
         pass_medium,
         pass_met170,
@@ -130,6 +139,7 @@ selections_medium: dict[str, list[Cut]] = {
     "medium_SR_failID": [
         pass_presel,
         pass_taupt170,
+        pass_eta,
         pass_mtw350,
         fail_medium,
         pass_met170,
@@ -137,6 +147,7 @@ selections_medium: dict[str, list[Cut]] = {
     "medium_CR_passID": [
         pass_presel,
         pass_taupt170,
+        pass_eta,
         pass_mtw350,
         pass_medium,
         pass_150met,
@@ -144,6 +155,7 @@ selections_medium: dict[str, list[Cut]] = {
     "medium_CR_failID": [
         pass_presel,
         pass_taupt170,
+        pass_eta,
         pass_mtw350,
         fail_medium,
         pass_150met,
@@ -153,6 +165,7 @@ selections_tight: dict[str, list[Cut]] = {
     "tight_SR_passID": [
         pass_presel,
         pass_taupt170,
+        pass_eta,
         pass_mtw350,
         pass_tight,
         pass_met170,
@@ -160,6 +173,7 @@ selections_tight: dict[str, list[Cut]] = {
     "tight_SR_failID": [
         pass_presel,
         pass_taupt170,
+        pass_eta,
         pass_mtw350,
         fail_tight,
         pass_met170,
@@ -167,6 +181,7 @@ selections_tight: dict[str, list[Cut]] = {
     "tight_CR_passID": [
         pass_presel,
         pass_taupt170,
+        pass_eta,
         pass_mtw350,
         pass_tight,
         pass_150met,
@@ -174,6 +189,7 @@ selections_tight: dict[str, list[Cut]] = {
     "tight_CR_failID": [
         pass_presel,
         pass_taupt170,
+        pass_eta,
         pass_mtw350,
         fail_tight,
         pass_150met,

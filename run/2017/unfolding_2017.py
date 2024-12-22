@@ -12,16 +12,16 @@ from utils.variable_names import variable_data
 # VARIABLES
 # ========================================================================
 measurement_vars_mass = [
-    # "TauPt",
+    "TauPt",
     "MTW",
-    # "MET_met",
+    "MET_met",
 ]
 measurement_vars_unitless = [
-    # "TauEta",
-    # "TauPhi",
-    # "TauBDTEleScore",
-    # "TauRNNJetScore",
-    # "TauNCoreTracks",
+    "TauEta",
+    "TauPhi",
+    "TauBDTEleScore",
+    "TauRNNJetScore",
+    "TauNCoreTracks",
 ]
 measurement_vars = measurement_vars_mass + measurement_vars_unitless
 NOMINAL_NAME = "T_s1thv_NOMINAL"
@@ -65,6 +65,21 @@ if __name__ == "__main__":
         "MET_met": r"E_\mathrm{T}^\mathrm{miss}",
         "TauEta": r"\eta^{\tau_\mathrm{had-vis}}",
         "TauPhi": r"\phi^{\tau_\mathrm{had-vis}}",
+    }
+    systematics = {
+        "TAUS_TRUEHADTAU_EFF_ELEOLR_TOTAL",
+        "TAUS_TRUEHADTAU_EFF_RECO_TOTAL",
+        "TAUS_TRUEHADTAU_EFF_TRIGGER_STATDATA161718",
+        "TAUS_TRUEHADTAU_EFF_TRIGGER_STATMC161718",
+        "TAUS_TRUEHADTAU_EFF_TRIGGER_SYST161718",
+        "TAUS_TRUEHADTAU_SME_TES_DETECTOR_Barrel_HighPt",
+        "TAUS_TRUEHADTAU_SME_TES_DETECTOR_Barrel_LowPt",
+        "TAUS_TRUEHADTAU_SME_TES_DETECTOR_Endcap_HighPt",
+        "TAUS_TRUEHADTAU_SME_TES_DETECTOR_Endcap_LowPt",
+        "TAUS_TRUEHADTAU_SME_TES_INSITUEXP",
+        "TAUS_TRUEHADTAU_SME_TES_INSITUFIT",
+        "TAUS_TRUEHADTAU_SME_TES_MODEL_CLOSURE",
+        "TAUS_TRUEHADTAU_SME_TES_PHYSICSLIST",
     }
 
     def unfolding_label(i: int) -> str:
@@ -141,7 +156,7 @@ if __name__ == "__main__":
                 ylabel=r"$f_\mathrm{in}$",
                 y_axlim=(0.7, 1.1),
                 hline_at=1,
-                vline_at=[0, 250, 300, 350] if var == "MTW" else None,
+                vline_at=[0, 0, 250, 300] if var == "MTW" else None,
                 logx=True if var in measurement_vars_mass else False,
                 label_params={"llabel": "Preliminary"},
                 filename=f"{wp}_{var}_shadow_bins.png",
@@ -162,40 +177,10 @@ if __name__ == "__main__":
                 systematic=NOMINAL_NAME,
             )
 
-            default_args = {
-                "systematic": NOMINAL_NAME,
-                "label": ["Truth MC", "Unfolded Data"],
-                "xlabel": (
-                    variable_data[var]["name"] + (" [GeV]" if var in measurement_vars_mass else "")
-                ),
-                "colour": ["r", "k"],
-                "kind": "overlay",
-                "do_stat": True,
-                "do_syst": False,
-                "title": smart_join(
-                    f"Unfolding {YEAR}",
-                    f"{wp.title()} Tau ID",
-                    r"$\sqrt{s} = 13$TeV",
-                    sep=" | ",
-                ),
-                "scale_by_bin_width": True,
-                "ylabel": (
-                    r"$\frac{d\sigma_{W\rightarrow\tau\nu\rightarrow\mathrm{had}}}{d"
-                    + symbols[var]
-                    + r"}$"
-                    + (" [fb / GeV]" if var in measurement_vars_mass else " [fb]")
-                ),
-                "logx": True if var in measurement_vars_mass else False,
-                "ratio_plot": True,
-                "ratio_label": "Data / MC",
-                "ratio_axlim": (0.5, 1.5),
-                "label_params": {"llabel": "Preliminary", "loc": 1},
-            }
-
             def unfold_bayes(h: ROOT.TH1, i: int) -> ROOT.TH1:
                 if i == 0:
-                    return ROOT.RooUnfoldBinByBin(response, h).Hreco()
-                return ROOT.RooUnfoldBayes(response, h, i).Hreco()
+                    return ROOT.RooUnfoldBinByBin(response, h)
+                return ROOT.RooUnfoldBayes(response, h, i)
 
             # get data and signal
             # ----------------------------------------------------------------
@@ -244,16 +229,14 @@ if __name__ == "__main__":
 
             # uncertainties
             # ----------------------------------------------------------------
+            sys_hists = {}
             with ROOT.TFile(
-                str(
-                    analysis.paths.output_dir.parent
-                    / f"analysis_simple_2017/root/analysis_simple_2017.root"
-                )
+                str(analysis.paths.output_dir.parent / f"analysis_simple_2017/root/wtaunu.root")
             ) as file:
-                uncert = file.Get(f"{var}_{wp}_wtaunu_uncert")
-                uncert.SetDirectory(0)
-            uncert_up = data_sig + uncert
-            uncert_down = data_sig - uncert
+                for sys in systematics:
+                    uncert = file[f"{NOMINAL_NAME}/{wp}_SR_passID"].Get(f"{var}_{sys}_tot_uncert")
+                    uncert.SetDirectory(0)
+                    sys_hists[sys] = uncert
 
             # efficiency and acceptance
             # ----------------------------------------------------------------
@@ -274,7 +257,7 @@ if __name__ == "__main__":
                 ("shadow_bin_250", acc_hist250),
                 ("shadow_bin_300", acc_hist300),
             )
-            acc_no_shadow = Histogram1D(th1=acc_hist)
+            acc_no_shadow = acc_hist.Clone()
 
             # fully unfold
             # ----------------------------------------------------------------
@@ -291,59 +274,222 @@ if __name__ == "__main__":
                     )
                     for i in range(acc.GetNbinsX()):
                         acc_new.SetBinContent(i, acc.GetBinContent(i + 1))
-                    acc_new = Histogram1D(th1=acc_new)
 
                 else:
                     acc_new = acc.Clone()
-                    acc_new = Histogram1D(th1=acc_new)
 
                 for n_iter in ITER:
                     analysis.logger.info(
                         f"Doing unfolding for {var} with {sh_bin_label} and {n_iter} bayesian iterations"
                     )
+                    default_args = {
+                        "systematic": NOMINAL_NAME,
+                        "xlabel": (
+                            variable_data[var]["name"]
+                            + (" [GeV]" if var in measurement_vars_mass else "")
+                        ),
+                        "kind": "overlay",
+                        "do_stat": True,
+                        "do_syst": False,
+                        "title": smart_join(
+                            f"Unfolding {YEAR}",
+                            f"{wp.title()} Tau ID",
+                            r"$\sqrt{s} = 13$TeV",
+                            sep=" | ",
+                        ),
+                        "scale_by_bin_width": True,
+                        "ylabel": (
+                            r"$\frac{d\sigma_{W\rightarrow\tau\nu\rightarrow\mathrm{had}}}{d"
+                            + symbols[var]
+                            + r"}$"
+                            + (" [fb / GeV]" if var in measurement_vars_mass else " [fb]")
+                        ),
+                        "logx": True if var in measurement_vars_mass else False,
+                        "ratio_plot": True,
+                        "ratio_label": "Data / MC",
+                        "ratio_axlim": (0.5, 1.5),
+                        "label_params": {"llabel": "Preliminary", "loc": 1},
+                    }
+
+                    def unfold_scale(h) -> ROOT.TH1D:
+                        h.Scale(1 / LUMI)
+                        return h * acc_new / acc_no_shadow
+
+                    def unfold(h, i) -> ROOT.TH1D:
+                        h = unfold_bayes(h, i).Hunfold()
+                        h.Scale(1 / LUMI)
+                        return h * acc_new / acc_no_shadow
 
                     # unfold
-                    data_unfolded = Histogram1D(th1=unfold_bayes(data_sig, n_iter))
-                    signal_unfolded = Histogram1D(th1=unfold_bayes(signal, n_iter))
-                    uncert_up_unfolded = Histogram1D(th1=unfold_bayes(uncert_up, n_iter))
-                    uncert_down_unfolded = Histogram1D(th1=unfold_bayes(uncert_down, n_iter))
+                    data_unfolded = unfold_bayes(data_sig, n_iter)
+                    signal_unfolded = unfold_bayes(signal, n_iter)
 
-                    data_unfolded_full = data_unfolded * acc_new / (LUMI * acc_no_shadow)
-                    signal_unfolded_full = signal_unfolded * acc_new / (LUMI * acc_no_shadow)
-                    uncert_up_unfolded_full = uncert_up_unfolded * acc_new / (LUMI * acc_no_shadow)
-                    uncert_down_unfolded_full = (
-                        uncert_down_unfolded * acc_new / (LUMI * acc_no_shadow)
-                    )
-                    uncert_sym_unfolded_full = (
-                        (uncert_up_unfolded_full - data_unfolded_full)
-                        + (data_unfolded_full - uncert_down_unfolded_full)
-                    ) / 4
+                    data_unfolded_full = unfold_scale(data_unfolded.Hunfold())
+                    signal_unfolded_full = unfold_scale(signal_unfolded.Hunfold())
 
-                    ratio_err = (uncert_sym_unfolded_full / data_unfolded_full).bin_values()
+                    data_response = data_unfolded.response().Hresponse()
+                    signal_response = signal_unfolded.response().Hresponse()
+
+                    data_cov = ROOT.TH2D(data_unfolded.Eunfold())
+                    signal_cov = ROOT.TH2D(signal_unfolded.Eunfold())
+
+                    # plot
+                    analysis.paths.plot_dir = wp_dir / "unfolded" / var
+                    hists[sh_bin_label][n_iter] = data_unfolded_full
                     default_args.update(
                         {
-                            "uncert": [truth.error(), uncert_sym_unfolded_full],
-                            "ratio_err": ratio_err,
+                            "label": ["Truth MC", "Unfolded Signal MC", "Unfolded Data"],
+                            "colour": ["r", "b", "k"],
+                            "histstyle": ["step", "step", "errorbar"],
                         }
                     )
-
-                    # save
-                    hists[sh_bin_label][n_iter] = data_unfolded_full
-
                     analysis.plot(
-                        val=[truth, data_unfolded_full],
+                        val=[truth, signal_unfolded_full, data_unfolded_full],
                         **default_args,
                         filename=f"{wp}_{var}_unfolded_{sh_bin_label}_{n_iter}iter.png",
                     )
                     analysis.plot(
-                        val=[truth, data_unfolded_full],
+                        val=[truth, signal_unfolded_full, data_unfolded_full],
                         **default_args,
                         logy=True,
                         filename=f"{wp}_{var}_unfolded_{sh_bin_label}_{n_iter}iter_logy.png",
                     )
+                    analysis.plot_2d(
+                        data_cov,
+                        ylabel=r"Bin($m_\mathrm{T}^W [GeV]$)",
+                        xlabel=r"Bin($m_\mathrm{T}^W [GeV]$)",
+                        title=rf"$m_\mathrm{{T}}^W$ Covariance | {analysis.global_lumi / 1000:.3g}fb$^{{-1}}$",
+                        labels=True,
+                        label_params={"llabel": "Simulation"},
+                        filename=f"{wp}_{var}_{n_iter}iter_cov.png",
+                    )
+
+                    # detector systematics
+                    # -------------------------------------------------------------------------
+                    analysis.paths.plot_dir = wp_dir / "unfolded" / var / "sys"
+
+                    def sys_up(sys) -> Histogram1D:
+                        h = (
+                            unfold(signal + sys_hists[sys], n_iter) - signal_unfolded_full
+                        ) / data_unfolded_full
+                        h.Scale(100)
+                        return h
+
+                    def sys_down(sys) -> Histogram1D:
+                        h = (
+                            unfold(signal - sys_hists[sys], n_iter) - signal_unfolded_full
+                        ) / data_unfolded_full
+                        h.Scale(100)
+                        return h
+
+                    default_args = {
+                        "logx": True if var in measurement_vars_mass else False,
+                        "ylabel": "Syst. Uncert. [%]",
+                        "do_syst": False,
+                        "do_stat": False,
+                        "title": smart_join(
+                            f"{wp.title()} Tau ID",
+                            r"$\sqrt{s} = 13$TeV",
+                            sep=" | ",
+                        ),
+                    }
+                    analysis.plot(
+                        val=[
+                            sys_up("TAUS_TRUEHADTAU_SME_TES_DETECTOR_Endcap_LowPt"),
+                            sys_up("TAUS_TRUEHADTAU_SME_TES_DETECTOR_Endcap_HighPt"),
+                            sys_up("TAUS_TRUEHADTAU_SME_TES_DETECTOR_Barrel_LowPt"),
+                            sys_up("TAUS_TRUEHADTAU_SME_TES_DETECTOR_Barrel_HighPt"),
+                        ],
+                        label=[
+                            "Endcap_LowPt",
+                            "Endcap_HighPt",
+                            "Barrel_LowPt",
+                            "Barrel_HighPt",
+                        ],
+                        colour=[
+                            (0.0, 0.0, 0.5, 1.0),
+                            (0.0, 0.8333333333333334, 1.0, 1.0),
+                            (1.0, 0.9012345679012348, 0.0, 1.0),
+                            (0.5, 0.0, 0.0, 1.0),
+                        ],
+                        linestyle=[
+                            "solid",
+                            "solid",
+                            "solid",
+                            "solid",
+                        ],
+                        **default_args,
+                        filename=f"{var}_sys_DETECTOR_{sh_bin_label}_{n_iter}iter.png",
+                    )
+                    # TRIGGER systematics
+                    analysis.plot(
+                        val=[
+                            sys_up("TAUS_TRUEHADTAU_EFF_TRIGGER_SYST161718"),
+                            sys_up("TAUS_TRUEHADTAU_EFF_TRIGGER_STATMC161718"),
+                            sys_up("TAUS_TRUEHADTAU_EFF_TRIGGER_STATDATA161718"),
+                        ],
+                        label=[
+                            "TRIGGER_SYST161718",
+                            "TRIGGER_STATMC161718_1up",
+                            "TRIGGER_STATDATA161718",
+                        ],
+                        colour=[
+                            (0.0, 0.0, 0.5, 1.0),
+                            (0.4901960784313725, 1.0, 0.4775458570524984, 1.0),
+                            (0.5, 0.0, 0.0, 1.0),
+                        ],
+                        linestyle=[
+                            "solid",
+                            "solid",
+                            "solid",
+                        ],
+                        **default_args,
+                        filename=f"{var}_sys_TRIGGER_{sh_bin_label}_{n_iter}iter.png",
+                    )
+                    # RECO systematic
+                    analysis.plot(
+                        val=[
+                            sys_up("TAUS_TRUEHADTAU_EFF_RECO_TOTAL"),
+                        ],
+                        label=[
+                            "EFF_RECO_TOTAL",
+                        ],
+                        colour=["r"],
+                        linestyle=[
+                            "solid",
+                        ],
+                        **default_args,
+                        filename=f"{var}_sys_RECO_{sh_bin_label}_{n_iter}iter.png",
+                    )
+                    # OTHER systematics
+                    analysis.plot(
+                        val=[
+                            sys_up("TAUS_TRUEHADTAU_SME_TES_INSITUEXP"),
+                            sys_up("TAUS_TRUEHADTAU_SME_TES_INSITUFIT"),
+                            sys_up("TAUS_TRUEHADTAU_SME_TES_MODEL_CLOSURE"),
+                        ],
+                        label=[
+                            "INSITUEXP",
+                            "INSITUFIT",
+                            "MODEL_CLOSURE",
+                        ],
+                        colour=[
+                            (0.0, 0.0, 0.5, 1.0),
+                            (0.4901960784313725, 1.0, 0.4775458570524984, 1.0),
+                            (0.5, 0.0, 0.0, 1.0),
+                        ],
+                        linestyle=[
+                            "solid",
+                            "solid",
+                            "solid",
+                        ],
+                        **default_args,
+                        filename=f"{var}_sys_OTHER_{sh_bin_label}_{n_iter}iter.png",
+                    )
 
             # COMPARISONS
             # ===================================================
+            analysis.paths.plot_dir = wp_dir / "unfolded" / "compare"
             for sh_bin_label, _ in shadow_bins:
                 analysis.plot(
                     val=[truth] + [hists[sh_bin_label][i] for i in ITER],

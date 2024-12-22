@@ -113,12 +113,14 @@ pass_tight = Cut(
 pass_SR_reco = Cut(
     r"Pass SR Reco",
     r"(TauPt > 150) && (MET_met > 150) && (MTW > 300)"
-    r"&& ((TauNCoreTracks == 1) || (TauNCoreTracks == 3))",
+    r"&& ((TauNCoreTracks == 1) || (TauNCoreTracks == 3))"
+    r"&& (((abs(TauEta) < 1.37) || (1.52 < abs(TauEta))) && (abs(TauEta) < 2.47))",
 )
 pass_SR_truth = Cut(
     r"Pass SR Truth",
     r"(VisTruthTauPt > 150) && (TruthMTW > 300) && (TruthNeutrinoPt > 150)"
-    r"&& ((TruthTau_nChargedTracks == 1) || (TruthTau_nChargedTracks == 3))",
+    r"&& ((TruthTau_nChargedTracks == 1) || (TruthTau_nChargedTracks == 3))"
+    r"&& (((abs(VisTruthTauEta) < 1.37) || (1.52 < abs(VisTruthTauEta))) && (abs(VisTruthTauEta) < 2.47))",
 )
 pass_SR = pass_SR_truth
 truth_cuts = [
@@ -219,16 +221,18 @@ reco_measurement_vars = [
 
 # define 2d histograms
 hists_2d = {
-    "TauPt_VisTruthTauPt": Hist2dOpts("TauPt", "VisTruthTauPt"),
-    "TauEta_VisTruthTauEta": Hist2dOpts("TauEta", "VisTruthTauEta"),
-    "TauPhi_VisTruthTauPhi": Hist2dOpts("TauPhi", "VisTruthTauPhi"),
-    "MTW_TruthMTW": Hist2dOpts("MTW", "TruthMTW"),
-    "MET_met_TruthNeutrinoPt": Hist2dOpts("MET_met", "TruthNeutrinoPt"),
-    "MET_phi_TruthNeutrinoPhi": Hist2dOpts("MET_phi", "TruthNeutrinoPhi"),
+    "TauPt_VisTruthTauPt": Hist2dOpts("TauPt", "VisTruthTauPt", "reco_weight"),
+    "TauEta_VisTruthTauEta": Hist2dOpts("TauEta", "VisTruthTauEta", "reco_weight"),
+    "TauPhi_VisTruthTauPhi": Hist2dOpts("TauPhi", "VisTruthTauPhi", "reco_weight"),
+    "MTW_TruthMTW": Hist2dOpts("MTW", "TruthMTW", "reco_weight"),
+    "MET_met_TruthNeutrinoPt": Hist2dOpts("MET_met", "TruthNeutrinoPt", "reco_weight"),
+    "MET_phi_TruthNeutrinoPhi": Hist2dOpts("MET_phi", "TruthNeutrinoPhi", "reco_weight"),
     "AbsDeltaPhi_tau_met_TruthAbsDeltaPhi_tau_met": Hist2dOpts(
-        "AbsDeltaPhi_tau_met", "TruthAbsDeltaPhi_tau_met"
+        "AbsDeltaPhi_tau_met", "TruthAbsDeltaPhi_tau_met", "reco_weight"
     ),
-    "TauPt_div_MET_TruthTauPt_div_MET": Hist2dOpts("TauPt_div_MET", "TruthTauPt_div_MET"),
+    "TauPt_div_MET_TruthTauPt_div_MET": Hist2dOpts(
+        "TauPt_div_MET", "TruthTauPt_div_MET", "reco_weight"
+    ),
 }
 NOMINAL_NAME = "T_s1thv_NOMINAL"
 mtw_bins = np.array(
@@ -240,7 +244,6 @@ taupt_bins = np.array([150, 170, 200, 250, 300, 350, 425, 500, 600, 1000], dtype
 def run_analysis() -> Analysis:
     """Run analysis"""
 
-    nedges = 16
     return Analysis(
         datasets,
         year=2017,

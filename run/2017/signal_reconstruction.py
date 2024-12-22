@@ -229,11 +229,11 @@ measurement_vars_unitless = [
     # "TauNCoreTracks",
     # "TauRNNJetScore",
     # "TauBDTEleScore",
-    "AbsDeltaPhi_tau_met",
-    "TruthAbsDeltaPhi_tau_met",
+    # "AbsDeltaPhi_tau_met",
+    # "TruthAbsDeltaPhi_tau_met",
     # "TruthDeltaPhi_tau_met",
-    "TauPt_div_MET",
-    "TruthTauPt_div_MET",
+    # "TauPt_div_MET",
+    # "TruthTauPt_div_MET",
 ]
 measurement_vars = measurement_vars_unitless + measurement_vars_mass
 truth_measurement_vars = [v for v in measurement_vars if variable_data[v]["tag"] == "truth"]
@@ -253,10 +253,10 @@ hists_2d = {
     "MTW_TruthMTW": Hist2dOpts("MTW", "TruthMTW"),
     "TauPhi_TruthTauPhi": Hist2dOpts("TauPhi", "TruthTauPhi"),
     "MET_met_TruthNeutrinoPt": Hist2dOpts("MET_met", "TruthNeutrinoPt"),
-    "AbsDeltaPhi_tau_met_TruthAbsDeltaPhi_tau_met": Hist2dOpts(
-        "AbsDeltaPhi_tau_met", "TruthAbsDeltaPhi_tau_met"
-    ),
-    "TauPt_div_MET_TruthTauPt_div_MET": Hist2dOpts("TauPt_div_MET", "TruthTauPt_div_MET"),
+    # "AbsDeltaPhi_tau_met_TruthAbsDeltaPhi_tau_met": Hist2dOpts(
+    #     "AbsDeltaPhi_tau_met", "TruthAbsDeltaPhi_tau_met"
+    # ),
+    # "TauPt_div_MET_TruthTauPt_div_MET": Hist2dOpts("TauPt_div_MET", "TruthTauPt_div_MET"),
 }
 for v in reco_measurement_vars:
     hists_2d[f"{v}_TauPt_res_frac"] = Hist2dOpts(
@@ -279,12 +279,13 @@ def run_analysis() -> Analysis:
     return Analysis(
         datasets,
         year=2017,
-        rerun=True,
-        regen_histograms=True,
+        # rerun=True,
+        # regen_histograms=True,
         do_systematics=False,
         # regen_metadata=True,
         ttree=NOMINAL_NAME,
         selections=selections,
+        do_unweighted=True,
         analysis_label="signal_reconstruction",
         log_level=10,
         log_out="both",
@@ -320,9 +321,14 @@ if __name__ == "__main__":
             nprong: {
                 var: bayes_divide(
                     analysis.get_hist(
-                        var, "wtaunu", NOMINAL_NAME, f"{wp}_{nprong}matched_reco_tau"
+                        var + "_unweighted",
+                        "wtaunu",
+                        NOMINAL_NAME,
+                        f"{wp}_{nprong}matched_reco_tau",
                     ),
-                    analysis.get_hist(var, "wtaunu", NOMINAL_NAME, f"{nprong}truth_tau"),
+                    analysis.get_hist(
+                        var + "_unweighted", "wtaunu", NOMINAL_NAME, f"{nprong}truth_tau"
+                    ),
                 )
                 for var in measurement_vars
             }
@@ -333,8 +339,12 @@ if __name__ == "__main__":
     trigger_efficiencies = {
         nprong: {
             var: bayes_divide(
-                analysis.get_hist(var, "wtaunu", NOMINAL_NAME, f"{nprong}truth_tau_trigger"),
-                analysis.get_hist(var, "wtaunu", NOMINAL_NAME, f"{nprong}truth_tau"),
+                analysis.get_hist(
+                    var + "_unweighted", "wtaunu", NOMINAL_NAME, f"{nprong}truth_tau_trigger"
+                ),
+                analysis.get_hist(
+                    var + "_unweighted", "wtaunu", NOMINAL_NAME, f"{nprong}truth_tau"
+                ),
             )
             for var in measurement_vars
         }
@@ -343,8 +353,12 @@ if __name__ == "__main__":
     met_trigger_efficiencies = {
         nprong: {
             var: bayes_divide(
-                analysis.get_hist(var, "wtaunu", NOMINAL_NAME, f"{nprong}truth_tau_mettrigger"),
-                analysis.get_hist(var, "wtaunu", NOMINAL_NAME, f"{nprong}truth_tau"),
+                analysis.get_hist(
+                    var + "_unweighted", "wtaunu", NOMINAL_NAME, f"{nprong}truth_tau_mettrigger"
+                ),
+                analysis.get_hist(
+                    var + "_unweighted", "wtaunu", NOMINAL_NAME, f"{nprong}truth_tau"
+                ),
             )
             for var in measurement_vars
         }
@@ -355,7 +369,7 @@ if __name__ == "__main__":
         "dataset": "wtaunu",
         "systematic": NOMINAL_NAME,
         "title": f"Reconstruction Efficiency | mc16d | {analysis.global_lumi / 1000:.3g}fb$^{{-1}}$",
-        "do_stat": True,
+        "do_stat": False,
         "do_syst": False,
         "ratio_err": "binom",
         "label_params": {"llabel": "Simulation", "loc": 1},
@@ -395,7 +409,7 @@ if __name__ == "__main__":
 
     # BEEEG LOOP
     # =======================================================================
-    args_eff["do_stat"] = True
+    args_eff["do_stat"] = False
     for wp in working_points:
         for nprong in working_prongs:
             # DIRECT FRACTIONS

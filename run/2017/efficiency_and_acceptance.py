@@ -34,17 +34,6 @@ pass_reco = Cut(
     r"&& ((MatchedTruthParticle_isTau + MatchedTruthParticle_isElectron + MatchedTruthParticle_isMuon + MatchedTruthParticle_isPhoton) <= 1)"
     r"&& ((TauNCoreTracks == 1) || (TauNCoreTracks == 3))",
 )
-pass_matched_reco = Cut(
-    r"Pass preselection",
-    r"(passReco == 1) && "
-    r"(TauBaselineWP == 1) && "
-    r"(abs(TauCharge) == 1) && "
-    r"passMetTrigger && "
-    r"(badjet == 0) &&"
-    r"((TauNCoreTracks == 1) || (TauNCoreTracks == 3)) &&"
-    r"(MatchedTruthParticle_isHadronicTau == true) && "
-    r"(MatchedTruthParticlePt == TruthTauPt)",
-)
 pass_trigger = Cut(
     r"Pass trigger",
     r"passTrigger",
@@ -57,25 +46,49 @@ pass_truth = Cut(
     r"Pass Truth",
     r"(passTruth == 1)",
 )
+fail_truth = Cut(
+    r"Pass Truth",
+    r"!(passTruth == 1)",
+)
 truth_tau = Cut(
     r"Truth Hadronic Tau",
     r"TruthTau_isHadronic && ((TruthTau_nChargedTracks == 1) || (TruthTau_nChargedTracks == 3))",
+)
+fail_truth_tau = Cut(
+    r"Truth Hadronic Tau",
+    r"!TruthTau_isHadronic | ((TruthTau_nChargedTracks == 1) || (TruthTau_nChargedTracks == 3))",
 )
 truth_tau_1prong = Cut(
     r"1-prong truth",
     r"TruthTau_nChargedTracks == 1",
 )
+fail_truth_tau_1prong = Cut(
+    r"Fail 1-prong truth",
+    r"!(TruthTau_nChargedTracks == 1)",
+)
 truth_tau_3prong = Cut(
     r"3-prong truth",
     r"TruthTau_nChargedTracks == 3",
 )
+fail_truth_tau_3prong = Cut(
+    r"Fail 3-prong truth",
+    r"!(TruthTau_nChargedTracks == 3)",
+)
 truth_tau_plus = Cut(
-    r"1-prong truth",
+    r"tau plus truth",
     r"TruthTauCharge == 1",
 )
+fail_truth_tau_plus = Cut(
+    r"fail tau plus truth",
+    r"!(TruthTauCharge == 1)",
+)
 truth_tau_minus = Cut(
-    r"3-prong truth",
+    r"tau minus truth",
     r"TruthTauCharge == -1",
+)
+fail_truth_tau_minus = Cut(
+    r"fail tau plus truth",
+    r"!(TruthTauCharge == -1)",
 )
 reco_tau_1prong = Cut(
     r"1-prong Reconstructed Hadronic Tau",
@@ -111,18 +124,33 @@ pass_tight = Cut(
 pass_SR_reco = Cut(
     r"Pass SR Reco",
     r"(TauPt > 170) && (MET_met > 170) && (MTW > 350)"
-    r"&& ((TauNCoreTracks == 1) || (TauNCoreTracks == 3))",
+    r"&& ((TauNCoreTracks == 1) || (TauNCoreTracks == 3))"
+    r"&& (((abs(TauEta) < 1.37) || (1.52 < abs(TauEta))) && (abs(TauEta) < 2.47))",
 )
 pass_SR_truth = Cut(
     r"Pass SR Truth",
     r"(VisTruthTauPt > 170) && (TruthMTW > 350) && (TruthNeutrinoPt > 170)"
-    r"&& ((TruthTau_nChargedTracks == 1) || (TruthTau_nChargedTracks == 3))",
+    r"&& ((TruthTau_nChargedTracks == 1) || (TruthTau_nChargedTracks == 3))"
+    r"&& (((abs(VisTruthTauEta) < 1.37) || (1.52 < abs(VisTruthTauEta))) && (abs(VisTruthTauEta) < 2.47))",
 )
-pass_SR = pass_SR_truth
+fail_SR_truth = Cut(
+    r"Fail SR Truth",
+    r"!(passTruth == 1)"
+    r"| !(TruthTau_isHadronic) "
+    r"| !((TruthTau_nChargedTracks == 1) || (TruthTau_nChargedTracks == 3)) "
+    r"| !(VisTruthTauPt > 170) | !(TruthMTW > 350) | !(TruthNeutrinoPt > 170) "
+    r"| !((TruthTau_nChargedTracks == 1) || (TruthTau_nChargedTracks == 3)) "
+    r"| !(((abs(VisTruthTauEta) < 1.37) || (1.52 < abs(VisTruthTauEta))) && (abs(VisTruthTauEta) < 2.47))",
+)
 truth_cuts = [
     pass_truth,
-    pass_SR,
+    pass_SR_truth,
     truth_tau,
+]
+fail_truth_cuts = [
+    # fail_truth,
+    fail_SR_truth,
+    # fail_truth_tau,
 ]
 reco_cuts = [
     pass_reco,
@@ -184,6 +212,46 @@ selections: dict[str, list[Cut]] = {
     "tight_tauminus_truth_reco_tau": truth_cuts + reco_cuts + [pass_tight, truth_tau_minus,
                                                                reco_tau_minus],
     # fmt: on
+    # PASS RECO BUT NOT TRUTH
+    "loose_reco_notruth_tau": fail_truth_cuts + reco_cuts + [pass_loose],
+    "loose_1prong_reco_notruth_tau": fail_truth_cuts
+    + reco_cuts
+    + [pass_loose, fail_truth_tau_1prong, reco_tau_1prong],
+    "loose_3prong_reco_notruth_tau": fail_truth_cuts
+    + reco_cuts
+    + [pass_loose, fail_truth_tau_3prong, reco_tau_3prong],
+    "loose_tauplus_reco_notruth_tau": fail_truth_cuts
+    + reco_cuts
+    + [pass_loose, fail_truth_tau_plus, reco_tau_plus],
+    "loose_tauminus_reco_notruth_tau": fail_truth_cuts
+    + reco_cuts
+    + [pass_loose, fail_truth_tau_minus, reco_tau_minus],
+    "medium_reco_notruth_tau": fail_truth_cuts + reco_cuts + [pass_medium],
+    "medium_1prong_reco_notruth_tau": fail_truth_cuts
+    + reco_cuts
+    + [pass_medium, fail_truth_tau_1prong, reco_tau_1prong],
+    "medium_3prong_reco_notruth_tau": fail_truth_cuts
+    + reco_cuts
+    + [pass_medium, fail_truth_tau_3prong, reco_tau_3prong],
+    "medium_tauplus_reco_notruth_tau": fail_truth_cuts
+    + reco_cuts
+    + [pass_medium, fail_truth_tau_plus, reco_tau_plus],
+    "medium_tauminus_reco_notruth_tau": fail_truth_cuts
+    + reco_cuts
+    + [pass_medium, fail_truth_tau_minus, reco_tau_minus],
+    "tight_reco_notruth_tau": fail_truth_cuts + reco_cuts + [pass_tight],
+    "tight_1prong_reco_notruth_tau": fail_truth_cuts
+    + reco_cuts
+    + [pass_tight, fail_truth_tau_1prong, reco_tau_1prong],
+    "tight_3prong_reco_notruth_tau": fail_truth_cuts
+    + reco_cuts
+    + [pass_tight, fail_truth_tau_3prong, reco_tau_3prong],
+    "tight_tauplus_reco_notruth_tau": fail_truth_cuts
+    + reco_cuts
+    + [pass_tight, fail_truth_tau_plus, reco_tau_plus],
+    "tight_tauminus_reco_notruth_tau": fail_truth_cuts
+    + reco_cuts
+    + [pass_tight, fail_truth_tau_minus, reco_tau_minus],
 }
 
 # VARIABLES
@@ -224,9 +292,11 @@ hists_2d = {
     "MET_met_TruthNeutrinoPt": Hist2dOpts("MET_met", "TruthNeutrinoPt", "reco_weight"),
     "MET_phi_TruthNeutrinoPhi": Hist2dOpts("MET_phi", "TruthNeutrinoPhi", "reco_weight"),
     "AbsDeltaPhi_tau_met_TruthAbsDeltaPhi_tau_met": Hist2dOpts(
-        "AbsDeltaPhi_tau_met", "TruthAbsDeltaPhi_tau_met"
+        "AbsDeltaPhi_tau_met", "TruthAbsDeltaPhi_tau_met", "reco_weight"
     ),
-    "TauPt_div_MET_TruthTauPt_div_MET": Hist2dOpts("TauPt_div_MET", "TruthTauPt_div_MET"),
+    "TauPt_div_MET_TruthTauPt_div_MET": Hist2dOpts(
+        "TauPt_div_MET", "TruthTauPt_div_MET", "reco_weight"
+    ),
 }
 NOMINAL_NAME = "T_s1thv_NOMINAL"
 
@@ -315,6 +385,20 @@ if __name__ == "__main__":
                         f"{wp}_{sec}reco_tau",
                     ),
                 )
+                analysis.histograms[f"{wp}_{sec}{var}_fake_rate"] = bayes_divide(
+                    analysis.get_hist(
+                        var + "_unweighted",
+                        "wtaunu",
+                        NOMINAL_NAME,
+                        f"{wp}_{sec}reco_notruth_tau",
+                    ),
+                    analysis.get_hist(
+                        var + "_unweighted",
+                        "wtaunu",
+                        NOMINAL_NAME,
+                        f"{wp}_{sec}reco_tau",
+                    ),
+                )
 
                 # Plots alone
                 # =======================================================================
@@ -362,6 +446,13 @@ if __name__ == "__main__":
                     colour="r",
                     **default_args,
                     filename=f"{wp}_{sec}{var}_acceptance.png",
+                )
+                analysis.plot(
+                    val=analysis.histograms[f"{wp}_{sec}{var}_fake_rate"],
+                    ylabel=r"fake fraction",
+                    colour="r",
+                    **default_args,
+                    filename=f"{wp}_{sec}{var}_fake_rate.png",
                 )
                 truth_label = variable_data[truths[var]]["name"] + (
                     " [GeV]" if var in measurement_vars_mass else ""
