@@ -62,7 +62,7 @@ class Dataset:
     colour: str | tuple[int, int, int] = field(default_factory=str)
     is_signal: bool = False
     is_data: bool = False
-    out_file: Path = ""
+    out_file: Path | str = ""
     nominal_name: str = field(init=False, default="")
     do_systematics: bool = False
     do_unweighted: bool = False
