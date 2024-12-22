@@ -105,9 +105,9 @@ derived_vars: Dict[str, OtherVar] = {
     },
     "TruthMTW": {  # truth boson mt
         "var_args": [
-            "TruthTauPt",
+            "VisTruthTauPt",
             "TruthNeutrinoPt",
-            "TruthTauPhi",
+            "VisTruthTauPhi",
             "TruthNeutrinoPhi",
         ],
         "tree": "",
