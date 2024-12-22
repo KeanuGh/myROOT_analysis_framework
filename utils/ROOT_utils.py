@@ -219,12 +219,14 @@ def get_TH1_bin_args(
                 raise ValueError(
                     "Must pass tuple of (nbins, xmin, xmax) as bins to calculate logarithmic bins"
                 )
-            return bins[0], np.geomspace(bins[1], bins[2], bins[0] + 1)  # type: ignore
+            return bins[0], np.geomspace(
+                bins[1], bins[2], bins[0] + 1, dtype="double"
+            )  # type: ignore
 
         if len(bins) == 3 and isinstance(bins, tuple):
             return bins
         else:
-            return len(bins) - 1, np.array(bins)
+            return len(bins) - 1, np.array(bins, dtype="double")
 
     raise ValueError("Bins should be list of bin edges or tuple like (nbins, xmin, xmax)")
 
