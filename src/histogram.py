@@ -338,7 +338,7 @@ class Histogram1D(bh.Histogram, family=None):
                 for i in range(self.TH1.GetNbinsX() + 2):
                     self.TH1.SetBinContent(i, self.TH1.GetBinContent(i) - other)
 
-        return self._compute_inplace_op("__iadd__", other)
+        return self._compute_inplace_op("__isub__", other)
 
     @staticmethod
     @overload
@@ -717,6 +717,7 @@ class Histogram1D(bh.Histogram, family=None):
         display_stats: bool = True,
         fit_empty: bool = False,
         colour: str | None = None,
+        histtype: str = "step",
         exclude_outliers: bool = True,
         **kwargs,
     ) -> Histogram1D:
@@ -778,6 +779,8 @@ class Histogram1D(bh.Histogram, family=None):
                 h_ratio.TH1.SetBinError(i + 1, yerr[i])  # type: ignore
         elif isinstance(yerr, str):
             raise ValueError(f"Unknown error type {yerr}")
+        elif yerr is None:
+            err = np.zeros(h_ratio.TH1.GetNbinsX())
         else:
             err = yerr
 
@@ -796,11 +799,13 @@ class Histogram1D(bh.Histogram, family=None):
         linestyle = kwargs.pop("linestyle", None)
 
         ax.axhline(1.0, linestyle="--", linewidth=1.0, c="k")
+        if histtype == "errorbar":
+            kwargs.update({"capsize": 6})
         eb = ax.errorbar(
             h_ratio.bin_centres,
             h_ratio.bin_values(),
-            xerr=h_ratio.bin_widths / 2,  # type: ignore
-            yerr=np.clip(err, 0, None) if isinstance(yerr, np.ndarray) else yerr,
+            xerr=(h_ratio.bin_widths / 2) if histtype == "step" else None,  # type: ignore
+            yerr=np.clip(err, 0, None),
             linestyle="None",
             label=label,
             marker=".",
