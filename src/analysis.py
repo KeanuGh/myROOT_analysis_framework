@@ -355,6 +355,7 @@ class Analysis:
         label: str | None | Sequence[str | None] = None,
         colour: str | tuple | None | Sequence[str | tuple | None] = None,
         linestyle: str | None | Sequence[str | None] = None,
+        histstyle: str | list[str] = "step",
         plot_as_data: Histogram1D | ROOT.TH1 | list[Histogram1D | ROOT.TH1] | None = None,
         data_label: str | list[str] = "data",
         data_colour: str | list[str] = "k",
@@ -382,7 +383,7 @@ class Analysis:
         ratio_fit: bool = False,
         ratio_axlim: float | tuple[float, float] | None = None,
         ratio_label: str = "Ratio",
-        ratio_err: str | Sequence = None,
+        ratio_err: str | Sequence = True,
         filename: str | Path | None = None,
         sort: bool = True,
         kind: str = "overlay",
@@ -460,6 +461,7 @@ class Analysis:
                 "labels": copy.copy(label),
                 "colours": copy.copy(colour),
                 "linestyles": copy.copy(linestyle),
+                "histstyles": copy.copy(histstyle),
             }
         )
         if scale_by_bin_width:
@@ -551,31 +553,36 @@ class Analysis:
                 errs[1, :] += per_hist_vars["uncert"][i]
 
                 if do_stat:
-                    errs[0, :] += hist.error() / 2
-                    errs[1, :] += hist.error() / 2
+                    errs[0, :] += hist.error()
+                    errs[1, :] += hist.error()
                 if do_syst:
                     sys_down, sys_up = self.get_systematic_uncertainty(
                         per_hist_vars["vals"][i],
                         per_hist_vars["datasets"][i],
                         per_hist_vars["selections"][i],
                     )
+                    if scale_by_bin_width:
+                        sys_down /= hist.bin_widths
+                        sys_up /= hist.bin_widths
                     errs[0, :] += sys_down
                     errs[1, :] += sys_up
 
-                if scale_by_bin_width:
-                    errs[0, :] /= hist.bin_widths
-                    errs[1, :] /= hist.bin_widths
-
+                if per_hist_vars["histstyles"][i] == "errorbar":
+                    kwargs.update({"capsize": 6})
                 hist.plot(
                     ax=ax,
                     yerr=errs,
                     stats_box=stats_box,
+                    histtype=per_hist_vars["histstyles"][i],
                     label=per_hist_vars["labels"][i],
                     color=per_hist_vars["colours"][i],
-                    linestyle=per_hist_vars["linestyles"][i],
+                    linestyle=(
+                        per_hist_vars["linestyles"][i]
+                        if per_hist_vars["histstyles"][i] != "errorbar"
+                        else "none"
+                    ),
                     **kwargs,
                 )
-
                 if ratio_plot and (n_plottables > 1) and (i > 0):
                     # ratio of first histogram to this one
                     per_hist_vars["hists"][0].plot_ratio(
@@ -589,6 +596,7 @@ class Analysis:
                         ),
                         colour=None if n_plottables == 2 else per_hist_vars["colours"][i],
                         linestyle=None if n_plottables == 2 else per_hist_vars["linestyles"][i],
+                        histtype=per_hist_vars["histstyles"][i],
                         fit=ratio_fit,
                         yax_lim=ratio_axlim,
                         display_stats=len(per_hist_vars["hists"]) <= 3,
@@ -1061,6 +1069,8 @@ class Analysis:
             # style
             if var_dict["linestyles"][i] is None:
                 var_dict["linestyles"][i] = "solid"
+            if var_dict["histstyles"][i] is None:
+                var_dict["histstyles"][i] = "step"
 
         return n_plottables, var_dict
 
