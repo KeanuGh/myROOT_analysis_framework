@@ -267,14 +267,14 @@ def run_analysis() -> Analysis:
         do_unweighted=True,
         binnings={
             "": BINNINGS
-            | {
-                "MTW": mtw_bins,
-                "TruthMTW": mtw_bins,
-                "TauPt": taupt_bins,
-                "MET_met": taupt_bins,
-                "TruthNeutrinoPt": taupt_bins,
-                "TruthTauPt": taupt_bins,
-            }
+                | {
+                    "MTW": mtw_bins,
+                    "TruthMTW": mtw_bins,
+                    "TauPt": taupt_bins,
+                    "MET_met": taupt_bins,
+                    "TruthNeutrinoPt": taupt_bins,
+                    "TruthTauPt": taupt_bins,
+                }
         },
     )
 
@@ -283,7 +283,7 @@ if __name__ == "__main__":
     # RUN
     # ========================================================================
     analysis = run_analysis()
-    analysis.full_cutflow_printout(datasets=["wtaunu"])
+    analysis.full_cutflow_printout(datasets=["wtaunu_had"])
     base_plotting_dir = analysis.paths.plot_dir
 
     truths = {
@@ -312,13 +312,13 @@ if __name__ == "__main__":
                 analysis.histograms[f"{wp}_{sec}{var}_efficiency"] = bayes_divide(
                     analysis.get_hist(
                         var + "_unweighted",
-                        "wtaunu",
+                        "wtaunu_had",
                         NOMINAL_NAME,
                         f"{wp}_{sec}truth_reco_tau",
                     ),
                     analysis.get_hist(
                         var + "_unweighted",
-                        "wtaunu",
+                        "wtaunu_had",
                         NOMINAL_NAME,
                         f"{sec}truth_tau",
                     ),
@@ -326,13 +326,13 @@ if __name__ == "__main__":
                 analysis.histograms[f"{wp}_{sec}{var}_acceptance"] = bayes_divide(
                     analysis.get_hist(
                         var + "_unweighted",
-                        "wtaunu",
+                        "wtaunu_had",
                         NOMINAL_NAME,
                         f"{wp}_{sec}truth_reco_tau",
                     ),
                     analysis.get_hist(
                         var + "_unweighted",
-                        "wtaunu",
+                        "wtaunu_had",
                         NOMINAL_NAME,
                         f"{wp}_{sec}reco_tau",
                     ),
@@ -341,7 +341,7 @@ if __name__ == "__main__":
                 # Plots alone
                 # =======================================================================
                 default_args = {
-                    "dataset": "wtaunu",
+                    "dataset": "wtaunu_had",
                     "systematic": NOMINAL_NAME,
                     "selection": f"{wp}_{sec}reco_tau",
                     "do_stat": True,
@@ -394,7 +394,7 @@ if __name__ == "__main__":
                 analysis.plot_2d(
                     var,
                     truths[var],
-                    dataset="wtaunu",
+                    dataset="wtaunu_had",
                     systematic=NOMINAL_NAME,
                     selection=f"{wp}_{sec}truth_reco_tau",
                     ylabel=truth_label,
@@ -410,14 +410,14 @@ if __name__ == "__main__":
                 # resonance
                 response = analysis.get_hist(
                     f"{var}_{truths[var]}",
-                    dataset="wtaunu",
+                    dataset="wtaunu_had",
                     systematic=NOMINAL_NAME,
                     selection=f"{wp}_{sec}truth_reco_tau",
                 ).Clone()
                 response.Scale(1 / response.GetEffectiveEntries())
                 analysis.plot_2d(
                     response,
-                    dataset="wtaunu",
+                    dataset="wtaunu_had",
                     systematic=NOMINAL_NAME,
                     selection=f"{wp}_{sec}truth_reco_tau",
                     ylabel=truth_label,

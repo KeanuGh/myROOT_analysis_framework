@@ -23,8 +23,8 @@ def copy_from_nominal(filepath: str, variables: list[str] | str, exist_ok: bool 
             branches_exist = False
             for sys in systematic_trees:
                 sys_tree = tfile.Get(sys)
-                branches = sys_tree.GetListOfBranches()
-                if all([v in branches for v in variables]):
+                all_branches = sys_tree.GetListOfBranches()
+                if all([v in all_branches for v in variables]):
                     branches_exist = True
             if branches_exist:
                 print(f"Branches exist in file: {filepath}. Exiting.")
@@ -82,9 +82,9 @@ if __name__ == "__main__":
     # file = "test_data/user.kghorban.40997791._000001.histograms.root"
     # copy_met_linear(file)
 
-    files_path = "/data/DTA_outputs/MC16e/**/*.root"
+    files_path = "/data/DTA_outputs/2024-09-19/**/*.root"
     n_workers = mp.cpu_count() // 2
     files = [f for f in multi_glob(files_path) if "user.kghorban.data" not in f]
     with mp.Pool(n_workers) as pool:
         # print(f"\n{file}")
-        pool.starmap(copy_from_nominal, [(file, "TruthBosonM") for file in files])
+        pool.starmap(copy_from_nominal, [(file, "TruthTau_isHadronic") for file in files])

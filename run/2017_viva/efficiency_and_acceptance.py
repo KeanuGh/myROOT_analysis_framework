@@ -15,7 +15,7 @@ DTA_PATH = Path("/mnt/D/data/DTA_outputs/2024-09-19/")
 datasets: Dict[str, Dict] = {
     # SIGNAL
     # ====================================================================
-    "wtaunu_had": {
+    "wtaunu": {
         "data_path": {
             "lm_cut": DTA_PATH / "*Sh_2211_Wtaunu_H_maxHTpTV2*/*.root",
             "full": DTA_PATH / "*Sh_2211_Wtaunu_mW_120*/*.root",
@@ -218,43 +218,43 @@ selections: dict[str, list[Cut]] = {
     # PASS RECO BUT NOT TRUTH
     "loose_reco_notruth_tau": fail_truth_cuts + reco_cuts + [pass_loose],
     "loose_1prong_reco_notruth_tau": fail_truth_cuts
-    + reco_cuts
-    + [pass_loose, fail_truth_tau_1prong, reco_tau_1prong],
+                                     + reco_cuts
+                                     + [pass_loose, fail_truth_tau_1prong, reco_tau_1prong],
     "loose_3prong_reco_notruth_tau": fail_truth_cuts
-    + reco_cuts
-    + [pass_loose, fail_truth_tau_3prong, reco_tau_3prong],
+                                     + reco_cuts
+                                     + [pass_loose, fail_truth_tau_3prong, reco_tau_3prong],
     "loose_tauplus_reco_notruth_tau": fail_truth_cuts
-    + reco_cuts
-    + [pass_loose, fail_truth_tau_plus, reco_tau_plus],
+                                      + reco_cuts
+                                      + [pass_loose, fail_truth_tau_plus, reco_tau_plus],
     "loose_tauminus_reco_notruth_tau": fail_truth_cuts
-    + reco_cuts
-    + [pass_loose, fail_truth_tau_minus, reco_tau_minus],
+                                       + reco_cuts
+                                       + [pass_loose, fail_truth_tau_minus, reco_tau_minus],
     "medium_reco_notruth_tau": fail_truth_cuts + reco_cuts + [pass_medium],
     "medium_1prong_reco_notruth_tau": fail_truth_cuts
-    + reco_cuts
-    + [pass_medium, fail_truth_tau_1prong, reco_tau_1prong],
+                                      + reco_cuts
+                                      + [pass_medium, fail_truth_tau_1prong, reco_tau_1prong],
     "medium_3prong_reco_notruth_tau": fail_truth_cuts
-    + reco_cuts
-    + [pass_medium, fail_truth_tau_3prong, reco_tau_3prong],
+                                      + reco_cuts
+                                      + [pass_medium, fail_truth_tau_3prong, reco_tau_3prong],
     "medium_tauplus_reco_notruth_tau": fail_truth_cuts
-    + reco_cuts
-    + [pass_medium, fail_truth_tau_plus, reco_tau_plus],
+                                       + reco_cuts
+                                       + [pass_medium, fail_truth_tau_plus, reco_tau_plus],
     "medium_tauminus_reco_notruth_tau": fail_truth_cuts
-    + reco_cuts
-    + [pass_medium, fail_truth_tau_minus, reco_tau_minus],
+                                        + reco_cuts
+                                        + [pass_medium, fail_truth_tau_minus, reco_tau_minus],
     "tight_reco_notruth_tau": fail_truth_cuts + reco_cuts + [pass_tight],
     "tight_1prong_reco_notruth_tau": fail_truth_cuts
-    + reco_cuts
-    + [pass_tight, fail_truth_tau_1prong, reco_tau_1prong],
+                                     + reco_cuts
+                                     + [pass_tight, fail_truth_tau_1prong, reco_tau_1prong],
     "tight_3prong_reco_notruth_tau": fail_truth_cuts
-    + reco_cuts
-    + [pass_tight, fail_truth_tau_3prong, reco_tau_3prong],
+                                     + reco_cuts
+                                     + [pass_tight, fail_truth_tau_3prong, reco_tau_3prong],
     "tight_tauplus_reco_notruth_tau": fail_truth_cuts
-    + reco_cuts
-    + [pass_tight, fail_truth_tau_plus, reco_tau_plus],
+                                      + reco_cuts
+                                      + [pass_tight, fail_truth_tau_plus, reco_tau_plus],
     "tight_tauminus_reco_notruth_tau": fail_truth_cuts
-    + reco_cuts
-    + [pass_tight, fail_truth_tau_minus, reco_tau_minus],
+                                       + reco_cuts
+                                       + [pass_tight, fail_truth_tau_minus, reco_tau_minus],
 }
 
 # VARIABLES

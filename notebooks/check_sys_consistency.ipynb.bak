@@ -1,0 +1,553 @@
+{
+ "cells": [
+  {
+   "cell_type": "code",
+   "id": "initial_id",
+   "metadata": {
+    "collapsed": true,
+    "ExecuteTime": {
+     "end_time": "2024-10-09T17:14:00.260936Z",
+     "start_time": "2024-10-09T17:14:00.007934Z"
+    }
+   },
+   "source": [
+    "import numpy as np\n",
+    "import ROOT\n",
+    "from numba.parfors.parfor import mean_parallel_impl\n",
+    "from utils import ROOT_utils\n",
+    "\n",
+    "ROOT_utils.load_ROOT_settings()\n",
+    "\n",
+    "filepath = \"/home/keanu/Uni_Stuff_Queen_Mary/Python_Projects/myFramework/outputs/analysis_test/root/wtaunu.root\"\n",
+    "check_sys_up = \"TAUS_TRUEHADTAU_SME_TES_DETECTOR_Endcap_LowPt__1up\"\n",
+    "check_sys_down = \"TAUS_TRUEHADTAU_SME_TES_DETECTOR_Endcap_LowPt__1down\"\n",
+    "nominal = \"T_s1thv_NOMINAL\"\n",
+    "check_sel = \"SR_passID\"\n",
+    "check_vars = [\"TauPt\", \"MTW\"]"
+   ],
+   "outputs": [],
+   "execution_count": 77
+  },
+  {
+   "metadata": {
+    "ExecuteTime": {
+     "end_time": "2024-10-09T17:14:00.778401Z",
+     "start_time": "2024-10-09T17:14:00.672329Z"
+    }
+   },
+   "cell_type": "code",
+   "source": [
+    "# from framework output histograms\n",
+    "tfile =  ROOT.TFile(filepath, \"read\")\n",
+    "hists_sys_up = [tfile[check_sys_up][check_sel][v] for v in check_vars]\n",
+    "hists_sys_down = [tfile[check_sys_down][check_sel][v] for v in check_vars]\n",
+    "hists_nom = [tfile[nominal][check_sel][v] for v in check_vars]\n",
+    "\n",
+    "print(\"sys_down: \", ROOT_utils.get_th1_bin_values(hists_sys_down[0]))\n",
+    "print(\"nominal: \", ROOT_utils.get_th1_bin_values(hists_nom[0]))\n",
+    "print(\"sys_up: \", ROOT_utils.get_th1_bin_values(hists_sys_up[0]))"
+   ],
+   "id": "2ee2603f53c0b71f",
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "sys_down:  [ 1.55269451e+01  1.33837328e+01  7.14678717e+00  3.46911383e+00\n",
+      "  4.33435869e+00  3.02302837e+00  1.55655491e+00  1.09763336e+00\n",
+      "  1.23380852e+00  8.54200244e-01  3.48851204e-01  1.74747452e-01\n",
+      "  1.98638946e-01  3.72378170e-01  1.89894699e-02  4.06573601e-02\n",
+      " -1.02722310e-02  0.00000000e+00  8.55085440e-03  7.49844611e-02]\n",
+      "nominal:  [ 1.51951237e+01  1.68124561e+01  5.93811893e+00  3.46142673e+00\n",
+      "  4.34511852e+00  3.02302814e+00  1.55655456e+00  1.09763336e+00\n",
+      "  1.23380876e+00  8.54200363e-01  3.48851144e-01  1.74747497e-01\n",
+      "  1.98638931e-01  3.72378230e-01  1.89894699e-02  4.06573601e-02\n",
+      " -1.02722291e-02  0.00000000e+00  8.55085440e-03  7.49844611e-02]\n",
+      "sys_up:  [ 1.55770636e+01  1.64297066e+01  6.52311087e+00  4.10966349e+00\n",
+      "  4.06787729e+00  3.29212880e+00  1.55655491e+00  1.09763336e+00\n",
+      "  1.23380852e+00  8.54200244e-01  3.48851204e-01  1.74747452e-01\n",
+      "  1.98638946e-01  3.72378170e-01  1.89894699e-02  4.06573601e-02\n",
+      " -1.02722310e-02  0.00000000e+00  8.55085440e-03  7.49844611e-02]\n"
+     ]
+    }
+   ],
+   "execution_count": 78
+  },
+  {
+   "metadata": {
+    "ExecuteTime": {
+     "end_time": "2024-10-09T17:14:02.143044Z",
+     "start_time": "2024-10-09T17:14:01.494142Z"
+    }
+   },
+   "cell_type": "code",
+   "source": [
+    "# from framework output dataframe snapshots\n",
+    "df_sys_up = ROOT.RDataFrame(f\"{check_sys_up}/data_{check_sel}\", filepath).Filter(\"passReco==1\")\n",
+    "df_sys_down = ROOT.RDataFrame(f\"{check_sys_down}/data_{check_sel}\", filepath).Filter(\"passReco==1\")\n",
+    "df_nom = ROOT.RDataFrame(f\"{nominal}/data_{check_sel}\", filepath).Filter(\"passReco==1\")\n",
+    "\n",
+    "hist_sys_up = df_sys_up.Histo1D((\"\", \"\", 20, 200, 1000), \"TauPt\").GetValue()\n",
+    "hist_sys_down = df_sys_down.Histo1D((\"\", \"\", 20, 200, 1000), \"TauPt\").GetValue()\n",
+    "hist_nom = df_nom.Histo1D((\"\", \"\", 20, 200, 1000), \"TauPt\").GetValue()\n",
+    "\n",
+    "print(\"sys_down: \", ROOT_utils.get_th1_bin_values(hist_sys_down))\n",
+    "print(\"nominal: \", ROOT_utils.get_th1_bin_values(hist_nom))\n",
+    "print(\"sys_up: \", ROOT_utils.get_th1_bin_values(hist_sys_up))"
+   ],
+   "id": "4ec6b35ba7882052",
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "sys_down:  [332. 173. 101.  60.  53.  35.  21.  17.  14.  10.   0.   2.   4.   5.\n",
+      "   0.   0.   1.   0.   4.   1.]\n",
+      "nominal:  [337. 181. 101.  60.  53.  35.  21.  17.  14.  10.   0.   2.   4.   5.\n",
+      "   0.   0.   1.   0.   4.   1.]\n",
+      "sys_up:  [340. 186. 101.  60.  53.  35.  21.  17.  14.  10.   0.   2.   4.   5.\n",
+      "   0.   0.   1.   0.   4.   1.]\n"
+     ]
+    }
+   ],
+   "execution_count": 79
+  },
+  {
+   "metadata": {
+    "ExecuteTime": {
+     "end_time": "2024-10-09T17:15:14.176315Z",
+     "start_time": "2024-10-09T17:15:13.507145Z"
+    }
+   },
+   "cell_type": "code",
+   "source": [
+    "# raw DTA output\n",
+    "file2 = \"/mnt/D/data/DTA_outputs/2024-08-28/user.kghorban.Sh_2211_Wtaunu_H_maxHTpTV2_BFilter.e8351.MC16d.v1.2024-08-28_histograms.root/user.kghorban.40997756._000001.histograms.root\"\n",
+    "prefix = \"T_s1thv_\"\n",
+    "df_sys_up = ROOT.RDataFrame(prefix + check_sys_up, file2).Filter(\"passReco==1\")\n",
+    "df_sys_down = ROOT.RDataFrame(prefix + check_sys_down, file2).Filter(\"passReco==1\")\n",
+    "df_nom = ROOT.RDataFrame(nominal, file2).Filter(\"passReco==1\")\n",
+    "\n",
+    "hist_sys_up = df_sys_up.Histo1D((\"\", \"\", 20, 200000, 1000000), \"TauPt\").GetValue()\n",
+    "hist_sys_down = df_sys_down.Histo1D((\"\", \"\", 20, 200000, 1000000), \"TauPt\").GetValue()\n",
+    "hist_nom = df_nom.Histo1D((\"\", \"\", 20, 200000, 1000000), \"TauPt\").GetValue()\n",
+    "\n",
+    "print(ROOT_utils.get_th1_bin_values(hist_sys_down))\n",
+    "print(ROOT_utils.get_th1_bin_values(hist_nom))\n",
+    "print(ROOT_utils.get_th1_bin_values(hist_sys_up))"
+   ],
+   "id": "64495eaf447f6faf",
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "[332. 173. 101.  60.  53.  35.  21.  17.  14.  10.   0.   2.   4.   5.\n",
+      "   0.   0.   1.   0.   4.   1.]\n",
+      "[337. 181. 101.  60.  53.  35.  21.  17.  14.  10.   0.   2.   4.   5.\n",
+      "   0.   0.   1.   0.   4.   1.]\n",
+      "[340. 186. 101.  60.  53.  35.  21.  17.  14.  10.   0.   2.   4.   5.\n",
+      "   0.   0.   1.   0.   4.   1.]\n"
+     ]
+    }
+   ],
+   "execution_count": 87
+  },
+  {
+   "metadata": {
+    "ExecuteTime": {
+     "end_time": "2024-10-09T17:15:56.329771Z",
+     "start_time": "2024-10-09T17:15:55.435022Z"
+    }
+   },
+   "cell_type": "code",
+   "source": [
+    "# try manually recreating analysis\n",
+    "tfile = ROOT.TFile(file2, \"read\")\n",
+    "# sumw = 160273396662272.0\n",
+    "# lumi = 44307.4\n",
+    "# # lumi = 139\n",
+    "# xs = 14126.0\n",
+    "# filter_eff = 0.00867775\n",
+    "\n",
+    "\n",
+    "\n",
+    "kFactor = 1.0\n",
+    "reco_weight = f\"(weight * rwCorr * prwWeight * {lumi * xs * filter_eff * kFactor}) / {sumw}\"\n",
+    "mtw = \"mt(TauPt, MET_met, TauPhi, MET_phi)\"\n",
+    "th1_model = [\"\", \"\", 20, np.geomspace(170, 1000, 21)]\n",
+    "\n",
+    "pass_presel = r\"(passReco == 1) && (TauBaselineWP == 1) && (abs(TauCharge) == 1) && ((MatchedTruthParticle_isTau + MatchedTruthParticle_isElectron + MatchedTruthParticle_isMuon + MatchedTruthParticle_isPhoton) <= 1)\"\n",
+    "pass_taupt170 = r\"TauPt > 170\"\n",
+    "pass_mtw150 = r\"MTW > 150\"\n",
+    "pass_loose = r\"(TauBDTEleScore > 0.05) && ((TauRNNJetScore > 0.15) * (TauNCoreTracks == 1) + (TauRNNJetScore > 0.25) * (TauNCoreTracks == 3))\"\n",
+    "pass_met150 = r\"MET_met > 150\"\n",
+    "\n",
+    "df_sys_down = (  # sys_down\n",
+    "    ROOT.RDataFrame(prefix + check_sys_down, file2)\n",
+    "    .Filter(pass_presel)  # pass_presel\n",
+    "    # .Filter(pass_taupt170)\n",
+    "    # .Define(\"MTW\", mtw)\n",
+    "    # .Filter(pass_mtw150)\n",
+    "    # .Filter(pass_loose)\n",
+    "    # .Filter(pass_met150)\n",
+    "    .Define(\"reco_weight\", reco_weight)\n",
+    "    .Redefine(\"TauPt\", \"TauPt / 1000\")\n",
+    ")\n",
+    "df_nom = (  # nominal\n",
+    "    ROOT.RDataFrame(nominal, file2)\n",
+    "    .Filter(pass_presel)  # pass_presel\n",
+    "    # .Filter(pass_taupt170)\n",
+    "    # .Define(\"MTW\", mtw)\n",
+    "    # .Filter(pass_mtw150)\n",
+    "    # .Filter(pass_loose)\n",
+    "    # .Filter(pass_met150)\n",
+    "    .Define(\"reco_weight\", reco_weight)\n",
+    "    .Redefine(\"TauPt\", \"TauPt / 1000\")\n",
+    ")\n",
+    "df_sys_up = (  # sys_up\n",
+    "    ROOT.RDataFrame(prefix + check_sys_up, file2)\n",
+    "    .Filter(pass_presel)  # pass_presel\n",
+    "    # .Filter(pass_taupt170)\n",
+    "    # .Define(\"MTW\", mtw)\n",
+    "    # .Filter(pass_mtw150)\n",
+    "    # .Filter(pass_loose)\n",
+    "    # .Filter(pass_met150)\n",
+    "    .Define(\"reco_weight\", reco_weight)\n",
+    "    .Redefine(\"TauPt\", \"TauPt / 1000\")\n",
+    ")\n",
+    "\n",
+    "# fill\n",
+    "hist_sys_up = ROOT.TH1F(*th1_model)\n",
+    "hist_sys_down = ROOT.TH1F(*th1_model)\n",
+    "hist_nom = ROOT.TH1F(*th1_model)\n",
+    "hist_sys_up = df_sys_up.Fill(hist_sys_up, [\"TauPt\", \"reco_weight\"]).GetValue()\n",
+    "hist_sys_down = df_sys_down.Fill(hist_sys_down, [\"TauPt\", \"reco_weight\"]).GetValue()\n",
+    "hist_nom = df_nom.Fill(hist_nom, [\"TauPt\", \"reco_weight\"]).GetValue()\n",
+    "\n",
+    "print(\"sys_down: \", ROOT_utils.get_th1_bin_values(hist_sys_down))\n",
+    "print(\"nominal: \", ROOT_utils.get_th1_bin_values(hist_nom))\n",
+    "print(\"sys_up: \", ROOT_utils.get_th1_bin_values(hist_sys_up))"
+   ],
+   "id": "ea2f236035d68ca7",
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "sys_down:  [ 1.72765408e+01  1.48780184e+01  7.78721714e+00  3.92511988e+00\n",
+      "  4.66115236e+00  3.64515424e+00  1.54110360e+00  1.19003463e+00\n",
+      "  1.45472658e+00  9.21422660e-01  3.91651154e-01  1.42040089e-01\n",
+      "  2.15324447e-01  4.10610497e-01  1.90027505e-02  4.06465307e-02\n",
+      " -1.86587349e-02  0.00000000e+00  9.78597626e-03  1.05087452e-01]\n",
+      "nominal:  [ 1.70863438e+01  1.84571495e+01  6.35891867e+00  4.02638102e+00\n",
+      "  4.66738987e+00  3.64515328e+00  1.54110336e+00  1.19003475e+00\n",
+      "  1.45472658e+00  9.21422720e-01  3.91651154e-01  1.42040074e-01\n",
+      "  2.15324432e-01  4.10610497e-01  1.90027505e-02  4.06465307e-02\n",
+      " -1.86587349e-02  0.00000000e+00  9.78597626e-03  1.05087452e-01]\n",
+      "sys_up:  [ 1.76451435e+01  1.79272118e+01  7.09039688e+00  4.81216574e+00\n",
+      "  4.18646431e+00  3.96383572e+00  1.54110360e+00  1.19003463e+00\n",
+      "  1.45472658e+00  9.21422660e-01  3.91651154e-01  1.42040089e-01\n",
+      "  2.15324447e-01  4.10610497e-01  1.90027505e-02  4.06465307e-02\n",
+      " -1.86587349e-02  0.00000000e+00  9.78597626e-03  1.05087452e-01]\n"
+     ]
+    }
+   ],
+   "execution_count": 90
+  },
+  {
+   "metadata": {
+    "ExecuteTime": {
+     "end_time": "2024-10-09T17:14:16.120713Z",
+     "start_time": "2024-10-09T17:14:15.307511Z"
+    }
+   },
+   "cell_type": "code",
+   "source": [
+    "import pandas as pd\n",
+    "\n",
+    "df = pd.DataFrame(df_nom.AsNumpy())"
+   ],
+   "id": "231e9653b4555b09",
+   "outputs": [],
+   "execution_count": 82
+  },
+  {
+   "metadata": {
+    "ExecuteTime": {
+     "end_time": "2024-10-09T17:14:16.895779Z",
+     "start_time": "2024-10-09T17:14:16.787286Z"
+    }
+   },
+   "cell_type": "code",
+   "source": [
+    "taupt = df.set_index(\"eventNumber\")[[\"TauPt\", \"mcChannel\"]].sort_index()\n",
+    "taupt"
+   ],
+   "id": "e1c219f20feb7e78",
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "                  TauPt  mcChannel\n",
+       "eventNumber                       \n",
+       "180111       283.012238     700347\n",
+       "180293       170.328018     700347\n",
+       "180372       239.107056     700347\n",
+       "180466       207.640289     700347\n",
+       "180637       231.268723     700347\n",
+       "...                 ...        ...\n",
+       "409231       221.690811     700347\n",
+       "409302       167.479477     700347\n",
+       "409400       163.991058     700347\n",
+       "409491       551.783752     700347\n",
+       "409675       177.570267     700347\n",
+       "\n",
+       "[1502 rows x 2 columns]"
+      ],
+      "text/html": [
+       "<div>\n",
+       "<style scoped>\n",
+       "    .dataframe tbody tr th:only-of-type {\n",
+       "        vertical-align: middle;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe tbody tr th {\n",
+       "        vertical-align: top;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe thead th {\n",
+       "        text-align: right;\n",
+       "    }\n",
+       "</style>\n",
+       "<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th></th>\n",
+       "      <th>TauPt</th>\n",
+       "      <th>mcChannel</th>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>eventNumber</th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th>180111</th>\n",
+       "      <td>283.012238</td>\n",
+       "      <td>700347</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>180293</th>\n",
+       "      <td>170.328018</td>\n",
+       "      <td>700347</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>180372</th>\n",
+       "      <td>239.107056</td>\n",
+       "      <td>700347</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>180466</th>\n",
+       "      <td>207.640289</td>\n",
+       "      <td>700347</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>180637</th>\n",
+       "      <td>231.268723</td>\n",
+       "      <td>700347</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>...</th>\n",
+       "      <td>...</td>\n",
+       "      <td>...</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>409231</th>\n",
+       "      <td>221.690811</td>\n",
+       "      <td>700347</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>409302</th>\n",
+       "      <td>167.479477</td>\n",
+       "      <td>700347</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>409400</th>\n",
+       "      <td>163.991058</td>\n",
+       "      <td>700347</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>409491</th>\n",
+       "      <td>551.783752</td>\n",
+       "      <td>700347</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>409675</th>\n",
+       "      <td>177.570267</td>\n",
+       "      <td>700347</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n",
+       "<p>1502 rows × 2 columns</p>\n",
+       "</div>"
+      ]
+     },
+     "execution_count": 83,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "execution_count": 83
+  },
+  {
+   "metadata": {
+    "ExecuteTime": {
+     "end_time": "2024-10-09T17:14:17.937278Z",
+     "start_time": "2024-10-09T17:14:17.830946Z"
+    }
+   },
+   "cell_type": "code",
+   "source": [
+    "reco_weight = df.set_index(\"eventNumber\")[\"reco_weight\"].sort_index()\n",
+    "reco_weight"
+   ],
+   "id": "f7b4befe49f7192",
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "eventNumber\n",
+       "180111    0.009455\n",
+       "180293    0.091771\n",
+       "180372    0.040620\n",
+       "180466    0.006924\n",
+       "180637    0.042849\n",
+       "            ...   \n",
+       "409231    0.102171\n",
+       "409302    0.086832\n",
+       "409400    0.040279\n",
+       "409491    0.029869\n",
+       "409675   -0.191278\n",
+       "Name: reco_weight, Length: 1502, dtype: float64"
+      ]
+     },
+     "execution_count": 84,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "execution_count": 84
+  },
+  {
+   "metadata": {
+    "ExecuteTime": {
+     "end_time": "2024-10-09T17:14:19.428946Z",
+     "start_time": "2024-10-09T17:14:19.324668Z"
+    }
+   },
+   "cell_type": "code",
+   "source": "reco_weight.mean()",
+   "id": "9f31af6a6ee66ffa",
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "0.04894636305547132"
+      ]
+     },
+     "execution_count": 85,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "execution_count": 85
+  },
+  {
+   "metadata": {
+    "ExecuteTime": {
+     "end_time": "2024-10-09T17:14:20.054271Z",
+     "start_time": "2024-10-09T17:14:19.947702Z"
+    }
+   },
+   "cell_type": "code",
+   "source": [
+    "weight = df.set_index(\"eventNumber\")[\"weight\"].sort_index()\n",
+    "weight"
+   ],
+   "id": "a75985e8b858660f",
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "eventNumber\n",
+       "180111    6.820416e+05\n",
+       "180293    1.607306e+06\n",
+       "180372    1.047372e+06\n",
+       "180466    2.118343e+05\n",
+       "180637    1.632408e+06\n",
+       "              ...     \n",
+       "409231    2.946000e+06\n",
+       "409302    2.241012e+06\n",
+       "409400    1.035677e+06\n",
+       "409491    7.442708e+05\n",
+       "409675   -4.920646e+06\n",
+       "Name: weight, Length: 1502, dtype: float32"
+      ]
+     },
+     "execution_count": 86,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "execution_count": 86
+  },
+  {
+   "metadata": {
+    "ExecuteTime": {
+     "end_time": "2024-10-09T16:30:28.554581Z",
+     "start_time": "2024-10-09T16:30:28.450864Z"
+    }
+   },
+   "cell_type": "code",
+   "source": "xs * filter_eff",
+   "id": "96eb29ab4ceded62",
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "122.5818965"
+      ]
+     },
+     "execution_count": 75,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "execution_count": 75
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 2
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython2",
+   "version": "2.7.6"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 5
+}
