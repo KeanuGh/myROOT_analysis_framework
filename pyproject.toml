@@ -40,7 +40,6 @@ test = [
     "pytest>=7.4",
 ]
 dev = [
-    "black>=24.0",
     "pytest>=7.4",
     "ruff>=0.4",
 ]
@@ -54,7 +53,6 @@ python = "3.11.*"
 root = ">=6.32,<7"
 roounfold = "*"
 pytest = ">=7.4"
-black = ">=24.0"
 ruff = ">=0.4"
 
 [tool.pixi.pypi-dependencies]
@@ -64,7 +62,7 @@ myframework = { path = ".", editable = true }
 test = "python -m pytest -vv"
 test-quiet = "python -m pytest -q"
 lint = "ruff check ."
-format = "black ."
+format = "ruff format ."
 
 [tool.setuptools]
 include-package-data = true
@@ -86,10 +84,6 @@ utils = [
 pythonpath = ["src"]
 addopts = "--ignore=quick_scripts/ --ignore=tests/OLD_TESTS/"
 testpaths = ["tests"]
-
-[tool.black]
-line-length = 100
-target-version = ["py311"]
 
 [tool.ruff]
 line-length = 100
