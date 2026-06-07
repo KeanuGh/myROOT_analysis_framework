@@ -1,6 +1,7 @@
 # python
 **/__pycache__/
 .pyc
+*.egg-info/
 
 # Environments
 .env

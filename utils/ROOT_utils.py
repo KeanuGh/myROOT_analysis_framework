@@ -1,5 +1,6 @@
 import glob
 import logging
+import os
 import pickle as pkl
 from contextlib import contextmanager
 from pathlib import Path
@@ -26,8 +27,10 @@ def load_ROOT_settings(set_batch: bool = True, th1_dir: bool = False, optstat: i
     ROOT.gSystem.Load(func_file)
     ROOT.gInterpreter.ProcessLine(f'#include "{func_file}"')
 
-    # load RooUnfold (if it exists)
-    ROOT.gSystem.Load("~/Programs/RooUnfold/build/libRooUnfold.so")
+    # load RooUnfold from the active environment, unless explicitly overridden.
+    roounfold_lib = os.environ.get("ROOUNFOLD_LIB", "libRooUnfold")
+    if ROOT.gSystem.Load(roounfold_lib) < 0:
+        logging.getLogger(__name__).warning("Could not load RooUnfold library: %s", roounfold_lib)
 
 
 # this dictionary decides which ROOT constructor needs to be called based on hist type and dimension
@@ -180,7 +183,7 @@ def glob_chain(TTree: str, path: Path | str) -> ROOT.TChain:
 
 
 def init_rdataframe(
-    name: str, filepaths: Path | str | Iterable[str | Path], trees: Iterable[str]
+        name: str, filepaths: Path | str | Iterable[str | Path], trees: Iterable[str]
 ) -> ROOT.RDataFrame:
     """
     Returns an RDataFrame for a given name
@@ -207,7 +210,7 @@ def get_object_names_in_file(file: str | Path, obj_type: str) -> list[str]:
 
 
 def get_TH1_bin_args(
-    bins: list[float] | tuple[int, float, float] | bh.axis.Axis, logbins: bool = False
+        bins: list[float] | tuple[int, float, float] | bh.axis.Axis, logbins: bool = False
 ) -> tuple[int, list | ArrayLike] | tuple[int, float, float]:
     """Format bins for TH1 constructor"""
     if isinstance(bins, bh.axis.Axis):

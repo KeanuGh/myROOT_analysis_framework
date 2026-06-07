@@ -1,5 +1,108 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "myframework"
 version = "0.1.0"
-requires-python = ">=3.12"
-dependencies = []
+description = "A ROOT/RDataFrame-based analysis framework for ATLAS-style histogramming, cutflows, plotting, and unfolding studies."
+readme = "README.md"
+requires-python = ">=3.11,<3.12"
+license = { text = "Proprietary" }
+authors = [
+    { name = "Keanu Ghorbani" },
+]
+keywords = [
+    "atlas",
+    "cern-root",
+    "histograms",
+    "physics-analysis",
+    "unfolding",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Scientific/Engineering :: Physics",
+]
+dependencies = [
+    "boost-histogram>=1.4",
+    "matplotlib>=3.8",
+    "mplhep>=0.3.54",
+    "numpy>=1.24",
+    "pandas>=2.1",
+    "tabulate>=0.9",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest>=7.4",
+]
+dev = [
+    "black>=24.0",
+    "pytest>=7.4",
+    "ruff>=0.4",
+]
+
+[tool.pixi.workspace]
+channels = ["conda-forge"]
+platforms = ["linux-64"]
+
+[tool.pixi.dependencies]
+python = "3.11.*"
+root = ">=6.32,<7"
+roounfold = "*"
+pytest = ">=7.4"
+black = ">=24.0"
+ruff = ">=0.4"
+
+[tool.pixi.pypi-dependencies]
+myframework = { path = ".", editable = true }
+
+[tool.pixi.tasks]
+test = "python -m pytest -vv"
+test-quiet = "python -m pytest -q"
+lint = "ruff check ."
+format = "black ."
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*", "utils*"]
+namespaces = true
+
+[tool.setuptools.package-data]
+src = ["PMGxsecDB_mc16.txt"]
+utils = [
+    "rootfuncs.h",
+    "PMGxsecDB_mc16_previous.txt",
+    "AtlasStyle/*",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+addopts = "--ignore=quick_scripts/ --ignore=tests/OLD_TESTS/"
+testpaths = ["tests"]
+
+[tool.black]
+line-length = 100
+target-version = ["py311"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend-exclude = [
+    "notebooks",
+    "outputs",
+    "quick_scripts",
+    "run/old",
+]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+ignore = [
+    "E501",
+]
