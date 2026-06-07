@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import ROOT
+import tabulate
 
 from analysis import Analysis
 from datasetbuilder import LUMI_YEAR
@@ -82,11 +83,13 @@ if __name__ == "__main__":
         "TAUS_TRUEHADTAU_SME_TES_PHYSICSLIST",
     }
 
+
     def unfolding_label(i: int) -> str:
         if i == 0:
             return "Bin-By-Bin Unfolding"
         else:
             return f"Iterative Unfolding - {i} Iterations"
+
 
     for wp in WP:
         wp_dir = base_plotting_dir / wp
@@ -101,34 +104,34 @@ if __name__ == "__main__":
             # ========================================================
             analysis.paths.plot_dir = wp_dir / "shadow_bins"
             with ROOT.TFile(
-                str(
-                    analysis.paths.output_dir.parent
-                    / f"efficiency_and_acceptance/root/efficiency_and_acceptance.root"
-                )
+                    str(
+                        analysis.paths.output_dir.parent
+                        / f"efficiency_and_acceptance/root/efficiency_and_acceptance.root"
+                    )
             ) as file:
                 acc_hist = file.Get(f"{wp}_{var}_acceptance")
                 acc_hist.SetDirectory(0)
             with ROOT.TFile(
-                str(
-                    analysis.paths.output_dir.parent
-                    / f"efficiency_and_acceptance_shadow_bin200/root/efficiency_and_acceptance_shadow_bin200.root"
-                )
+                    str(
+                        analysis.paths.output_dir.parent
+                        / f"efficiency_and_acceptance_shadow_bin200/root/efficiency_and_acceptance_shadow_bin200.root"
+                    )
             ) as file:
                 acc_hist200 = file.Get(f"{wp}_{var}_acceptance")
                 acc_hist200.SetDirectory(0)
             with ROOT.TFile(
-                str(
-                    analysis.paths.output_dir.parent
-                    / f"efficiency_and_acceptance_shadow_bin250/root/efficiency_and_acceptance_shadow_bin250.root"
-                )
+                    str(
+                        analysis.paths.output_dir.parent
+                        / f"efficiency_and_acceptance_shadow_bin250/root/efficiency_and_acceptance_shadow_bin250.root"
+                    )
             ) as file:
                 acc_hist250 = file.Get(f"{wp}_{var}_acceptance")
                 acc_hist250.SetDirectory(0)
             with ROOT.TFile(
-                str(
-                    analysis.paths.output_dir.parent
-                    / f"efficiency_and_acceptance_shadow_bin300/root/efficiency_and_acceptance_shadow_bin300.root"
-                )
+                    str(
+                        analysis.paths.output_dir.parent
+                        / f"efficiency_and_acceptance_shadow_bin300/root/efficiency_and_acceptance_shadow_bin300.root"
+                    )
             ) as file:
                 acc_hist300 = file.Get(f"{wp}_{var}_acceptance")
                 acc_hist300.SetDirectory(0)
@@ -142,7 +145,7 @@ if __name__ == "__main__":
                     r"350|170|170 (no shadow bin)",
                 ],
                 xlabel=(
-                    variable_data[var]["name"] + (" [GeV]" if var in measurement_vars_mass else "")
+                        variable_data[var]["name"] + (" [GeV]" if var in measurement_vars_mass else "")
                 ),
                 colour=["r", "b", "g", "k"],
                 kind="overlay",
@@ -177,20 +180,22 @@ if __name__ == "__main__":
                 systematic=NOMINAL_NAME,
             )
 
+
             def unfold_bayes(h: ROOT.TH1, i: int) -> ROOT.TH1:
                 if i == 0:
                     return ROOT.RooUnfoldBinByBin(response, h)
                 return ROOT.RooUnfoldBayes(response, h, i)
 
+
             # get data and signal
             # ----------------------------------------------------------------
             with ROOT.TFile(
-                str(analysis.paths.output_dir.parent / f"analysis_simple_2017/root/data.root")
+                    str(analysis.paths.output_dir.parent / f"analysis_simple_2017/root/data.root")
             ) as file:
                 data = file[f"{NOMINAL_NAME}/{wp}_SR_passID"].Get(var)
                 data.SetDirectory(0)
             with ROOT.TFile(
-                str(analysis.paths.output_dir.parent / f"analysis_simple_2017/root/wtaunu.root")
+                    str(analysis.paths.output_dir.parent / f"analysis_simple_2017/root/wtaunu.root")
             ) as file:
                 signal = file[f"{NOMINAL_NAME}/{wp}_SR_passID"].Get(var)
                 signal.SetDirectory(0)
@@ -198,9 +203,9 @@ if __name__ == "__main__":
             # get truth
             # ----------------------------------------------------------------
             with ROOT.TFile(
-                str(
-                    analysis.paths.output_dir.parent / f"efficiency_and_acceptance/root/wtaunu.root"
-                )
+                    str(
+                        analysis.paths.output_dir.parent / f"efficiency_and_acceptance/root/wtaunu.root"
+                    )
             ) as file:
                 truth = file[f"{NOMINAL_NAME}/truth_tau"].Get(truths[var])
                 truth.SetDirectory(0)
@@ -211,27 +216,60 @@ if __name__ == "__main__":
             bkg_hists = []
             for bkg in ["wlnu", "zll", "top", "diboson"]:
                 with ROOT.TFile(
-                    str(analysis.paths.output_dir.parent / f"analysis_simple_2017/root/{bkg}.root")
+                        str(analysis.paths.output_dir.parent / f"analysis_simple_2017/root/{bkg}.root")
                 ) as file:
                     h = file[f"{NOMINAL_NAME}/{wp}_SR_passID"].Get(var)
                     h.SetDirectory(0)
                     bkg_hists.append(h)
             with ROOT.TFile(
-                str(
-                    analysis.paths.output_dir.parent
-                    / f"analysis_fakes_{YEAR}/root/analysis_fakes_{YEAR}.root"
-                )
+                    str(
+                        analysis.paths.output_dir.parent
+                        / f"analysis_fakes_{YEAR}/root/analysis_fakes_{YEAR}.root"
+                    )
             ) as file:
                 fakes_hist = file.Get(f"{wp}_{var}_fakes_bkg_TauPt_src")
                 fakes_hist.SetDirectory(0)
             background = sum_th1s(*(bkg_hists + [fakes_hist]))
             data_sig = data - background
 
+            bin_edges = get_th1_bin_edges(signal)
+            signal_fraction_rows = []
+            for bin_i in range(1, signal.GetNbinsX() + 1):
+                signal_yield = signal.GetBinContent(bin_i)
+                total_prediction = signal_yield + background.GetBinContent(bin_i)
+                signal_percent = 100 * signal_yield / total_prediction if total_prediction else 0.0
+                signal_fraction_rows.append(
+                    [
+                        f"[{bin_edges[bin_i - 1]:.3g}, {bin_edges[bin_i]:.3g})",
+                        f"{signal_yield:.2f}",
+                        f"{total_prediction:.2f}",
+                        f"{signal_percent:.2f}",
+                    ]
+                )
+
+            signal_fraction_table_path = (
+                    analysis.paths.latex_dir / f"{wp}_{var}_signal_percentage.tex"
+            )
+            with open(signal_fraction_table_path, "w") as f:
+                f.write(
+                    tabulate.tabulate(
+                        signal_fraction_rows,
+                        headers=[
+                            rf"{variable_data[var]['name']} bin",
+                            r"$W\rightarrow\tau\nu$",
+                            "Total prediction",
+                            "Signal [\\%]",
+                        ],
+                        tablefmt="latex_raw",
+                    )
+                )
+            analysis.logger.info(f"Saved table to {signal_fraction_table_path}")
+
             # uncertainties
             # ----------------------------------------------------------------
             sys_hists = {}
             with ROOT.TFile(
-                str(analysis.paths.output_dir.parent / f"analysis_simple_2017/root/wtaunu.root")
+                    str(analysis.paths.output_dir.parent / f"analysis_simple_2017/root/wtaunu.root")
             ) as file:
                 for sys in systematics:
                     uncert = file[f"{NOMINAL_NAME}/{wp}_SR_passID"].Get(f"{var}_{sys}_tot_uncert")
@@ -241,10 +279,10 @@ if __name__ == "__main__":
             # efficiency and acceptance
             # ----------------------------------------------------------------
             with ROOT.TFile(
-                str(
-                    analysis.paths.output_dir.parent
-                    / f"efficiency_and_acceptance/root/efficiency_and_acceptance.root"
-                )
+                    str(
+                        analysis.paths.output_dir.parent
+                        / f"efficiency_and_acceptance/root/efficiency_and_acceptance.root"
+                    )
             ) as file:
                 eff_hist = file.Get(f"{wp}_{var}_efficiency")
                 eff_hist.SetDirectory(0)
@@ -285,8 +323,8 @@ if __name__ == "__main__":
                     default_args = {
                         "systematic": NOMINAL_NAME,
                         "xlabel": (
-                            variable_data[var]["name"]
-                            + (" [GeV]" if var in measurement_vars_mass else "")
+                                variable_data[var]["name"]
+                                + (" [GeV]" if var in measurement_vars_mass else "")
                         ),
                         "kind": "overlay",
                         "do_stat": True,
@@ -299,10 +337,10 @@ if __name__ == "__main__":
                         ),
                         "scale_by_bin_width": True,
                         "ylabel": (
-                            r"$\frac{d\sigma_{W\rightarrow\tau\nu\rightarrow\mathrm{had}}}{d"
-                            + symbols[var]
-                            + r"}$"
-                            + (" [fb / GeV]" if var in measurement_vars_mass else " [fb]")
+                                r"$\frac{d\sigma_{W\rightarrow\tau\nu\rightarrow\mathrm{had}}}{d"
+                                + symbols[var]
+                                + r"}$"
+                                + (" [fb / GeV]" if var in measurement_vars_mass else " [fb]")
                         ),
                         "logx": True if var in measurement_vars_mass else False,
                         "ratio_plot": True,
@@ -311,14 +349,17 @@ if __name__ == "__main__":
                         "label_params": {"llabel": "Preliminary", "loc": 1},
                     }
 
+
                     def unfold_scale(h) -> ROOT.TH1D:
                         h.Scale(1 / LUMI)
                         return h * acc_new / acc_no_shadow
+
 
                     def unfold(h, i) -> ROOT.TH1D:
                         h = unfold_bayes(h, i).Hunfold()
                         h.Scale(1 / LUMI)
                         return h * acc_new / acc_no_shadow
+
 
                     # unfold
                     data_unfolded = unfold_bayes(data_sig, n_iter)
@@ -368,19 +409,22 @@ if __name__ == "__main__":
                     # -------------------------------------------------------------------------
                     analysis.paths.plot_dir = wp_dir / "unfolded" / var / "sys"
 
+
                     def sys_up(sys) -> Histogram1D:
                         h = (
-                            unfold(signal + sys_hists[sys], n_iter) - signal_unfolded_full
-                        ) / data_unfolded_full
+                                    unfold(signal + sys_hists[sys], n_iter) - signal_unfolded_full
+                            ) / data_unfolded_full
                         h.Scale(100)
                         return h
 
+
                     def sys_down(sys) -> Histogram1D:
                         h = (
-                            unfold(signal - sys_hists[sys], n_iter) - signal_unfolded_full
-                        ) / data_unfolded_full
+                                    unfold(signal - sys_hists[sys], n_iter) - signal_unfolded_full
+                            ) / data_unfolded_full
                         h.Scale(100)
                         return h
+
 
                     default_args = {
                         "logx": True if var in measurement_vars_mass else False,
@@ -495,8 +539,8 @@ if __name__ == "__main__":
                     val=[truth] + [hists[sh_bin_label][i] for i in ITER],
                     label=["Truth"] + [unfolding_label(i) for i in ITER],
                     xlabel=(
-                        variable_data[var]["name"]
-                        + (" [GeV]" if var in measurement_vars_mass else "")
+                            variable_data[var]["name"]
+                            + (" [GeV]" if var in measurement_vars_mass else "")
                     ),
                     kind="overlay",
                     do_stat=True,
@@ -508,10 +552,10 @@ if __name__ == "__main__":
                     ),
                     scale_by_bin_width=True,
                     ylabel=(
-                        r"$\frac{d\sigma_{W\rightarrow\tau\nu\rightarrow\mathrm{had}}}{d"
-                        + symbols[var]
-                        + r"}$"
-                        + (" [fb / GeV]" if var in measurement_vars_mass else " [fb]")
+                            r"$\frac{d\sigma_{W\rightarrow\tau\nu\rightarrow\mathrm{had}}}{d"
+                            + symbols[var]
+                            + r"}$"
+                            + (" [fb / GeV]" if var in measurement_vars_mass else " [fb]")
                     ),
                     logx=True if var in measurement_vars_mass else False,
                     label_params={"llabel": "Preliminary", "loc": 1},
@@ -523,8 +567,8 @@ if __name__ == "__main__":
                     val=[truth] + [hists[sh_bin_label][i] for sh_bin_label, _ in shadow_bins],
                     label=["Truth"] + [sh_bin_label for sh_bin_label, _ in shadow_bins],
                     xlabel=(
-                        variable_data[var]["name"]
-                        + (" [GeV]" if var in measurement_vars_mass else "")
+                            variable_data[var]["name"]
+                            + (" [GeV]" if var in measurement_vars_mass else "")
                     ),
                     kind="overlay",
                     do_stat=True,
@@ -536,10 +580,10 @@ if __name__ == "__main__":
                     ),
                     scale_by_bin_width=True,
                     ylabel=(
-                        r"$\frac{d\sigma_{W\rightarrow\tau\nu\rightarrow\mathrm{had}}}{d"
-                        + symbols[var]
-                        + r"}$"
-                        + (" [fb / GeV]" if var in measurement_vars_mass else " [fb]")
+                            r"$\frac{d\sigma_{W\rightarrow\tau\nu\rightarrow\mathrm{had}}}{d"
+                            + symbols[var]
+                            + r"}$"
+                            + (" [fb / GeV]" if var in measurement_vars_mass else " [fb]")
                     ),
                     logx=True if var in measurement_vars_mass else False,
                     label_params={"llabel": "Preliminary", "loc": 1},
