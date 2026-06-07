@@ -346,6 +346,7 @@ if __name__ == "__main__":
     # loop over each working point
     for sel in selections:
         wp_dir = base_plotting_dir / sel
+        fake_fraction_y_axlim = (0, 0.4) if "SR" in sel else (0, 1)
 
         # Fakes distribution across kinematic variable for signal MC
         # -----------------------------------------------------------------------
@@ -428,7 +429,7 @@ if __name__ == "__main__":
                     f"{analysis.global_lumi / 1000:.3g}fb$^{{-1}}$",
                     sep=" | ",
                 ),
-                y_axlim=(0, 1),
+                y_axlim=fake_fraction_y_axlim,
                 kind="stack",
                 xlabel=xlabel,
                 logx=True if var in measurement_vars_mass else False,
@@ -459,7 +460,7 @@ if __name__ == "__main__":
                     systematic=NOMINAL_NAME,
                     colour=list(plt.rcParams["axes.prop_cycle"].by_key()["color"])[:4],
                     title=f"Fake fractions for {var} in {mc} for SR",
-                    y_axlim=(0, 1),
+                    y_axlim=fake_fraction_y_axlim,
                     kind="stack",
                     xlabel=xlabel,
                     label_params={"llabel": "Simulation"},
