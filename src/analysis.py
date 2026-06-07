@@ -1424,36 +1424,36 @@ class Analysis:
 
         self.logger.info("Completed fakes estimate")
 
-    # def get_response_histogram(
-    #     self,
-    #     varname_reco: str,
-    #     varname_truth: str,
-    #     dataset: str,
-    #     wp: str,
-    #     nprong: str,
-    #     systematic: str = "T_s1thv_NOMINAL",
-    # ) -> ROOT.RooUnfoldResponse:
-    #     """Get unfolding response histogram from signal resconstruction analysis"""
-    #
-    #     response_file = (
-    #         self.paths.output_dir.parent / f"efficiency_and_acceptance/root/{dataset}.root"
-    #     )
-    #     if not response_file.is_file():
-    #         raise FileNotFoundError(f"No file found at {response_file}")
-    #
-    #     with ROOT.TFile(str(response_file)) as file:
-    #         hist_reco = file[f"{systematic}/{wp}_{nprong}reco_tau"].Get(varname_reco)
-    #         hist_reco.SetDirectory(0)
-    #
-    #         hist_truth = file[f"{systematic}/truth_tau"].Get(varname_truth)
-    #         hist_truth.SetDirectory(0)
-    #
-    #         h_response = file[f"{systematic}/{wp}_{nprong}truth_reco_tau"].Get(
-    #             f"{varname_reco}_{varname_truth}"
-    #         )
-    #         h_response.SetDirectory(0)
-    #
-    #         return ROOT.RooUnfoldResponse(hist_reco, hist_truth, h_response)
+    def get_response_histogram(
+            self,
+            varname_reco: str,
+            varname_truth: str,
+            dataset: str,
+            wp: str,
+            nprong: str,
+            systematic: str = "T_s1thv_NOMINAL",
+    ) -> ROOT.RooUnfoldResponse:
+        """Get unfolding response histogram from signal resconstruction analysis"""
+
+        response_file = (
+                self.paths.output_dir.parent / f"efficiency_and_acceptance/root/{dataset}.root"
+        )
+        if not response_file.is_file():
+            raise FileNotFoundError(f"No file found at {response_file}")
+
+        with ROOT.TFile(str(response_file)) as file:
+            hist_reco = file[f"{systematic}/{wp}_{nprong}reco_tau"].Get(varname_reco)
+            hist_reco.SetDirectory(0)
+
+            hist_truth = file[f"{systematic}/truth_tau"].Get(varname_truth)
+            hist_truth.SetDirectory(0)
+
+            h_response = file[f"{systematic}/{wp}_{nprong}truth_reco_tau"].Get(
+                f"{varname_reco}_{varname_truth}"
+            )
+            h_response.SetDirectory(0)
+
+            return ROOT.RooUnfoldResponse(hist_reco, hist_truth, h_response)
 
     # ===============================
     # ========= PRINTOUTS ===========
