@@ -6,7 +6,7 @@ import numpy as np
 from binnings import BINNINGS
 from src.analysis import Analysis
 from src.cutting import Cut
-from utils.ROOT_utils import bayes_divide
+from utils.ROOT_utils import bayes_divide, normalise_migration_hist
 from utils.helper_functions import smart_join
 from utils.plotting_tools import Hist2dOpts
 from utils.variable_names import variable_data
@@ -389,15 +389,22 @@ if __name__ == "__main__":
                 reco_label = variable_data[var]["name"] + (
                     " [GeV]" if var in measurement_vars_mass else ""
                 )
+                migration_hist = normalise_migration_hist(
+                    analysis.get_hist(
+                        f"{var}_{truths[var]}",
+                        dataset="wtaunu_had",
+                        systematic=NOMINAL_NAME,
+                        selection=f"{wp}_{sec}truth_reco_tau",
+                    )
+                )
                 analysis.plot_2d(
-                    var,
-                    truths[var],
+                    migration_hist,
                     dataset="wtaunu_had",
                     systematic=NOMINAL_NAME,
                     selection=f"{wp}_{sec}truth_reco_tau",
                     ylabel=truth_label,
                     xlabel=reco_label,
-                    title=f"{reco_label.removesuffix(' [GeV]')} Migration Matrix | {analysis.global_lumi / 1000:.3g}fb$^{{-1}}$",
+                    title=f"{reco_label.removesuffix(' [GeV]')} Migration Matrix [%] | {analysis.global_lumi / 1000:.3g}fb$^{{-1}}$",
                     labels=True,
                     logx=True if var in measurement_vars_mass else False,
                     logy=True if var in measurement_vars_mass else False,

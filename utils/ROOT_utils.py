@@ -312,6 +312,26 @@ def get_th2_bin_values(h: ROOT.TH2, flow: bool = False) -> np.typing.NDArray[flo
     return bin_values
 
 
+def normalise_migration_hist(h: ROOT.TH2, scale: float = 100.0) -> ROOT.TH2:
+    """Return a column-normalised migration histogram clone for plotting."""
+    h_norm = h.Clone()
+    for truth_bin in range(1, h_norm.GetNbinsY() + 1):
+        norm = sum(
+            h_norm.GetBinContent(reco_bin, truth_bin)
+            for reco_bin in range(1, h_norm.GetNbinsX() + 1)
+        )
+        if not norm:
+            continue
+        for reco_bin in range(1, h_norm.GetNbinsX() + 1):
+            h_norm.SetBinContent(
+                reco_bin, truth_bin, scale * h_norm.GetBinContent(reco_bin, truth_bin) / norm
+            )
+            h_norm.SetBinError(
+                reco_bin, truth_bin, scale * h_norm.GetBinError(reco_bin, truth_bin) / norm
+            )
+    return h_norm
+
+
 def get_th1_axis_range(h: ROOT.TH1, start: int = 0, end: int = -1) -> ROOT.TH1:
     """Return axis subset of TH1 from range"""
     if end == -1:
