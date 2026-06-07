@@ -54,9 +54,12 @@ root_h_ratio = root_h.Clone()
 root_h_ratio.Divide(root_h2)
 
 # binomial ratio
-mine_h_ratio_binom = mine_h.divide_binom(mine_h2)
-root_h_ratio_binom = root_h.Clone()
-root_h_ratio_binom.Divide(root_h_ratio_binom, root_h2, 1, 1, "B")
+mine_h_pass = Histogram1D(a, (nbins, xmin, xmax), weight=w * 0.5)
+root_h_pass = root_h.Clone()
+root_h_pass.Scale(0.5)
+mine_h_ratio_binom = mine_h_pass.divide_binom(mine_h)
+root_h_ratio_binom = root_h_pass.Clone()
+root_h_ratio_binom.Divide(root_h_pass, root_h, 1, 1, "B")
 
 # product
 mine_h_prod = mine_h * mine_h2
@@ -188,7 +191,7 @@ class TestHistogram1DTH1Comparison:
     def test_convert(self, my_hist: Histogram1D, root_hist: ROOT.TH1F):
         # NOTE: mean and std will not pass
 
-        new_th1 = my_hist.to_TH1()
+        new_th1 = my_hist.TH1
 
         assert isinstance(new_th1, ROOT.TH1)
 

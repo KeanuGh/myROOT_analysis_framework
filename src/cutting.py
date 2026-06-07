@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import logging
 import re
-from copy import deepcopy
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List, Generator, Final
@@ -284,14 +283,21 @@ class Cutflow:
         return len(self._cutflow)
 
     def __add__(self, other: Cutflow):
-        return deepcopy(self).__iadd__(other)
+        cutflow = object.__new__(Cutflow)
+        cutflow._report = self._report
+        cutflow.logger = self.logger
+        cutflow._cutflow = [
+            CutflowItem(npass=item.npass, eff=item.eff, ceff=item.ceff, cut=item.cut)
+            for item in self._cutflow
+        ]
+        return cutflow.__iadd__(other)
 
     def __iadd__(self, other: Cutflow):
         """Sum individual cutflow values (the only important part), leave the rest alone"""
 
         # cuts must be identical if cutflows are to be merged
         if (self_names := [item.cut for item in self]) != (
-            other_names := [item.cut for item in other]
+                other_names := [item.cut for item in other]
         ):
             raise ValueError(
                 "Cuts are not equivalent and cannot be summed. "

@@ -1,28 +1,17 @@
 import ROOT
 
 from src.cutting import Cut, Cutflow, CutflowItem, FilterNode, FilterTree
+from src.logger import get_logger
 
-cut1 = Cut("cut1", "TauPt == 1", set(), set())
-cut2 = Cut("cut2", "TauPt == 0", set(), set())
-cut3 = Cut("cut3", "TauPt == 3", set(), set())
-cut4 = Cut("cut4", "TauPt == 90", set(), set())
-cut5 = Cut("cut5", "TauPt == 234", set(), set())
+cut1 = Cut("cut1", "TauPt == 1")
+cut2 = Cut("cut2", "TauPt == 0")
+cut3 = Cut("cut3", "TauPt == 3")
+cut4 = Cut("cut4", "TauPt == 90")
+cut5 = Cut("cut5", "TauPt == 234")
 
 
 class TestCutflow:
-    cutflow1 = Cutflow()
-    cutflow1._cutflow = [
-        CutflowItem(npass=100, eff=100, ceff=100, cut=cut1),
-        CutflowItem(npass=50, eff=50, ceff=50, cut=cut2),
-        CutflowItem(npass=10, eff=10, ceff=20, cut=cut3),
-    ]
-
-    cutflow2 = Cutflow()
-    cutflow2._cutflow = [
-        CutflowItem(npass=200, eff=100, ceff=100, cut=cut1),
-        CutflowItem(npass=150, eff=75, ceff=75, cut=cut2),
-        CutflowItem(npass=10, eff=100 / 15, ceff=5, cut=cut3),
-    ]
+    logger = get_logger(name="test_cutting", log_out="console")
 
     cutflow_merged = [
         CutflowItem(npass=300, eff=100, ceff=100, cut=cut1),
@@ -30,17 +19,37 @@ class TestCutflow:
         CutflowItem(npass=20, eff=10, ceff=100 / 15, cut=cut3),
     ]
 
+    def make_cutflow1(self):
+        cutflow = Cutflow(ROOT.RDataFrame(1), self.logger)
+        cutflow._cutflow = [
+            CutflowItem(npass=100, eff=100, ceff=100, cut=cut1),
+            CutflowItem(npass=50, eff=50, ceff=50, cut=cut2),
+            CutflowItem(npass=10, eff=10, ceff=20, cut=cut3),
+        ]
+        return cutflow
+
+    def make_cutflow2(self):
+        cutflow = Cutflow(ROOT.RDataFrame(1), self.logger)
+        cutflow._cutflow = [
+            CutflowItem(npass=200, eff=100, ceff=100, cut=cut1),
+            CutflowItem(npass=150, eff=75, ceff=75, cut=cut2),
+            CutflowItem(npass=10, eff=100 / 15, ceff=5, cut=cut3),
+        ]
+        return cutflow
+
     def test_names(self):
-        assert self.cutflow1[0].cut.name == "cut1"
-        assert self.cutflow1[-1].cut.name == "cut3"
+        cutflow = self.make_cutflow1()
+        assert cutflow[0].cut.name == "cut1"
+        assert cutflow[-1].cut.name == "cut3"
 
     def test_merge_add(self):
-        assert (self.cutflow1 + self.cutflow2)._cutflow == self.cutflow_merged
+        assert (self.make_cutflow1() + self.make_cutflow2())._cutflow == self.cutflow_merged
 
     def test_merge_iadd(self):
-        self.cutflow1 += self.cutflow2
+        cutflow = self.make_cutflow1()
+        cutflow += self.make_cutflow2()
 
-        assert self.cutflow1._cutflow == self.cutflow_merged
+        assert cutflow._cutflow == self.cutflow_merged
 
 
 class TestFilterTree:
