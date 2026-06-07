@@ -91,6 +91,89 @@ if __name__ == "__main__":
             return f"Iterative Unfolding - {i} Iterations"
 
 
+    def covariance_from_hist(h: ROOT.TH1, name: str) -> ROOT.TH2D:
+        cov = ROOT.TH2D(
+            name,
+            name,
+            h.GetNbinsX(),
+            0,
+            h.GetNbinsX(),
+            h.GetNbinsX(),
+            0,
+            h.GetNbinsX(),
+        )
+        cov.SetDirectory(0)
+        for bin_i in range(1, h.GetNbinsX() + 1):
+            cov.SetBinContent(bin_i, bin_i, h.GetBinError(bin_i) ** 2)
+        return cov
+
+
+    def unfold_bin_by_bin_with_corrections(
+            data_sig: ROOT.TH1,
+            signal: ROOT.TH1,
+            response_reco: ROOT.TH1,
+            response_truth: ROOT.TH1,
+            unfold_scale,
+            wp: str,
+            var: str,
+            sh_bin_label: str,
+    ) -> tuple[ROOT.TH1, ROOT.TH1, ROOT.TH1, ROOT.TH1, ROOT.TH2D, ROOT.TH2D]:
+        data_unfolded = analysis.unfold_bin_by_bin(
+            data_sig,
+            response_reco,
+            response_truth,
+            name=f"{wp}_{var}_{sh_bin_label}_data",
+        )
+        signal_unfolded = analysis.unfold_bin_by_bin(
+            signal,
+            response_reco,
+            response_truth,
+            name=f"{wp}_{var}_{sh_bin_label}_signal",
+        )
+
+        data_unfolded_full = unfold_scale(data_unfolded.unfolded)
+        signal_unfolded_full = unfold_scale(signal_unfolded.unfolded)
+
+        data_cov = covariance_from_hist(
+            data_unfolded_full,
+            f"{wp}_{var}_{sh_bin_label}_bin_by_bin_data_cov",
+        )
+        signal_cov = covariance_from_hist(
+            signal_unfolded_full,
+            f"{wp}_{var}_{sh_bin_label}_bin_by_bin_signal_cov",
+        )
+
+        analysis.plot(
+            val=[data_unfolded.correction],
+            label=["Truth / reco"],
+            xlabel=(
+                    variable_data[var]["name"]
+                    + (" [GeV]" if var in measurement_vars_mass else "")
+            ),
+            ylabel="Bin-by-bin correction",
+            title=smart_join(
+                sh_bin_label,
+                f"{wp.title()} Tau ID",
+                r"$\sqrt{s} = 13$TeV",
+                sep=" | ",
+            ),
+            do_stat=True,
+            do_syst=False,
+            logx=True if var in measurement_vars_mass else False,
+            label_params={"llabel": "Simulation", "loc": 1},
+            filename=f"{wp}_{var}_{sh_bin_label}_bin_by_bin_correction.png",
+        )
+
+        return (
+            data_unfolded_full,
+            signal_unfolded_full,
+            data_unfolded.correction,
+            signal_unfolded.correction,
+            data_cov,
+            signal_cov,
+        )
+
+
     for wp in WP:
         wp_dir = base_plotting_dir / wp
 
@@ -171,13 +254,14 @@ if __name__ == "__main__":
             analysis.paths.plot_dir = wp_dir / "unfolded" / var
 
             # get response
-            response = analysis.get_response_histogram(
+            response, response_reco, response_truth, _ = analysis.get_response_histogram(
                 varname_reco=var,
                 varname_truth=truths[var],
                 dataset="wtaunu",
                 wp=wp,
                 nprong="",
                 systematic=NOMINAL_NAME,
+                return_histograms=True,
             )
 
 
@@ -356,23 +440,49 @@ if __name__ == "__main__":
 
 
                     def unfold(h, i) -> ROOT.TH1D:
-                        h = unfold_bayes(h, i).Hunfold()
-                        h.Scale(1 / LUMI)
-                        return h * acc_new / acc_no_shadow
+                        if i == 0:
+                            # manual bin-by-bin
+                            h = analysis.unfold_bin_by_bin(
+                                h,
+                                response_reco,
+                                response_truth,
+                            ).unfolded
+                        else:
+                            h = unfold_bayes(h, i).Hunfold()
+                        return unfold_scale(h)
 
 
                     # unfold
-                    data_unfolded = unfold_bayes(data_sig, n_iter)
-                    signal_unfolded = unfold_bayes(signal, n_iter)
+                    if n_iter == 0:
+                        (
+                            data_unfolded_full,
+                            signal_unfolded_full,
+                            data_response,
+                            signal_response,
+                            data_cov,
+                            signal_cov,
+                        ) = unfold_bin_by_bin_with_corrections(
+                            data_sig,
+                            signal,
+                            response_reco,
+                            response_truth,
+                            unfold_scale,
+                            wp,
+                            var,
+                            sh_bin_label,
+                        )
+                    else:
+                        data_unfolded = unfold_bayes(data_sig, n_iter)
+                        signal_unfolded = unfold_bayes(signal, n_iter)
 
-                    data_unfolded_full = unfold_scale(data_unfolded.Hunfold())
-                    signal_unfolded_full = unfold_scale(signal_unfolded.Hunfold())
+                        data_unfolded_full = unfold_scale(data_unfolded.Hunfold())
+                        signal_unfolded_full = unfold_scale(signal_unfolded.Hunfold())
 
-                    data_response = data_unfolded.response().Hresponse()
-                    signal_response = signal_unfolded.response().Hresponse()
+                        data_response = data_unfolded.response().Hresponse()
+                        signal_response = signal_unfolded.response().Hresponse()
 
-                    data_cov = ROOT.TH2D(data_unfolded.Eunfold())
-                    signal_cov = ROOT.TH2D(signal_unfolded.Eunfold())
+                        data_cov = ROOT.TH2D(data_unfolded.Eunfold())
+                        signal_cov = ROOT.TH2D(signal_unfolded.Eunfold())
 
                     # plot
                     analysis.paths.plot_dir = wp_dir / "unfolded" / var

@@ -50,6 +50,14 @@ class AnalysisPath:
         object.__setattr__(self, key, value)
 
 
+@dataclass(slots=True)
+class BinByBinUnfoldingResult:
+    """Container for explicit bin-by-bin unfolding outputs."""
+
+    unfolded: ROOT.TH1
+    correction: ROOT.TH1
+
+
 class Analysis:
     """
     Analysis class acts as a container for the src.dataset.Dataset class. Contains methods to apply either to
@@ -1424,6 +1432,76 @@ class Analysis:
 
         self.logger.info("Completed fakes estimate")
 
+    @staticmethod
+    def get_bin_by_bin_correction(
+            hist_reco: ROOT.TH1,
+            hist_truth: ROOT.TH1,
+            name: str | None = None,
+    ) -> ROOT.TH1:
+        """
+        Build the bin-by-bin unfolding correction, truth / reco, with propagated errors.
+
+        The returned histogram carries the uncertainty on the correction factor. Applying it with
+        TH1.Multiply then propagates both input-histogram and correction-factor uncertainties.
+        """
+        if hist_reco.GetNbinsX() != hist_truth.GetNbinsX():
+            raise ValueError(
+                "Reco and truth histograms must have the same number of bins for bin-by-bin "
+                f"unfolding. Got {hist_reco.GetNbinsX()} and {hist_truth.GetNbinsX()}."
+            )
+
+        correction = hist_truth.Clone(name or f"{hist_truth.GetName()}_over_{hist_reco.GetName()}")
+        correction.SetDirectory(0)
+        correction.Divide(hist_truth, hist_reco, 1.0, 1.0)
+        return correction
+
+    @staticmethod
+    def apply_bin_by_bin_correction(
+            hist: ROOT.TH1,
+            correction: ROOT.TH1,
+            name: str | None = None,
+    ) -> ROOT.TH1:
+        """
+        Apply a bin-by-bin correction histogram with ROOT error propagation.
+
+        The input histogram is cloned; neither `hist` nor `correction` are modified.
+        """
+        if hist.GetNbinsX() != correction.GetNbinsX():
+            raise ValueError(
+                "Histogram and correction must have the same number of bins for bin-by-bin "
+                f"unfolding. Got {hist.GetNbinsX()} and {correction.GetNbinsX()}."
+            )
+
+        unfolded = hist.Clone(name or f"{hist.GetName()}_bin_by_bin_unfolded")
+        unfolded.SetDirectory(0)
+        unfolded.Multiply(correction)
+        return unfolded
+
+    def unfold_bin_by_bin(
+            self,
+            hist: ROOT.TH1,
+            hist_reco: ROOT.TH1,
+            hist_truth: ROOT.TH1,
+            name: str | None = None,
+    ) -> BinByBinUnfoldingResult:
+        """
+        Perform explicit bin-by-bin unfolding and return both result and correction histogram.
+
+        This is equivalent to applying the correction truth/reco to the measured histogram, but
+        keeps the correction available for plotting/inspection and preserves its uncertainty.
+        """
+        correction = self.get_bin_by_bin_correction(
+            hist_reco,
+            hist_truth,
+            name=f"{name}_correction" if name else None,
+        )
+        unfolded = self.apply_bin_by_bin_correction(
+            hist,
+            correction,
+            name=f"{name}_unfolded" if name else None,
+        )
+        return BinByBinUnfoldingResult(unfolded=unfolded, correction=correction)
+
     def get_response_histogram(
             self,
             varname_reco: str,
@@ -1432,7 +1510,8 @@ class Analysis:
             wp: str,
             nprong: str,
             systematic: str = "T_s1thv_NOMINAL",
-    ) -> ROOT.RooUnfoldResponse:
+            return_histograms: bool = False,
+    ) -> ROOT.RooUnfoldResponse | tuple[ROOT.RooUnfoldResponse, ROOT.TH1, ROOT.TH1, ROOT.TH2]:
         """Get unfolding response histogram from signal resconstruction analysis"""
 
         response_file = (
@@ -1453,7 +1532,10 @@ class Analysis:
             )
             h_response.SetDirectory(0)
 
-            return ROOT.RooUnfoldResponse(hist_reco, hist_truth, h_response)
+            response = ROOT.RooUnfoldResponse(hist_reco, hist_truth, h_response)
+            if return_histograms:
+                return response, hist_reco, hist_truth, h_response
+            return response
 
     # ===============================
     # ========= PRINTOUTS ===========

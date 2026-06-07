@@ -1,6 +1,7 @@
 import json
 import shutil
 
+import ROOT
 import numpy as np
 import pytest
 
@@ -101,3 +102,32 @@ class TestSimpleDTA:
             [restored.GetBinContent(i + 1) for i in range(restored.GetNbinsX())],
             [original.GetBinContent(i + 1) for i in range(original.GetNbinsX())],
         )
+
+
+class TestBinByBinUnfolding:
+    def test_bin_by_bin_correction_propagates_uncertainty(self):
+        reco = ROOT.TH1F("bbb_reco", "bbb_reco", 1, 0, 1)
+        truth = ROOT.TH1F("bbb_truth", "bbb_truth", 1, 0, 1)
+        measured = ROOT.TH1F("bbb_measured", "bbb_measured", 1, 0, 1)
+
+        reco.SetBinContent(1, 50)
+        reco.SetBinError(1, 5)
+        truth.SetBinContent(1, 100)
+        truth.SetBinError(1, 10)
+        measured.SetBinContent(1, 25)
+        measured.SetBinError(1, 3)
+
+        correction = Analysis.get_bin_by_bin_correction(reco, truth)
+        unfolded = Analysis.apply_bin_by_bin_correction(measured, correction)
+
+        expected_correction = 2.0
+        expected_correction_error = np.sqrt((10 / 50) ** 2 + (100 * 5 / 50 ** 2) ** 2)
+        expected_unfolded = 50.0
+        expected_unfolded_error = np.sqrt(
+            (3 * expected_correction) ** 2 + (25 * expected_correction_error) ** 2
+        )
+
+        np.testing.assert_allclose(correction.GetBinContent(1), expected_correction)
+        np.testing.assert_allclose(correction.GetBinError(1), expected_correction_error)
+        np.testing.assert_allclose(unfolded.GetBinContent(1), expected_unfolded)
+        np.testing.assert_allclose(unfolded.GetBinError(1), expected_unfolded_error)

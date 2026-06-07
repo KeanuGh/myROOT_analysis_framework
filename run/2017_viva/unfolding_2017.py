@@ -82,11 +82,95 @@ if __name__ == "__main__":
         "TAUS_TRUEHADTAU_SME_TES_PHYSICSLIST",
     }
 
+
     def unfolding_label(i: int) -> str:
         if i == 0:
             return "Bin-By-Bin Unfolding"
         else:
             return f"Iterative Unfolding - {i} Iterations"
+
+
+    def covariance_from_hist(h: ROOT.TH1, name: str) -> ROOT.TH2D:
+        cov = ROOT.TH2D(
+            name,
+            name,
+            h.GetNbinsX(),
+            0,
+            h.GetNbinsX(),
+            h.GetNbinsX(),
+            0,
+            h.GetNbinsX(),
+        )
+        cov.SetDirectory(0)
+        for bin_i in range(1, h.GetNbinsX() + 1):
+            cov.SetBinContent(bin_i, bin_i, h.GetBinError(bin_i) ** 2)
+        return cov
+
+
+    def unfold_bin_by_bin_with_corrections(
+            data_sig: ROOT.TH1,
+            signal: ROOT.TH1,
+            response_reco: ROOT.TH1,
+            response_truth: ROOT.TH1,
+            unfold_scale,
+            wp: str,
+            var: str,
+            sh_bin_label: str,
+    ) -> tuple[ROOT.TH1, ROOT.TH1, ROOT.TH1, ROOT.TH1, ROOT.TH2D, ROOT.TH2D]:
+        data_unfolded = analysis.unfold_bin_by_bin(
+            data_sig,
+            response_reco,
+            response_truth,
+            name=f"{wp}_{var}_{sh_bin_label}_data",
+        )
+        signal_unfolded = analysis.unfold_bin_by_bin(
+            signal,
+            response_reco,
+            response_truth,
+            name=f"{wp}_{var}_{sh_bin_label}_signal",
+        )
+
+        data_unfolded_full = unfold_scale(data_unfolded.unfolded)
+        signal_unfolded_full = unfold_scale(signal_unfolded.unfolded)
+
+        data_cov = covariance_from_hist(
+            data_unfolded_full,
+            f"{wp}_{var}_{sh_bin_label}_bin_by_bin_data_cov",
+        )
+        signal_cov = covariance_from_hist(
+            signal_unfolded_full,
+            f"{wp}_{var}_{sh_bin_label}_bin_by_bin_signal_cov",
+        )
+
+        analysis.plot(
+            val=[data_unfolded.correction],
+            label=["Truth / reco"],
+            xlabel=(
+                    variable_data[var]["name"] + (" [GeV]" if var in measurement_vars_mass else "")
+            ),
+            ylabel="Bin-by-bin correction",
+            title=smart_join(
+                sh_bin_label,
+                f"{wp.title()} Tau ID",
+                r"$\sqrt{s} = 13$TeV",
+                sep=" | ",
+            ),
+            do_stat=True,
+            do_syst=False,
+            logx=True if var in measurement_vars_mass else False,
+            label_params={"llabel": "Simulation", "loc": 1},
+            filename=f"{wp}_{var}_{sh_bin_label}_bin_by_bin_correction.png",
+        )
+
+        return (
+            data_unfolded_full,
+            signal_unfolded_full,
+            data_unfolded.correction,
+            signal_unfolded.correction,
+            data_cov,
+            signal_cov,
+        )
+
 
     for wp in WP:
         wp_dir = base_plotting_dir / wp
@@ -101,34 +185,34 @@ if __name__ == "__main__":
             # ========================================================
             analysis.paths.plot_dir = wp_dir / "shadow_bins"
             with ROOT.TFile(
-                str(
-                    analysis.paths.output_dir.parent
-                    / f"efficiency_and_acceptance/root/efficiency_and_acceptance.root"
-                )
+                    str(
+                        analysis.paths.output_dir.parent
+                        / f"efficiency_and_acceptance/root/efficiency_and_acceptance.root"
+                    )
             ) as file:
                 acc_hist = file.Get(f"{wp}_{var}_acceptance")
                 acc_hist.SetDirectory(0)
             with ROOT.TFile(
-                str(
-                    analysis.paths.output_dir.parent
-                    / f"efficiency_and_acceptance_shadow_bin200/root/efficiency_and_acceptance_shadow_bin200.root"
-                )
+                    str(
+                        analysis.paths.output_dir.parent
+                        / f"efficiency_and_acceptance_shadow_bin200/root/efficiency_and_acceptance_shadow_bin200.root"
+                    )
             ) as file:
                 acc_hist200 = file.Get(f"{wp}_{var}_acceptance")
                 acc_hist200.SetDirectory(0)
             with ROOT.TFile(
-                str(
-                    analysis.paths.output_dir.parent
-                    / f"efficiency_and_acceptance_shadow_bin250/root/efficiency_and_acceptance_shadow_bin250.root"
-                )
+                    str(
+                        analysis.paths.output_dir.parent
+                        / f"efficiency_and_acceptance_shadow_bin250/root/efficiency_and_acceptance_shadow_bin250.root"
+                    )
             ) as file:
                 acc_hist250 = file.Get(f"{wp}_{var}_acceptance")
                 acc_hist250.SetDirectory(0)
             with ROOT.TFile(
-                str(
-                    analysis.paths.output_dir.parent
-                    / f"efficiency_and_acceptance_shadow_bin300/root/efficiency_and_acceptance_shadow_bin300.root"
-                )
+                    str(
+                        analysis.paths.output_dir.parent
+                        / f"efficiency_and_acceptance_shadow_bin300/root/efficiency_and_acceptance_shadow_bin300.root"
+                    )
             ) as file:
                 acc_hist300 = file.Get(f"{wp}_{var}_acceptance")
                 acc_hist300.SetDirectory(0)
@@ -142,7 +226,7 @@ if __name__ == "__main__":
                     r"350|170|170 (no shadow bin)",
                 ],
                 xlabel=(
-                    variable_data[var]["name"] + (" [GeV]" if var in measurement_vars_mass else "")
+                        variable_data[var]["name"] + (" [GeV]" if var in measurement_vars_mass else "")
                 ),
                 colour=["r", "b", "g", "k"],
                 kind="overlay",
@@ -168,29 +252,32 @@ if __name__ == "__main__":
             analysis.paths.plot_dir = wp_dir / "unfolded" / var
 
             # get response
-            response = analysis.get_response_histogram(
+            response, response_reco, response_truth, _ = analysis.get_response_histogram(
                 varname_reco=var,
                 varname_truth=truths[var],
                 dataset="wtaunu",
                 wp=wp,
                 nprong="",
                 systematic=NOMINAL_NAME,
+                return_histograms=True,
             )
+
 
             def unfold_bayes(h: ROOT.TH1, i: int) -> ROOT.TH1:
                 if i == 0:
                     return ROOT.RooUnfoldBinByBin(response, h)
                 return ROOT.RooUnfoldBayes(response, h, i)
 
+
             # get data and signal
             # ----------------------------------------------------------------
             with ROOT.TFile(
-                str(analysis.paths.output_dir.parent / f"analysis_simple_2017/root/data.root")
+                    str(analysis.paths.output_dir.parent / f"analysis_simple_2017/root/data.root")
             ) as file:
                 data = file[f"{NOMINAL_NAME}/{wp}_SR_passID"].Get(var)
                 data.SetDirectory(0)
             with ROOT.TFile(
-                str(analysis.paths.output_dir.parent / f"analysis_simple_2017/root/wtaunu.root")
+                    str(analysis.paths.output_dir.parent / f"analysis_simple_2017/root/wtaunu.root")
             ) as file:
                 signal = file[f"{NOMINAL_NAME}/{wp}_SR_passID"].Get(var)
                 signal.SetDirectory(0)
@@ -198,9 +285,9 @@ if __name__ == "__main__":
             # get truth
             # ----------------------------------------------------------------
             with ROOT.TFile(
-                str(
-                    analysis.paths.output_dir.parent / f"efficiency_and_acceptance/root/wtaunu.root"
-                )
+                    str(
+                        analysis.paths.output_dir.parent / f"efficiency_and_acceptance/root/wtaunu.root"
+                    )
             ) as file:
                 truth = file[f"{NOMINAL_NAME}/truth_tau"].Get(truths[var])
                 truth.SetDirectory(0)
@@ -211,16 +298,16 @@ if __name__ == "__main__":
             bkg_hists = []
             for bkg in ["wlnu", "zll", "top", "diboson"]:
                 with ROOT.TFile(
-                    str(analysis.paths.output_dir.parent / f"analysis_simple_2017/root/{bkg}.root")
+                        str(analysis.paths.output_dir.parent / f"analysis_simple_2017/root/{bkg}.root")
                 ) as file:
                     h = file[f"{NOMINAL_NAME}/{wp}_SR_passID"].Get(var)
                     h.SetDirectory(0)
                     bkg_hists.append(h)
             with ROOT.TFile(
-                str(
-                    analysis.paths.output_dir.parent
-                    / f"analysis_fakes_{YEAR}/root/analysis_fakes_{YEAR}.root"
-                )
+                    str(
+                        analysis.paths.output_dir.parent
+                        / f"analysis_fakes_{YEAR}/root/analysis_fakes_{YEAR}.root"
+                    )
             ) as file:
                 fakes_hist = file.Get(f"{wp}_{var}_fakes_bkg_TauPt_src")
                 fakes_hist.SetDirectory(0)
@@ -231,7 +318,7 @@ if __name__ == "__main__":
             # ----------------------------------------------------------------
             sys_hists = {}
             with ROOT.TFile(
-                str(analysis.paths.output_dir.parent / f"analysis_simple_2017/root/wtaunu.root")
+                    str(analysis.paths.output_dir.parent / f"analysis_simple_2017/root/wtaunu.root")
             ) as file:
                 for sys in systematics:
                     uncert = file[f"{NOMINAL_NAME}/{wp}_SR_passID"].Get(f"{var}_{sys}_tot_uncert")
@@ -241,10 +328,10 @@ if __name__ == "__main__":
             # efficiency and acceptance
             # ----------------------------------------------------------------
             with ROOT.TFile(
-                str(
-                    analysis.paths.output_dir.parent
-                    / f"efficiency_and_acceptance/root/efficiency_and_acceptance.root"
-                )
+                    str(
+                        analysis.paths.output_dir.parent
+                        / f"efficiency_and_acceptance/root/efficiency_and_acceptance.root"
+                    )
             ) as file:
                 eff_hist = file.Get(f"{wp}_{var}_efficiency")
                 eff_hist.SetDirectory(0)
@@ -285,8 +372,8 @@ if __name__ == "__main__":
                     default_args = {
                         "systematic": NOMINAL_NAME,
                         "xlabel": (
-                            variable_data[var]["name"]
-                            + (" [GeV]" if var in measurement_vars_mass else "")
+                                variable_data[var]["name"]
+                                + (" [GeV]" if var in measurement_vars_mass else "")
                         ),
                         "kind": "overlay",
                         "do_stat": True,
@@ -299,10 +386,10 @@ if __name__ == "__main__":
                         ),
                         "scale_by_bin_width": True,
                         "ylabel": (
-                            r"$\frac{d\sigma_{W\rightarrow\tau\nu\rightarrow\mathrm{had}}}{d"
-                            + symbols[var]
-                            + r"}$"
-                            + (" [fb / GeV]" if var in measurement_vars_mass else " [fb]")
+                                r"$\frac{d\sigma_{W\rightarrow\tau\nu\rightarrow\mathrm{had}}}{d"
+                                + symbols[var]
+                                + r"}$"
+                                + (" [fb / GeV]" if var in measurement_vars_mass else " [fb]")
                         ),
                         "logx": True if var in measurement_vars_mass else False,
                         "ratio_plot": True,
@@ -311,27 +398,55 @@ if __name__ == "__main__":
                         "label_params": {"llabel": "Preliminary", "loc": 1},
                     }
 
+
                     def unfold_scale(h) -> ROOT.TH1D:
                         h.Scale(1 / LUMI)
                         return h * acc_new / acc_no_shadow
 
+
                     def unfold(h, i) -> ROOT.TH1D:
-                        h = unfold_bayes(h, i).Hunfold()
-                        h.Scale(1 / LUMI)
-                        return h * acc_new / acc_no_shadow
+                        if i == 0:
+                            h = analysis.unfold_bin_by_bin(
+                                h,
+                                response_reco,
+                                response_truth,
+                            ).unfolded
+                        else:
+                            h = unfold_bayes(h, i).Hunfold()
+                        return unfold_scale(h)
+
 
                     # unfold
-                    data_unfolded = unfold_bayes(data_sig, n_iter)
-                    signal_unfolded = unfold_bayes(signal, n_iter)
+                    if n_iter == 0:
+                        (
+                            data_unfolded_full,
+                            signal_unfolded_full,
+                            data_response,
+                            signal_response,
+                            data_cov,
+                            signal_cov,
+                        ) = unfold_bin_by_bin_with_corrections(
+                            data_sig,
+                            signal,
+                            response_reco,
+                            response_truth,
+                            unfold_scale,
+                            wp,
+                            var,
+                            sh_bin_label,
+                        )
+                    else:
+                        data_unfolded = unfold_bayes(data_sig, n_iter)
+                        signal_unfolded = unfold_bayes(signal, n_iter)
 
-                    data_unfolded_full = unfold_scale(data_unfolded.Hunfold())
-                    signal_unfolded_full = unfold_scale(signal_unfolded.Hunfold())
+                        data_unfolded_full = unfold_scale(data_unfolded.Hunfold())
+                        signal_unfolded_full = unfold_scale(signal_unfolded.Hunfold())
 
-                    data_response = data_unfolded.response().Hresponse()
-                    signal_response = signal_unfolded.response().Hresponse()
+                        data_response = data_unfolded.response().Hresponse()
+                        signal_response = signal_unfolded.response().Hresponse()
 
-                    data_cov = ROOT.TH2D(data_unfolded.Eunfold())
-                    signal_cov = ROOT.TH2D(signal_unfolded.Eunfold())
+                        data_cov = ROOT.TH2D(data_unfolded.Eunfold())
+                        signal_cov = ROOT.TH2D(signal_unfolded.Eunfold())
 
                     # plot
                     analysis.paths.plot_dir = wp_dir / "unfolded" / var
@@ -368,19 +483,22 @@ if __name__ == "__main__":
                     # -------------------------------------------------------------------------
                     analysis.paths.plot_dir = wp_dir / "unfolded" / var / "sys"
 
+
                     def sys_up(sys) -> Histogram1D:
                         h = (
-                            unfold(signal + sys_hists[sys], n_iter) - signal_unfolded_full
-                        ) / data_unfolded_full
+                                    unfold(signal + sys_hists[sys], n_iter) - signal_unfolded_full
+                            ) / data_unfolded_full
                         h.Scale(100)
                         return h
 
+
                     def sys_down(sys) -> Histogram1D:
                         h = (
-                            unfold(signal - sys_hists[sys], n_iter) - signal_unfolded_full
-                        ) / data_unfolded_full
+                                    unfold(signal - sys_hists[sys], n_iter) - signal_unfolded_full
+                            ) / data_unfolded_full
                         h.Scale(100)
                         return h
+
 
                     default_args = {
                         "logx": True if var in measurement_vars_mass else False,
@@ -495,8 +613,8 @@ if __name__ == "__main__":
                     val=[truth] + [hists[sh_bin_label][i] for i in ITER],
                     label=["Truth"] + [unfolding_label(i) for i in ITER],
                     xlabel=(
-                        variable_data[var]["name"]
-                        + (" [GeV]" if var in measurement_vars_mass else "")
+                            variable_data[var]["name"]
+                            + (" [GeV]" if var in measurement_vars_mass else "")
                     ),
                     kind="overlay",
                     do_stat=True,
@@ -508,10 +626,10 @@ if __name__ == "__main__":
                     ),
                     scale_by_bin_width=True,
                     ylabel=(
-                        r"$\frac{d\sigma_{W\rightarrow\tau\nu\rightarrow\mathrm{had}}}{d"
-                        + symbols[var]
-                        + r"}$"
-                        + (" [fb / GeV]" if var in measurement_vars_mass else " [fb]")
+                            r"$\frac{d\sigma_{W\rightarrow\tau\nu\rightarrow\mathrm{had}}}{d"
+                            + symbols[var]
+                            + r"}$"
+                            + (" [fb / GeV]" if var in measurement_vars_mass else " [fb]")
                     ),
                     logx=True if var in measurement_vars_mass else False,
                     label_params={"llabel": "Preliminary", "loc": 1},
@@ -523,8 +641,8 @@ if __name__ == "__main__":
                     val=[truth] + [hists[sh_bin_label][i] for sh_bin_label, _ in shadow_bins],
                     label=["Truth"] + [sh_bin_label for sh_bin_label, _ in shadow_bins],
                     xlabel=(
-                        variable_data[var]["name"]
-                        + (" [GeV]" if var in measurement_vars_mass else "")
+                            variable_data[var]["name"]
+                            + (" [GeV]" if var in measurement_vars_mass else "")
                     ),
                     kind="overlay",
                     do_stat=True,
@@ -536,10 +654,10 @@ if __name__ == "__main__":
                     ),
                     scale_by_bin_width=True,
                     ylabel=(
-                        r"$\frac{d\sigma_{W\rightarrow\tau\nu\rightarrow\mathrm{had}}}{d"
-                        + symbols[var]
-                        + r"}$"
-                        + (" [fb / GeV]" if var in measurement_vars_mass else " [fb]")
+                            r"$\frac{d\sigma_{W\rightarrow\tau\nu\rightarrow\mathrm{had}}}{d"
+                            + symbols[var]
+                            + r"}$"
+                            + (" [fb / GeV]" if var in measurement_vars_mass else " [fb]")
                     ),
                     logx=True if var in measurement_vars_mass else False,
                     label_params={"llabel": "Preliminary", "loc": 1},
