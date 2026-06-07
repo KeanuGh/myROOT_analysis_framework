@@ -628,7 +628,7 @@ if __name__ == "__main__":
                 label=[
                     "1-prong",
                     "3-prong",
-                    "Inclusive",
+                    "1 + 3 prong",
                 ],
                 title=smart_join(
                     f"{wp.title()} ID",

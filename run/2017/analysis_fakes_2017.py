@@ -542,9 +542,9 @@ if __name__ == "__main__":
                     "dataset": all_samples + [None],
                     "systematic": NOMINAL_NAME,
                     "selection": (
-                        [f"{sec}{wp}_SR_passID"]
-                        + [f"{sec}{wp}_SR_passID"] * len(mc_samples)
-                        + [None]
+                            [f"{sec}{wp}_SR_passID"]
+                            + [f"{sec}{wp}_SR_passID"] * len(mc_samples)
+                            + [None]
                     ),
                     "label": [analysis[ds].label for ds in all_samples] + ["Fake Jet Estimate"],
                     "colour": [analysis[ds].colour for ds in all_samples] + [fakes_colour],
@@ -562,11 +562,13 @@ if __name__ == "__main__":
                     "kind": "stack",
                 }
 
+
                 def FF_vars(s: str) -> list[str]:
                     """List of variable names for each sample"""
                     return [s] * (len(all_samples)) + [
                         f"{sec}{wp}_{s}_fakes_bkg_{fakes_source}_src"
                     ]
+
 
                 # mass variables
                 for v in measurement_vars:
@@ -602,7 +604,7 @@ if __name__ == "__main__":
                 label=[
                     "1-prong",
                     "3-prong",
-                    "Inclusive",
+                    "1 + 3 prong",
                 ],
                 title=smart_join(
                     f"{wp.title()} ID",

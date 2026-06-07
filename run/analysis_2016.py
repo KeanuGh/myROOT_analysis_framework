@@ -624,7 +624,7 @@ if __name__ == "__main__":
                 label=[
                     "1-prong",
                     "3-prong",
-                    "Inclusive",
+                    "1 + 3 prong",
                 ],
                 xlabel=r"$p_T^\tau$ [GeV]" if fakes_source == "TauPt" else r"$m_T^W$ [GeV]",
                 do_stat=False,
@@ -643,7 +643,7 @@ if __name__ == "__main__":
                     f"3prong_{wp}_{fakes_source}_FF",
                     f"{wp}_{fakes_source}_FF",
                 ],
-                label=["1-prong taus", "3-prong taus", "Inclusive"],
+                label=["1-prong taus", "3-prong taus", "1 + 3 prong"],
                 xlabel=r"$p_T^\tau$ [GeV]" if fakes_source == "TauPt" else r"$m_T^W$ [GeV]",
                 title=smart_join(
                     f"Fake Factor Comparisons",

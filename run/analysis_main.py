@@ -570,9 +570,9 @@ if __name__ == "__main__":
                     "dataset": all_samples + [None],
                     "systematic": NOMINAL_NAME,
                     "selection": (
-                        [f"{nprong}{wp}_SR_passID"]
-                        + [f"{nprong}{wp}_SR_passID"] * len(mc_samples)
-                        + [None]
+                            [f"{nprong}{wp}_SR_passID"]
+                            + [f"{nprong}{wp}_SR_passID"] * len(mc_samples)
+                            + [None]
                     ),
                     "label": [analysis[ds].label for ds in all_samples] + ["Fake Jet Estimate"],
                     "colour": [analysis[ds].colour for ds in all_samples] + [fakes_colour],
@@ -590,11 +590,13 @@ if __name__ == "__main__":
                     "kind": "stack",
                 }
 
+
                 def FF_vars(s: str) -> list[str]:
                     """List of variable names for each sample"""
                     return [s] * (len(all_samples)) + [
                         f"{nprong}{wp}_{s}_fakes_bkg_{fakes_source}_src"
                     ]
+
 
                 # mass variables
                 for v in measurement_vars:
@@ -630,7 +632,7 @@ if __name__ == "__main__":
                 label=[
                     "1-prong",
                     "3-prong",
-                    "Inclusive",
+                    "1 + 3 prong",
                 ],
                 title=smart_join(
                     f"{wp.title()} ID",
@@ -693,6 +695,7 @@ if __name__ == "__main__":
             "ratio_axlim": (0.8, 1.2),
         }
 
+
         def full_bkg(variable: str, t: str | None = None) -> Histogram1D:
             """Sum of all backgrounds + signal + FF"""
             h = Histogram1D(
@@ -711,6 +714,7 @@ if __name__ == "__main__":
             if t:
                 h += Histogram1D(th1=analysis.get_hist(f"{wp}_{variable}_fakes_bkg_{t}_src"))
             return h
+
 
         for v in measurement_vars:
             if v in measurement_vars_mass:
@@ -749,6 +753,7 @@ if __name__ == "__main__":
                 return (
                     s.removeprefix("TAUS_TRUEHADTAU_").removeprefix("TES_SME").removeprefix("EFF_")
                 )
+
 
             # list of systematic variations
             sys_list_eff = sorted(set(get_base_sys_name(s) for s in analysis["wtaunu"].eff_sys_set))
