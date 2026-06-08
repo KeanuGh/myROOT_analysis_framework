@@ -2,11 +2,11 @@
 This file contains metadata about named branches in NTuples,
 useful for the logic behind cuts and generating axis labels
 """
-from enum import Enum
+from enum import StrEnum
 from typing import TypedDict
 
 
-class VarTag(str, Enum):
+class VarTag(StrEnum):
     """Variable tag. A variable should be either truth, reconstructed or 'metadata'"""
 
     META = "meta"
