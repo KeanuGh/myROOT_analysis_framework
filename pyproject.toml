@@ -124,6 +124,7 @@ include = [
     "tests",
     "run/2017",
 ]
+extraPaths = ["typings"]
 exclude = [
     "run/2017_viva",
     "run/old",
@@ -132,6 +133,7 @@ exclude = [
 [tool.ty.environment]
 python-version = "3.11"
 python = ".pixi/envs/default/bin/python"
+extra-paths = ["typings"]
 
 [tool.ty.src]
 include = [
