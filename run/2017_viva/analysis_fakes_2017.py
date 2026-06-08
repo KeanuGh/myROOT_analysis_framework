@@ -1,12 +1,13 @@
 from pathlib import Path
+from typing import Dict
 
 import numpy as np
-from binnings import BINNINGS, nedges
 
+from binnings import BINNINGS, nedges
 from src.analysis import Analysis
 from src.cutting import Cut
-from utils.helper_functions import smart_join
 from utils.ROOT_utils import load_ROOT_settings
+from utils.helper_functions import smart_join
 from utils.variable_names import variable_data
 
 load_ROOT_settings()
@@ -252,7 +253,7 @@ measurement_vars_unitless = [
 measurement_vars = measurement_vars_unitless + measurement_vars_mass
 NOMINAL_NAME = "T_s1thv_NOMINAL"
 
-datasets: dict[str, dict] = {
+datasets: Dict[str, Dict] = {
     # DATA
     # ====================================================================
     "data": {
@@ -372,8 +373,8 @@ def run_analysis() -> Analysis:
     return Analysis(
         datasets,
         year=YEAR,
-        # rerun=True,
-        # regen_histograms=True,
+        rerun=True,
+        regen_histograms=True,
         do_systematics=False,
         # regen_metadata=True,
         # output_dir="/eos/home-k/kghorban/framework_outputs/analysis_main",
@@ -560,9 +561,9 @@ if __name__ == "__main__":
                     "dataset": all_samples + [None],
                     "systematic": NOMINAL_NAME,
                     "selection": (
-                            [f"{sec}{wp}_SR_passID"]
-                            + [f"{sec}{wp}_SR_passID"] * len(mc_samples)
-                            + [None]
+                        [f"{sec}{wp}_SR_passID"]
+                        + [f"{sec}{wp}_SR_passID"] * len(mc_samples)
+                        + [None]
                     ),
                     "label": [analysis[ds].label for ds in all_samples] + ["Fake Jet Estimate"],
                     "colour": [analysis[ds].colour for ds in all_samples] + [fakes_colour],
@@ -580,6 +581,11 @@ if __name__ == "__main__":
                     "kind": "stack",
                 }
 
+                def FF_vars(s: str) -> list[str]:
+                    """List of variable names for each sample"""
+                    return [s] * (len(all_samples)) + [
+                        f"{sec}{wp}_{s}_fakes_bkg_{fakes_source}_src"
+                    ]
 
                 # mass variables
                 for v in measurement_vars:
@@ -589,17 +595,14 @@ if __name__ == "__main__":
                         )
                     elif v in measurement_vars_unitless:
                         default_args.update({"logx": False, "xlabel": variable_data[v]["name"]})
-                    ff_vals = [v] * len(all_samples) + [
-                        f"{sec}{wp}_{v}_fakes_bkg_{fakes_source}_src"
-                    ]
                     analysis.plot(
-                        val=ff_vals,
+                        val=FF_vars(v),
                         **default_args,
                         logy=True,
                         filename=f"{sec}{wp}_{v}_fakes_stack_{fakes_source}_log.png",
                     )
                     analysis.plot(
-                        val=ff_vals,
+                        val=FF_vars(v),
                         **default_args,
                         logy=False,
                         filename=f"{sec}{wp}_{v}_fakes_stack_{fakes_source}_liny.png",

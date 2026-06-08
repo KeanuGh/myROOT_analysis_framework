@@ -1,18 +1,19 @@
 from pathlib import Path
+from typing import Dict
 
-from binnings import BINNINGS
 from tabulate import tabulate
 
+from binnings import BINNINGS
 from src.analysis import Analysis
 from src.cutting import Cut
-from utils.plotting_tools import Hist2dOpts
 from utils.ROOT_utils import bayes_divide
+from utils.plotting_tools import Hist2dOpts
 from utils.variable_names import variable_data
 
 DTA_PATH = Path("/mnt/D/data/DTA_outputs/2024-09-19/")
 # DTA_PATH = Path("/eos/home-k/kghorban/DTA_OUT/2024-02-05/")
 
-datasets: dict[str, dict] = {
+datasets: Dict[str, Dict] = {
     # SIGNAL
     # ====================================================================
     "wtaunu_had": {
@@ -418,7 +419,7 @@ if __name__ == "__main__":
             # =======================================================================
             analysis.paths.plot_dir = base_plotting_dir / "efficiency/full" / wp / nprong
             args_eff["selection"] = [f"{nprong}truth_tau", f"{wp}_{nprong}matched_reco_tau"]
-            args_eff["ylabel"] = "Events"
+            args_eff["ylabel"] = f"Events"
             for v in truth_measurement_vars:
                 if v in measurement_vars_mass:
                     args_eff.update({"logx": True, "xlabel": variable_data[v]["name"] + " [GeV]"})

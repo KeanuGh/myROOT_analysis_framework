@@ -92,6 +92,7 @@ extend-exclude = [
     "notebooks",
     "outputs",
     "quick_scripts",
+    "run/2017_viva",
     "run/old",
 ]
 
@@ -99,4 +100,14 @@ extend-exclude = [
 select = ["E", "F", "I", "UP", "B"]
 ignore = [
     "E501",
+]
+
+[tool.mypy]
+exclude = [
+    "^run/2017_viva/",
+]
+
+[tool.pyright]
+exclude = [
+    "run/2017_viva",
 ]

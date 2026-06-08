@@ -1,19 +1,20 @@
 from pathlib import Path
+from typing import Dict
 
 import numpy as np
-from binnings import BINNINGS
 
+from binnings import BINNINGS
 from src.analysis import Analysis
 from src.cutting import Cut
+from utils.ROOT_utils import bayes_divide
 from utils.helper_functions import smart_join
 from utils.plotting_tools import Hist2dOpts
-from utils.ROOT_utils import bayes_divide, normalise_migration_hist
 from utils.variable_names import variable_data
 
 DTA_PATH = Path("/mnt/D/data/DTA_outputs/2024-09-19/")
 # DTA_PATH = Path("/eos/home-k/kghorban/DTA_OUT/2024-02-05/")
 
-datasets: dict[str, dict] = {
+datasets: Dict[str, Dict] = {
     # SIGNAL
     # ====================================================================
     "wtaunu_had": {
@@ -249,8 +250,8 @@ def run_analysis() -> Analysis:
     return Analysis(
         datasets,
         year=2017,
-        # rerun=True,
-        # regen_histograms=True,
+        rerun=True,
+        regen_histograms=True,
         do_systematics=False,
         # regen_metadata=True,
         ttree=NOMINAL_NAME,
@@ -265,14 +266,14 @@ def run_analysis() -> Analysis:
         do_unweighted=True,
         binnings={
             "": BINNINGS
-                | {
-                    "MTW": mtw_bins,
-                    "TruthMTW": mtw_bins,
-                    "TauPt": taupt_bins,
-                    "MET_met": taupt_bins,
-                    "TruthNeutrinoPt": taupt_bins,
-                    "TruthTauPt": taupt_bins,
-                }
+            | {
+                "MTW": mtw_bins,
+                "TruthMTW": mtw_bins,
+                "TauPt": taupt_bins,
+                "MET_met": taupt_bins,
+                "TruthNeutrinoPt": taupt_bins,
+                "TruthTauPt": taupt_bins,
+            }
         },
     )
 
@@ -281,7 +282,7 @@ if __name__ == "__main__":
     # RUN
     # ========================================================================
     analysis = run_analysis()
-    analysis.full_cutflow_printout(datasets=["wtaunu_had"])
+    analysis.full_cutflow_printout(datasets=["wtaunu"])
     base_plotting_dir = analysis.paths.plot_dir
 
     truths = {
@@ -310,13 +311,13 @@ if __name__ == "__main__":
                 analysis.histograms[f"{wp}_{sec}{var}_efficiency"] = bayes_divide(
                     analysis.get_hist(
                         var + "_unweighted",
-                        "wtaunu_had",
+                        "wtaunu",
                         NOMINAL_NAME,
                         f"{wp}_{sec}truth_reco_tau",
                     ),
                     analysis.get_hist(
                         var + "_unweighted",
-                        "wtaunu_had",
+                        "wtaunu",
                         NOMINAL_NAME,
                         f"{sec}truth_tau",
                     ),
@@ -324,13 +325,13 @@ if __name__ == "__main__":
                 analysis.histograms[f"{wp}_{sec}{var}_acceptance"] = bayes_divide(
                     analysis.get_hist(
                         var + "_unweighted",
-                        "wtaunu_had",
+                        "wtaunu",
                         NOMINAL_NAME,
                         f"{wp}_{sec}truth_reco_tau",
                     ),
                     analysis.get_hist(
                         var + "_unweighted",
-                        "wtaunu_had",
+                        "wtaunu",
                         NOMINAL_NAME,
                         f"{wp}_{sec}reco_tau",
                     ),
@@ -339,7 +340,7 @@ if __name__ == "__main__":
                 # Plots alone
                 # =======================================================================
                 default_args = {
-                    "dataset": "wtaunu_had",
+                    "dataset": "wtaunu",
                     "systematic": NOMINAL_NAME,
                     "selection": f"{wp}_{sec}reco_tau",
                     "do_stat": True,
@@ -389,22 +390,15 @@ if __name__ == "__main__":
                 reco_label = variable_data[var]["name"] + (
                     " [GeV]" if var in measurement_vars_mass else ""
                 )
-                migration_hist = normalise_migration_hist(
-                    analysis.get_hist(
-                        f"{var}_{truths[var]}",
-                        dataset="wtaunu_had",
-                        systematic=NOMINAL_NAME,
-                        selection=f"{wp}_{sec}truth_reco_tau",
-                    )
-                )
                 analysis.plot_2d(
-                    migration_hist,
-                    dataset="wtaunu_had",
+                    var,
+                    truths[var],
+                    dataset="wtaunu",
                     systematic=NOMINAL_NAME,
                     selection=f"{wp}_{sec}truth_reco_tau",
                     ylabel=truth_label,
                     xlabel=reco_label,
-                    title=f"{reco_label.removesuffix(' [GeV]')} Migration Matrix [%] | {analysis.global_lumi / 1000:.3g}fb$^{{-1}}$",
+                    title=f"{reco_label.removesuffix(' [GeV]')} Migration Matrix | {analysis.global_lumi / 1000:.3g}fb$^{{-1}}$",
                     labels=True,
                     logx=True if var in measurement_vars_mass else False,
                     logy=True if var in measurement_vars_mass else False,
@@ -415,14 +409,14 @@ if __name__ == "__main__":
                 # resonance
                 response = analysis.get_hist(
                     f"{var}_{truths[var]}",
-                    dataset="wtaunu_had",
+                    dataset="wtaunu",
                     systematic=NOMINAL_NAME,
                     selection=f"{wp}_{sec}truth_reco_tau",
                 ).Clone()
                 response.Scale(1 / response.GetEffectiveEntries())
                 analysis.plot_2d(
                     response,
-                    dataset="wtaunu_had",
+                    dataset="wtaunu",
                     systematic=NOMINAL_NAME,
                     selection=f"{wp}_{sec}truth_reco_tau",
                     ylabel=truth_label,

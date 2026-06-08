@@ -1,15 +1,16 @@
 from pathlib import Path
+from typing import Dict
 
-import numpy as np
 import ROOT
+import numpy as np
 import tabulate
-from binnings import BINNINGS
 from matplotlib import pyplot as plt
 
+from binnings import BINNINGS
 from src.analysis import Analysis
 from src.cutting import Cut
-from utils.helper_functions import get_base_sys_name, smart_join
 from utils.ROOT_utils import get_th1_bin_edges
+from utils.helper_functions import smart_join, get_base_sys_name
 from utils.variable_names import variable_data
 
 DTA_PATH = Path("/mnt/D/data/DTA_outputs/2024-09-19/")
@@ -155,7 +156,7 @@ measurement_vars_unitless = [
 measurement_vars = measurement_vars_mass + measurement_vars_unitless
 NOMINAL_NAME = "T_s1thv_NOMINAL"
 
-datasets: dict[str, dict] = {
+datasets: Dict[str, Dict] = {
     # DATA
     # ====================================================================
     "data": {
@@ -174,13 +175,13 @@ datasets: dict[str, dict] = {
             "full": DTA_PATH / "*Sh_2211_Wtaunu_mW_120*/*.root",
         },
         "hard_cut": {
-            "lm_cut": "(TruthBosonM < 120) && TruthTau_isHadronic",
+            "lm_cut": "TruthBosonM < 120",
             "full": "TruthTau_isHadronic",
         },
         "label": r"$W\rightarrow\tau\nu\rightarrow\mathrm{had}$",
         "is_signal": True,
+        "snapshot": {"selections": list(selections.keys()), "systematics": NOMINAL_NAME},
         "selections": selections,
-        "rerun": True,
     },
     # BACKGROUNDS
     # ====================================================================
@@ -191,11 +192,11 @@ datasets: dict[str, dict] = {
             "full": DTA_PATH / "*Sh_2211_Wtaunu_mW_120*/*.root",
         },
         "hard_cut": {
-            "lm_cut": "(TruthBosonM < 120) && !TruthTau_isHadronic",
+            "lm_cut": "TruthBosonM < 120",
             "full": "!TruthTau_isHadronic",
         },
-        "rerun": True,
         "label": r"$W\rightarrow\tau\nu\rightarrow l\nu$",
+        "is_signal": True,
         "snapshot": {"selections": list(selections.keys()), "systematics": NOMINAL_NAME},
         "selections": selections,
     },
@@ -330,7 +331,6 @@ if __name__ == "__main__":
                 if var not in truths:
                     continue
 
-
             # pie chart of contributions
             # -------------------------------------------------------------------
             def get_entries(s: str) -> float:
@@ -339,7 +339,6 @@ if __name__ == "__main__":
                     .histograms[NOMINAL_NAME][f"{sec}{wp}_SR_passID"]["MTW"]
                     .GetEffectiveEntries()
                 )
-
 
             def get_stat_err(s: str) -> float:
                 return sum(
@@ -352,7 +351,6 @@ if __name__ == "__main__":
                         .GetNbinsX()
                     )
                 )
-
 
             abs_values = [get_entries(mc_sample) for mc_sample in mc_samples]
             total = sum(abs_values)
@@ -371,19 +369,19 @@ if __name__ == "__main__":
             # -------------------------------------------------------------------
             stat_err = [get_stat_err(mc_sample) for mc_sample in mc_samples]
             total_bkg = sum(
-                [get_entries(mc_sample) for mc_sample in mc_samples if mc_sample != "wtaunu_had"]
+                [get_entries(mc_sample) for mc_sample in mc_samples if mc_sample != "wtaunu"]
             )
             total_bkg_err = sum(
-                [get_stat_err(mc_sample) for mc_sample in mc_samples if mc_sample != "wtaunu_had"]
+                [get_stat_err(mc_sample) for mc_sample in mc_samples if mc_sample != "wtaunu"]
             )
             evt_str = r"${nevt:.2f} \pm {stat_err:.2f}$"
             sample_evt_counts = [
-                                    evt_str.format(nevt=nevt, stat_err=err) for nevt, err in zip(abs_values, stat_err)
-                                ] + [
-                                    evt_str.format(nevt=total_bkg, stat_err=total_bkg_err),
-                                    evt_str.format(nevt=total, stat_err=sum(stat_err)),
-                                    evt_str.format(nevt=get_entries("data"), stat_err=get_stat_err("data")),
-                                ]
+                evt_str.format(nevt=nevt, stat_err=err) for nevt, err in zip(abs_values, stat_err)
+            ] + [
+                evt_str.format(nevt=total_bkg, stat_err=total_bkg_err),
+                evt_str.format(nevt=total, stat_err=sum(stat_err)),
+                evt_str.format(nevt=get_entries("data"), stat_err=get_stat_err("data")),
+            ]
             categories = [analysis[mc_sample].label for mc_sample in mc_samples] + [
                 "Total Bkg.",
                 "Total MC",
@@ -448,19 +446,17 @@ if __name__ == "__main__":
 
                 # get fakes
                 with ROOT.TFile(
-                        str(
-                            analysis.paths.output_dir.parent
-                            / f"analysis_fakes_{YEAR}/root/analysis_fakes_{YEAR}.root"
-                        )
+                    str(
+                        analysis.paths.output_dir.parent
+                        / f"analysis_fakes_{YEAR}/root/analysis_fakes_{YEAR}.root"
+                    )
                 ) as file:
                     fakes_hist = file.Get(f"{sec}{wp}_{var}_fakes_bkg_TauPt_src")
                     fakes_hist.SetDirectory(0)
 
-
                 def FF_vars(s: str) -> list[str]:
                     """List of variable names for each sample"""
                     return [s] * (len(mc_samples)) + [fakes_hist, s]
-
 
                 analysis.plot(
                     val=FF_vars(var),
@@ -536,12 +532,8 @@ if __name__ == "__main__":
             # SYSTEMATIC UNCERTAINTIES
             # ===========================================================================
             # list of systematic variations
-            sys_list_eff = sorted(
-                set(get_base_sys_name(s) for s in analysis["wtaunu_had"].eff_sys_set)
-            )
-            sys_list_tes = sorted(
-                set(get_base_sys_name(s) for s in analysis["wtaunu_had"].tes_sys_set)
-            )
+            sys_list_eff = sorted(set(get_base_sys_name(s) for s in analysis["wtaunu"].eff_sys_set))
+            sys_list_tes = sorted(set(get_base_sys_name(s) for s in analysis["wtaunu"].tes_sys_set))
             cmap = plt.get_cmap("jet")
             colours_eff = [tuple(c) for c in cmap(np.linspace(0, 1.0, len(sys_list_eff)))]
             colours_tes = [tuple(c) for c in cmap(np.linspace(0, 1.0, len(sys_list_tes)))]

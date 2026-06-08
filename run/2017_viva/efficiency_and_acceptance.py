@@ -1,21 +1,21 @@
 from pathlib import Path
+from typing import Dict
 
 from binnings import BINNINGS
-
 from src.analysis import Analysis
 from src.cutting import Cut
+from utils.ROOT_utils import bayes_divide
 from utils.helper_functions import smart_join
 from utils.plotting_tools import Hist2dOpts
-from utils.ROOT_utils import bayes_divide, normalise_migration_hist
 from utils.variable_names import variable_data
 
 DTA_PATH = Path("/mnt/D/data/DTA_outputs/2024-09-19/")
 # DTA_PATH = Path("/eos/home-k/kghorban/DTA_OUT/2024-02-05/")
 
-datasets: dict[str, dict] = {
+datasets: Dict[str, Dict] = {
     # SIGNAL
     # ====================================================================
-    "wtaunu": {
+    "wtaunu_had": {
         "data_path": {
             "lm_cut": DTA_PATH / "*Sh_2211_Wtaunu_H_maxHTpTV2*/*.root",
             "full": DTA_PATH / "*Sh_2211_Wtaunu_mW_120*/*.root",
@@ -218,43 +218,43 @@ selections: dict[str, list[Cut]] = {
     # PASS RECO BUT NOT TRUTH
     "loose_reco_notruth_tau": fail_truth_cuts + reco_cuts + [pass_loose],
     "loose_1prong_reco_notruth_tau": fail_truth_cuts
-                                     + reco_cuts
-                                     + [pass_loose, fail_truth_tau_1prong, reco_tau_1prong],
+    + reco_cuts
+    + [pass_loose, fail_truth_tau_1prong, reco_tau_1prong],
     "loose_3prong_reco_notruth_tau": fail_truth_cuts
-                                     + reco_cuts
-                                     + [pass_loose, fail_truth_tau_3prong, reco_tau_3prong],
+    + reco_cuts
+    + [pass_loose, fail_truth_tau_3prong, reco_tau_3prong],
     "loose_tauplus_reco_notruth_tau": fail_truth_cuts
-                                      + reco_cuts
-                                      + [pass_loose, fail_truth_tau_plus, reco_tau_plus],
+    + reco_cuts
+    + [pass_loose, fail_truth_tau_plus, reco_tau_plus],
     "loose_tauminus_reco_notruth_tau": fail_truth_cuts
-                                       + reco_cuts
-                                       + [pass_loose, fail_truth_tau_minus, reco_tau_minus],
+    + reco_cuts
+    + [pass_loose, fail_truth_tau_minus, reco_tau_minus],
     "medium_reco_notruth_tau": fail_truth_cuts + reco_cuts + [pass_medium],
     "medium_1prong_reco_notruth_tau": fail_truth_cuts
-                                      + reco_cuts
-                                      + [pass_medium, fail_truth_tau_1prong, reco_tau_1prong],
+    + reco_cuts
+    + [pass_medium, fail_truth_tau_1prong, reco_tau_1prong],
     "medium_3prong_reco_notruth_tau": fail_truth_cuts
-                                      + reco_cuts
-                                      + [pass_medium, fail_truth_tau_3prong, reco_tau_3prong],
+    + reco_cuts
+    + [pass_medium, fail_truth_tau_3prong, reco_tau_3prong],
     "medium_tauplus_reco_notruth_tau": fail_truth_cuts
-                                       + reco_cuts
-                                       + [pass_medium, fail_truth_tau_plus, reco_tau_plus],
+    + reco_cuts
+    + [pass_medium, fail_truth_tau_plus, reco_tau_plus],
     "medium_tauminus_reco_notruth_tau": fail_truth_cuts
-                                        + reco_cuts
-                                        + [pass_medium, fail_truth_tau_minus, reco_tau_minus],
+    + reco_cuts
+    + [pass_medium, fail_truth_tau_minus, reco_tau_minus],
     "tight_reco_notruth_tau": fail_truth_cuts + reco_cuts + [pass_tight],
     "tight_1prong_reco_notruth_tau": fail_truth_cuts
-                                     + reco_cuts
-                                     + [pass_tight, fail_truth_tau_1prong, reco_tau_1prong],
+    + reco_cuts
+    + [pass_tight, fail_truth_tau_1prong, reco_tau_1prong],
     "tight_3prong_reco_notruth_tau": fail_truth_cuts
-                                     + reco_cuts
-                                     + [pass_tight, fail_truth_tau_3prong, reco_tau_3prong],
+    + reco_cuts
+    + [pass_tight, fail_truth_tau_3prong, reco_tau_3prong],
     "tight_tauplus_reco_notruth_tau": fail_truth_cuts
-                                      + reco_cuts
-                                      + [pass_tight, fail_truth_tau_plus, reco_tau_plus],
+    + reco_cuts
+    + [pass_tight, fail_truth_tau_plus, reco_tau_plus],
     "tight_tauminus_reco_notruth_tau": fail_truth_cuts
-                                       + reco_cuts
-                                       + [pass_tight, fail_truth_tau_minus, reco_tau_minus],
+    + reco_cuts
+    + [pass_tight, fail_truth_tau_minus, reco_tau_minus],
 }
 
 # VARIABLES
@@ -463,22 +463,15 @@ if __name__ == "__main__":
                 reco_label = variable_data[var]["name"] + (
                     " [GeV]" if var in measurement_vars_mass else ""
                 )
-                migration_hist = normalise_migration_hist(
-                    analysis.get_hist(
-                        f"{var}_{truths[var]}",
-                        dataset="wtaunu",
-                        systematic=NOMINAL_NAME,
-                        selection=f"{wp}_{sec}truth_reco_tau",
-                    )
-                )
                 analysis.plot_2d(
-                    migration_hist,
+                    var,
+                    truths[var],
                     dataset="wtaunu",
                     systematic=NOMINAL_NAME,
                     selection=f"{wp}_{sec}truth_reco_tau",
                     ylabel=truth_label,
                     xlabel=reco_label,
-                    title=f"{reco_label.removesuffix(' [GeV]')} Migration Matrix [%] | {analysis.global_lumi / 1000:.3g}fb$^{{-1}}$",
+                    title=f"{reco_label.removesuffix(' [GeV]')} Migration Matrix | {analysis.global_lumi / 1000:.3g}fb$^{{-1}}$",
                     labels=True,
                     logx=True if var in measurement_vars_mass else False,
                     logy=True if var in measurement_vars_mass else False,
