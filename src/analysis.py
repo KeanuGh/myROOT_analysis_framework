@@ -1521,16 +1521,27 @@ class Analysis:
             raise FileNotFoundError(f"No file found at {response_file}")
 
         with ROOT.TFile(str(response_file)) as file:
-            hist_reco = file[f"{systematic}/{wp}_{nprong}reco_tau"].Get(varname_reco)
-            hist_reco.SetDirectory(0)
+            def get_required(path: str) -> ROOT.TH1 | ROOT.TH2:
+                obj = file.Get(path)
+                if not obj:
+                    raise KeyError(f"Missing response object '{path}' in {response_file}")
+                obj.SetDirectory(0)
+                return obj
 
-            hist_truth = file[f"{systematic}/truth_tau"].Get(varname_truth)
+            hist_reco = get_required(f"{systematic}/{wp}_{nprong}reco_tau/{varname_reco}")
+
+            truth_path = f"{systematic}/truth_tau/{varname_truth}"
+            hist_truth = file.Get(truth_path)
+            if not hist_truth and systematic != "T_s1thv_NOMINAL":
+                truth_path = f"T_s1thv_NOMINAL/truth_tau/{varname_truth}"
+                hist_truth = file.Get(truth_path)
+            if not hist_truth:
+                raise KeyError(f"Missing response object '{truth_path}' in {response_file}")
             hist_truth.SetDirectory(0)
 
-            h_response = file[f"{systematic}/{wp}_{nprong}truth_reco_tau"].Get(
-                f"{varname_reco}_{varname_truth}"
+            h_response = get_required(
+                f"{systematic}/{wp}_{nprong}truth_reco_tau/{varname_reco}_{varname_truth}"
             )
-            h_response.SetDirectory(0)
 
             response = ROOT.RooUnfoldResponse(hist_reco, hist_truth, h_response)
             if return_histograms:

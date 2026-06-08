@@ -287,6 +287,50 @@ def th1_abs(h: ROOT.TH1) -> ROOT.TH1:
     return th1
 
 
+def th1_max_abs_deviation(
+        up: ROOT.TH1,
+        down: ROOT.TH1,
+        nominal: ROOT.TH1,
+        name: str | None = None,
+) -> ROOT.TH1:
+    """Return max(|up - nominal|, |down - nominal|) per bin."""
+    up_diff = th1_abs(up - nominal)
+    down_diff = th1_abs(down - nominal)
+    uncertainty = up_diff.Clone(name or nominal.GetName())
+    uncertainty.SetDirectory(0)
+    for bin_i in range(1, uncertainty.GetNbinsX() + 1):
+        uncertainty.SetBinContent(
+            bin_i,
+            max(
+                up_diff.GetBinContent(bin_i),
+                down_diff.GetBinContent(bin_i),
+            ),
+        )
+        uncertainty.SetBinError(bin_i, 0)
+    return uncertainty
+
+
+def th1_relative_uncertainty(
+        uncertainty: ROOT.TH1,
+        nominal: ROOT.TH1,
+        name: str | None = None,
+        scale: float = 100.0,
+) -> ROOT.TH1:
+    """Return uncertainty / |nominal| per bin, scaled by ``scale``."""
+    relative = uncertainty.Clone(name or uncertainty.GetName())
+    relative.SetDirectory(0)
+    for bin_i in range(1, relative.GetNbinsX() + 1):
+        nominal_value = nominal.GetBinContent(bin_i)
+        relative.SetBinContent(
+            bin_i,
+            scale * uncertainty.GetBinContent(bin_i) / abs(nominal_value)
+            if nominal_value
+            else 0,
+        )
+        relative.SetBinError(bin_i, 0)
+    return relative
+
+
 def sum_th1s(*h: ROOT.TH1) -> ROOT.TH1:
     """Sum together any number of TH1s"""
     hist_out = h[0].Clone()

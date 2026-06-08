@@ -309,7 +309,7 @@ def run_analysis() -> Analysis:
         year=2017,
         rerun=True,
         regen_histograms=True,
-        do_systematics=False,
+        do_systematics=True,
         # regen_metadata=True,
         ttree=NOMINAL_NAME,
         selections=selections,
@@ -321,6 +321,7 @@ def run_analysis() -> Analysis:
         snapshot=False,
         hists_2d=hists_2d,
         do_unweighted=True,
+        systematics_for_selection={r".*reco_tau$"},
         binnings={
             "": BINNINGS,
         },

@@ -706,6 +706,12 @@ class Dataset:
             #         self.logger.debug(f"\t%s", name)
 
         # build histograms
+        def include_systematic_selection(selection: str) -> bool:
+            return (
+                    not self.systematics_for_selection
+                    or match_any(self.systematics_for_selection, selection)
+            )
+
         for sys_name, root_sys_df in self.rdataframes.items():
             # to contain smart pointers to TH1s (instantiate with a "NoSel" for blank selection)
             th1_ptr_map: dict[str, dict[str, ROOT.RResultsPtr]] = dict()
@@ -719,6 +725,9 @@ class Dataset:
             selections = [""] + list(self.filters[sys_name].keys())
             rdfs = [root_sys_df] + [node.df for node in self.filters[sys_name].values()]
             for selection, sel_df in zip(selections, rdfs):
+                if sys_name != self.nominal_name and not include_systematic_selection(selection):
+                    continue
+
                 th1_ptr_map[selection] = dict()
 
                 # Define Histograms
@@ -751,6 +760,7 @@ class Dataset:
                             (self.eff_sys_set or self.tes_sys_set)
                             and (sys_name == self.nominal_name)
                             and (weight == "reco_weight")
+                            and include_systematic_selection(selection)
                     ):
                         for sys_wgt in [
                             str(wgt)
@@ -764,27 +774,24 @@ class Dataset:
                                 th1, [variable_name, sys_wgt]
                             )
 
-                # only want regular 1D histograms for systemaics
-                if sys_name != self.nominal_name:
-                    continue
-
                 # Define profiles
                 # =======================================================
-                for profile_name, profile_opts in self.profiles.items():
-                    if profile_name in output_histogram_variables:
-                        self.logger.error(
-                            "Histogram for '%s' already exists! Skipping profile creation",
-                            profile_name,
-                        )
-                        continue
+                if sys_name == self.nominal_name:
+                    for profile_name, profile_opts in self.profiles.items():
+                        if profile_name in output_histogram_variables:
+                            self.logger.error(
+                                "Histogram for '%s' already exists! Skipping profile creation",
+                                profile_name,
+                            )
+                            continue
 
-                    profile_args = self.define_profile(
-                        profile_opts=profile_opts,
-                        profile_name=profile_name,
-                        systematic=sys_name,
-                        selection=selection,
-                    )
-                    th1_ptr_map[selection][profile_name] = sel_df.Profile1D(*profile_args)
+                        profile_args = self.define_profile(
+                            profile_opts=profile_opts,
+                            profile_name=profile_name,
+                            systematic=sys_name,
+                            selection=selection,
+                        )
+                        th1_ptr_map[selection][profile_name] = sel_df.Profile1D(*profile_args)
 
                 # Define 2D histograms
                 # =======================================================
@@ -813,6 +820,34 @@ class Dataset:
                         th2, fill_cols
                     )
 
+                    # do systematic weights for response matrices in nominal tree
+                    if (
+                            (self.eff_sys_set or self.tes_sys_set)
+                            and (sys_name == self.nominal_name)
+                            and (hist2d_opts.weight == "reco_weight")
+                            and include_systematic_selection(selection)
+                    ):
+                        for sys_wgt in [
+                            str(wgt)
+                            for wgt in self.rdataframes[self.nominal_name].GetColumnNames()
+                            if wgt.startswith("weight_TAUS_TRUEHADTAU_EFF_")
+                        ]:
+                            eff_sys_name = sys_wgt.removeprefix("weight_")
+                            hist_name = smart_join(
+                                eff_sys_name,
+                                selection,
+                                f"{hist2d_opts.x}_{hist2d_opts.y}",
+                            )
+                            th2 = self.define_th2(
+                                hist2d_opts.x,
+                                hist2d_opts.y,
+                                hist_name,
+                                hist_name,
+                            )
+                            th1_ptr_map[selection][
+                                f"{hist2d_opts.x}_{hist2d_opts.y}|{eff_sys_name}"
+                            ] = sel_df.Fill(th2, [hist2d_opts.x, hist2d_opts.y, sys_wgt])
+
                     # define histogram
                     if self.do_unweighted and hist2d_opts.weight:  # not if it's already unweighted
                         hist_name_unweighted = smart_join(
@@ -839,11 +874,14 @@ class Dataset:
                 histograms_dict[sys_name][selection] = dict()
                 for hist_name, hist_ptr in hist_ptrs.items():
                     # put EFF. sys in their own systematics key
-                    if "TAUS_TRUEHADTAU_EFF_" in hist_name:
+                    if "|" in hist_name:
                         var_name, eff_sys_name = hist_name.split("|")
 
                         # skip if variable is truth
-                        if variable_data[var_name]["tag"] == "truth":
+                        if (
+                                var_name in variable_data
+                                and variable_data[var_name]["tag"] == "truth"
+                        ):
                             continue
 
                         if eff_sys_name not in histograms_dict:
@@ -932,6 +970,8 @@ class Dataset:
 
             if isinstance(sys_hist, ROOT.TProfile):
                 return  # don't want profiles
+            if var not in variable_data:
+                return  # don't want response matrices or other derived helper histograms
             if variable_data[var]["tag"] == VarTag.TRUTH:
                 return  # no truth systematics
 
@@ -990,27 +1030,17 @@ class Dataset:
                 for variable, pair in __.items():
                     nominal_hist = self.histograms[self.nominal_name][selection][variable]
 
-                    up_diff = ROOT_utils.th1_abs(pair["1up"] - nominal_hist)
-                    down_diff = ROOT_utils.th1_abs(pair["1down"] - nominal_hist)
-                    tot_uncert = up_diff.Clone(f"{variable}_{sys_name}_tot_uncert")
-                    for bin_i in range(1, tot_uncert.GetNbinsX() + 1):
-                        tot_uncert.SetBinContent(
-                            bin_i,
-                            max(
-                                up_diff.GetBinContent(bin_i),
-                                down_diff.GetBinContent(bin_i),
-                            ),
-                        )
-
-                    pct_uncert = tot_uncert.Clone(f"{variable}_{sys_name}_pct_uncert")
-                    for bin_i in range(1, pct_uncert.GetNbinsX() + 1):
-                        nominal = nominal_hist.GetBinContent(bin_i)
-                        pct_uncert.SetBinContent(
-                            bin_i,
-                            100 * tot_uncert.GetBinContent(bin_i) / nominal
-                            if nominal
-                            else 0,
-                        )
+                    tot_uncert = ROOT_utils.th1_max_abs_deviation(
+                        pair["1up"],
+                        pair["1down"],
+                        nominal_hist,
+                        name=f"{variable}_{sys_name}_tot_uncert",
+                    )
+                    pct_uncert = ROOT_utils.th1_relative_uncertainty(
+                        tot_uncert,
+                        nominal_hist,
+                        name=f"{variable}_{sys_name}_pct_uncert",
+                    )
 
                     # total uncert for systematic
                     self.histograms[self.nominal_name][selection][

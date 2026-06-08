@@ -6,8 +6,9 @@ import tabulate
 from analysis import Analysis
 from datasetbuilder import LUMI_YEAR
 from src.histogram import Histogram1D
-from utils.ROOT_utils import sum_th1s, get_th1_bin_edges
+from utils import ROOT_utils
 from utils.helper_functions import smart_join
+from utils.ROOT_utils import sum_th1s, get_th1_bin_edges
 from utils.variable_names import variable_data
 
 # VARIABLES
@@ -182,6 +183,7 @@ if __name__ == "__main__":
                 continue
 
             hists: dict[str, dict[str, Histogram1D]] = {}
+            response_cache = {}
 
             # shadow bins difference?
             # ========================================================
@@ -265,10 +267,34 @@ if __name__ == "__main__":
             )
 
 
-            def unfold_bayes(h: ROOT.TH1, i: int) -> ROOT.TH1:
+            def get_response_components(
+                    systematic: str,
+                    *,
+                    cache: dict = response_cache,
+                    response_var: str = var,
+                    response_wp: str = wp,
+            ) -> tuple[ROOT.RooUnfoldResponse, ROOT.TH1, ROOT.TH1, ROOT.TH2]:
+                if systematic not in cache:
+                    cache[systematic] = analysis.get_response_histogram(
+                        varname_reco=response_var,
+                        varname_truth=truths[response_var],
+                        dataset="wtaunu",
+                        wp=response_wp,
+                        nprong="",
+                        systematic=systematic,
+                        return_histograms=True,
+                    )
+                return cache[systematic]
+
+
+            def unfold_bayes(
+                    h: ROOT.TH1,
+                    response_obj: ROOT.RooUnfoldResponse,
+                    i: int,
+            ) -> ROOT.TH1:
                 if i == 0:
-                    return ROOT.RooUnfoldBinByBin(response, h)
-                return ROOT.RooUnfoldBayes(response, h, i)
+                    return ROOT.RooUnfoldBinByBin(response_obj, h)
+                return ROOT.RooUnfoldBayes(response_obj, h, i)
 
 
             # get data and signal
@@ -349,17 +375,6 @@ if __name__ == "__main__":
                 )
             analysis.logger.info(f"Saved table to {signal_fraction_table_path}")
 
-            # uncertainties
-            # ----------------------------------------------------------------
-            sys_hists = {}
-            with ROOT.TFile(
-                    str(analysis.paths.output_dir.parent / f"analysis_simple_2017/root/wtaunu.root")
-            ) as file:
-                for sys in systematics:
-                    uncert = file[f"{NOMINAL_NAME}/{wp}_SR_passID"].Get(f"{var}_{sys}_tot_uncert")
-                    uncert.SetDirectory(0)
-                    sys_hists[sys] = uncert
-
             # efficiency and acceptance
             # ----------------------------------------------------------------
             with ROOT.TFile(
@@ -434,21 +449,31 @@ if __name__ == "__main__":
                     }
 
 
-                    def unfold_scale(h) -> ROOT.TH1D:
+                    def unfold_scale(
+                            h,
+                            scale_acc_new: ROOT.TH1 = acc_new,
+                            scale_acc_no_shadow: ROOT.TH1 = acc_no_shadow,
+                    ) -> ROOT.TH1D:
                         h.Scale(1 / LUMI)
-                        return h * acc_new / acc_no_shadow
+                        return h * scale_acc_new / scale_acc_no_shadow
 
 
-                    def unfold(h, i) -> ROOT.TH1D:
+                    def unfold(
+                            h: ROOT.TH1,
+                            i: int,
+                            response_obj: ROOT.RooUnfoldResponse = response,
+                            response_reco_hist: ROOT.TH1 = response_reco,
+                            response_truth_hist: ROOT.TH1 = response_truth,
+                    ) -> ROOT.TH1D:
                         if i == 0:
                             # manual bin-by-bin
                             h = analysis.unfold_bin_by_bin(
                                 h,
-                                response_reco,
-                                response_truth,
+                                response_reco_hist,
+                                response_truth_hist,
                             ).unfolded
                         else:
-                            h = unfold_bayes(h, i).Hunfold()
+                            h = unfold_bayes(h, response_obj, i).Hunfold()
                         return unfold_scale(h)
 
 
@@ -472,8 +497,8 @@ if __name__ == "__main__":
                             sh_bin_label,
                         )
                     else:
-                        data_unfolded = unfold_bayes(data_sig, n_iter)
-                        signal_unfolded = unfold_bayes(signal, n_iter)
+                        data_unfolded = unfold_bayes(data_sig, response, n_iter)
+                        signal_unfolded = unfold_bayes(signal, response, n_iter)
 
                         data_unfolded_full = unfold_scale(data_unfolded.Hunfold())
                         signal_unfolded_full = unfold_scale(signal_unfolded.Hunfold())
@@ -520,20 +545,49 @@ if __name__ == "__main__":
                     analysis.paths.plot_dir = wp_dir / "unfolded" / var / "sys"
 
 
-                    def sys_up(sys) -> Histogram1D:
-                        h = (
-                                    unfold(signal + sys_hists[sys], n_iter) - signal_unfolded_full
-                            ) / data_unfolded_full
-                        h.Scale(100)
-                        return h
-
-
-                    def sys_down(sys) -> Histogram1D:
-                        h = (
-                                    unfold(signal - sys_hists[sys], n_iter) - signal_unfolded_full
-                            ) / data_unfolded_full
-                        h.Scale(100)
-                        return h
+                    def response_sys_uncertainty(
+                            sys: str,
+                            *,
+                            nominal_unfolded: ROOT.TH1 = data_unfolded_full,
+                            input_data: ROOT.TH1 = data_sig,
+                            iter_count: int = n_iter,
+                            hist_wp: str = wp,
+                            hist_var: str = var,
+                            hist_shadow_bin: str = sh_bin_label,
+                    ) -> ROOT.TH1:
+                        response_up, reco_up, truth_up, _ = get_response_components(
+                            f"{sys}__1up"
+                        )
+                        response_down, reco_down, truth_down, _ = get_response_components(
+                            f"{sys}__1down"
+                        )
+                        unfolded_up = unfold(
+                            input_data,
+                            iter_count,
+                            response_up,
+                            reco_up,
+                            truth_up,
+                        )
+                        unfolded_down = unfold(
+                            input_data,
+                            iter_count,
+                            response_down,
+                            reco_down,
+                            truth_down,
+                        )
+                        response_uncertainty = ROOT_utils.th1_max_abs_deviation(
+                            unfolded_up,
+                            unfolded_down,
+                            nominal_unfolded,
+                        )
+                        return ROOT_utils.th1_relative_uncertainty(
+                            response_uncertainty,
+                            nominal_unfolded,
+                            name=(
+                                f"{hist_wp}_{hist_var}_{hist_shadow_bin}_{iter_count}iter_"
+                                f"{sys}_response_uncert"
+                            ),
+                        )
 
 
                     default_args = {
@@ -549,10 +603,18 @@ if __name__ == "__main__":
                     }
                     analysis.plot(
                         val=[
-                            sys_up("TAUS_TRUEHADTAU_SME_TES_DETECTOR_Endcap_LowPt"),
-                            sys_up("TAUS_TRUEHADTAU_SME_TES_DETECTOR_Endcap_HighPt"),
-                            sys_up("TAUS_TRUEHADTAU_SME_TES_DETECTOR_Barrel_LowPt"),
-                            sys_up("TAUS_TRUEHADTAU_SME_TES_DETECTOR_Barrel_HighPt"),
+                            response_sys_uncertainty(
+                                "TAUS_TRUEHADTAU_SME_TES_DETECTOR_Endcap_LowPt"
+                            ),
+                            response_sys_uncertainty(
+                                "TAUS_TRUEHADTAU_SME_TES_DETECTOR_Endcap_HighPt"
+                            ),
+                            response_sys_uncertainty(
+                                "TAUS_TRUEHADTAU_SME_TES_DETECTOR_Barrel_LowPt"
+                            ),
+                            response_sys_uncertainty(
+                                "TAUS_TRUEHADTAU_SME_TES_DETECTOR_Barrel_HighPt"
+                            ),
                         ],
                         label=[
                             "Endcap_LowPt",
@@ -578,9 +640,11 @@ if __name__ == "__main__":
                     # TRIGGER systematics
                     analysis.plot(
                         val=[
-                            sys_up("TAUS_TRUEHADTAU_EFF_TRIGGER_SYST161718"),
-                            sys_up("TAUS_TRUEHADTAU_EFF_TRIGGER_STATMC161718"),
-                            sys_up("TAUS_TRUEHADTAU_EFF_TRIGGER_STATDATA161718"),
+                            response_sys_uncertainty("TAUS_TRUEHADTAU_EFF_TRIGGER_SYST161718"),
+                            response_sys_uncertainty("TAUS_TRUEHADTAU_EFF_TRIGGER_STATMC161718"),
+                            response_sys_uncertainty(
+                                "TAUS_TRUEHADTAU_EFF_TRIGGER_STATDATA161718"
+                            ),
                         ],
                         label=[
                             "TRIGGER_SYST161718",
@@ -603,7 +667,7 @@ if __name__ == "__main__":
                     # RECO systematic
                     analysis.plot(
                         val=[
-                            sys_up("TAUS_TRUEHADTAU_EFF_RECO_TOTAL"),
+                            response_sys_uncertainty("TAUS_TRUEHADTAU_EFF_RECO_TOTAL"),
                         ],
                         label=[
                             "EFF_RECO_TOTAL",
@@ -618,9 +682,9 @@ if __name__ == "__main__":
                     # OTHER systematics
                     analysis.plot(
                         val=[
-                            sys_up("TAUS_TRUEHADTAU_SME_TES_INSITUEXP"),
-                            sys_up("TAUS_TRUEHADTAU_SME_TES_INSITUFIT"),
-                            sys_up("TAUS_TRUEHADTAU_SME_TES_MODEL_CLOSURE"),
+                            response_sys_uncertainty("TAUS_TRUEHADTAU_SME_TES_INSITUEXP"),
+                            response_sys_uncertainty("TAUS_TRUEHADTAU_SME_TES_INSITUFIT"),
+                            response_sys_uncertainty("TAUS_TRUEHADTAU_SME_TES_MODEL_CLOSURE"),
                         ],
                         label=[
                             "INSITUEXP",
