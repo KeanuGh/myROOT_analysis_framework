@@ -7,6 +7,7 @@ import pytest
 
 from src.analysis import Analysis
 from src.cutting import Cut
+from src.dataset import Dataset
 
 
 @pytest.fixture(scope="class")
@@ -131,3 +132,60 @@ class TestBinByBinUnfolding:
         np.testing.assert_allclose(correction.GetBinError(1), expected_correction_error)
         np.testing.assert_allclose(unfolded.GetBinContent(1), expected_unfolded)
         np.testing.assert_allclose(unfolded.GetBinError(1), expected_unfolded_error)
+
+
+class TestSystematicUncertainties:
+    @staticmethod
+    def make_hist(name: str, value: float) -> ROOT.TH1F:
+        hist = ROOT.TH1F(name, name, 1, 0, 1)
+        hist.SetDirectory(0)
+        hist.SetBinContent(1, value)
+        return hist
+
+    def test_systematic_uncertainty_uses_max_deviation_from_nominal(self):
+        dataset = Dataset(
+            name="test",
+            rdataframes={"T_s1thv_NOMINAL": ROOT.RDataFrame(1)},
+        )
+        dataset.nominal_name = "T_s1thv_NOMINAL"
+        dataset.tes_sys_set = {"SME_TES_TEST__1up", "SME_TES_TEST__1down"}
+        dataset.histograms = {
+            "T_s1thv_NOMINAL": {"sel": {"TauPhi": self.make_hist("nominal", 100)}},
+            "SME_TES_TEST__1up": {"sel": {"TauPhi": self.make_hist("up", 110)}},
+            "SME_TES_TEST__1down": {"sel": {"TauPhi": self.make_hist("down", -90)}},
+        }
+
+        dataset.calculate_systematic_uncertainties()
+
+        total = dataset.histograms["T_s1thv_NOMINAL"]["sel"]["TauPhi_SME_TES_TEST_tot_uncert"]
+        percent = dataset.histograms["T_s1thv_NOMINAL"]["sel"]["TauPhi_SME_TES_TEST_pct_uncert"]
+
+        np.testing.assert_allclose(total.GetBinContent(1), 190)
+        np.testing.assert_allclose(percent.GetBinContent(1), 190)
+
+    def test_dataset_systematic_uncertainty_combines_sources_in_quadrature(self):
+        dataset = Dataset(
+            name="test",
+            rdataframes={"T_s1thv_NOMINAL": ROOT.RDataFrame(1)},
+        )
+        dataset.nominal_name = "T_s1thv_NOMINAL"
+        dataset.tes_sys_set = {
+            "SME_TES_A__1up",
+            "SME_TES_A__1down",
+            "SME_TES_B__1up",
+            "SME_TES_B__1down",
+        }
+        dataset.histograms = {
+            "T_s1thv_NOMINAL": {
+                "sel": {
+                    "TauPhi": self.make_hist("nominal", 100),
+                    "TauPhi_SME_TES_A_tot_uncert": self.make_hist("a", 3),
+                    "TauPhi_SME_TES_B_tot_uncert": self.make_hist("b", 4),
+                }
+            }
+        }
+
+        down, up = dataset.get_systematic_uncertainty("TauPhi", "sel")
+
+        np.testing.assert_allclose(down, [5])
+        np.testing.assert_allclose(up, [5])

@@ -1222,8 +1222,8 @@ class Analysis:
     ) -> tuple[np.typing.NDArray[float]]:
         """Calculate full systematic uncertainties. Outputs int 0 if no systematics are found"""
 
-        sys_errs_up = np.zeros_like(per_hist_vars["hists"][0].bin_values())
-        sys_errs_down = np.zeros_like(per_hist_vars["hists"][0].bin_values())
+        sys_errs_up_sq = np.zeros_like(per_hist_vars["hists"][0].bin_values())
+        sys_errs_down_sq = np.zeros_like(per_hist_vars["hists"][0].bin_values())
         for ds, sel, v in zip(
                 per_hist_vars["datasets"],
                 per_hist_vars["selections"],
@@ -1234,10 +1234,10 @@ class Analysis:
                     np.isscalar(sys_err_up) and sys_err_up == 0
             ):
                 continue  # skip no errors
-            sys_errs_down += sys_err_down
-            sys_errs_up += sys_err_up
+            sys_errs_down_sq += sys_err_down ** 2
+            sys_errs_up_sq += sys_err_up ** 2
 
-        return sys_errs_down, sys_errs_up
+        return np.sqrt(sys_errs_down_sq), np.sqrt(sys_errs_up_sq)
 
     def __verify_same_cuts(self, datasets: list[str]):
         """check that all datasets to be plotted have the same sets of cuts"""
