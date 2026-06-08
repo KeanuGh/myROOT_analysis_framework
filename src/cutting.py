@@ -302,7 +302,9 @@ class Cutflow:
         ):
             raise ValueError(
                 "Cuts are not equivalent and cannot be summed. "
-                "Got:\n{}".format("\n".join(f"{x}\t{y}" for x, y in zip(self_names, other_names)))
+                "Got:\n{}".format(
+                    "\n".join(f"{x}\t{y}" for x, y in zip(self_names, other_names, strict=True))
+                )
             )
 
         # do inclusive separately

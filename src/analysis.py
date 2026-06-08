@@ -492,9 +492,9 @@ class Analysis:
         # handle custom data?
         if not isinstance(plot_as_data, (list, tuple)):
             plot_as_data = [plot_as_data]
-        for i, p in enumerate(plot_as_data):
-            if (plot_as_data[i] is not None) and isinstance(plot_as_data[i], ROOT.TH1):
-                plot_as_data[i] = Histogram1D(th1=plot_as_data[i])
+        for i, plot_data in enumerate(plot_as_data):
+            if (plot_data is not None) and isinstance(plot_data, ROOT.TH1):
+                plot_as_data[i] = Histogram1D(th1=plot_data)
 
         # unset options that depend on multiple histograms
         if n_plottables == 1:
@@ -973,7 +973,9 @@ class Analysis:
                 colors="r",
             )
 
-        for data_hist, data_label, data_colour in zip(data_hists, data_labels, data_colours):
+        for data_hist, data_label, data_colour in zip(
+                data_hists, data_labels, data_colours, strict=True
+        ):
             ax.errorbar(
                 data_hist.bin_centres,
                 data_hist.bin_values(flow),
@@ -1229,6 +1231,7 @@ class Analysis:
                 per_hist_vars["datasets"],
                 per_hist_vars["selections"],
                 per_hist_vars["vals"],
+                strict=True,
         ):
             sys_err_down, sys_err_up = self.get_systematic_uncertainty(v, ds, sel)
             if (np.isscalar(sys_err_down) and sys_err_down == 0) and (

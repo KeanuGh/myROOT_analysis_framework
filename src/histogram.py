@@ -656,11 +656,11 @@ class Histogram1D(bh.Histogram, family=None):
             textstr = "\n".join(
                 (
                     hist.name,
-                    r"$\mu=%.2f\pm%.2f$" % (hist.mean, hist.mean_error),
+                    rf"$\mu={hist.mean:.2f}\pm{hist.mean_error:.2f}$",
                     # r'$\sigma=%.2f\pm%.2f$' % (self.std, self.std_error),
-                    r"$\mathrm{Entries}: %.0f$" % hist.n_entries,
-                    r"$\mathrm{Bin sum}: %.2f$" % hist.bin_sum(True),
-                    r"$\mathrm{Integral}: %.2f$" % hist.integral,
+                    rf"$\mathrm{{Entries}}: {hist.n_entries:.0f}$",
+                    rf"$\mathrm{{Bin sum}}: {hist.bin_sum(True):.2f}$",
+                    rf"$\mathrm{{Integral}}: {hist.integral:.2f}$",
                 )
             )
             ax.text(x=box_xpos, y=box_ypos, s=textstr, transform=ax.transAxes, fontsize="x-small")
@@ -920,8 +920,7 @@ class Histogram1D(bh.Histogram, family=None):
                 (
                     # r"$\chi^2=%.3f$" % fit_results.Chi2(),
                     # r"$\mathrm{NDF}=%.3f$" % fit_results.Ndf(),
-                    r"$\epsilon=%.2f\pm%.3f$"
-                    % (c, fit_err),
+                    rf"$\epsilon={c:.2f}\pm{fit_err:.3f}$",
                 )
             )
             # dumb workaround to avoid the stats boxes from overlapping eachother

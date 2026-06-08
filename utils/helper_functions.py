@@ -13,7 +13,7 @@ def multi_glob(paths: Path | list[Path] | str | list[str]) -> list[str]:
     for path in paths:
         f = glob(str(path))
         if not f:
-            warn(f"Path passed with no files: {path}")
+            warn(f"Path passed with no files: {path}", stacklevel=2)
 
         all_files += f
 

@@ -160,7 +160,7 @@ class DatasetMetadata:
                 files = multi_glob(dataset_dict["data_path"])
             elif isinstance(dataset_dict["data_path"], dict):
                 files = []
-                for subsample_name, subsample_files in dataset_dict["data_path"].items():
+                for subsample_files in dataset_dict["data_path"].values():
                     if isinstance(subsample_files, list):
                         files.extend(subsample_files)
                     elif isinstance(subsample_files, (str, Path)):

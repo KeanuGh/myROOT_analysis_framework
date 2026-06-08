@@ -142,7 +142,7 @@ def get_axis(
         return bh.axis.Regular(*bins, transform=transform)
     elif isinstance(bins, list):
         if transform is not None:
-            warn("Transforms cannot be passed to variable bin types")
+            warn("Transforms cannot be passed to variable bin types", stacklevel=2)
         return bh.axis.Variable(bins)
     else:
         raise TypeError(

@@ -20,13 +20,13 @@ s = 0.4 * np.random.random(20) + 0.8
 # regular
 mine_h = Histogram1D(a, (nbins, xmin, xmax), weight=w)
 root_h = ROOT.TH1F("test", "test;test", nbins, xmin, xmax)
-for ia, iw in zip(a, w):
+for ia, iw in zip(a, w, strict=True):
     root_h.Fill(ia, iw)
 
 # extra histograms for operations
 mine_h2 = Histogram1D(b, (nbins, xmin, xmax), weight=w)
 root_h2 = ROOT.TH1F("test", "test;test", nbins, xmin, xmax)
-for ib, iw2 in zip(b, w):
+for ib, iw2 in zip(b, w, strict=True):
     root_h2.Fill(ib, iw2)
 
 # multiply by 10

@@ -179,7 +179,7 @@ class Dataset:
                 continue
 
             for selection in selections:
-                if selection not in selections:
+                if selection not in sys_selections:
                     continue
 
                 self.filters[sys_name][selection].df = self.filters[sys_name][
@@ -693,7 +693,7 @@ class Dataset:
         self.logger.info(f"Defining histograms for dataset {self.name}...")
         if self.logger.getEffectiveLevel() < 20 and do_prints:
             # variable MUST be in scope! (why is ROOT like this)
-            verbosity = ROOT.Experimental.RLogScopedVerbosity(
+            _verbosity = ROOT.Experimental.RLogScopedVerbosity(
                 ROOT.Detail.RDF.RDFLogChannel(), ROOT.Experimental.ELogLevel.kInfo
             )
 
@@ -726,7 +726,7 @@ class Dataset:
             # gather all selections (including no selection)
             selections = [""] + list(self.filters[sys_name].keys())
             rdfs = [root_sys_df] + [node.df for node in self.filters[sys_name].values()]
-            for selection, sel_df in zip(selections, rdfs):
+            for selection, sel_df in zip(selections, rdfs, strict=True):
                 if sys_name != self.nominal_name and not include_systematic_selection(selection):
                     continue
 
