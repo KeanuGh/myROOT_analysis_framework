@@ -42,6 +42,7 @@ test = [
 dev = [
     "pytest>=7.4",
     "ruff>=0.4",
+    "ty>=0.0.38",
 ]
 
 [tool.pixi.workspace]
@@ -57,12 +58,14 @@ ruff = ">=0.4"
 
 [tool.pixi.pypi-dependencies]
 myframework = { path = ".", editable = true }
+ty = ">=0.0.38"
 
 [tool.pixi.tasks]
 test = "python -m pytest -vv"
 test-quiet = "python -m pytest -q"
 lint = "ruff check ."
 format = "ruff format ."
+typecheck = "ty check"
 
 [tool.setuptools]
 include-package-data = true
@@ -108,6 +111,21 @@ exclude = [
 ]
 
 [tool.pyright]
+exclude = [
+    "run/2017_viva",
+]
+
+[tool.ty.environment]
+python-version = "3.11"
+python = ".pixi/envs/default/bin/python"
+
+[tool.ty.src]
+include = [
+    "src",
+    "utils",
+    "tests",
+    "run",
+]
 exclude = [
     "run/2017_viva",
 ]
