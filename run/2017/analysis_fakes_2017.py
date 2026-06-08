@@ -199,7 +199,7 @@ selections = selections_loose | selections_medium | selections_tight
 # define selection for MC samples
 selections_list = list(selections.keys())
 selections_cuts = list(selections.values())
-for selection, cut_list in zip(selections_list, selections_cuts):
+for selection, cut_list in zip(selections_list, selections_cuts, strict=True):
     selections[f"trueTau_{selection}"] = cut_list + [pass_truetau]
     # define selections for 1- or 3- tau prongs
     for cutstr, cut_name in [

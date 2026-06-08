@@ -126,7 +126,7 @@ selections: dict[str, list[Cut]] = {
 # define selection for prongs
 selections_list = list(selections.keys())
 selections_cuts = list(selections.values())
-for selection, cut_list in zip(selections_list, selections_cuts):
+for selection, cut_list in zip(selections_list, selections_cuts, strict=True):
     # define selections for 1- or 3- tau prongs
     for cutstr, cut_name in [
         ("TauNCoreTracks == 1", "1prong"),
@@ -364,7 +364,8 @@ if __name__ == "__main__":
             )
             evt_str = r"${nevt:.2f} \pm {stat_err:.2f}$"
             sample_evt_counts = [
-                evt_str.format(nevt=nevt, stat_err=err) for nevt, err in zip(abs_values, stat_err)
+                evt_str.format(nevt=nevt, stat_err=err)
+                for nevt, err in zip(abs_values, stat_err, strict=True)
             ] + [
                 evt_str.format(nevt=total_bkg, stat_err=total_bkg_err),
                 evt_str.format(nevt=total, stat_err=sum(stat_err)),

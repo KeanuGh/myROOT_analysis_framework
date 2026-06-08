@@ -274,7 +274,6 @@ NOMINAL_NAME = "T_s1thv_NOMINAL"
 def run_analysis() -> Analysis:
     """Run analysis"""
 
-    nedges = 16
     return Analysis(
         datasets,
         year=2017,

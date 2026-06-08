@@ -243,7 +243,6 @@ taupt_bins = np.array([125, 170, 200, 250, 300, 350, 425, 500, 600, 1000], dtype
 def run_analysis() -> Analysis:
     """Run analysis"""
 
-    nedges = 16
     return Analysis(
         datasets,
         year=2017,

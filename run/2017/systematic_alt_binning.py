@@ -125,7 +125,7 @@ selections: dict[str, list[Cut]] = {
 # define selection for prongs
 selections_list = list(selections.keys())
 selections_cuts = list(selections.values())
-for selection, cut_list in zip(selections_list, selections_cuts):
+for selection, cut_list in zip(selections_list, selections_cuts, strict=True):
     # define selections for 1- or 3- tau prongs
     for cutstr, cut_name in [
         ("TauNCoreTracks == 1", "1prong"),
