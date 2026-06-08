@@ -64,7 +64,7 @@ def get_logger(
 
 class CustomFileHandler(logging.FileHandler):
     def __init__(self, filename: Path, mode: str = "w"):
-        super(CustomFileHandler, self).__init__(filename, mode=mode)
+        super().__init__(filename, mode=mode)
         self.setFormatter(logging.Formatter("%(asctime)s %(name)s %(levelname)-10s %(message)s"))
 
     def emit(self, record):
@@ -72,16 +72,16 @@ class CustomFileHandler(logging.FileHandler):
         messages = record.msg.split("\n")
         for message in messages:
             record.msg = message
-            super(CustomFileHandler, self).emit(record)
+            super().emit(record)
 
 
 class CustomStreamHandler(logging.StreamHandler):
     def __init__(self, stream=sys.stdout):
-        super(CustomStreamHandler, self).__init__(stream)
+        super().__init__(stream)
 
     def emit(self, record):
         # add prefix to multiline log messages
         messages = record.msg.split("\n")
         for message in messages:
             record.msg = message
-            super(CustomStreamHandler, self).emit(record)
+            super().emit(record)

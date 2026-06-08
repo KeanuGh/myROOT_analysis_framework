@@ -1,20 +1,19 @@
 from pathlib import Path
-from typing import Dict
 
 import numpy as np
-
 from binnings import BINNINGS
+
 from src.analysis import Analysis
 from src.cutting import Cut
-from utils.ROOT_utils import bayes_divide, normalise_migration_hist
 from utils.helper_functions import smart_join
 from utils.plotting_tools import Hist2dOpts
+from utils.ROOT_utils import bayes_divide, normalise_migration_hist
 from utils.variable_names import variable_data
 
 DTA_PATH = Path("/mnt/D/data/DTA_outputs/2024-09-19/")
 # DTA_PATH = Path("/eos/home-k/kghorban/DTA_OUT/2024-02-05/")
 
-datasets: Dict[str, Dict] = {
+datasets: dict[str, dict] = {
     # SIGNAL
     # ====================================================================
     "wtaunu_had": {

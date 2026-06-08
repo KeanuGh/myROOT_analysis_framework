@@ -1,9 +1,9 @@
 import json
 import shutil
 
-import ROOT
 import numpy as np
 import pytest
+import ROOT
 
 from src.analysis import Analysis
 from src.cutting import Cut

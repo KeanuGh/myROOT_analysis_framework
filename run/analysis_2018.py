@@ -1,5 +1,4 @@
 from pathlib import Path
-from typing import Dict
 
 import numpy as np
 from matplotlib import pyplot as plt
@@ -7,7 +6,7 @@ from matplotlib import pyplot as plt
 from src.analysis import Analysis
 from src.cutting import Cut
 from src.histogram import Histogram1D
-from utils.helper_functions import smart_join, get_base_sys_name
+from utils.helper_functions import get_base_sys_name, smart_join
 from utils.variable_names import variable_data
 
 DTA_PATH = Path("/mnt/D/data/DTA_outputs/MC16e/")
@@ -259,7 +258,7 @@ measurement_vars_unitless = [
 measurement_vars = measurement_vars_unitless + measurement_vars_mass
 NOMINAL_NAME = "T_s1thv_NOMINAL"
 
-datasets: Dict[str, Dict] = {
+datasets: dict[str, dict] = {
     # DATA
     # ====================================================================
     "data": {

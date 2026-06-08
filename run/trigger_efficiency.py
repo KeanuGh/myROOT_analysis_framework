@@ -1,5 +1,4 @@
 from pathlib import Path
-from typing import Dict
 
 import numpy as np
 
@@ -11,7 +10,7 @@ DTA_PATH = Path("/mnt/D/data/DTA_outputs/2024-09-19/")
 # DTA_PATH = Path("/eos/home-k/kghorban/DTA_OUT/2024-02-05/")
 DO_SYS = False
 
-datasets: Dict[str, Dict] = {
+datasets: dict[str, dict] = {
     # SIGNAL
     # ====================================================================
     "wtaunu": {

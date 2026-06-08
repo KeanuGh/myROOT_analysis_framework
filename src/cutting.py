@@ -9,16 +9,17 @@ from __future__ import annotations
 
 import logging
 import re
+from collections.abc import Generator
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import List, Generator, Final
+from typing import Final
 
-import ROOT  # type: ignore
 import numpy as np
+import ROOT  # type: ignore
 from tabulate import tabulate  # type: ignore
 
 from utils.var_helpers import derived_vars
-from utils.variable_names import variable_data, VarTag
+from utils.variable_names import VarTag, variable_data
 
 # all variables known by this framework
 _ALL_KNOWN_VARS: Final[set[str]] = set(derived_vars.keys()) | set(variable_data.keys())
@@ -365,7 +366,7 @@ class Cutflow:
             except ZeroDivisionError:
                 self._cutflow[i].ceff = np.nan
 
-    def import_cutflow(self, hist: ROOT.TH1I, cuts: List[Cut]) -> None:
+    def import_cutflow(self, hist: ROOT.TH1I, cuts: list[Cut]) -> None:
         """Import cutflow from histogram and cutfile"""
         if hist.GetNbinsX() != len(cuts):
             raise ValueError(

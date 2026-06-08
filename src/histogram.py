@@ -5,12 +5,12 @@ import logging
 from copy import deepcopy
 from typing import Any, overload
 
-import ROOT
 import boost_histogram as bh
 import matplotlib.pyplot as plt
 import mplhep as hep
 import numpy as np
 import pandas as pd
+import ROOT
 from matplotlib.offsetbox import AnchoredText
 from numpy.typing import ArrayLike
 
@@ -226,12 +226,12 @@ class Histogram1D(bh.Histogram, family=None):
         new.logger = self.logger
         return new
 
-    def __truediv__(self, other: bh.Histogram | "np.typing.NDArray[Any]" | float) -> Histogram1D:
+    def __truediv__(self, other: bh.Histogram | np.typing.NDArray[Any] | float) -> Histogram1D:
         """boost-histogram doesn't allow dividing weighted histograms so implement that here"""
         result = self.copy()
         return result.__itruediv__(other)
 
-    def __itruediv__(self, other: bh.Histogram | "np.typing.NDArray[Any]" | float) -> Histogram1D:
+    def __itruediv__(self, other: bh.Histogram | np.typing.NDArray[Any] | float) -> Histogram1D:
         """boost-histogram doesn't allow dividing weighted histograms so implement that here"""
         if isinstance(other, Histogram1D):
             # Scale variances based on ROOT method. See https://root.cern.ch/doc/master/TH1_8cxx_source.html#l02929
@@ -263,12 +263,12 @@ class Histogram1D(bh.Histogram, family=None):
         # let boost-histogram handle return
         return self._compute_inplace_op("__itruediv__", other)
 
-    def __mul__(self, other: bh.Histogram | "np.typing.NDArray[Any]" | float) -> Histogram1D:
+    def __mul__(self, other: bh.Histogram | np.typing.NDArray[Any] | float) -> Histogram1D:
         """boost-histogram doesn't allow multiplying weighted histograms so implement that here"""
         result = self.copy()
         return result.__imul__(other)
 
-    def __imul__(self, other: bh.Histogram | "np.typing.NDArray[Any]" | float) -> Histogram1D:
+    def __imul__(self, other: bh.Histogram | np.typing.NDArray[Any] | float) -> Histogram1D:
         """boost-histogram doesn't allow multiplying weighted histograms so implement that here"""
         if isinstance(other, Histogram1D):
             # Scale variances based on ROOT method. See https://root.cern.ch/doc/master/TH1_8cxx_source.html#l06116
@@ -294,12 +294,12 @@ class Histogram1D(bh.Histogram, family=None):
             self.TH1.Scale(other)
         return self._compute_inplace_op("__imul__", other)
 
-    def __add__(self, other: bh.Histogram | "np.typing.NDArray[Any]" | float) -> Histogram1D:
+    def __add__(self, other: bh.Histogram | np.typing.NDArray[Any] | float) -> Histogram1D:
         """Need to handle adding together TH1s"""
         result = self.copy()
         return result.__iadd__(other)
 
-    def __iadd__(self, other: bh.Histogram | "np.typing.NDArray[Any]" | float) -> Histogram1D:
+    def __iadd__(self, other: bh.Histogram | np.typing.NDArray[Any] | float) -> Histogram1D:
         """Handle adding TH1s"""
         if isinstance(other, Histogram1D):
             self.TH1.Add(other.TH1)
@@ -317,12 +317,12 @@ class Histogram1D(bh.Histogram, family=None):
 
         return self._compute_inplace_op("__iadd__", other)
 
-    def __sub__(self, other: bh.Histogram | "np.typing.NDArray[Any]" | float) -> Histogram1D:
+    def __sub__(self, other: bh.Histogram | np.typing.NDArray[Any] | float) -> Histogram1D:
         """Need to handle adding together TH1s"""
         result = self.copy()
         return result.__isub__(other)
 
-    def __isub__(self, other: bh.Histogram | "np.typing.NDArray[Any]" | float) -> Histogram1D:
+    def __isub__(self, other: bh.Histogram | np.typing.NDArray[Any] | float) -> Histogram1D:
         """Handle adding TH1s"""
         if isinstance(other, Histogram1D):
             self.TH1.Add(other.TH1, -1)

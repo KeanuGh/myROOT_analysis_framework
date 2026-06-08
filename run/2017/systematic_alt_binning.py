@@ -1,15 +1,14 @@
 from pathlib import Path
-from typing import Dict
 
-import ROOT
 import numpy as np
+import ROOT
+from binnings import BINNINGS
 from matplotlib import pyplot as plt
 
-from binnings import BINNINGS
 from src.analysis import Analysis
 from src.cutting import Cut
-from utils.ROOT_utils import get_th1_bin_edges
 from utils.helper_functions import get_base_sys_name
+from utils.ROOT_utils import get_th1_bin_edges
 from utils.variable_names import variable_data
 
 DTA_PATH = Path("/mnt/D/data/DTA_outputs/2024-09-19/")
@@ -153,7 +152,7 @@ measurement_vars_unitless = [
 measurement_vars = measurement_vars_mass + measurement_vars_unitless
 NOMINAL_NAME = "T_s1thv_NOMINAL"
 
-datasets: Dict[str, Dict] = {
+datasets: dict[str, dict] = {
     # DATA
     # ====================================================================
     "data": {

@@ -1,9 +1,8 @@
 from pathlib import Path
-from typing import Dict
 
 import numpy as np
-
 from binnings import BINNINGS, nedges
+
 from src.analysis import Analysis
 from src.cutting import Cut
 from utils.helper_functions import smart_join
@@ -251,7 +250,7 @@ measurement_vars_unitless = [
 measurement_vars = measurement_vars_unitless + measurement_vars_mass
 NOMINAL_NAME = "T_s1thv_NOMINAL"
 
-datasets: Dict[str, Dict] = {
+datasets: dict[str, dict] = {
     # DATA
     # ====================================================================
     "data": {

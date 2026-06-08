@@ -1,6 +1,5 @@
-from typing import Dict, List
 
-override_binnings: Dict[str, List[float]] = {
+override_binnings: dict[str, list[float]] = {
     "TauPt": [
         170.0,
         200.0,

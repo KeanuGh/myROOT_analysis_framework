@@ -1,5 +1,4 @@
 from pathlib import Path
-from typing import Dict
 
 import numpy as np
 from matplotlib import pyplot as plt
@@ -17,7 +16,7 @@ if __name__ == "__main__":
     DTA_PATH = Path("/mnt/D/data/DTA_outputs/2024-09-19/")
     # DTA_PATH = Path("/eos/home-k/kghorban/DTA_OUT/2024-02-05/")
 
-    datasets: Dict[str, Dict] = {
+    datasets: dict[str, dict] = {
         # SIGNAL
         # ====================================================================
         "wtaunu": {
@@ -145,7 +144,7 @@ if __name__ == "__main__":
     )
     tot = 0
     nominal_bin1 = ROOT_utils.get_th1_bin_values(
-        analysis["wtaunu"].histograms["T_s1thv_NOMINAL"]["SR_passID"][f"TauPt"]
+        analysis["wtaunu"].histograms["T_s1thv_NOMINAL"]["SR_passID"]["TauPt"]
     )[0]
     print(f"NOMINAL bin1: {nominal_bin1}")
     for sys in sys_base:
@@ -217,7 +216,7 @@ if __name__ == "__main__":
 
     # try summing manually
     sys_up_sum = analysis["wtaunu"].get_hist(
-        f"TauPt_TAUS_TRUEHADTAU_EFF_RECO_TOTAL__1up_diff", NOMINAL_NAME, "SR_passID"
+        "TauPt_TAUS_TRUEHADTAU_EFF_RECO_TOTAL__1up_diff", NOMINAL_NAME, "SR_passID"
     )
     for sys in analysis["wtaunu"].eff_sys_set | analysis["wtaunu"].tes_sys_set:
         if "TAUS_TRUEHADTAU_EFF_RECO_TOTAL" in sys:

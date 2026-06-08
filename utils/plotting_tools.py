@@ -1,15 +1,14 @@
+from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Sequence, TypedDict
+from typing import TypedDict
 from warnings import warn
 
-import ROOT
 import boost_histogram as bh
 import matplotlib.pyplot as plt  # type: ignore
 import mplhep as hep  # type: ignore
 import numpy as np
-import pandas as pd  # type: ignore
+import ROOT
 from matplotlib import ticker
-from matplotlib.colors import LogNorm  # type: ignore
 
 from src.histogram import Histogram1D
 from utils.variable_names import variable_data

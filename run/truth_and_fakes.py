@@ -1,5 +1,4 @@
 from pathlib import Path
-from typing import Dict
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -7,12 +6,12 @@ import numpy as np
 from src.analysis import Analysis
 from src.cutting import Cut
 from utils.helper_functions import smart_join
-from utils.plotting_tools import get_axis_labels, ProfileOpts
+from utils.plotting_tools import ProfileOpts, get_axis_labels
 
 DTA_PATH = Path("/mnt/D/data/DTA_outputs/2024-09-19/")
 # DTA_PATH = Path("/eos/home-k/kghorban/DTA_OUT/2024-02-05/")
 
-datasets: Dict[str, Dict] = {
+datasets: dict[str, dict] = {
     # SIGNAL
     # ====================================================================
     "wtaunu": {

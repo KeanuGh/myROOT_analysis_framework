@@ -1,8 +1,8 @@
 from pathlib import Path
 
-import ROOT
 import matplotlib.pyplot as plt
 import mplhep as hep
+import ROOT
 
 from datasetbuilder import LUMI_YEAR
 from histogram import Histogram1D
@@ -29,7 +29,7 @@ with ROOT.TFile(str(path_root / "efficiency_and_acceptance/root/wtaunu.root")) a
 response = ROOT.RooUnfoldResponse(hist_reco, hist_truth, h_response)
 
 with ROOT.TFile(
-        str(path_root / f"efficiency_and_acceptance/root/efficiency_and_acceptance.root")
+        str(path_root / "efficiency_and_acceptance/root/efficiency_and_acceptance.root")
 ) as file:
     eff_hist = file.Get(f"{wp}_{var}_efficiency")
     eff_hist.SetDirectory(0)

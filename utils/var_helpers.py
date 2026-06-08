@@ -1,7 +1,7 @@
 """
 Defines helper functions to calculate various kinematic/other physical variables
 """
-from typing import Dict, TypedDict, List
+from typing import TypedDict
 
 
 # VARIABLE BUILDING DICTIONARY
@@ -9,14 +9,14 @@ from typing import Dict, TypedDict, List
 class OtherVar(TypedDict):
     """Define type hint for other_vars nested dictionary"""
 
-    var_args: List[str]
+    var_args: list[str]
     tree: str
     cfunc: str
 
 
 # this dictionary of special variables aren't in the usual root ntuples
 # var_args is a list of the ntuple variables needed to calculate, to be passed to the 'calc' function
-derived_vars: Dict[str, OtherVar] = {
+derived_vars: dict[str, OtherVar] = {
     # analysistop
     "e_mt_reco": {
         "var_args": [

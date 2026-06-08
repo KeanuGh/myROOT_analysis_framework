@@ -3,7 +3,7 @@ This file contains metadata about named branches in NTuples,
 useful for the logic behind cuts and generating axis labels
 """
 from enum import Enum
-from typing import Dict, TypedDict
+from typing import TypedDict
 
 
 class VarTag(str, Enum):
@@ -23,7 +23,7 @@ class Branch(TypedDict):
 
 
 # labels for cross-sections
-variable_data: Dict[str, Branch] = {
+variable_data: dict[str, Branch] = {
     # DATASET METADATA
     # =======================================================
     "weight_mc": {

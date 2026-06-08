@@ -1,5 +1,4 @@
 from pathlib import Path
-from typing import Dict
 
 import numpy as np
 
@@ -50,7 +49,7 @@ measurement_vars_unitless = [
 measurement_vars = measurement_vars_unitless + measurement_vars_mass
 NOMINAL_NAME = "T_s1thv_NOMINAL"
 
-datasets: Dict[str, Dict] = {
+datasets: dict[str, dict] = {
     # SIGNAL
     # ====================================================================
     "wtaunu": {

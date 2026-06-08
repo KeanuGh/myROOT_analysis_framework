@@ -7,9 +7,9 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Literal
 
-import ROOT  # type: ignore
 import matplotlib.pyplot as plt  # type: ignore
 import numpy as np
+import ROOT  # type: ignore
 from numpy.typing import ArrayLike
 from tabulate import tabulate
 
@@ -17,9 +17,9 @@ from src.cutting import Cut, Cutflow, FilterNode, FilterTree
 from src.histogram import Histogram1D
 from src.logger import get_logger
 from utils import ROOT_utils
-from utils.helper_functions import smart_join, get_base_sys_name, match_any, count_nested_values
-from utils.plotting_tools import ProfileOpts, Hist2dOpts
-from utils.variable_names import variable_data, VarTag
+from utils.helper_functions import count_nested_values, get_base_sys_name, match_any, smart_join
+from utils.plotting_tools import Hist2dOpts, ProfileOpts
+from utils.variable_names import VarTag, variable_data
 
 
 @dataclass(slots=True)
@@ -197,7 +197,7 @@ class Dataset:
         """export histograms to output root file"""
 
         n_hists = count_nested_values(self.histograms)
-        self.logger.info(f"Saving %d histograms...", n_hists)
+        self.logger.info("Saving %d histograms...", n_hists)
         t1 = time.time()
         with ROOT.TFile(str(filepath), "UPDATE") as file:
             for sys_name, selection_dict in self.histograms.items():
@@ -230,7 +230,7 @@ class Dataset:
             for sys_key in tfile.GetListOfKeys():
                 if sys_key.GetClassName() != "TDirectoryFile":
                     self.logger.warning(
-                        "Non-TDirectoryFile object (%s) " f"in top-level of file: %s",
+                        "Non-TDirectoryFile object (%s) " "in top-level of file: %s",
                         sys_key.GetClassName(),
                         in_file,
                     )
@@ -667,7 +667,7 @@ class Dataset:
             fill_cols = [variable]
 
         self.logger.debug(
-            "Generating %s histogram in %s " f"for systematic '%s' and selection '%s'...",
+            "Generating %s histogram in %s " "for systematic '%s' and selection '%s'...",
             variable,
             self.name,
             systematic,

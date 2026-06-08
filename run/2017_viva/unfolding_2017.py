@@ -5,8 +5,8 @@ import ROOT
 from analysis import Analysis
 from datasetbuilder import LUMI_YEAR
 from src.histogram import Histogram1D
-from utils.ROOT_utils import sum_th1s, get_th1_bin_edges
 from utils.helper_functions import smart_join
+from utils.ROOT_utils import get_th1_bin_edges, sum_th1s
 from utils.variable_names import variable_data
 
 # VARIABLES
@@ -187,7 +187,7 @@ if __name__ == "__main__":
             with ROOT.TFile(
                     str(
                         analysis.paths.output_dir.parent
-                        / f"efficiency_and_acceptance/root/efficiency_and_acceptance.root"
+                        / "efficiency_and_acceptance/root/efficiency_and_acceptance.root"
                     )
             ) as file:
                 acc_hist = file.Get(f"{wp}_{var}_acceptance")
@@ -195,7 +195,7 @@ if __name__ == "__main__":
             with ROOT.TFile(
                     str(
                         analysis.paths.output_dir.parent
-                        / f"efficiency_and_acceptance_shadow_bin200/root/efficiency_and_acceptance_shadow_bin200.root"
+                        / "efficiency_and_acceptance_shadow_bin200/root/efficiency_and_acceptance_shadow_bin200.root"
                     )
             ) as file:
                 acc_hist200 = file.Get(f"{wp}_{var}_acceptance")
@@ -203,7 +203,7 @@ if __name__ == "__main__":
             with ROOT.TFile(
                     str(
                         analysis.paths.output_dir.parent
-                        / f"efficiency_and_acceptance_shadow_bin250/root/efficiency_and_acceptance_shadow_bin250.root"
+                        / "efficiency_and_acceptance_shadow_bin250/root/efficiency_and_acceptance_shadow_bin250.root"
                     )
             ) as file:
                 acc_hist250 = file.Get(f"{wp}_{var}_acceptance")
@@ -211,7 +211,7 @@ if __name__ == "__main__":
             with ROOT.TFile(
                     str(
                         analysis.paths.output_dir.parent
-                        / f"efficiency_and_acceptance_shadow_bin300/root/efficiency_and_acceptance_shadow_bin300.root"
+                        / "efficiency_and_acceptance_shadow_bin300/root/efficiency_and_acceptance_shadow_bin300.root"
                     )
             ) as file:
                 acc_hist300 = file.Get(f"{wp}_{var}_acceptance")
@@ -272,12 +272,12 @@ if __name__ == "__main__":
             # get data and signal
             # ----------------------------------------------------------------
             with ROOT.TFile(
-                    str(analysis.paths.output_dir.parent / f"analysis_simple_2017/root/data.root")
+                    str(analysis.paths.output_dir.parent / "analysis_simple_2017/root/data.root")
             ) as file:
                 data = file[f"{NOMINAL_NAME}/{wp}_SR_passID"].Get(var)
                 data.SetDirectory(0)
             with ROOT.TFile(
-                    str(analysis.paths.output_dir.parent / f"analysis_simple_2017/root/wtaunu.root")
+                    str(analysis.paths.output_dir.parent / "analysis_simple_2017/root/wtaunu.root")
             ) as file:
                 signal = file[f"{NOMINAL_NAME}/{wp}_SR_passID"].Get(var)
                 signal.SetDirectory(0)
@@ -286,7 +286,7 @@ if __name__ == "__main__":
             # ----------------------------------------------------------------
             with ROOT.TFile(
                     str(
-                        analysis.paths.output_dir.parent / f"efficiency_and_acceptance/root/wtaunu.root"
+                        analysis.paths.output_dir.parent / "efficiency_and_acceptance/root/wtaunu.root"
                     )
             ) as file:
                 truth = file[f"{NOMINAL_NAME}/truth_tau"].Get(truths[var])
@@ -318,7 +318,7 @@ if __name__ == "__main__":
             # ----------------------------------------------------------------
             sys_hists = {}
             with ROOT.TFile(
-                    str(analysis.paths.output_dir.parent / f"analysis_simple_2017/root/wtaunu.root")
+                    str(analysis.paths.output_dir.parent / "analysis_simple_2017/root/wtaunu.root")
             ) as file:
                 for sys in systematics:
                     uncert = file[f"{NOMINAL_NAME}/{wp}_SR_passID"].Get(f"{var}_{sys}_tot_uncert")
@@ -330,7 +330,7 @@ if __name__ == "__main__":
             with ROOT.TFile(
                     str(
                         analysis.paths.output_dir.parent
-                        / f"efficiency_and_acceptance/root/efficiency_and_acceptance.root"
+                        / "efficiency_and_acceptance/root/efficiency_and_acceptance.root"
                     )
             ) as file:
                 eff_hist = file.Get(f"{wp}_{var}_efficiency")

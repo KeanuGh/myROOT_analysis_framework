@@ -2,13 +2,14 @@ import glob
 import logging
 import os
 import pickle as pkl
+from collections.abc import Iterable
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Type, Iterable, Literal
+from typing import Literal
 
-import ROOT  # type: ignore
 import boost_histogram as bh
 import numpy as np
+import ROOT  # type: ignore
 from numpy.typing import ArrayLike
 
 
@@ -64,7 +65,7 @@ TH1_constructor = {
 }
 
 
-def bh_to_TH1(h_bh: bh.Histogram, name: str, title: str, hist_type: str = "F") -> Type[ROOT.TH1]:
+def bh_to_TH1(h_bh: bh.Histogram, name: str, title: str, hist_type: str = "F") -> type[ROOT.TH1]:
     """
     Converts a boost-histogram histogram into a ROOT TH1 histogram. Only works for histograms with numeric axes.
     """
@@ -95,7 +96,7 @@ def bh_to_TH1(h_bh: bh.Histogram, name: str, title: str, hist_type: str = "F") -
     return h_root
 
 
-def TH1_to_bh(h_root: Type[ROOT.TH1]) -> bh.Histogram:
+def TH1_to_bh(h_root: type[ROOT.TH1]) -> bh.Histogram:
     """Converts a ROOT TH1 into a boost-histogram"""
 
     # construct axes

@@ -1,9 +1,10 @@
 import io
 import os
 import sys
+from collections.abc import Callable
 from contextlib import contextmanager
 from functools import wraps
-from typing import Callable, TextIO
+from typing import TextIO
 
 
 def check_single_dataset(func) -> Callable:

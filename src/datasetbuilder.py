@@ -9,8 +9,8 @@ import ROOT  # type: ignore
 from src.cutting import Cut
 from src.dataset import Dataset
 from src.logger import get_logger
-from utils.ROOT_utils import get_object_names_in_file
 from utils.helper_functions import multi_glob
+from utils.ROOT_utils import get_object_names_in_file
 from utils.var_helpers import derived_vars
 from utils.variable_names import variable_data
 
@@ -231,7 +231,7 @@ class DatasetBuilder:
             extract_variables = {v for v in extract_variables if variable_data[v]["tag"] != "truth"}
 
         # make rdataframe
-        self.logger.info(f"Initiating RDataFrame from trees: %s..", ttrees)
+        self.logger.info("Initiating RDataFrame from trees: %s..", ttrees)
         spec = ROOT.RDF.Experimental.RDatasetSpec()
         for sample_name, paths in sample_paths.items():
             for tree in ttrees:

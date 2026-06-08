@@ -4,12 +4,12 @@ import math
 import os
 import re
 import subprocess
-from dataclasses import dataclass, field, asdict
+from collections.abc import Generator
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Generator
 
-import ROOT
 import pandas as pd
+import ROOT
 
 from src.logger import get_logger
 from utils.helper_functions import multi_glob
@@ -97,12 +97,12 @@ class DatasetMetadata:
             )
 
         try:
-            self.logger.info(f"reading pmg database file '%s'...", self._PMG_DB)
+            self.logger.info("reading pmg database file '%s'...", self._PMG_DB)
             return __read_pmg(self._PMG_DB)
         except FileNotFoundError:
             try:
                 self.logger.info(
-                    f"File not found at: %s\n. Looking for backup at '%s'...",
+                    "File not found at: %s\n. Looking for backup at '%s'...",
                     self._PMG_DB,
                     self._PMG_DB_BACKUP,
                 )

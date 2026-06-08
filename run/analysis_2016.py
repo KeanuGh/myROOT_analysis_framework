@@ -1,5 +1,4 @@
 from pathlib import Path
-from typing import Dict
 
 import numpy as np
 from matplotlib import pyplot as plt
@@ -7,7 +6,7 @@ from matplotlib import pyplot as plt
 from src.analysis import Analysis
 from src.cutting import Cut
 from src.histogram import Histogram1D
-from utils.helper_functions import smart_join, get_base_sys_name
+from utils.helper_functions import get_base_sys_name, smart_join
 from utils.variable_names import variable_data
 
 DTA_PATH = Path("/mnt/D/data/DTA_outputs/MC16a")
@@ -258,7 +257,7 @@ measurement_vars_unitless = [
 measurement_vars = measurement_vars_unitless + measurement_vars_mass
 NOMINAL_NAME = "T_s1thv_NOMINAL"
 
-datasets: Dict[str, Dict] = {
+datasets: dict[str, dict] = {
     # DATA
     # ====================================================================
     "data": {
@@ -646,7 +645,7 @@ if __name__ == "__main__":
                 label=["1-prong taus", "3-prong taus", "1 + 3 prong"],
                 xlabel=r"$p_T^\tau$ [GeV]" if fakes_source == "TauPt" else r"$m_T^W$ [GeV]",
                 title=smart_join(
-                    f"Fake Factor Comparisons",
+                    "Fake Factor Comparisons",
                     "2015+2016",
                     f"{analysis.global_lumi / 1000:.3g}fb$^{{-1}}$",
                     sep=" | ",

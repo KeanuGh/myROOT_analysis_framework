@@ -1,6 +1,6 @@
-import ROOT  # type: ignore
 import numpy as np
 import pytest
+import ROOT  # type: ignore
 
 from src.histogram import Histogram1D
 

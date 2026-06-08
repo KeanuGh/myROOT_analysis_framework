@@ -1,25 +1,26 @@
 import copy
 import inspect
 import itertools
+from collections.abc import Callable, Generator, Sequence
 from copy import deepcopy
 from dataclasses import dataclass, field
 from functools import reduce
 from pathlib import Path
-from typing import Callable, Any, Sequence, Generator, Literal
+from typing import Any, Literal
 
-import ROOT
 import matplotlib.pyplot as plt
 import mplhep as hep
 import numpy as np
+import ROOT
 from matplotlib import ticker
 from tabulate import tabulate
 
 from src.dataset import Dataset
-from src.datasetbuilder import DatasetBuilder, LUMI_YEAR
+from src.datasetbuilder import LUMI_YEAR, DatasetBuilder
 from src.dsid_meta import DatasetMetadata
 from src.histogram import Histogram1D
 from src.logger import get_logger
-from utils import plotting_tools, ROOT_utils
+from utils import ROOT_utils, plotting_tools
 from utils.context import handle_dataset_arg
 from utils.helper_functions import smart_join
 
