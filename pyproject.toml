@@ -91,6 +91,13 @@ testpaths = ["tests"]
 [tool.ruff]
 line-length = 100
 target-version = "py311"
+include = [
+    "pyproject.toml",
+    "src/**/*.py",
+    "utils/**/*.py",
+    "tests/**/*.py",
+    "run/2017/**/*.py",
+]
 extend-exclude = [
     "notebooks",
     "outputs",
@@ -107,12 +114,19 @@ ignore = [
 
 [tool.mypy]
 exclude = [
-    "^run/2017_viva/",
+    "^run/(?!2017/)",
 ]
 
 [tool.pyright]
+include = [
+    "src",
+    "utils",
+    "tests",
+    "run/2017",
+]
 exclude = [
     "run/2017_viva",
+    "run/old",
 ]
 
 [tool.ty.environment]
@@ -124,8 +138,7 @@ include = [
     "src",
     "utils",
     "tests",
-    "run",
+    "run/2017",
 ]
 exclude = [
-    "run/2017_viva",
 ]
