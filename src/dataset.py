@@ -520,8 +520,10 @@ class Dataset:
         """Fetch histogram from internal dictionary"""
         try:
             return self.histograms[systematic][selection][variable]
-        except KeyError:
-            raise KeyError(f"No histogram in {self.name} for {systematic} {selection} {variable}")
+        except KeyError as err:
+            raise KeyError(
+                f"No histogram in {self.name} for {systematic} {selection} {variable}"
+            ) from err
 
     def _match_weight(self, var_) -> str:
         """match variable to weight"""

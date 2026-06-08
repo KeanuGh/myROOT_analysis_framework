@@ -130,8 +130,8 @@ class DatasetMetadata:
         # check for voms cert
         try:
             res = subprocess.run(["voms-proxy-info", "-fqan", "-exists"], capture_output=True)
-        except FileNotFoundError:
-            raise OSError("No voms module found. Are you running on lxplus?")
+        except FileNotFoundError as err:
+            raise OSError("No voms module found. Are you running on lxplus?") from err
 
         if res.returncode:
             self.logger.info("Connecting to voms proxy server..")
@@ -337,7 +337,7 @@ class DatasetMetadata:
                         ds_size = self._convert_size(int(ds_info["totalSize"]))
 
                     else:
-                        logger.error(
+                        self.logger.error(
                             "No matching ptags in: %s for dataset: %s",
                             possible_ptags,
                             pattern,

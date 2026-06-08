@@ -339,7 +339,7 @@ class DatasetBuilder:
         # gather all systematics trees
         nominal_trees = {tree for tree in self.ttree if tree.endswith("_NOMINAL")}
         for tree in nominal_trees:  # only nominal trees have associated systematics
-            tree_prefix = tree.rstrip("NOMINAL")
+            tree_prefix = tree.removesuffix("NOMINAL")
 
             systematic_trees |= {
                 treename
