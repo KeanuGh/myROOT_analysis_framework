@@ -562,13 +562,6 @@ if __name__ == "__main__":
                 }
 
 
-                def FF_vars(s: str) -> list[str]:
-                    """List of variable names for each sample"""
-                    return [s] * (len(all_samples)) + [
-                        f"{sec}{wp}_{s}_fakes_bkg_{fakes_source}_src"
-                    ]
-
-
                 # mass variables
                 for v in measurement_vars:
                     if v in measurement_vars_mass:
@@ -577,14 +570,17 @@ if __name__ == "__main__":
                         )
                     elif v in measurement_vars_unitless:
                         default_args.update({"logx": False, "xlabel": variable_data[v]["name"]})
+                    ff_vals = [v] * len(all_samples) + [
+                        f"{sec}{wp}_{v}_fakes_bkg_{fakes_source}_src"
+                    ]
                     analysis.plot(
-                        val=FF_vars(v),
+                        val=ff_vals,
                         **default_args,
                         logy=True,
                         filename=f"{sec}{wp}_{v}_fakes_stack_{fakes_source}_log.png",
                     )
                     analysis.plot(
-                        val=FF_vars(v),
+                        val=ff_vals,
                         **default_args,
                         logy=False,
                         filename=f"{sec}{wp}_{v}_fakes_stack_{fakes_source}_liny.png",

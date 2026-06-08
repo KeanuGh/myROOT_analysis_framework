@@ -313,26 +313,26 @@ if __name__ == "__main__":
 
             # pie chart of contributions
             # -------------------------------------------------------------------
-            def get_entries(s: str) -> float:
+            selection_name = f"{sec}{wp}_SR_passID"
+
+            def get_entries(s: str, selection: str) -> float:
                 return (
                     analysis[s]
-                    .histograms[NOMINAL_NAME][f"{sec}{wp}_SR_passID"]["MTW"]
+                    .histograms[NOMINAL_NAME][selection]["MTW"]
                     .GetEffectiveEntries()
                 )
 
-            def get_stat_err(s: str) -> float:
+            def get_stat_err(s: str, selection: str) -> float:
                 return sum(
                     analysis[s]
-                    .histograms[NOMINAL_NAME][f"{sec}{wp}_SR_passID"]["MTW"]
+                    .histograms[NOMINAL_NAME][selection]["MTW"]
                     .GetBinError(bin_i + 1)
                     for bin_i in range(
-                        analysis[s]
-                        .histograms[NOMINAL_NAME][f"{sec}{wp}_SR_passID"]["MTW"]
-                        .GetNbinsX()
+                        analysis[s].histograms[NOMINAL_NAME][selection]["MTW"].GetNbinsX()
                     )
                 )
 
-            abs_values = [get_entries(mc_sample) for mc_sample in mc_samples]
+            abs_values = [get_entries(mc_sample, selection_name) for mc_sample in mc_samples]
             total = sum(abs_values)
             percentages = [a / total * 100 for a in abs_values]
             labels = [analysis[mc].label for mc in mc_samples]
@@ -347,12 +347,20 @@ if __name__ == "__main__":
 
             # Table of numbers of events
             # -------------------------------------------------------------------
-            stat_err = [get_stat_err(mc_sample) for mc_sample in mc_samples]
+            stat_err = [get_stat_err(mc_sample, selection_name) for mc_sample in mc_samples]
             total_bkg = sum(
-                [get_entries(mc_sample) for mc_sample in mc_samples if mc_sample != "wtaunu"]
+                [
+                    get_entries(mc_sample, selection_name)
+                    for mc_sample in mc_samples
+                    if mc_sample != "wtaunu"
+                ]
             )
             total_bkg_err = sum(
-                [get_stat_err(mc_sample) for mc_sample in mc_samples if mc_sample != "wtaunu"]
+                [
+                    get_stat_err(mc_sample, selection_name)
+                    for mc_sample in mc_samples
+                    if mc_sample != "wtaunu"
+                ]
             )
             evt_str = r"${nevt:.2f} \pm {stat_err:.2f}$"
             sample_evt_counts = [
@@ -360,7 +368,10 @@ if __name__ == "__main__":
             ] + [
                 evt_str.format(nevt=total_bkg, stat_err=total_bkg_err),
                 evt_str.format(nevt=total, stat_err=sum(stat_err)),
-                evt_str.format(nevt=get_entries("data"), stat_err=get_stat_err("data")),
+                evt_str.format(
+                    nevt=get_entries("data", selection_name),
+                    stat_err=get_stat_err("data", selection_name),
+                ),
             ]
             categories = [analysis[mc_sample].label for mc_sample in mc_samples] + [
                 "Total Bkg.",
@@ -434,18 +445,16 @@ if __name__ == "__main__":
                     fakes_hist = file.Get(f"{sec}{wp}_{var}_fakes_bkg_TauPt_src")
                     fakes_hist.SetDirectory(0)
 
-                def FF_vars(s: str) -> list[str]:
-                    """List of variable names for each sample"""
-                    return [s] * (len(mc_samples)) + [fakes_hist, s]
+                ff_vals = [var] * len(mc_samples) + [fakes_hist, var]
 
                 analysis.plot(
-                    val=FF_vars(var),
+                    val=ff_vals,
                     **default_args,
                     logy=True,
                     filename=f"{sec}{wp}_{var}_stack_fakes_log.png",
                 )
                 analysis.plot(
-                    val=FF_vars(var),
+                    val=ff_vals,
                     **default_args,
                     logy=False,
                     filename=f"{sec}{wp}_{var}_stack_fakes_liny.png",

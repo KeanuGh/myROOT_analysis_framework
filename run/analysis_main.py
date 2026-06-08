@@ -590,13 +590,6 @@ if __name__ == "__main__":
                 }
 
 
-                def FF_vars(s: str) -> list[str]:
-                    """List of variable names for each sample"""
-                    return [s] * (len(all_samples)) + [
-                        f"{nprong}{wp}_{s}_fakes_bkg_{fakes_source}_src"
-                    ]
-
-
                 # mass variables
                 for v in measurement_vars:
                     if v in measurement_vars_mass:
@@ -605,14 +598,17 @@ if __name__ == "__main__":
                         )
                     elif v in measurement_vars_unitless:
                         default_args.update({"logx": False, "xlabel": variable_data[v]["name"]})
+                    ff_vals = [v] * len(all_samples) + [
+                        f"{nprong}{wp}_{v}_fakes_bkg_{fakes_source}_src"
+                    ]
                     analysis.plot(
-                        val=FF_vars(v),
+                        val=ff_vals,
                         **default_args,
                         logy=True,
                         filename=f"{nprong}{wp}_{v}_fakes_stack_{fakes_source}_log.png",
                     )
                     analysis.plot(
-                        val=FF_vars(v),
+                        val=ff_vals,
                         **default_args,
                         logy=False,
                         filename=f"{nprong}{wp}_{v}_fakes_stack_{fakes_source}_liny.png",
@@ -695,7 +691,7 @@ if __name__ == "__main__":
         }
 
 
-        def full_bkg(variable: str, t: str | None = None) -> Histogram1D:
+        def full_bkg(variable: str, wp_name: str, t: str | None = None) -> Histogram1D:
             """Sum of all backgrounds + signal + FF"""
             h = Histogram1D(
                 th1=analysis.sum_hists(
@@ -704,14 +700,14 @@ if __name__ == "__main__":
                             variable=variable,
                             dataset=ds_,
                             systematic=NOMINAL_NAME,
-                            selection=f"{wp}_SR_passID",
+                            selection=f"{wp_name}_SR_passID",
                         )
                         for ds_ in mc_samples
                     ]
                 )
             )
             if t:
-                h += Histogram1D(th1=analysis.get_hist(f"{wp}_{variable}_fakes_bkg_{t}_src"))
+                h += Histogram1D(th1=analysis.get_hist(f"{wp_name}_{variable}_fakes_bkg_{t}_src"))
             return h
 
 
@@ -723,9 +719,9 @@ if __name__ == "__main__":
             analysis.plot(
                 val=[
                     analysis.get_hist(variable=v, dataset="data", selection=f"{wp}_SR_passID"),
-                    full_bkg(v, "MTW"),
-                    full_bkg(v, "TauPt"),
-                    full_bkg(v, None),
+                    full_bkg(v, wp, "MTW"),
+                    full_bkg(v, wp, "TauPt"),
+                    full_bkg(v, wp, None),
                 ],
                 logy=True,
                 **default_args,
@@ -734,9 +730,9 @@ if __name__ == "__main__":
             analysis.plot(
                 val=[
                     analysis.get_hist(variable=v, dataset="data", selection=f"{wp}_SR_passID"),
-                    full_bkg(v, "MTW"),
-                    full_bkg(v, "TauPt"),
-                    full_bkg(v, None),
+                    full_bkg(v, wp, "MTW"),
+                    full_bkg(v, wp, "TauPt"),
+                    full_bkg(v, wp, None),
                 ],
                 logy=False,
                 **default_args,
