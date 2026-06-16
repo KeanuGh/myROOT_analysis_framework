@@ -9,6 +9,7 @@ from matplotlib import pyplot as plt
 from src.analysis import Analysis
 from src.cutting import Cut
 from utils.helper_functions import get_base_sys_name, smart_join
+from utils.plotting_tools import PlotKwargs
 from utils.ROOT_utils import get_th1_bin_edges
 from utils.variable_names import variable_data
 
@@ -393,7 +394,7 @@ if __name__ == "__main__":
 
             # WITH FAKES
             # ===========================================================================
-            default_args = {
+            default_args: PlotKwargs = {
                 "dataset": mc_samples + [None, "data"],
                 "selection": f"{sec}{wp}_SR_passID",
                 "label": [analysis[ds].label for ds in mc_samples] + ["Fake Jets", "Data"],
@@ -463,7 +464,7 @@ if __name__ == "__main__":
 
             # NO FAKES
             # ===========================================================================
-            default_args = {
+            default_args: PlotKwargs = {
                 "dataset": all_samples,
                 "do_stat": True,
                 "do_syst": True,
@@ -535,7 +536,7 @@ if __name__ == "__main__":
 
                 for v in measurement_vars:
                     analysis.paths.plot_dir = wp_dir / "systematics" / mc_sample
-                    default_args = {
+                    default_args: PlotKwargs = {
                         "do_stat": False,
                         "do_syst": False,
                         "ratio_plot": False,

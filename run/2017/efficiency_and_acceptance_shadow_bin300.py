@@ -6,7 +6,7 @@ from binnings import BINNINGS
 from src.analysis import Analysis
 from src.cutting import Cut
 from utils.helper_functions import smart_join
-from utils.plotting_tools import Hist2dOpts
+from utils.plotting_tools import Hist2dOpts, PlotKwargs
 from utils.ROOT_utils import bayes_divide, normalise_migration_hist
 from utils.variable_names import variable_data
 
@@ -334,7 +334,7 @@ if __name__ == "__main__":
 
                 # Plots alone
                 # =======================================================================
-                default_args = {
+                default_args: PlotKwargs = {
                     "dataset": "wtaunu",
                     "systematic": NOMINAL_NAME,
                     "selection": f"{wp}_{sec}reco_tau",

@@ -5,7 +5,7 @@ from tabulate import tabulate
 
 from src.analysis import Analysis
 from src.cutting import Cut
-from utils.plotting_tools import Hist2dOpts
+from utils.plotting_tools import Hist2dOpts, PlotKwargs
 from utils.ROOT_utils import bayes_divide
 from utils.variable_names import variable_data
 
@@ -363,7 +363,7 @@ if __name__ == "__main__":
         for nprong in ("1prong_", "3prong_")
     }
 
-    args_eff = {
+    args_eff: PlotKwargs = {
         "dataset": "wtaunu",
         "systematic": NOMINAL_NAME,
         "title": f"Reconstruction Efficiency | mc16d | {analysis.global_lumi / 1000:.3g}fb$^{{-1}}$",
@@ -372,7 +372,7 @@ if __name__ == "__main__":
         "ratio_err": "binom",
         "label_params": {"llabel": "Simulation", "loc": 1},
     }
-    args_res = {
+    args_res: PlotKwargs = {
         "dataset": "wtaunu",
         "systematic": NOMINAL_NAME,
         "title": f"Tau $p_T$ resolution | mc16d | {analysis.global_lumi / 1000:.3g}fb$^{{-1}}$",

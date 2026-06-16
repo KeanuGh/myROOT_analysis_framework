@@ -392,7 +392,7 @@ class Analysis:
             ratio_fit: bool = False,
             ratio_axlim: float | tuple[float, float] | None = None,
             ratio_label: str = "Ratio",
-            ratio_err: str | Sequence = True,
+            ratio_err: bool | str | Sequence = True,
             filename: str | Path | None = None,
             sort: bool = True,
             kind: str = "overlay",

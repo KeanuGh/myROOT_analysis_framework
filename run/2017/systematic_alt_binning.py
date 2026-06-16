@@ -8,6 +8,7 @@ from matplotlib import pyplot as plt
 from src.analysis import Analysis
 from src.cutting import Cut
 from utils.helper_functions import get_base_sys_name
+from utils.plotting_tools import PlotKwargs
 from utils.ROOT_utils import get_th1_bin_edges
 from utils.variable_names import variable_data
 
@@ -330,7 +331,7 @@ if __name__ == "__main__":
 
                 for v in measurement_vars:
                     analysis.paths.plot_dir = wp_dir / "systematics" / mc_sample
-                    default_args = {
+                    default_args: PlotKwargs = {
                         "do_stat": False,
                         "do_syst": False,
                         "ratio_plot": False,

@@ -1,6 +1,6 @@
 from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import TypedDict
+from typing import Any, TypedDict
 from warnings import warn
 
 import boost_histogram as bh
@@ -30,6 +30,9 @@ class PlotOpts(TypedDict):
     colours: list[str | tuple]
     linestyles: list[str]
     histstyles: list[str]
+
+
+PlotKwargs = dict[str, Any]
 
 
 @dataclass(slots=True)

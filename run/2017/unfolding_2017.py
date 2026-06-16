@@ -8,6 +8,7 @@ from datasetbuilder import LUMI_YEAR
 from src.histogram import Histogram1D
 from utils import ROOT_utils
 from utils.helper_functions import smart_join
+from utils.plotting_tools import PlotKwargs
 from utils.ROOT_utils import get_th1_bin_edges, sum_th1s
 from utils.variable_names import variable_data
 
@@ -419,7 +420,7 @@ if __name__ == "__main__":
                     analysis.logger.info(
                         f"Doing unfolding for {var} with {sh_bin_label} and {n_iter} bayesian iterations"
                     )
-                    default_args = {
+                    default_args: PlotKwargs = {
                         "systematic": NOMINAL_NAME,
                         "xlabel": (
                                 variable_data[var]["name"]
@@ -590,7 +591,7 @@ if __name__ == "__main__":
                         )
 
 
-                    default_args = {
+                    default_args: PlotKwargs = {
                         "logx": True if var in measurement_vars_mass else False,
                         "ylabel": "Syst. Uncert. [%]",
                         "do_syst": False,

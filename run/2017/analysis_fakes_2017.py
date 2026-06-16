@@ -6,6 +6,7 @@ from binnings import BINNINGS, nedges
 from src.analysis import Analysis
 from src.cutting import Cut
 from utils.helper_functions import smart_join
+from utils.plotting_tools import PlotKwargs
 from utils.variable_names import variable_data
 
 DTA_PATH = Path("/mnt/D/data/DTA_outputs/2024-09-19/")
@@ -469,7 +470,7 @@ if __name__ == "__main__":
                 SR_failID_mc = analysis.get_hist(
                     f"{sec}{wp}_all_mc_{fakes_source}_trueTau_{sec}{wp}_SR_failID"
                 )
-                default_args = {
+                default_args: PlotKwargs = {
                     "do_stat": False,
                     "logx": True,
                     "logy": True,
@@ -537,7 +538,7 @@ if __name__ == "__main__":
                 # ----------------------------------------------------------------------------
                 analysis.paths.plot_dir = wp_dir / "fakes_stacks"
                 # log axes
-                default_args = {
+                default_args: PlotKwargs = {
                     "dataset": all_samples + [None],
                     "systematic": NOMINAL_NAME,
                     "selection": (
