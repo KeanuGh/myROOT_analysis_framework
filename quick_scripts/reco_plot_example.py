@@ -158,7 +158,11 @@ def plot(var: str, xlabel: str, weight: str, bins: tuple = (50, 0, 5000)) -> Non
     plt.ylabel("Entries")
     plt.semilogy()
     plt.legend(fontsize=10, ncol=2)
-    hep.atlas.label(italic=(True, True), llabel='Internal', rlabel=r'$W^+\rightarrow\tau\nu$ 13TeV')
+    hep.atlas.label(
+        fontstyle=("italic", "italic", "normal", "normal"),
+        llabel="",
+        rlabel=r'$W^+\rightarrow\tau\nu$ 13TeV',
+    )
     plt.savefig(OUT_DIR + 'wplustaunu_' + var + '.png')
     plt.show()
     print(f"Making {var} plot: {time.time() - t0:.3f}s")

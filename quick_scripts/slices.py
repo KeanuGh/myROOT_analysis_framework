@@ -60,8 +60,14 @@ def main():
     plt.legend(fontsize=10, ncol=2, loc='upper right')
     plt.semilogy()
     plt.semilogx()
-    label_base._exp_label(exp='ATLAS', data=True, paper=True, italic=(True, True),
-                          llabel='Internal', rlabel=r"$W^-\rightarrow\tau\bar{\nu}$ mass slices")
+    label_base._exp_label(
+        exp='ATLAS',
+        data=True,
+        paper=True,
+        fontstyle=("italic", "italic", "normal", "normal"),
+        llabel="",
+        rlabel=r"$W^-\rightarrow\tau\bar{\nu}$ mass slices",
+    )
     plt.xlabel("Born dilep m [GeV]")
     plt.ylabel(r"$\frac{d\sigma}{dm_{ll}}$ [fb GeV$^{-1}$]")
     plt.show()
