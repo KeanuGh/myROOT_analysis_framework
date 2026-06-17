@@ -35,6 +35,11 @@ class PlotOpts(TypedDict):
 PlotKwargs = dict[str, Any]
 
 
+def visible_atlas_label(label: str) -> str:
+    """Return the ATLAS label text that should be drawn on plots."""
+    return "" if label.strip().lower() == "internal" else label
+
+
 @dataclass(slots=True)
 class ProfileOpts:
     """
@@ -258,7 +263,7 @@ def set_hep_label(ax: plt.Axes, title: str = "", **label_params) -> None:
         italic=(True, True, False),
         ax=ax,
         loc=0,
-        llabel="Preliminary",
+        llabel="",
         rlabel=title,
     )
     if label_params:
