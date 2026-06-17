@@ -877,7 +877,7 @@ class Analysis:
             label=per_hist_vars["labels"],
             stack=True,
             histtype="fill",
-            zorder=reversed(range(len(hist_list))),  # mplhep plots in wrong order
+            zorder=list(reversed(range(len(hist_list)))),  # mplhep plots in wrong order
             flow="show" if flow else None,
             **kwargs,
         )
