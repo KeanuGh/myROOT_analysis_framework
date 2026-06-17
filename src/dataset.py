@@ -7,9 +7,9 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Literal
 
-import matplotlib.pyplot as plt  # type: ignore
+import matplotlib.pyplot as plt
 import numpy as np
-import ROOT  # type: ignore
+import ROOT
 from numpy.typing import ArrayLike
 from tabulate import tabulate
 
@@ -143,10 +143,14 @@ class Dataset:
         if filepath is None:
             filepath = f"{self.name}.root"
 
-        if not isinstance(selections, list):
+        if selections is None:
+            selections = list(self.selections)
+        elif isinstance(selections, str):
             selections = [selections]
-        if not isinstance(systematics, list):
-            selections = [systematics]
+        if systematics is None:
+            systematics = list(self.filters)
+        elif isinstance(systematics, str):
+            systematics = [systematics]
 
         # Snapshotting options
         snapshot_opts = ROOT.RDF.RSnapshotOptions()
@@ -453,7 +457,7 @@ class Dataset:
             self,
             var: str,
             bins: list[float] | tuple[int, float, float] | None = None,
-            ax: plt.Axes = None,
+            ax: plt.Axes | None = None,
             yerr: ArrayLike | bool = False,
             normalise: float | bool = False,
             systematic: str = "T_s1hv_NOMINAL",
@@ -916,7 +920,7 @@ class Dataset:
             self,
             val: str,
             selection: str = "",
-    ) -> tuple[np.typing.NDArray[1] | Literal[0], np.typing.NDArray[1] | Literal[0]]:
+    ) -> tuple[np.typing.NDArray[np.float64] | Literal[0], np.typing.NDArray[np.float64] | Literal[0]]:
         """
         Get symmetric systematic uncertainty for single variable in dataset.
         Returns 0s if not found.

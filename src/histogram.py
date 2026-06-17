@@ -575,7 +575,7 @@ class Histogram1D(bh.Histogram, family=None):
     # ===================
     def plot(
         self,
-        ax: plt.Axes = None,
+        ax: plt.Axes | None = None,
         yerr: ArrayLike | bool | None = True,
         w2: bool = False,
         normalise: float | bool = False,
