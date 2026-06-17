@@ -51,6 +51,17 @@ class TestCutflow:
 
         assert cutflow._cutflow == self.cutflow_merged
 
+    def test_latex_cut_name_lookup(self):
+        rdf = ROOT.RDataFrame(3).Define("TauPt", "static_cast<float>(rdfentry_ + 1)")
+        cut = Cut(r"$p_T^\tau > 1$", "TauPt > 1")
+        node = FilterNode(rdf).create_child(cut)
+
+        cutflow = Cutflow(node.df, self.logger)
+        cutflow.get_cutflow(node)
+
+        assert cutflow[0].cut.name == r"$p_T^\tau > 1$"
+        assert cutflow[0].npass == 2
+
 
 class TestFilterTree:
     rdf = ROOT.RDataFrame(100)

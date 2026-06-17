@@ -350,13 +350,19 @@ class Cutflow:
         if self.logger.level <= logging.DEBUG:
             self.logger.debug(
                 "Full report (internal):\n%s",
-                "\n".join([f"{cut.name}: {self._report.At(cut.name).GetPass()}" for cut in cuts]),
+                "\n".join(
+                    [
+                        f"{cut.name}: "
+                        f"{self._report.At(FilterNode._sanitise_str(cut.name)).GetPass()}"
+                        for cut in cuts
+                    ]
+                ),
             )
 
         self._cutflow = [
             CutflowItem(
-                npass=self._report.At(cut.name).GetPass(),
-                eff=self._report.At(cut.name).GetEff(),
+                npass=self._report.At(FilterNode._sanitise_str(cut.name)).GetPass(),
+                eff=self._report.At(FilterNode._sanitise_str(cut.name)).GetEff(),
                 ceff=0.0,  # calculate this next
                 cut=cut,
             )
