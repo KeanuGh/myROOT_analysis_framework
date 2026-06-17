@@ -322,7 +322,7 @@ class DatasetBuilder:
         # apply any hard cuts
         for sample_name, hard_cut in self.hard_cut.items():
             Rdf = Rdf.Filter(
-                f'SampleID == sampleToId_{self.name}["{sample_name}"] ? {hard_cut} : true',
+                f'(SampleID != sampleToId_{self.name}["{sample_name}"]) || ({hard_cut})',
                 f"Hard cut ({sample_name})" + (f": {hard_cut}" if hard_cut else ""),
             )
 

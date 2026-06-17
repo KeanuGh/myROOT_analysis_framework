@@ -257,7 +257,7 @@ def run_analysis() -> Analysis:
         datasets,
         year=YEAR,
         rerun=True,
-        # regen_histograms=True,
+        regen_histograms=True,
         do_systematics=False,
         # regen_metadata=True,
         metadata_cache=DSID_METADATA_CACHE,
