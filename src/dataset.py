@@ -693,8 +693,9 @@ class Dataset:
         self.logger.info(f"Defining histograms for dataset {self.name}...")
         if self.logger.getEffectiveLevel() < 20 and do_prints:
             # variable MUST be in scope! (why is ROOT like this)
-            _verbosity = ROOT.Experimental.RLogScopedVerbosity(
-                ROOT.Detail.RDF.RDFLogChannel(), ROOT.Experimental.ELogLevel.kInfo
+            _verbosity = ROOT.RLogScopedVerbosity(
+                ROOT.Detail.RDF.RDFLogChannel(),
+                ROOT.ELogLevel(4),  # ROOT::ELogLevel::kInfo
             )
 
             # # print debug information with filter names (from nominal)

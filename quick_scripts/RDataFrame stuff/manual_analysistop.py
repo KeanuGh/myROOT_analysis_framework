@@ -2,8 +2,8 @@
 import glob
 
 # import pandas as pd
-import ROOT
 import numpy as np
+import ROOT
 
 # import matplotlib.pyplot as plt
 
@@ -11,7 +11,10 @@ ROOT.TH1.SetDefaultSumw2()
 ROOT.EnableImplicitMT()
 ROOT.gROOT.SetBatch(False)
 
-verbosity = ROOT.Experimental.RLogScopedVerbosity(ROOT.Detail.RDF.RDFLogChannel(), ROOT.Experimental.ELogLevel.kInfo)
+verbosity = ROOT.RLogScopedVerbosity(
+    ROOT.Detail.RDF.RDFLogChannel(),
+    ROOT.ELogLevel(4),  # ROOT::ELogLevel::kInfo
+)
 
 FILEPATH_PEAK = '/data/analysistop_out/mc16a/wmintaunu/*.root'
 FILEPATH_SLICE = '/data/analysistop_out/mc16a/wmintaunu_*/*.root'
