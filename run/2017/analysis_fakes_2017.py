@@ -291,7 +291,7 @@ datasets: dict[str, dict] = {
             "lm_cut": "(TruthBosonM < 120) && !(TruthTau_isHadronic)",
             "full": "!(TruthTau_isHadronic)",
         },
-        "label": r"$W\rightarrow\tau\nu\rightarrow\ell+3\nu$",
+        "label": r"$W\rightarrow\tau\nu\rightarrow\ell$",
         "snapshot": {"selections": list(selections.keys()), "systematics": NOMINAL_NAME},
         "selections": selections,
     },
