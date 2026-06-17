@@ -2,6 +2,7 @@ from pathlib import Path
 
 import numpy as np
 from binnings import BINNINGS
+from samples import signal_sample
 
 from src.analysis import Analysis
 from src.cutting import Cut
@@ -10,25 +11,7 @@ from utils.plotting_tools import Hist2dOpts, PlotKwargs
 from utils.ROOT_utils import bayes_divide, normalise_migration_hist
 from utils.variable_names import variable_data
 
-DTA_PATH = Path("/mnt/D/data/DTA_outputs/2024-09-19/")
-# DTA_PATH = Path("/eos/home-k/kghorban/DTA_OUT/2024-02-05/")
-
-datasets: dict[str, dict] = {
-    # SIGNAL
-    # ====================================================================
-    "wtaunu_had": {
-        "data_path": {
-            "lm_cut": DTA_PATH / "*Sh_2211_Wtaunu_*_maxHTpTV2*/*.root",
-            "full": DTA_PATH / "*Sh_2211_Wtaunu_mW_120*/*.root",
-        },
-        "hard_cut": {
-            "lm_cut": "(TruthBosonM < 120) && TruthTau_isHadronic",
-            "full": "TruthTau_isHadronic",
-        },
-        "label": r"$W\rightarrow\tau\nu\rightarrow\mathrm{had}$",
-        "is_signal": True,
-    },
-}
+datasets = {"wtaunu_had": signal_sample()}
 
 # CUTS & SELECTIONS
 # ========================================================================

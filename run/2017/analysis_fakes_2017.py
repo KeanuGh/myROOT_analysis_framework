@@ -2,6 +2,7 @@ from pathlib import Path
 
 import numpy as np
 from binnings import BINNINGS, nedges
+from samples import NOMINAL_NAME, analysis_samples
 
 from src.analysis import Analysis
 from src.cutting import Cut
@@ -9,8 +10,6 @@ from utils.helper_functions import smart_join
 from utils.plotting_tools import PlotKwargs
 from utils.variable_names import variable_data
 
-DTA_PATH = Path("/mnt/D/data/DTA_outputs/2024-09-19/")
-# DTA_PATH = Path("/eos/home-k/kghorban/DTA_OUT/2024-02-05/")
 YEAR = 2017
 
 # CUTS & SELECTIONS
@@ -249,120 +248,7 @@ measurement_vars_unitless = [
     "TauNCoreTracks",
 ]
 measurement_vars = measurement_vars_unitless + measurement_vars_mass
-NOMINAL_NAME = "T_s1thv_NOMINAL"
-
-datasets: dict[str, dict] = {
-    # DATA
-    # ====================================================================
-    "data": {
-        # "data_path": DTA_PATH / "*data17*/*.root",
-        "data_path": Path("/data/DTA_outputs/2024-03-05/*data17*/*.root"),
-        "label": "data",
-        "is_data": True,
-        "selections": selections_notruth,
-        "snapshot": {"selections": selections_notruth, "systematics": NOMINAL_NAME},
-        # "rerun": True,
-        # "regen_histograms": True,
-    },
-    # SIGNAL
-    # ====================================================================
-    "wtaunu_had": {
-        "data_path": {
-            "lm_cut": DTA_PATH / "*Sh_2211_Wtaunu_*_maxHTpTV2*/*.root",
-            "full": DTA_PATH / "*Sh_2211_Wtaunu_mW_120*/*.root",
-        },
-        "hard_cut": {
-            "lm_cut": "(TruthBosonM < 120) && TruthTau_isHadronic",
-            "full": "TruthTau_isHadronic",
-        },
-        "label": r"$W\rightarrow\tau\nu\rightarrow\mathrm{had}$",
-        "is_signal": True,
-        "snapshot": {"selections": list(selections.keys()), "systematics": NOMINAL_NAME},
-        "selections": selections,
-    },
-    # BACKGROUNDS
-    # ====================================================================
-    "wtaunu_lep": {
-        "data_path": {
-            "lm_cut": DTA_PATH / "*Sh_2211_Wtaunu_*_maxHTpTV2*/*.root",
-            "full": DTA_PATH / "*Sh_2211_Wtaunu_mW_120*/*.root",
-        },
-        "hard_cut": {
-            "lm_cut": "(TruthBosonM < 120) && !(TruthTau_isHadronic)",
-            "full": "!(TruthTau_isHadronic)",
-        },
-        "label": r"$W\rightarrow\tau\nu\rightarrow\ell$",
-        "snapshot": {"selections": list(selections.keys()), "systematics": NOMINAL_NAME},
-        "selections": selections,
-    },
-    # W -> light lepton
-    "wlnu": {
-        "data_path": {
-            "lm_cut": [
-                DTA_PATH / "*Sh_2211_Wmunu_maxHTpTV2*/*.root",
-                DTA_PATH / "*Sh_2211_Wenu_maxHTpTV2*/*.root",
-            ],
-            "full": [
-                DTA_PATH / "*Sh_2211_Wmunu_mW_120*/*.root",
-                DTA_PATH / "*Sh_2211_Wenu_mW_120*/*.root",
-            ],
-        },
-        "hard_cut": {"lm_cut": "TruthBosonM < 120"},
-        "label": r"$W\rightarrow (e/\mu)\nu$",
-        "snapshot": {"selections": list(selections.keys()), "systematics": NOMINAL_NAME},
-        "selections": selections,
-    },
-    # Z -> ll
-    "zll": {
-        "data_path": {
-            "lm_cut": [
-                DTA_PATH / "*Sh_2211_Ztautau_*_maxHTpTV2*/*.root",
-                DTA_PATH / "*Sh_2211_Zee_maxHTpTV2*/*.root",
-                DTA_PATH / "*Sh_2211_Zmumu_maxHTpTV2*/*.root",
-            ],
-            "full": [
-                DTA_PATH / "*Sh_2211_Ztautau_mZ_120*/*.root",
-                DTA_PATH / "*Sh_2211_Zmumu_mZ_120*/*.root",
-                DTA_PATH / "*Sh_2211_Zee_mZ_120*/*.root",
-                DTA_PATH / "*Sh_2211_Znunu_pTV2*/*.root",
-            ],
-        },
-        "hard_cut": {"lm_cut": "TruthBosonM < 120"},
-        "label": r"$Z\rightarrow (\ell/\nu)(\ell/\nu)$",
-        "snapshot": {"selections": list(selections.keys()), "systematics": NOMINAL_NAME},
-        "selections": selections,
-    },
-    "top": {
-        "data_path": [
-            DTA_PATH / "*PP8_singletop*/*.root",
-            DTA_PATH / "*PP8_tchan*/*.root",
-            DTA_PATH / "*PP8_Wt_DR_dilepton*/*.root",
-            DTA_PATH / "*PP8_ttbar_hdamp258p75*/*.root",
-        ],
-        "label": "Top",
-        "snapshot": {"selections": list(selections.keys()), "systematics": NOMINAL_NAME},
-        "selections": selections,
-    },
-    # DIBOSON
-    "diboson": {
-        "data_path": [
-            DTA_PATH / "*Sh_2212_llll*/*.root",
-            DTA_PATH / "*Sh_2212_lllv*/*.root",
-            DTA_PATH / "*Sh_2212_llvv*/*.root",
-            DTA_PATH / "*Sh_2212_lvvv*/*.root",
-            DTA_PATH / "*Sh_2212_vvvv*/*.root",
-            DTA_PATH / "*Sh_2211_ZqqZll*/*.root",
-            DTA_PATH / "*Sh_2211_ZbbZll*/*.root",
-            DTA_PATH / "*Sh_2211_WqqZll*/*.root",
-            DTA_PATH / "*Sh_2211_WlvWqq*/*.root",
-            DTA_PATH / "*Sh_2211_WlvZqq*/*.root",
-            DTA_PATH / "*Sh_2211_WlvZbb*/*.root",
-        ],
-        "label": "Diboson",
-        "snapshot": {"selections": list(selections.keys()), "systematics": NOMINAL_NAME},
-        "selections": selections,
-    },
-}
+datasets = analysis_samples(selections, data_selections=selections_notruth, snapshot=True)
 
 
 def run_analysis() -> Analysis:

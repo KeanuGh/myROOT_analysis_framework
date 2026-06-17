@@ -176,6 +176,8 @@ class Analysis:
                 self.metadata.read_metadata(dsid_metadata_cache)
                 self.logger.debug("Loaded metadata cache from %s", dsid_metadata_cache)
 
+            self._apply_metadata_aliases(data_dict)
+
             # create c++ maps for calculation of weights in datasets
             sumws = [(dsid, meta.sumw) for (dsid, meta) in self.metadata]
             pmgfs = [
@@ -323,6 +325,31 @@ class Analysis:
             if arg in params:
                 args[arg] = params[arg]
         return args
+
+    def _apply_metadata_aliases(self, data_dict: dict[str, dict]) -> None:
+        """Add read-only dataset metadata aliases for split samples."""
+
+        for dataset_name, data_args in data_dict.items():
+            metadata_alias = data_args.get("metadata_alias")
+            if metadata_alias is None or dataset_name in self.metadata.dataset_dsids:
+                continue
+
+            if metadata_alias not in self.metadata.dataset_dsids:
+                available_datasets = ", ".join(self.metadata.dataset_dsids)
+                raise KeyError(
+                    f"Dataset '{dataset_name}' requested metadata alias '{metadata_alias}', "
+                    f"but that alias is not present in the metadata cache. "
+                    f"Available metadata datasets: {available_datasets}"
+                )
+
+            self.metadata.dataset_dsids[dataset_name] = list(
+                self.metadata.dataset_dsids[metadata_alias]
+            )
+            self.logger.debug(
+                "Using metadata DSID list from dataset '%s' for alias '%s'",
+                metadata_alias,
+                dataset_name,
+            )
 
     # ===============================
     # ========== BUILTINS ===========
