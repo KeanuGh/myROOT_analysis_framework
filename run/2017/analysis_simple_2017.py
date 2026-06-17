@@ -169,18 +169,33 @@ datasets: dict[str, dict] = {
     },
     # SIGNAL
     # ====================================================================
-    "wtaunu": {
+    "wtaunu_had": {
         "data_path": {
             "lm_cut": DTA_PATH / "*Sh_2211_Wtaunu_*_maxHTpTV2*/*.root",
             "full": DTA_PATH / "*Sh_2211_Wtaunu_mW_120*/*.root",
         },
-        "hard_cut": {"lm_cut": "TruthBosonM < 120"},
-        "label": r"$W\rightarrow\tau\nu$",
+        "hard_cut": {
+            "lm_cut": "(TruthBosonM < 120) && TruthTau_isHadronic",
+            "full": "TruthTau_isHadronic",
+        },
+        "label": r"$W\rightarrow\tau\nu\rightarrow\mathrm{had}$",
         "is_signal": True,
         "selections": selections,
     },
     # BACKGROUNDS
     # ====================================================================
+    "wtaunu_lep": {
+        "data_path": {
+            "lm_cut": DTA_PATH / "*Sh_2211_Wtaunu_*_maxHTpTV2*/*.root",
+            "full": DTA_PATH / "*Sh_2211_Wtaunu_mW_120*/*.root",
+        },
+        "hard_cut": {
+            "lm_cut": "(TruthBosonM < 120) && !(TruthTau_isHadronic)",
+            "full": "!(TruthTau_isHadronic)",
+        },
+        "label": r"$W\rightarrow\tau\nu\rightarrow\ell+3\nu$",
+        "selections": selections,
+    },
     # W -> light lepton
     "wlnu": {
         "data_path": {
@@ -353,14 +368,14 @@ if __name__ == "__main__":
                 [
                     get_entries(mc_sample, selection_name)
                     for mc_sample in mc_samples
-                    if mc_sample != "wtaunu"
+                    if mc_sample != "wtaunu_had"
                 ]
             )
             total_bkg_err = sum(
                 [
                     get_stat_err(mc_sample, selection_name)
                     for mc_sample in mc_samples
-                    if mc_sample != "wtaunu"
+                    if mc_sample != "wtaunu_had"
                 ]
             )
             evt_str = r"${nevt:.2f} \pm {stat_err:.2f}$"
@@ -523,8 +538,8 @@ if __name__ == "__main__":
             # SYSTEMATIC UNCERTAINTIES
             # ===========================================================================
             # list of systematic variations
-            sys_list_eff = sorted(set(get_base_sys_name(s) for s in analysis["wtaunu"].eff_sys_set))
-            sys_list_tes = sorted(set(get_base_sys_name(s) for s in analysis["wtaunu"].tes_sys_set))
+            sys_list_eff = sorted(set(get_base_sys_name(s) for s in analysis["wtaunu_had"].eff_sys_set))
+            sys_list_tes = sorted(set(get_base_sys_name(s) for s in analysis["wtaunu_had"].tes_sys_set))
             cmap = plt.get_cmap("jet")
             colours_eff = [tuple(c) for c in cmap(np.linspace(0, 1.0, len(sys_list_eff)))]
             colours_tes = [tuple(c) for c in cmap(np.linspace(0, 1.0, len(sys_list_tes)))]

@@ -260,7 +260,7 @@ if __name__ == "__main__":
             response, response_reco, response_truth, _ = analysis.get_response_histogram(
                 varname_reco=var,
                 varname_truth=truths[var],
-                dataset="wtaunu",
+                dataset="wtaunu_had",
                 wp=wp,
                 nprong="",
                 systematic=NOMINAL_NAME,
@@ -279,7 +279,7 @@ if __name__ == "__main__":
                     cache[systematic] = analysis.get_response_histogram(
                         varname_reco=response_var,
                         varname_truth=truths[response_var],
-                        dataset="wtaunu",
+                        dataset="wtaunu_had",
                         wp=response_wp,
                         nprong="",
                         systematic=systematic,
@@ -306,7 +306,7 @@ if __name__ == "__main__":
                 data = file[f"{NOMINAL_NAME}/{wp}_SR_passID"].Get(var)
                 data.SetDirectory(0)
             with ROOT.TFile(
-                    str(analysis.paths.output_dir.parent / "analysis_simple_2017/root/wtaunu.root")
+                    str(analysis.paths.output_dir.parent / "analysis_simple_2017/root/wtaunu_had.root")
             ) as file:
                 signal = file[f"{NOMINAL_NAME}/{wp}_SR_passID"].Get(var)
                 signal.SetDirectory(0)
@@ -315,7 +315,7 @@ if __name__ == "__main__":
             # ----------------------------------------------------------------
             with ROOT.TFile(
                     str(
-                        analysis.paths.output_dir.parent / "efficiency_and_acceptance/root/wtaunu.root"
+                        analysis.paths.output_dir.parent / "efficiency_and_acceptance/root/wtaunu_had.root"
                     )
             ) as file:
                 truth = file[f"{NOMINAL_NAME}/truth_tau"].Get(truths[var])
@@ -325,7 +325,7 @@ if __name__ == "__main__":
             # get backgrounds
             # ----------------------------------------------------------------
             bkg_hists = []
-            for bkg in ["wlnu", "zll", "top", "diboson"]:
+            for bkg in ["wtaunu_lep", "wlnu", "zll", "top", "diboson"]:
                 with ROOT.TFile(
                         str(analysis.paths.output_dir.parent / f"analysis_simple_2017/root/{bkg}.root")
                 ) as file:

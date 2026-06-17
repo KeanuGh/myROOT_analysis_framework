@@ -15,13 +15,16 @@ DTA_PATH = Path("/mnt/D/data/DTA_outputs/2024-09-19/")
 datasets: dict[str, dict] = {
     # SIGNAL
     # ====================================================================
-    "wtaunu": {
+    "wtaunu_had": {
         "data_path": {
             "lm_cut": DTA_PATH / "*Sh_2211_Wtaunu_*_maxHTpTV2*/*.root",
             "full": DTA_PATH / "*Sh_2211_Wtaunu_mW_120*/*.root",
         },
-        "hard_cut": {"lm_cut": "TruthBosonM < 120"},
-        "label": r"$W\rightarrow\tau\nu$",
+        "hard_cut": {
+            "lm_cut": "(TruthBosonM < 120) && TruthTau_isHadronic",
+            "full": "TruthTau_isHadronic",
+        },
+        "label": r"$W\rightarrow\tau\nu\rightarrow\mathrm{had}$",
         "is_signal": True,
     },
 }
@@ -302,7 +305,7 @@ if __name__ == "__main__":
     # RUN
     # ========================================================================
     analysis = run_analysis()
-    analysis.full_cutflow_printout(datasets=["wtaunu"])
+    analysis.full_cutflow_printout(datasets=["wtaunu_had"])
     base_plotting_dir = analysis.paths.plot_dir
 
     # print histograms
@@ -320,12 +323,12 @@ if __name__ == "__main__":
                 var: bayes_divide(
                     analysis.get_hist(
                         var + "_unweighted",
-                        "wtaunu",
+                        "wtaunu_had",
                         NOMINAL_NAME,
                         f"{wp}_{nprong}matched_reco_tau",
                     ),
                     analysis.get_hist(
-                        var + "_unweighted", "wtaunu", NOMINAL_NAME, f"{nprong}truth_tau"
+                        var + "_unweighted", "wtaunu_had", NOMINAL_NAME, f"{nprong}truth_tau"
                     ),
                 )
                 for var in measurement_vars
@@ -338,10 +341,10 @@ if __name__ == "__main__":
         nprong: {
             var: bayes_divide(
                 analysis.get_hist(
-                    var + "_unweighted", "wtaunu", NOMINAL_NAME, f"{nprong}truth_tau_trigger"
+                    var + "_unweighted", "wtaunu_had", NOMINAL_NAME, f"{nprong}truth_tau_trigger"
                 ),
                 analysis.get_hist(
-                    var + "_unweighted", "wtaunu", NOMINAL_NAME, f"{nprong}truth_tau"
+                    var + "_unweighted", "wtaunu_had", NOMINAL_NAME, f"{nprong}truth_tau"
                 ),
             )
             for var in measurement_vars
@@ -352,10 +355,10 @@ if __name__ == "__main__":
         nprong: {
             var: bayes_divide(
                 analysis.get_hist(
-                    var + "_unweighted", "wtaunu", NOMINAL_NAME, f"{nprong}truth_tau_mettrigger"
+                    var + "_unweighted", "wtaunu_had", NOMINAL_NAME, f"{nprong}truth_tau_mettrigger"
                 ),
                 analysis.get_hist(
-                    var + "_unweighted", "wtaunu", NOMINAL_NAME, f"{nprong}truth_tau"
+                    var + "_unweighted", "wtaunu_had", NOMINAL_NAME, f"{nprong}truth_tau"
                 ),
             )
             for var in measurement_vars
@@ -364,7 +367,7 @@ if __name__ == "__main__":
     }
 
     args_eff: PlotKwargs = {
-        "dataset": "wtaunu",
+        "dataset": "wtaunu_had",
         "systematic": NOMINAL_NAME,
         "title": f"Reconstruction Efficiency | mc16d | {analysis.global_lumi / 1000:.3g}fb$^{{-1}}$",
         "do_stat": False,
@@ -373,7 +376,7 @@ if __name__ == "__main__":
         "label_params": {"llabel": "Simulation", "loc": 1},
     }
     args_res: PlotKwargs = {
-        "dataset": "wtaunu",
+        "dataset": "wtaunu_had",
         "systematic": NOMINAL_NAME,
         "title": f"Tau $p_T$ resolution | mc16d | {analysis.global_lumi / 1000:.3g}fb$^{{-1}}$",
         "do_stat": False,
@@ -441,7 +444,7 @@ if __name__ == "__main__":
                 analysis.plot_2d(
                     v,
                     "TauPt_res_frac",
-                    dataset="wtaunu",
+                    dataset="wtaunu_had",
                     systematic=NOMINAL_NAME,
                     selection=selection,
                     ylabel=r"$p_\mathrm{T,res-frac}^\tau$",
@@ -455,7 +458,7 @@ if __name__ == "__main__":
                 analysis.plot_2d(
                     v,
                     "TauPt_res",
-                    dataset="wtaunu",
+                    dataset="wtaunu_had",
                     systematic=NOMINAL_NAME,
                     selection=selection,
                     ylabel=r"$p_\mathrm{T,res}^\tau$ [GeV]",
@@ -469,7 +472,7 @@ if __name__ == "__main__":
             analysis.plot_2d(
                 "TauPt",
                 "TruthTauPt",
-                dataset="wtaunu",
+                dataset="wtaunu_had",
                 systematic=NOMINAL_NAME,
                 selection=selection,
                 xlabel=r"$p_\mathrm{T}^\mathrm{reco}$ [GeV]",
@@ -484,7 +487,7 @@ if __name__ == "__main__":
             analysis.plot_2d(
                 "TauPt",
                 "VisTruthTauPt",
-                dataset="wtaunu",
+                dataset="wtaunu_had",
                 systematic=NOMINAL_NAME,
                 selection=selection,
                 xlabel=r"$p_\mathrm{T}^\mathrm{reco}$ [GeV]",
@@ -499,7 +502,7 @@ if __name__ == "__main__":
             analysis.plot_2d(
                 "TauEta",
                 "TruthTauEta",
-                dataset="wtaunu",
+                dataset="wtaunu_had",
                 systematic=NOMINAL_NAME,
                 selection=selection,
                 logx=False,
@@ -512,7 +515,7 @@ if __name__ == "__main__":
             analysis.plot_2d(
                 "TauEta",
                 "VisTruthTauEta",
-                dataset="wtaunu",
+                dataset="wtaunu_had",
                 systematic=NOMINAL_NAME,
                 selection=selection,
                 logx=False,
@@ -525,7 +528,7 @@ if __name__ == "__main__":
             analysis.plot_2d(
                 "MTW",
                 "TauPt",
-                dataset="wtaunu",
+                dataset="wtaunu_had",
                 systematic=NOMINAL_NAME,
                 selection=selection,
                 logx=True,
@@ -538,7 +541,7 @@ if __name__ == "__main__":
             analysis.plot_2d(
                 "MET_met",
                 "TruthNeutrinoPt",
-                dataset="wtaunu",
+                dataset="wtaunu_had",
                 systematic=NOMINAL_NAME,
                 selection=selection,
                 logx=True,
@@ -591,7 +594,7 @@ if __name__ == "__main__":
             )
             analysis.plot(
                 v,
-                dataset="wtaunu",
+                dataset="wtaunu_had",
                 systematic=NOMINAL_NAME,
                 selection=selection,
                 label=["Loose", "Medium", "Tight"],
@@ -601,7 +604,7 @@ if __name__ == "__main__":
             )
         analysis.plot(
             "TauPt_res",
-            dataset="wtaunu",
+            dataset="wtaunu_had",
             systematic=NOMINAL_NAME,
             selection=selection,
             label=["Loose", "Medium", "Tight"],
@@ -611,7 +614,7 @@ if __name__ == "__main__":
         )
         analysis.plot(
             "TauPt_res_frac",
-            dataset="wtaunu",
+            dataset="wtaunu_had",
             systematic=NOMINAL_NAME,
             selection=selection,
             label=["Loose", "Medium", "Tight"],
@@ -669,7 +672,7 @@ if __name__ == "__main__":
             )
             analysis.plot(
                 v,
-                dataset="wtaunu",
+                dataset="wtaunu_had",
                 systematic=NOMINAL_NAME,
                 selection=selection,
                 label=["1-prong", "3-prong"],
@@ -679,7 +682,7 @@ if __name__ == "__main__":
             )
         analysis.plot(
             "TauPt_res",
-            dataset="wtaunu",
+            dataset="wtaunu_had",
             systematic=NOMINAL_NAME,
             selection=selection,
             label=["1-prong", "3-prong"],
@@ -689,7 +692,7 @@ if __name__ == "__main__":
         )
         analysis.plot(
             "TauPt_res_frac",
-            dataset="wtaunu",
+            dataset="wtaunu_had",
             systematic=NOMINAL_NAME,
             selection=selection,
             label=["1-prong", "3-prong"],
@@ -712,7 +715,7 @@ if __name__ == "__main__":
 
         for nprong in ("", "1prong_", "3prong_"):
             pt = (
-                analysis["wtaunu"]
+                analysis["wtaunu_had"]
                 .filters[NOMINAL_NAME][f"{wp}_{nprong}matched_reco_tau"]
                 .df.AsNumpy(["TauPt_res", "TauPt_res_frac"])
             )

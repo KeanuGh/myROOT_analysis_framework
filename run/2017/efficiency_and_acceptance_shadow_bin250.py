@@ -16,13 +16,16 @@ DTA_PATH = Path("/mnt/D/data/DTA_outputs/2024-09-19/")
 datasets: dict[str, dict] = {
     # SIGNAL
     # ====================================================================
-    "wtaunu": {
+    "wtaunu_had": {
         "data_path": {
             "lm_cut": DTA_PATH / "*Sh_2211_Wtaunu_*_maxHTpTV2*/*.root",
             "full": DTA_PATH / "*Sh_2211_Wtaunu_mW_120*/*.root",
         },
-        "hard_cut": {"lm_cut": "TruthBosonM < 120"},
-        "label": r"$W\rightarrow\tau\nu$",
+        "hard_cut": {
+            "lm_cut": "(TruthBosonM < 120) && TruthTau_isHadronic",
+            "full": "TruthTau_isHadronic",
+        },
+        "label": r"$W\rightarrow\tau\nu\rightarrow\mathrm{had}$",
         "is_signal": True,
     },
 }
@@ -278,7 +281,7 @@ if __name__ == "__main__":
     # RUN
     # ========================================================================
     analysis = run_analysis()
-    analysis.full_cutflow_printout(datasets=["wtaunu"])
+    analysis.full_cutflow_printout(datasets=["wtaunu_had"])
     base_plotting_dir = analysis.paths.plot_dir
 
     truths = {
@@ -307,13 +310,13 @@ if __name__ == "__main__":
                 analysis.histograms[f"{wp}_{sec}{var}_efficiency"] = bayes_divide(
                     analysis.get_hist(
                         var + "_unweighted",
-                        "wtaunu",
+                        "wtaunu_had",
                         NOMINAL_NAME,
                         f"{wp}_{sec}truth_reco_tau",
                     ),
                     analysis.get_hist(
                         var + "_unweighted",
-                        "wtaunu",
+                        "wtaunu_had",
                         NOMINAL_NAME,
                         f"{sec}truth_tau",
                     ),
@@ -321,13 +324,13 @@ if __name__ == "__main__":
                 analysis.histograms[f"{wp}_{sec}{var}_acceptance"] = bayes_divide(
                     analysis.get_hist(
                         var + "_unweighted",
-                        "wtaunu",
+                        "wtaunu_had",
                         NOMINAL_NAME,
                         f"{wp}_{sec}truth_reco_tau",
                     ),
                     analysis.get_hist(
                         var + "_unweighted",
-                        "wtaunu",
+                        "wtaunu_had",
                         NOMINAL_NAME,
                         f"{wp}_{sec}reco_tau",
                     ),
@@ -336,7 +339,7 @@ if __name__ == "__main__":
                 # Plots alone
                 # =======================================================================
                 default_args: PlotKwargs = {
-                    "dataset": "wtaunu",
+                    "dataset": "wtaunu_had",
                     "systematic": NOMINAL_NAME,
                     "selection": f"{wp}_{sec}reco_tau",
                     "do_stat": True,
@@ -389,14 +392,14 @@ if __name__ == "__main__":
                 migration_hist = normalise_migration_hist(
                     analysis.get_hist(
                         f"{var}_{truths[var]}",
-                        dataset="wtaunu",
+                        dataset="wtaunu_had",
                         systematic=NOMINAL_NAME,
                         selection=f"{wp}_{sec}truth_reco_tau",
                     )
                 )
                 analysis.plot_2d(
                     migration_hist,
-                    dataset="wtaunu",
+                    dataset="wtaunu_had",
                     systematic=NOMINAL_NAME,
                     selection=f"{wp}_{sec}truth_reco_tau",
                     ylabel=truth_label,
@@ -412,14 +415,14 @@ if __name__ == "__main__":
                 # resonance
                 response = analysis.get_hist(
                     f"{var}_{truths[var]}",
-                    dataset="wtaunu",
+                    dataset="wtaunu_had",
                     systematic=NOMINAL_NAME,
                     selection=f"{wp}_{sec}truth_reco_tau",
                 ).Clone()
                 response.Scale(1 / response.GetEffectiveEntries())
                 analysis.plot_2d(
                     response,
-                    dataset="wtaunu",
+                    dataset="wtaunu_had",
                     systematic=NOMINAL_NAME,
                     selection=f"{wp}_{sec}truth_reco_tau",
                     ylabel=truth_label,

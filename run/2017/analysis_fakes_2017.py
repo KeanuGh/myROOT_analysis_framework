@@ -266,19 +266,35 @@ datasets: dict[str, dict] = {
     },
     # SIGNAL
     # ====================================================================
-    "wtaunu": {
+    "wtaunu_had": {
         "data_path": {
             "lm_cut": DTA_PATH / "*Sh_2211_Wtaunu_*_maxHTpTV2*/*.root",
             "full": DTA_PATH / "*Sh_2211_Wtaunu_mW_120*/*.root",
         },
-        "hard_cut": {"lm_cut": "TruthBosonM < 120"},
-        "label": r"$W\rightarrow\tau\nu$",
+        "hard_cut": {
+            "lm_cut": "(TruthBosonM < 120) && TruthTau_isHadronic",
+            "full": "TruthTau_isHadronic",
+        },
+        "label": r"$W\rightarrow\tau\nu\rightarrow\mathrm{had}$",
         "is_signal": True,
         "snapshot": {"selections": list(selections.keys()), "systematics": NOMINAL_NAME},
         "selections": selections,
     },
     # BACKGROUNDS
     # ====================================================================
+    "wtaunu_lep": {
+        "data_path": {
+            "lm_cut": DTA_PATH / "*Sh_2211_Wtaunu_*_maxHTpTV2*/*.root",
+            "full": DTA_PATH / "*Sh_2211_Wtaunu_mW_120*/*.root",
+        },
+        "hard_cut": {
+            "lm_cut": "(TruthBosonM < 120) && !(TruthTau_isHadronic)",
+            "full": "!(TruthTau_isHadronic)",
+        },
+        "label": r"$W\rightarrow\tau\nu\rightarrow\ell+3\nu$",
+        "snapshot": {"selections": list(selections.keys()), "systematics": NOMINAL_NAME},
+        "selections": selections,
+    },
     # W -> light lepton
     "wlnu": {
         "data_path": {
