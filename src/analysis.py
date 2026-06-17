@@ -6,7 +6,7 @@ from copy import deepcopy
 from dataclasses import dataclass, field
 from functools import reduce
 from pathlib import Path
-from typing import Any, Literal
+from typing import Literal, Protocol, cast
 
 import matplotlib.pyplot as plt
 import mplhep as hep
@@ -23,6 +23,12 @@ from src.logger import get_logger
 from utils import ROOT_utils, plotting_tools
 from utils.context import handle_dataset_arg
 from utils.helper_functions import smart_join
+
+
+class _HistResultPtr(Protocol):
+    """Lazy ROOT histogram result returned by RDataFrame actions."""
+
+    def GetValue(self) -> ROOT.TH1: ...
 
 
 @dataclass(slots=True)
@@ -326,9 +332,9 @@ class Analysis:
         self.logger.info(f"ANALYSIS '{analysis_label}' INITIALISED")
 
     @staticmethod
-    def _match_params(params: dict[str, Any], func: Callable) -> dict[str, Any]:
+    def _match_params(params: dict, func: Callable) -> dict:
         """Return parameters matching passed function signature"""
-        args = dict()
+        args = {}
         for arg in inspect.signature(func).parameters:
             if str(arg) == "self":
                 continue
@@ -1033,7 +1039,7 @@ class Analysis:
                 )
 
     def _process_plot_variables(
-            self, var_dict: dict[str, Any]
+            self, var_dict: dict
     ) -> tuple[int, plotting_tools.PlotOpts]:
         """
         Make sure per-plottable variables in `plot()` are either all the same length,
@@ -1120,7 +1126,7 @@ class Analysis:
             if var_dict["histstyles"][i] is None:
                 var_dict["histstyles"][i] = "step"
 
-        return n_plottables, var_dict
+        return n_plottables, cast(plotting_tools.PlotOpts, var_dict)
 
     def _process_val_args(
             self,
@@ -1374,7 +1380,7 @@ class Analysis:
                     variable=ff_var,
                     dataset=mc_ds,
                     systematic=systematic,
-                    selection=CR_failID_mc,
+                    selection=CR_passID_mc,
                     allow_generation=True,
                 )
                 for mc_ds in self.mc_samples
@@ -1386,7 +1392,7 @@ class Analysis:
                     variable=ff_var,
                     dataset=mc_ds,
                     systematic=systematic,
-                    selection=CR_passID_mc,
+                    selection=CR_failID_mc,
                     allow_generation=True,
                 )
                 for mc_ds in self.mc_samples
@@ -1398,7 +1404,7 @@ class Analysis:
                     variable=ff_var,
                     dataset=mc_ds,
                     systematic=systematic,
-                    selection=SR_passID_mc,
+                    selection=SR_failID_mc,
                     allow_generation=True,
                 )
                 for mc_ds in self.mc_samples
@@ -1417,37 +1423,52 @@ class Analysis:
         self.histograms[f"{prefix}{ff_var}_FF"] = h_FF
         self.histograms[f"{prefix}{ff_var}_fakes_bkg_{ff_var}"] = h_SR_data_fakes
 
-        # define ff_weights in MC
+        # define fake-factor weights in the anti-ID signal region
         ROOT.gInterpreter.Declare(
             f"TH1F* FF_hist_{prefix}{ff_var} = reinterpret_cast<TH1F*>({ROOT.addressof(h_FF)});"
         )
         ff_weight = f"reco_weight * FF_hist_{prefix}{ff_var}->GetBinContent(FF_hist_{prefix}{ff_var}->FindBin({ff_var}))"
         ff_weight_col = f"FF_weight_{prefix}{ff_var}"
+        self[self.data_sample].filters[systematic][SR_failID_data].df = (
+            self[self.data_sample]
+            .filters[systematic][SR_failID_data]
+            .df.Define(ff_weight_col, ff_weight)
+        )
         for mc in self.mc_samples:
-            self[mc].filters[systematic][SR_passID_mc].df = (
-                self[mc].filters[systematic][SR_passID_mc].df.Define(ff_weight_col, ff_weight)
+            self[mc].filters[systematic][SR_failID_mc].df = (
+                self[mc].filters[systematic][SR_failID_mc].df.Define(ff_weight_col, ff_weight)
             )
 
         # background estimation in target variables
-        mc_ff_hists: dict[str, dict[str, ROOT.RDF.RResultsPtr]] = dict()
+        ff_hists: dict[str, tuple[_HistResultPtr, dict[str, _HistResultPtr]]] = {}
         for target_var in fakes_target_vars:
             # define target histogram
             h_name = f"{prefix}{target_var}_fakes_bkg_{ff_var}_src"
             h_bins = self[self.data_sample].get_binnings(target_var, SR_passID_data)
-            h_target_var_ff = ROOT.TH1F(h_name, h_name, *ROOT_utils.get_TH1_bin_args(**h_bins))
+            h_data_target_var_ff = ROOT.TH1F(
+                f"{h_name}_data", h_name, *ROOT_utils.get_TH1_bin_args(**h_bins)
+            )
 
-            # need to fill histograms for each MC sample
-            ptrs: dict[str, ROOT.RDF.RResultsPtr] = {}
+            data_ptr = (
+                self[self.data_sample]
+                .filters[systematic][SR_failID_data]
+                .df.Fill(h_data_target_var_ff, [target_var, ff_weight_col])
+            )
+
+            ptrs: dict[str, _HistResultPtr] = {}
             for mc in self.mc_samples:
+                h_mc_target_var_ff = ROOT.TH1F(
+                    f"{h_name}_{mc}", h_name, *ROOT_utils.get_TH1_bin_args(**h_bins)
+                )
                 ptrs[mc] = (
                     self[mc]
-                    .filters[systematic][SR_passID_mc]
-                    .df.Fill(h_target_var_ff, [target_var, ff_weight_col])
+                    .filters[systematic][SR_failID_mc]
+                    .df.Fill(h_mc_target_var_ff, [target_var, ff_weight_col])
                 )
-            mc_ff_hists[target_var] = ptrs
+            ff_hists[target_var] = (data_ptr, ptrs)
 
         # rerun over dataframes (must be its own loop to avoid separating the runs)
-        for target_var, hist in mc_ff_hists.items():
+        for target_var, (data_ptr, mc_ptrs) in ff_hists.items():
             info_msg = "Calculating fake background estimate for %s"
             if name:
                 info_msg += " with name: '%s'"
@@ -1456,7 +1477,11 @@ class Analysis:
                 msg_args = (target_var,)
             info_msg += "..."
             self.logger.info(info_msg, *msg_args)
-            jet_est_h = reduce(lambda x, y: x + y, [ptr.GetValue() for ptr in hist.values()])
+            truth_h = reduce(lambda x, y: x + y, [ptr.GetValue() for ptr in mc_ptrs.values()])
+            jet_est_h = data_ptr.GetValue() - truth_h
+            jet_est_h.SetName(f"{prefix}{target_var}_fakes_bkg_{ff_var}_src")
+            jet_est_h.SetTitle(f"{prefix}{target_var}_fakes_bkg_{ff_var}_src")
+
             # set error at 10%
             for i in range(jet_est_h.GetNbinsX()):
                 jet_est_h.SetBinError(i + 1, jet_est_h.GetBinContent(i + 1) * 0.1)
@@ -1593,7 +1618,7 @@ class Analysis:
     # ========= PRINTOUTS ===========
     # ===============================
     @staticmethod
-    def __sanitise_for_latex(s: Any) -> str:
+    def __sanitise_for_latex(s: object) -> str:
         return str(s).replace(r"_", r"\_")
 
     @handle_dataset_arg
