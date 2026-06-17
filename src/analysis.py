@@ -3,10 +3,9 @@ import inspect
 import itertools
 from collections.abc import Callable, Generator, Sequence
 from copy import deepcopy
-from dataclasses import dataclass, field
 from functools import reduce
 from pathlib import Path
-from typing import Literal, Protocol, cast
+from typing import Literal, cast
 
 import matplotlib.pyplot as plt
 import mplhep as hep
@@ -15,6 +14,7 @@ import ROOT
 from matplotlib import ticker
 from tabulate import tabulate
 
+from models.analysis import AnalysisPath, BinByBinUnfoldingResult, FloatArray, HistResultPtr
 from src.dataset import Dataset
 from src.datasetbuilder import LUMI_YEAR, DatasetBuilder
 from src.dsid_meta import DatasetMetadata
@@ -23,46 +23,6 @@ from src.logger import get_logger
 from utils import ROOT_utils, plotting_tools
 from utils.context import handle_dataset_arg
 from utils.helper_functions import smart_join
-
-
-class _HistResultPtr(Protocol):
-    """Lazy ROOT histogram result returned by RDataFrame actions."""
-
-    def GetValue(self) -> ROOT.TH1: ...
-
-
-@dataclass(slots=True)
-class AnalysisPath:
-    """
-    Container class for paths needed by analyses
-    """
-
-    output_dir: Path
-
-    plot_dir: Path = field(init=False, default_factory=Path)
-    latex_dir: Path = field(init=False, default_factory=Path)
-    root_dir: Path = field(init=False, default_factory=Path)
-    log_dir: Path = field(init=False, default_factory=Path)
-
-    def __post_init__(self):
-        self.output_dir = Path(self.output_dir)
-        self.plot_dir = Path(self.output_dir) / "plots"
-        self.root_dir = Path(self.output_dir) / "root"
-        self.latex_dir = Path(self.output_dir) / "LaTeX"
-        self.log_dir = Path(self.output_dir) / "logs"
-
-    def __setattr__(self, key, value):
-        value = Path(value)
-        value.mkdir(parents=True, exist_ok=True)
-        object.__setattr__(self, key, value)
-
-
-@dataclass(slots=True)
-class BinByBinUnfoldingResult:
-    """Container for explicit bin-by-bin unfolding outputs."""
-
-    unfolded: ROOT.TH1
-    correction: ROOT.TH1
 
 
 class Analysis:
@@ -560,12 +520,12 @@ class Analysis:
         # do lines
         colours = ["k", "r", "b", "g", "y", "o"]
         if vline_at:
-            if not hasattr(vline_at, "__iter__"):
+            if isinstance(vline_at, int | float):
                 vline_at = [vline_at]
             for i, vpos in enumerate(vline_at):
                 ax.axvline(vpos, linestyle="--", linewidth=1.0, c=colours[i])
         if hline_at:
-            if not hasattr(hline_at, "__iter__"):
+            if isinstance(hline_at, int | float):
                 hline_at = [hline_at]
             for i, hpos in enumerate(hline_at):
                 ax.axhline(hpos, linestyle="--", linewidth=1.0, c=colours[i])
@@ -702,14 +662,12 @@ class Analysis:
                     init_: bool = True,
             ) -> str:
                 """String rep. of combinations of histogram definitions"""
-                out = [el for el in per_hist_vars[s] if (el is not None) and isinstance(el, str)]
+                out = [el for el in per_hist_vars[s] if isinstance(el, str)]
                 init = "_" if init_ else ""
                 if out:
-                    all_el = [el for el in per_hist_vars[s] if el is not None]
-                    if len(set(all_el)) == 1:
-                        all_el = all_el[0]
-                        return init + all_el
-                    return init + "_".join(all_el)
+                    if len(set(out)) == 1:
+                        return init + out[0]
+                    return init + "_".join(out)
                 return ""
 
             filename = (
@@ -800,8 +758,14 @@ class Analysis:
             ax.semilogy()
             ax.yaxis.set_minor_formatter(ticker.LogFormatter())
             ax.yaxis.set_major_formatter(ticker.LogFormatter())
-        ax.set_xlabel(xlabel if xlabel else plotting_tools.get_axis_labels(xvar)[0])
-        ax.set_ylabel(ylabel if ylabel else plotting_tools.get_axis_labels(yvar)[0])
+        x_axis_label = xlabel
+        if not x_axis_label and isinstance(xvar, str):
+            x_axis_label = plotting_tools.get_axis_labels(xvar)[0] or ""
+        y_axis_label = ylabel
+        if not y_axis_label and isinstance(yvar, str):
+            y_axis_label = plotting_tools.get_axis_labels(yvar)[0] or ""
+        ax.set_xlabel(x_axis_label)
+        ax.set_ylabel(y_axis_label)
 
         # save
         # =========================================================================
@@ -846,8 +810,9 @@ class Analysis:
         # separate signal just for dealing with errors
         per_hist_vars_errs = deepcopy(per_hist_vars)
         signal_plot_args = {}
-        if self.signal_sample and (self.signal_sample in per_hist_vars_errs["datasets"]):
-            idx = per_hist_vars_errs["datasets"].index(self.signal_sample)
+        signal_sample = self.signal_sample
+        if signal_sample and (signal_sample in per_hist_vars_errs["datasets"]):
+            idx = per_hist_vars_errs["datasets"].index(signal_sample)
             for v in per_hist_vars_errs:
                 signal_plot_args[v] = per_hist_vars[v].pop(idx)  # type: ignore
 
@@ -889,14 +854,14 @@ class Analysis:
         )
 
         # handle signal seperately
-        if signal_plot_args:
+        if signal_plot_args and signal_sample is not None:
             full_stack += signal_plot_args["hists"]
-            full_stack.plot(ax=ax, yerr=None, color="r", label=self[self.signal_sample].label)
+            full_stack.plot(ax=ax, yerr=None, color="r", label=self[signal_sample].label)
 
         # handle errors
         # -------------------------------------------
-        err_top = full_stack.values()
-        err_bottom = full_stack.values()
+        err_top = full_stack.values().astype(np.float64)
+        err_bottom = full_stack.values().astype(np.float64)
         err_label = ""
         if per_hist_vars_errs["uncert"]:
             for uncert in per_hist_vars_errs["uncert"]:
@@ -937,6 +902,8 @@ class Analysis:
                 step="post",
             )
 
+        if data_hist is None:
+            return
         if isinstance(data_hist, Histogram1D):
             data_hists = [data_hist]
         else:
@@ -949,9 +916,6 @@ class Analysis:
             data_colours = [data_colour]
         else:
             data_colours = data_colour
-
-        if all([h is None for h in data_hists]):
-            return
 
         # handle ratio plot options
         all_mc_hist = reduce((lambda x, y: x + y), per_hist_vars_errs["hists"])
@@ -1251,21 +1215,39 @@ class Analysis:
             val: str | Histogram1D | ROOT.TH1,
             dataset: str | None = None,
             selection: str = "",
-    ) -> tuple[np.typing.NDArray[float], np.typing.NDArray[float]]:
+    ) -> tuple[FloatArray, FloatArray]:
         """Get systematic uncertainty for single variable in dataframe"""
         if (not isinstance(val, str)) or (not dataset) or (selection is None):
             # self.logger.debug("No systematic uncertainties for histograms outside a dataset")
             if isinstance(val, Histogram1D):
-                return np.zeros_like(val.bin_values()), np.zeros_like(val.bin_values())
+                return (
+                    np.zeros_like(val.bin_values(), dtype=np.float64),
+                    np.zeros_like(val.bin_values(), dtype=np.float64),
+                )
             elif isinstance(val, ROOT.TH1):
-                return np.zeros(val.GetNbinsX()), np.zeros(val.GetNbinsX())
+                return (
+                    np.zeros(val.GetNbinsX(), dtype=np.float64),
+                    np.zeros(val.GetNbinsX(), dtype=np.float64),
+                )
             else:
                 raise TypeError(f"Unknown histogram type: {type(val)}")
-        return self[dataset].get_systematic_uncertainty(val=val, selection=selection)
+        sys_err_down, sys_err_up = self[dataset].get_systematic_uncertainty(
+            val=val, selection=selection
+        )
+        if isinstance(sys_err_down, int) or isinstance(sys_err_up, int):
+            nominal_hist = self.get_hist(variable=val, dataset=dataset, selection=selection)
+            return (
+                np.zeros(nominal_hist.GetNbinsX(), dtype=np.float64),
+                np.zeros(nominal_hist.GetNbinsX(), dtype=np.float64),
+            )
+        return (
+            np.asarray(sys_err_down, dtype=np.float64),
+            np.asarray(sys_err_up, dtype=np.float64),
+        )
 
     def get_full_systematic_uncertainty(
             self, per_hist_vars: plotting_tools.PlotOpts
-    ) -> tuple[np.typing.NDArray[float]]:
+    ) -> tuple[FloatArray, FloatArray]:
         """Calculate full systematic uncertainties. Outputs int 0 if no systematics are found"""
 
         sys_errs_up_sq = np.zeros_like(per_hist_vars["hists"][0].bin_values())
@@ -1440,7 +1422,7 @@ class Analysis:
             )
 
         # background estimation in target variables
-        ff_hists: dict[str, tuple[_HistResultPtr, dict[str, _HistResultPtr]]] = {}
+        ff_hists: dict[str, tuple[HistResultPtr, dict[str, HistResultPtr]]] = {}
         for target_var in fakes_target_vars:
             # define target histogram
             h_name = f"{prefix}{target_var}_fakes_bkg_{ff_var}_src"
@@ -1455,7 +1437,7 @@ class Analysis:
                 .df.Fill(h_data_target_var_ff, [target_var, ff_weight_col])
             )
 
-            ptrs: dict[str, _HistResultPtr] = {}
+            ptrs: dict[str, HistResultPtr] = {}
             for mc in self.mc_samples:
                 h_mc_target_var_ff = ROOT.TH1F(
                     f"{h_name}_{mc}", h_name, *ROOT_utils.get_TH1_bin_args(**h_bins)
@@ -1618,7 +1600,7 @@ class Analysis:
     # ========= PRINTOUTS ===========
     # ===============================
     @staticmethod
-    def __sanitise_for_latex(s: object) -> str:
+    def __sanitise_for_latex(s: str | int | float | bool | None) -> str:
         return str(s).replace(r"_", r"\_")
 
     @handle_dataset_arg

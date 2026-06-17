@@ -13,12 +13,12 @@ import ROOT  # type: ignore
 from numpy.typing import ArrayLike
 from tabulate import tabulate
 
+from models.plotting import Hist2dOpts, ProfileOpts
 from src.cutting import Cut, Cutflow, FilterNode, FilterTree
 from src.histogram import Histogram1D
 from src.logger import get_logger
 from utils import ROOT_utils
 from utils.helper_functions import count_nested_values, get_base_sys_name, match_any, smart_join
-from utils.plotting_tools import Hist2dOpts, ProfileOpts
 from utils.variable_names import VarTag, variable_data
 
 

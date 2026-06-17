@@ -716,7 +716,7 @@ class Histogram1D(bh.Histogram, family=None):
         yax_lim: float | tuple[float, float] | None = None,
         display_stats: bool = True,
         fit_empty: bool = False,
-        colour: str | None = None,
+        colour: str | tuple[float, ...] | None = None,
         histtype: str = "step",
         exclude_outliers: bool = True,
         **kwargs,
