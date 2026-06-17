@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from binnings import BINNINGS
-from samples import signal_sample
+from samples import DSID_METADATA_CACHE, signal_sample
 
 from src.analysis import Analysis
 from src.cutting import Cut
@@ -297,6 +297,7 @@ def run_analysis() -> Analysis:
         regen_histograms=True,
         do_systematics=True,
         # regen_metadata=True,
+        metadata_cache=DSID_METADATA_CACHE,
         ttree=NOMINAL_NAME,
         selections=selections,
         analysis_label=Path(__file__).stem,

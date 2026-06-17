@@ -1,5 +1,5 @@
 from binnings import BINNINGS
-from samples import signal_sample
+from samples import DSID_METADATA_CACHE, signal_sample
 from tabulate import tabulate
 
 from src.analysis import Analysis
@@ -265,6 +265,7 @@ def run_analysis() -> Analysis:
         # regen_histograms=True,
         do_systematics=False,
         # regen_metadata=True,
+        metadata_cache=DSID_METADATA_CACHE,
         ttree=NOMINAL_NAME,
         selections=selections,
         do_unweighted=True,

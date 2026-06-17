@@ -85,20 +85,21 @@ class Analysis:
     )
 
     def __init__(
-            self,
-            data_dict: dict[str, dict],
-            analysis_label: str,
-            global_lumi: float | None = 139.0,
-            output_dir: Path | str | None = None,
-            log_level: int = 20,
-            log_out: str = "both",
-            timedatelog: bool = True,
-            separate_loggers: bool = False,
-            rerun: bool = False,
-            regen_histograms: bool = False,
-            regen_metadata: bool = False,
-            snapshot: bool | dict = False,
-            **kwargs,
+        self,
+        data_dict: dict[str, dict],
+        analysis_label: str,
+        global_lumi: float | None = 139.0,
+        output_dir: Path | str | None = None,
+        log_level: int = 20,
+        log_out: str = "both",
+        timedatelog: bool = True,
+        separate_loggers: bool = False,
+        rerun: bool = False,
+        regen_histograms: bool = False,
+        regen_metadata: bool = False,
+        metadata_cache: Path | str | None = None,
+        snapshot: bool | dict = False,
+        **kwargs,
     ):
         """
         :param data_dict: Dictionary of dictionaries containing paths to root files and the tree to extract from each.
@@ -113,6 +114,7 @@ class Analysis:
         :param rerun: Whether to rerun full analysis
         :param regen_histograms: Whether to regenerate all histograms for all datasets (can be applied separately)
         :param regen_metadata: Whether to regenerate DSID metadata (requires connection to pyami)
+        :param metadata_cache: Shared DSID metadata cache path. Defaults to output_dir/dsid_meta_cache.json
         :param snapshot: whether to snapshot generated datasets into root output file. If dictinoary, pass as argument to export function
         :param year: Data-year. One of 2016, 2017, 2018
         :param kwargs: Options arguments to pass to all dataset builders
@@ -163,10 +165,18 @@ class Analysis:
         # ============================
         if data_dict:
             self.metadata = DatasetMetadata(logger=self.logger)
-            dsid_metadata_cache = output_dir / "dsid_meta_cache.json"
+            dsid_metadata_cache = (
+                Path(metadata_cache) if metadata_cache else output_dir / "dsid_meta_cache.json"
+            )
 
             if (not dsid_metadata_cache.is_file()) or regen_metadata:
+                if metadata_cache and not regen_metadata:
+                    raise FileNotFoundError(
+                        f"Shared metadata cache '{dsid_metadata_cache}' does not exist."
+                    )
+
                 # fetch and save metadata
+                dsid_metadata_cache.parent.mkdir(parents=True, exist_ok=True)
                 self.metadata.fetch_metadata(datasets=data_dict, ttree=kwargs.get("ttree"))
                 self.metadata.save_metadata(dsid_metadata_cache)
                 self.logger.debug("Saved metadata cache in %s", dsid_metadata_cache)

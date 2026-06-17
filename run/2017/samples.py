@@ -10,6 +10,7 @@ from src.cutting import Cut
 NOMINAL_NAME = "T_s1thv_NOMINAL"
 DTA_PATH = Path("/mnt/D/data/DTA_outputs/2024-09-19/")
 DATA_PATH = Path("/data/DTA_outputs/2024-03-05/*data17*/*.root")
+DSID_METADATA_CACHE = Path(__file__).with_name("dsid_meta_cache.json")
 
 SelectionMap = Mapping[str, list[Cut]]
 PathSpec = Path | list[Path] | dict[str, Path | list[Path]]

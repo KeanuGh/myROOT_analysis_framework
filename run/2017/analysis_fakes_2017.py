@@ -2,7 +2,7 @@ from pathlib import Path
 
 import numpy as np
 from binnings import BINNINGS, nedges
-from samples import NOMINAL_NAME, analysis_samples
+from samples import DSID_METADATA_CACHE, NOMINAL_NAME, analysis_samples
 
 from src.analysis import Analysis
 from src.cutting import Cut
@@ -260,6 +260,7 @@ def run_analysis() -> Analysis:
         regen_histograms=True,
         do_systematics=False,
         # regen_metadata=True,
+        metadata_cache=DSID_METADATA_CACHE,
         # output_dir="/eos/home-k/kghorban/framework_outputs/analysis_main",
         ttree=NOMINAL_NAME,
         analysis_label=Path(__file__).stem,
