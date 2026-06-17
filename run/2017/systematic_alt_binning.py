@@ -225,7 +225,7 @@ datasets: dict[str, dict] = {
             ],
         },
         "hard_cut": {"lm_cut": "TruthBosonM < 120"},
-        "label": r"$Z\rightarrow (l/\nu)(l/\nu)$",
+        "label": r"$Z\rightarrow (\ell/\nu)(\ell/\nu)$",
         "selections": selections,
     },
     "top": {
