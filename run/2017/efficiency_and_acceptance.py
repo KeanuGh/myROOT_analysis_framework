@@ -42,7 +42,7 @@ truth_tau = Cut(
 )
 fail_truth_tau = Cut(
     r"Truth Hadronic Tau",
-    r"!TruthTau_isHadronic | ((TruthTau_nChargedTracks == 1) || (TruthTau_nChargedTracks == 3))",
+    r"!TruthTau_isHadronic || ((TruthTau_nChargedTracks == 1) || (TruthTau_nChargedTracks == 3))",
 )
 truth_tau_1prong = Cut(
     r"1-prong truth",
@@ -122,11 +122,11 @@ pass_SR_truth = Cut(
 fail_SR_truth = Cut(
     r"Fail SR Truth",
     r"!(passTruth == 1)"
-    r"| !(TruthTau_isHadronic) "
-    r"| !((TruthTau_nChargedTracks == 1) || (TruthTau_nChargedTracks == 3)) "
-    r"| !(VisTruthTauPt > 170) | !(TruthMTW > 350) | !(TruthNeutrinoPt > 170) "
-    r"| !((TruthTau_nChargedTracks == 1) || (TruthTau_nChargedTracks == 3)) "
-    r"| !(((abs(VisTruthTauEta) < 1.37) || (1.52 < abs(VisTruthTauEta))) && (abs(VisTruthTauEta) < 2.47))",
+    r"|| !(TruthTau_isHadronic) "
+    r"|| !((TruthTau_nChargedTracks == 1) || (TruthTau_nChargedTracks == 3)) "
+    r"|| !(VisTruthTauPt > 170) || !(TruthMTW > 350) || !(TruthNeutrinoPt > 170) "
+    r"|| !((TruthTau_nChargedTracks == 1) || (TruthTau_nChargedTracks == 3)) "
+    r"|| !(((abs(VisTruthTauEta) < 1.37) || (1.52 < abs(VisTruthTauEta))) && (abs(VisTruthTauEta) < 2.47))",
 )
 truth_cuts = [
     pass_truth,
