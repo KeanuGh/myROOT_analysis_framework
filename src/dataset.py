@@ -79,7 +79,8 @@ class Dataset:
         if (self.rdataframes is not None) and (self.selections is not None):
             self.logger.debug("Generating filters trees for dataframes...")
             for sys_name, rdf in self.rdataframes.items():
-                self.filters[sys_name] = self.gen_filters(rdf)
+                selections = self.selections_for_systematic(sys_name, rdf)
+                self.filters[sys_name] = self.gen_filters(rdf, selections)
 
                 # set up cutflow for later
                 self.cutflows[sys_name] = {}
@@ -90,6 +91,42 @@ class Dataset:
             self.init_sys()
         else:
             self.nominal_name = next(s for s in self.rdataframes if "NOMINAL" in s)
+
+    def selections_for_systematic(
+        self,
+        sys_name: str,
+        rdf: ROOT.RDataFrame,
+    ) -> dict[str, list[Cut]]:
+        """Return selections that should be built for this dataframe systematic."""
+        is_nominal = ("__1up" not in sys_name) and ("__1down" not in sys_name)
+        if is_nominal:
+            return self.selections
+
+        available_columns = {str(column) for column in rdf.GetColumnNames()}
+        selections: dict[str, list[Cut]] = {}
+        skipped_selections: list[str] = []
+        for selection, cuts in self.selections.items():
+            if self.systematics_for_selection and not match_any(
+                self.systematics_for_selection, selection
+            ):
+                continue
+
+            required_columns = set().union(*(cut.included_variables for cut in cuts))
+            if required_columns.issubset(available_columns):
+                selections[selection] = cuts
+            else:
+                skipped_selections.append(selection)
+
+        if skipped_selections:
+            self.logger.debug(
+                "Skipping %d selections for systematic '%s' because required columns "
+                "are missing: %s",
+                len(skipped_selections),
+                sys_name,
+                skipped_selections,
+            )
+
+        return selections
 
     def init_sys(self) -> None:
         """initialise systematics"""
@@ -119,18 +156,18 @@ class Dataset:
             str(wgt).removeprefix("weight_")
             for wgt in self.rdataframes[self.nominal_name].GetColumnNames()
             if wgt.startswith("weight_TAUS_TRUEHADTAU_EFF_")
-               and not match_any(self.skip_sys, str(wgt))
+            and not match_any(self.skip_sys, str(wgt))
         }
         self.logger.info(f"Initialised dataset: {self.name}")
 
     # Import/Export
     # ===================
     def export_dataset(
-            self,
-            filepath: str | Path | None = None,
-            selections: list | str | None = None,
-            systematics: list | str | None = None,
-            overwrite: bool = True,
+        self,
+        filepath: str | Path | None = None,
+        selections: list | str | None = None,
+        systematics: list | str | None = None,
+        overwrite: bool = True,
     ) -> None:
         """
         Save data and histograms to ROOT file. File structure goes as:
@@ -234,7 +271,7 @@ class Dataset:
             for sys_key in tfile.GetListOfKeys():
                 if sys_key.GetClassName() != "TDirectoryFile":
                     self.logger.warning(
-                        "Non-TDirectoryFile object (%s) " "in top-level of file: %s",
+                        "Non-TDirectoryFile object (%s) in top-level of file: %s",
                         sys_key.GetClassName(),
                         in_file,
                     )
@@ -318,17 +355,22 @@ class Dataset:
             in_file,
         )
 
-    def gen_filters(self, df: ROOT.RDataFrame) -> dict[str, FilterNode]:
+    def gen_filters(
+        self,
+        df: ROOT.RDataFrame,
+        selections: dict[str, list[Cut]] | None = None,
+    ) -> dict[str, FilterNode]:
         """Generate end nodes of filter tree from selections for given dataframe"""
+        selections = self.selections if selections is None else selections
         filter_tree = FilterTree(df)
-        filter_tree.generate_tree(self.selections)
+        filter_tree.generate_tree(selections)
         return filter_tree.leaves
 
     # ===============================
     # ========= PRINTOUTS ===========
     # ===============================
     def cutflow_printout(
-            self, systematic: str = "", selection: str = "", path: Path | None = None
+        self, systematic: str = "", selection: str = "", path: Path | None = None
     ) -> None:
         """Prints cutflow table. Pass path to .tex file if you want to print to latex"""
 
@@ -351,9 +393,9 @@ class Dataset:
                 self.cutflows[systematic][selection].print(latex_path=path)
 
     def histogram_printout(
-            self,
-            to_file: Literal["txt", "latex", False] = False,
-            to_dir: Path | None = None,
+        self,
+        to_file: Literal["txt", "latex", False] = False,
+        to_dir: Path | None = None,
     ) -> None:
         """Printout of histogram metadata"""
         rows = []
@@ -413,7 +455,9 @@ class Dataset:
         if do_print:
             self.cutflow_printout()
 
-    def define_selection(self, filter_str: str, name: str, systematic: str, selection: str) -> bool:
+    def define_selection(
+        self, filter_str: str, name: str, systematic: str, selection: str
+    ) -> bool:
         """
         Define filter applied from selection.
 
@@ -427,7 +471,9 @@ class Dataset:
             raise KeyError(f"No selection '{selection}' in dataset '{self.name}'")
         if name in self.filters[systematic]:
             self.logger.warning(
-                "Selection %s already exists in dataset '%s'. Skipping definition.", selection, name
+                "Selection %s already exists in dataset '%s'. Skipping definition.",
+                selection,
+                name,
             )
             return False
 
@@ -454,16 +500,16 @@ class Dataset:
     # =========== PLOTING FUNCTION(S) ===========
     # ===========================================
     def plot_hist(
-            self,
-            var: str,
-            bins: list[float] | tuple[int, float, float] | None = None,
-            ax: plt.Axes | None = None,
-            yerr: ArrayLike | bool = False,
-            normalise: float | bool = False,
-            systematic: str = "T_s1hv_NOMINAL",
-            selection: str = "",
-            histtype: Literal["TH1F", "TH1D", "TH1I", "TH1C", "TH1L", "TH1S"] = "TH1F",
-            **kwargs,
+        self,
+        var: str,
+        bins: list[float] | tuple[int, float, float] | None = None,
+        ax: plt.Axes | None = None,
+        yerr: ArrayLike | bool = False,
+        normalise: float | bool = False,
+        systematic: str = "T_s1hv_NOMINAL",
+        selection: str = "",
+        histtype: Literal["TH1F", "TH1D", "TH1I", "TH1C", "TH1L", "TH1S"] = "TH1F",
+        **kwargs,
     ) -> Histogram1D:
         """
         Generate 1D plots of given variables in dataframe. Returns figure object of list of figure objects.
@@ -516,10 +562,10 @@ class Dataset:
     # ============== HISTOGRAMMING ==============
     # ===========================================
     def get_hist(
-            self,
-            variable,
-            systematic: str = "T_s1hv_NOMINAL",
-            selection: str = "",
+        self,
+        variable,
+        systematic: str = "T_s1hv_NOMINAL",
+        selection: str = "",
     ) -> ROOT.TH1 | Histogram1D:
         """Fetch histogram from internal dictionary"""
         try:
@@ -575,14 +621,14 @@ class Dataset:
             # look for first matching key in binning dictionary that isn't ""
             for sel_pattern in [i for i in self.binnings.keys() if i]:
                 if bool(re.match(sel_pattern, selection)) and (
-                        variable_name in self.binnings[sel_pattern]
+                    variable_name in self.binnings[sel_pattern]
                 ):
                     return {"bins": self.binnings[sel_pattern][variable_name]}
 
         if (
-                selection
-                and (selection in self.binnings)
-                and (variable_name in self.binnings[selection])
+            selection
+            and (selection in self.binnings)
+            and (variable_name in self.binnings[selection])
         ):
             return {"bins": self.binnings[selection][variable_name]}
         elif variable_name in self.binnings[""]:
@@ -591,11 +637,11 @@ class Dataset:
             return self.__match_bin_args(variable_name)
 
     def define_th1(
-            self,
-            variable: str,
-            name: str = "",
-            title: str = "",
-            histtype: Literal["TH1F", "TH1D", "TH1I", "TH1C", "TH1L", "TH1S"] = "TH1F",
+        self,
+        variable: str,
+        name: str = "",
+        title: str = "",
+        histtype: Literal["TH1F", "TH1D", "TH1I", "TH1C", "TH1L", "TH1S"] = "TH1F",
     ) -> ROOT.TH1F:
         """Define 1D histogram from variable with correct binnings"""
         allowed_histtypes = ["TH1F", "TH1D", "TH1I", "TH1C", "TH1L", "TH1S"]
@@ -613,12 +659,12 @@ class Dataset:
         )
 
     def define_th2(
-            self,
-            x: str,
-            y: str,
-            name: str = "",
-            title: str = "",
-            histtype: Literal["TH2F", "TH2D", "TH2I", "TH2C", "TH2L", "TH2S"] = "TH2F",
+        self,
+        x: str,
+        y: str,
+        name: str = "",
+        title: str = "",
+        histtype: Literal["TH2F", "TH2D", "TH2I", "TH2C", "TH2L", "TH2S"] = "TH2F",
     ) -> ROOT.TH1F:
         """Define 2D histogram from variables with correct binnings"""
         allowed_histtypes = ["TH2F", "TH2D", "TH2I", "TH2C", "TH2L", "TH2S"]
@@ -638,11 +684,11 @@ class Dataset:
         )
 
     def define_profile(
-            self,
-            profile_opts: ProfileOpts,
-            profile_name: str,
-            systematic: str = "T_s1hv_NOMINAL",
-            selection: str = "",
+        self,
+        profile_opts: ProfileOpts,
+        profile_name: str,
+        systematic: str = "T_s1hv_NOMINAL",
+        selection: str = "",
     ) -> tuple[ROOT.TProfile1DModel, str, str, str] | tuple[ROOT.TProfile1DModel, str, str]:
         """Return arguments for profile creation from profile options"""
         bin_args = self.get_binnings(profile_opts.x, selection)
@@ -658,12 +704,12 @@ class Dataset:
         return profile_model, profile_opts.x, profile_opts.y
 
     def gen_th1(
-            self,
-            variable: str,
-            systematic: str = "T_s1thv_NOMINAL",
-            selection: str = "",
-            histtype: Literal["TH1F", "TH1D", "TH1I", "TH1C", "TH1L", "TH1S"] = "TH1F",
-            weighted: bool = True,
+        self,
+        variable: str,
+        systematic: str = "T_s1thv_NOMINAL",
+        selection: str = "",
+        histtype: Literal["TH1F", "TH1D", "TH1I", "TH1C", "TH1L", "TH1S"] = "TH1F",
+        weighted: bool = True,
     ) -> ROOT.TH1:
         """Return TH1 histogram from selection for variable. Binning taken from internal binnings dictionary"""
         if weighted:
@@ -673,7 +719,7 @@ class Dataset:
             fill_cols = [variable]
 
         self.logger.debug(
-            "Generating %s histogram in %s " "for systematic '%s' and selection '%s'...",
+            "Generating %s histogram in %s for systematic '%s' and selection '%s'...",
             variable,
             self.name,
             systematic,
@@ -714,9 +760,8 @@ class Dataset:
 
         # build histograms
         def include_systematic_selection(selection: str) -> bool:
-            return (
-                    not self.systematics_for_selection
-                    or match_any(self.systematics_for_selection, selection)
+            return not self.systematics_for_selection or match_any(
+                self.systematics_for_selection, selection
             )
 
         for sys_name, root_sys_df in self.rdataframes.items():
@@ -735,18 +780,21 @@ class Dataset:
                 if sys_name != self.nominal_name and not include_systematic_selection(selection):
                     continue
 
+                available_columns = {str(column) for column in sel_df.GetColumnNames()}
                 th1_ptr_map[selection] = dict()
 
                 # Define Histograms
                 # =======================================================
                 for variable_name in output_histogram_variables:
                     if (sys_name != self.nominal_name) and (
-                            variable_data[variable_name]["tag"] == "truth"
+                        variable_data[variable_name]["tag"] == "truth"
                     ):
                         continue
 
                     weight = self._match_weight(variable_name)
                     fill_cols = [variable_name, weight] if weight else [variable_name]
+                    if not set(fill_cols).issubset(available_columns):
+                        continue
 
                     # define histogram
                     hist_name = smart_join(sys_name, selection, variable_name)
@@ -764,10 +812,10 @@ class Dataset:
 
                     # do systematic weights for reco variables in nominal tree
                     if (
-                            (self.eff_sys_set or self.tes_sys_set)
-                            and (sys_name == self.nominal_name)
-                            and (weight == "reco_weight")
-                            and include_systematic_selection(selection)
+                        (self.eff_sys_set or self.tes_sys_set)
+                        and (sys_name == self.nominal_name)
+                        and (weight == "reco_weight")
+                        and include_systematic_selection(selection)
                     ):
                         for sys_wgt in [
                             str(wgt)
@@ -777,8 +825,8 @@ class Dataset:
                             eff_sys_name = sys_wgt.removeprefix("weight_")
                             hist_name = smart_join(eff_sys_name, selection, variable_name)
                             th1 = self.define_th1(variable_name, hist_name, hist_name)
-                            th1_ptr_map[selection][f"{variable_name}|{eff_sys_name}"] = sel_df.Fill(
-                                th1, [variable_name, sys_wgt]
+                            th1_ptr_map[selection][f"{variable_name}|{eff_sys_name}"] = (
+                                sel_df.Fill(th1, [variable_name, sys_wgt])
                             )
 
                 # Define profiles
@@ -815,6 +863,8 @@ class Dataset:
                         if hist2d_opts.weight
                         else [hist2d_opts.x, hist2d_opts.y]
                     )
+                    if not set(fill_cols).issubset(available_columns):
+                        continue
 
                     # define histogram
                     hist_name = smart_join(
@@ -829,10 +879,10 @@ class Dataset:
 
                     # do systematic weights for response matrices in nominal tree
                     if (
-                            (self.eff_sys_set or self.tes_sys_set)
-                            and (sys_name == self.nominal_name)
-                            and (hist2d_opts.weight == "reco_weight")
-                            and include_systematic_selection(selection)
+                        (self.eff_sys_set or self.tes_sys_set)
+                        and (sys_name == self.nominal_name)
+                        and (hist2d_opts.weight == "reco_weight")
+                        and include_systematic_selection(selection)
                     ):
                         for sys_wgt in [
                             str(wgt)
@@ -863,9 +913,9 @@ class Dataset:
                         th2_unweighted = self.define_th2(
                             hist2d_opts.x, hist2d_opts.y, hist_name_unweighted, hist_name
                         )
-                        th1_ptr_map[selection][
-                            f"{hist2d_opts.x}_{hist2d_opts.y}_unweighted"
-                        ] = sel_df.Fill(th2_unweighted, [hist2d_opts.x, hist2d_opts.y])
+                        th1_ptr_map[selection][f"{hist2d_opts.x}_{hist2d_opts.y}_unweighted"] = (
+                            sel_df.Fill(th2_unweighted, [hist2d_opts.x, hist2d_opts.y])
+                        )
 
             # generate histograms
             t = time.time()
@@ -875,30 +925,47 @@ class Dataset:
                 sys_name,
                 self.name,
             )
+            if (
+                root_sys_df.GetNRuns() > 0
+            ):  # if we run the same graph twice it won't add a new progress bar
+                ROOT.RDF.Experimental.AddProgressBar(ROOT.RDF.AsRNode(root_sys_df))
 
             histograms_dict[sys_name] = dict()
+            event_loop_triggered = False
             for selection, hist_ptrs in th1_ptr_map.items():
                 histograms_dict[sys_name][selection] = dict()
                 for hist_name, hist_ptr in hist_ptrs.items():
+                    if not event_loop_triggered:
+                        self.logger.info(
+                            "Starting ROOT event loop for %s histograms in %s...",
+                            sys_name,
+                            self.name,
+                        )
+                    hist = hist_ptr.GetValue()
+                    if not event_loop_triggered:
+                        event_loop_triggered = True
+                        self.logger.info(
+                            "ROOT event loop finished for %s in %s; collecting histogram results...",
+                            sys_name,
+                            self.name,
+                        )
+
                     # put EFF. sys in their own systematics key
                     if "|" in hist_name:
                         var_name, eff_sys_name = hist_name.split("|")
 
                         # skip if variable is truth
-                        if (
-                                var_name in variable_data
-                                and variable_data[var_name]["tag"] == "truth"
-                        ):
+                        if var_name in variable_data and variable_data[var_name]["tag"] == "truth":
                             continue
 
                         if eff_sys_name not in histograms_dict:
                             histograms_dict[eff_sys_name] = dict()
                         if selection not in histograms_dict[eff_sys_name]:
                             histograms_dict[eff_sys_name][selection] = dict()
-                        histograms_dict[eff_sys_name][selection][var_name] = hist_ptr.GetValue()
+                        histograms_dict[eff_sys_name][selection][var_name] = hist
 
                     else:
-                        histograms_dict[sys_name][selection][hist_name] = hist_ptr.GetValue()
+                        histograms_dict[sys_name][selection][hist_name] = hist
 
             self.logger.info(
                 "Took %.3fs to produce %d histograms over %d run(s).",
@@ -917,10 +984,12 @@ class Dataset:
     # ============== UNCERTAINTIES ==============
     # ===========================================
     def get_systematic_uncertainty(
-            self,
-            val: str,
-            selection: str = "",
-    ) -> tuple[np.typing.NDArray[np.float64] | Literal[0], np.typing.NDArray[np.float64] | Literal[0]]:
+        self,
+        val: str,
+        selection: str = "",
+    ) -> tuple[
+        np.typing.NDArray[np.float64] | Literal[0], np.typing.NDArray[np.float64] | Literal[0]
+    ]:
         """
         Get symmetric systematic uncertainty for single variable in dataset.
         Returns 0s if not found.
@@ -944,9 +1013,7 @@ class Dataset:
         tot_uncert = sys_uncerts[0].Clone(f"{val}_{selection}_total_syst_uncert")
         tot_uncert.Reset()
         for bin_i in range(1, tot_uncert.GetNbinsX() + 1):
-            total = np.sqrt(
-                sum(sys_hist.GetBinContent(bin_i) ** 2 for sys_hist in sys_uncerts)
-            )
+            total = np.sqrt(sum(sys_hist.GetBinContent(bin_i) ** 2 for sys_hist in sys_uncerts))
             tot_uncert.SetBinContent(bin_i, total)
 
         values = ROOT_utils.get_th1_bin_values(tot_uncert)
