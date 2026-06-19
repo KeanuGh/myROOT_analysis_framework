@@ -3,8 +3,8 @@ from pathlib import Path
 import ROOT
 import tabulate
 
-from analysis import Analysis
-from datasetbuilder import LUMI_YEAR
+from src.analysis import Analysis
+from src.datasetbuilder import LUMI_YEAR
 from src.histogram import Histogram1D
 from utils import ROOT_utils
 from utils.helper_functions import smart_join
