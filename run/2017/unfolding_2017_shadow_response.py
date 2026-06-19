@@ -1,3 +1,11 @@
+"""Run the experimental full shadow-response unfolding.
+
+This implementation loads the response matrices from the shadow-bin
+efficiency/acceptance outputs and unfolds with those matrices directly. It is
+currently incomplete as a closure method because the measured inputs are still
+nominal signal-region histograms, not shadow-region reconstructed inputs.
+"""
+
 from pathlib import Path
 
 import ROOT
@@ -67,13 +75,89 @@ RECO_ONLY_SYSTEMATICS = {
     "TAUS_TRUEHADTAU_SME_TES_MODEL_CLOSURE",
     "TAUS_TRUEHADTAU_SME_TES_PHYSICSLIST",
 }
+SHADOW_RESPONSE_OUTPUTS = {
+    "no_shadow_bin": "efficiency_and_acceptance",
+    "shadow_bin_200": "efficiency_and_acceptance_shadow_bin200",
+    "shadow_bin_250": "efficiency_and_acceptance_shadow_bin250",
+    "shadow_bin_300": "efficiency_and_acceptance_shadow_bin300",
+}
+BIN_EDGE_TOLERANCE = 1e-6
 
 
 def systematic_source(systematic: str) -> str:
+    """Return the base systematic name without the up/down variation suffix."""
     for suffix in ("__1up", "__1down"):
         if systematic.endswith(suffix):
             return systematic.removesuffix(suffix)
     return systematic
+
+
+def same_bin_edges(left: ROOT.TH1, right: ROOT.TH1) -> bool:
+    """Check whether two ROOT histograms have the same explicit bin edges."""
+    left_edges = get_th1_bin_edges(left)
+    right_edges = get_th1_bin_edges(right)
+    if len(left_edges) != len(right_edges):
+        return False
+    return all(
+        abs(float(left_edge) - float(right_edge)) < BIN_EDGE_TOLERANCE
+        for left_edge, right_edge in zip(left_edges, right_edges, strict=True)
+    )
+
+
+def has_leading_shadow_bin(source: ROOT.TH1, target: ROOT.TH1) -> bool:
+    """Check whether target equals source with one extra leading shadow bin."""
+    source_edges = get_th1_bin_edges(source)
+    target_edges = get_th1_bin_edges(target)
+    if len(target_edges) != len(source_edges) + 1:
+        return False
+    return all(
+        abs(float(source_edge) - float(target_edge)) < BIN_EDGE_TOLERANCE
+        for source_edge, target_edge in zip(source_edges, target_edges[1:], strict=True)
+    )
+
+
+def embed_histogram_in_shadow_binning(source: ROOT.TH1, target: ROOT.TH1, name: str) -> ROOT.TH1:
+    """Clone source into target binning by inserting an empty leading shadow bin."""
+    if same_bin_edges(source, target):
+        clone = source.Clone(name)
+        clone.SetDirectory(0)
+        return clone
+
+    if not has_leading_shadow_bin(source, target):
+        raise ValueError(
+            f"Cannot align histogram '{source.GetName()}' to '{target.GetName()}': "
+            "the target binning is not identical and does not contain one leading shadow bin."
+        )
+
+    target_edges = get_th1_bin_edges(target)
+    aligned = ROOT.TH1D(name, source.GetTitle(), len(target_edges) - 1, target_edges)
+    aligned.SetDirectory(0)
+    for bin_i in range(1, source.GetNbinsX() + 1):
+        aligned.SetBinContent(bin_i + 1, source.GetBinContent(bin_i))
+        aligned.SetBinError(bin_i + 1, source.GetBinError(bin_i))
+    return aligned
+
+
+def crop_shadow_bin_from_histogram(source: ROOT.TH1, target: ROOT.TH1, name: str) -> ROOT.TH1:
+    """Clone source into target binning by dropping a leading shadow bin."""
+    if same_bin_edges(source, target):
+        clone = source.Clone(name)
+        clone.SetDirectory(0)
+        return clone
+
+    if not has_leading_shadow_bin(target, source):
+        raise ValueError(
+            f"Cannot crop histogram '{source.GetName()}' to '{target.GetName()}': "
+            "the source binning is not identical and does not contain one leading shadow bin."
+        )
+
+    target_edges = get_th1_bin_edges(target)
+    cropped = ROOT.TH1D(name, source.GetTitle(), len(target_edges) - 1, target_edges)
+    cropped.SetDirectory(0)
+    for bin_i in range(1, target.GetNbinsX() + 1):
+        cropped.SetBinContent(bin_i, source.GetBinContent(bin_i + 1))
+        cropped.SetBinError(bin_i, source.GetBinError(bin_i + 1))
+    return cropped
 
 
 if __name__ == "__main__":
@@ -95,7 +179,57 @@ if __name__ == "__main__":
         "TauEta": r"\eta^{\tau_\mathrm{had-vis}}",
         "TauPhi": r"\phi^{\tau_\mathrm{had-vis}}",
     }
+
+    def load_response_components(
+        output_label: str,
+        systematic: str,
+        response_var: str,
+        response_wp: str,
+    ) -> ResponseComponents:
+        """Load reco, truth, and migration histograms and wrap them as a RooUnfold response."""
+        response_file = analysis.paths.output_dir.parent / output_label / "root/wtaunu_had.root"
+        reco_path = f"{systematic}/{response_wp}_reco_tau/{response_var}"
+        truth_path = f"{systematic}/truth_tau/{truths[response_var]}"
+        matrix_path = (
+            f"{systematic}/{response_wp}_truth_reco_tau/{response_var}_{truths[response_var]}"
+        )
+
+        with ROOT.TFile(str(response_file)) as file:
+            response_reco = file.Get(reco_path)
+            response_truth = file.Get(truth_path)
+            response_matrix = file.Get(matrix_path)
+            missing = [
+                path
+                for path, hist in (
+                    (reco_path, response_reco),
+                    (truth_path, response_truth),
+                    (matrix_path, response_matrix),
+                )
+                if not hist
+            ]
+            if missing:
+                raise KeyError(
+                    f"Missing response object(s) in {response_file}: {', '.join(missing)}"
+                )
+
+            response_reco = response_reco.Clone(
+                f"{output_label}_{systematic}_{response_wp}_{response_var}_reco"
+            )
+            response_truth = response_truth.Clone(
+                f"{output_label}_{systematic}_{response_wp}_{response_var}_truth"
+            )
+            response_matrix = response_matrix.Clone(
+                f"{output_label}_{systematic}_{response_wp}_{response_var}_matrix"
+            )
+            response_reco.SetDirectory(0)
+            response_truth.SetDirectory(0)
+            response_matrix.SetDirectory(0)
+
+        response = ROOT.RooUnfoldResponse(response_reco, response_truth, response_matrix)
+        return response, response_reco, response_truth, response_matrix
+
     def unfolding_label(i: int) -> str:
+        """User-facing label for the chosen unfolding method/iteration count."""
         if i == 0:
             return "Bin-By-Bin Unfolding"
         else:
@@ -103,6 +237,7 @@ if __name__ == "__main__":
 
 
     def covariance_from_hist(h: ROOT.TH1, name: str) -> ROOT.TH2D:
+        """Build a diagonal covariance matrix from a histogram's bin errors."""
         cov = ROOT.TH2D(
             name,
             name,
@@ -129,6 +264,7 @@ if __name__ == "__main__":
             var: str,
             sh_bin_label: str,
     ) -> tuple[ROOT.TH1, ROOT.TH1, ROOT.TH1, ROOT.TH1, ROOT.TH2D, ROOT.TH2D]:
+        """Apply the framework bin-by-bin correction when reco/truth axes match."""
         data_unfolded = analysis.unfold_bin_by_bin(
             data_sig,
             response_reco,
@@ -195,7 +331,7 @@ if __name__ == "__main__":
             hists: dict[str, dict[str, Histogram1D]] = {}
             response_cache: dict[str, ResponseComponents] = {}
 
-            # shadow bins difference?
+            # Compare acceptance shifts from the alternative shadow-bin definitions.
             # ========================================================
             analysis.paths.plot_dir = wp_dir / "shadow_bins"
             with ROOT.TFile(
@@ -265,15 +401,12 @@ if __name__ == "__main__":
             analysis.logger.info(f"Performing unfolding for {var} in {wp}")
             analysis.paths.plot_dir = wp_dir / "unfolded" / var
 
-            # get response
-            response, response_reco, response_truth, response_matrix = analysis.get_response_histogram(
-                varname_reco=var,
-                varname_truth=truths[var],
-                dataset="wtaunu_had",
-                wp=wp,
-                nprong="",
-                systematic=NOMINAL_NAME,
-                return_histograms=True,
+            # Load the nominal response first; systematic variations reuse it below.
+            response, response_reco, response_truth, response_matrix = load_response_components(
+                SHADOW_RESPONSE_OUTPUTS["no_shadow_bin"],
+                NOMINAL_NAME,
+                var,
+                wp,
             )
             response_cache[NOMINAL_NAME] = (
                 response,
@@ -290,9 +423,11 @@ if __name__ == "__main__":
                     response_var: str = var,
                     response_wp: str = wp,
             ) -> ResponseComponents:
+                """Return the response to use for a systematic variation."""
                 if systematic not in cache:
                     source = systematic_source(systematic)
                     if source in FULL_RESPONSE_SYSTEMATICS:
+                        # Efficiency variations change the response, reco, and truth pieces.
                         cache[systematic] = analysis.get_response_histogram(
                             varname_reco=response_var,
                             varname_truth=truths[response_var],
@@ -303,6 +438,7 @@ if __name__ == "__main__":
                             return_histograms=True,
                         )
                     elif source in RECO_ONLY_SYSTEMATICS:
+                        # TES variations only shift the reconstructed axis in saved inputs.
                         response_file = (
                                 analysis.paths.output_dir.parent
                                 / "efficiency_and_acceptance/root/wtaunu_had.root"
@@ -351,12 +487,13 @@ if __name__ == "__main__":
                     response_obj: ROOT.RooUnfoldResponse,
                     i: int,
             ) -> ROOT.TH1:
+                """Construct the requested RooUnfold object for one histogram."""
                 if i == 0:
                     return ROOT.RooUnfoldBinByBin(response_obj, h)
                 return ROOT.RooUnfoldBayes(response_obj, h, i)
 
-
-            # get data and signal
+            # Current measured inputs are nominal SR histograms. Full shadow closure
+            # needs matching shadow-region inputs upstream, not just shadow responses.
             # ----------------------------------------------------------------
             with ROOT.TFile(
                     str(analysis.paths.output_dir.parent / "analysis_simple_2017/root/data.root")
@@ -376,9 +513,9 @@ if __name__ == "__main__":
                         analysis.paths.output_dir.parent / "efficiency_and_acceptance/root/wtaunu_had.root"
                     )
             ) as file:
-                truth = file[f"{NOMINAL_NAME}/truth_tau"].Get(truths[var])
-                truth.SetDirectory(0)
-            truth = Histogram1D(th1=truth) / LUMI
+                truth_nominal_hist = file[f"{NOMINAL_NAME}/truth_tau"].Get(truths[var])
+                truth_nominal_hist.SetDirectory(0)
+            truth = Histogram1D(th1=truth_nominal_hist) / LUMI
 
             # get backgrounds
             # ----------------------------------------------------------------
@@ -434,7 +571,7 @@ if __name__ == "__main__":
                 )
             analysis.logger.info(f"Saved table to {signal_fraction_table_path}")
 
-            # efficiency and acceptance
+            # Load efficiency/acceptance products used for diagnostics and labels.
             # ----------------------------------------------------------------
             with ROOT.TFile(
                     str(
@@ -453,26 +590,40 @@ if __name__ == "__main__":
                 ("shadow_bin_250", acc_hist250),
                 ("shadow_bin_300", acc_hist300),
             )
-            acc_no_shadow = acc_hist.Clone()
+            shadow_response_cache = {"no_shadow_bin": response_cache[NOMINAL_NAME]}
 
-            # fully unfold
+            # Unfold with each response definition. Shadow responses can have one
+            # extra leading bin; inputs are aligned below before RooUnfold sees them.
             # ----------------------------------------------------------------
-            for sh_bin_label, acc in shadow_bins:
+            for sh_bin_label, _ in shadow_bins:
                 hists[sh_bin_label] = {}
 
-                if (sh_bin_label != "no_shadow_bin") and (var in ("MTW", "TauPt", "MET_met")):
-                    # make new histogram that excludes shadow bin
-                    acc_new = ROOT.TH1F(
-                        acc.GetName(),
-                        acc.GetTitle(),
-                        acc.GetNbinsX() - 1,
-                        get_th1_bin_edges(acc)[1:],
+                if sh_bin_label not in shadow_response_cache:
+                    shadow_response_cache[sh_bin_label] = load_response_components(
+                        SHADOW_RESPONSE_OUTPUTS[sh_bin_label],
+                        NOMINAL_NAME,
+                        var,
+                        wp,
                     )
-                    for i in range(acc.GetNbinsX()):
-                        acc_new.SetBinContent(i, acc.GetBinContent(i + 1))
 
-                else:
-                    acc_new = acc.Clone()
+                (
+                    active_response,
+                    active_response_reco,
+                    active_response_truth,
+                    active_response_matrix,
+                ) = shadow_response_cache[sh_bin_label]
+                # This inserts an empty leading bin for shadow responses. It is a
+                # technical alignment step, not a substitute for real shadow-region data.
+                input_data_sig = embed_histogram_in_shadow_binning(
+                    data_sig,
+                    active_response_reco,
+                    f"{wp}_{var}_{sh_bin_label}_data_minus_background_input",
+                )
+                input_signal = embed_histogram_in_shadow_binning(
+                    signal,
+                    active_response_reco,
+                    f"{wp}_{var}_{sh_bin_label}_signal_input",
+                )
 
                 for n_iter in ITER:
                     analysis.logger.info(
@@ -509,27 +660,30 @@ if __name__ == "__main__":
 
 
                     def unfold_scale(
-                            h: ROOT.TH1,
-                            scale_acc_new: ROOT.TH1 = acc_new,
-                            scale_acc_no_shadow: ROOT.TH1 = acc_no_shadow,
+                        h: ROOT.TH1,
+                        nominal_truth_bins: ROOT.TH1 = truth_nominal_hist,
                     ) -> ROOT.TH1:
+                        """Convert unfolded yields to cross-section and nominal truth bins."""
                         scaled = h.Clone(f"{h.GetName()}_scaled")
                         scaled.SetDirectory(0)
                         scaled.Scale(1 / LUMI)
-                        scaled.Multiply(scale_acc_new)
-                        scaled.Divide(scale_acc_no_shadow)
-                        return scaled
+                        return crop_shadow_bin_from_histogram(
+                            scaled,
+                            nominal_truth_bins,
+                            f"{scaled.GetName()}_nominal_truth_bins",
+                        )
 
 
                     def unfold(
-                            h: ROOT.TH1,
-                            i: int,
-                            response_obj: ROOT.RooUnfoldResponse = response,
-                            response_reco_hist: ROOT.TH1 = response_reco,
-                            response_truth_hist: ROOT.TH1 = response_truth,
+                        h: ROOT.TH1,
+                        i: int,
+                        response_obj: ROOT.RooUnfoldResponse = active_response,
+                        response_reco_hist: ROOT.TH1 = active_response_reco,
+                        response_truth_hist: ROOT.TH1 = active_response_truth,
                     ) -> ROOT.TH1D:
+                        """Unfold one histogram with the active response definition."""
                         if i == 0:
-                            # manual bin-by-bin
+                            # Use the local correction helper when axes match exactly.
                             h = analysis.unfold_bin_by_bin(
                                 h,
                                 response_reco_hist,
@@ -541,7 +695,11 @@ if __name__ == "__main__":
 
 
                     # unfold
-                    if n_iter == 0:
+                    analysis.paths.plot_dir = wp_dir / "unfolded" / var
+                    if (
+                        n_iter == 0
+                        and active_response_reco.GetNbinsX() == active_response_truth.GetNbinsX()
+                    ):
                         (
                             data_unfolded_full,
                             signal_unfolded_full,
@@ -550,18 +708,28 @@ if __name__ == "__main__":
                             data_cov,
                             signal_cov,
                         ) = unfold_bin_by_bin_with_corrections(
-                            data_sig,
-                            signal,
-                            response_reco,
-                            response_truth,
+                            input_data_sig,
+                            input_signal,
+                            active_response_reco,
+                            active_response_truth,
                             unfold_scale,
                             wp,
                             var,
                             sh_bin_label,
                         )
                     else:
-                        data_unfolded = unfold_bayes(data_sig, response, n_iter)
-                        signal_unfolded = unfold_bayes(signal, response, n_iter)
+                        if n_iter == 0:
+                            analysis.logger.info(
+                                "Using RooUnfold bin-by-bin for %s %s %s because the "
+                                "shadow response has %s reco bins and %s truth bins.",
+                                wp,
+                                var,
+                                sh_bin_label,
+                                active_response_reco.GetNbinsX(),
+                                active_response_truth.GetNbinsX(),
+                            )
+                        data_unfolded = unfold_bayes(input_data_sig, active_response, n_iter)
+                        signal_unfolded = unfold_bayes(input_signal, active_response, n_iter)
 
                         data_unfolded_full = unfold_scale(data_unfolded.Hunfold())
                         signal_unfolded_full = unfold_scale(signal_unfolded.Hunfold())
@@ -569,11 +737,20 @@ if __name__ == "__main__":
                         data_response = data_unfolded.response().Hresponse()
                         signal_response = signal_unfolded.response().Hresponse()
 
-                        data_cov = ROOT.TH2D(data_unfolded.Eunfold())
-                        signal_cov = ROOT.TH2D(signal_unfolded.Eunfold())
+                        if n_iter == 0:
+                            data_cov = covariance_from_hist(
+                                data_unfolded_full,
+                                f"{wp}_{var}_{sh_bin_label}_response_bin_by_bin_data_cov",
+                            )
+                            signal_cov = covariance_from_hist(
+                                signal_unfolded_full,
+                                f"{wp}_{var}_{sh_bin_label}_response_bin_by_bin_signal_cov",
+                            )
+                        else:
+                            data_cov = ROOT.TH2D(data_unfolded.Eunfold())
+                            signal_cov = ROOT.TH2D(signal_unfolded.Eunfold())
 
                     # plot
-                    analysis.paths.plot_dir = wp_dir / "unfolded" / var
                     hists[sh_bin_label][n_iter] = data_unfolded_full
                     default_args.update(
                         {
@@ -602,6 +779,39 @@ if __name__ == "__main__":
                         label_params={"llabel": "Simulation"},
                         filename=f"{wp}_{var}_{n_iter}iter_cov.png",
                     )
+                    response_plot = active_response_matrix if n_iter == 0 else data_response
+                    response_filename = (
+                        f"{wp}_{var}_{n_iter}iter_response.png"
+                        if sh_bin_label == "no_shadow_bin"
+                        else f"{wp}_{var}_{sh_bin_label}_{n_iter}iter_response.png"
+                    )
+                    analysis.plot_2d(
+                        response_plot,
+                        ylabel=f"Truth {truths[var]}",
+                        xlabel=f"Reco {var}",
+                        title=smart_join(
+                            sh_bin_label,
+                            unfolding_label(n_iter),
+                            f"{wp.title()} Tau ID",
+                            r"$\sqrt{s} = 13$TeV",
+                            sep=" | ",
+                        ),
+                        labels=True,
+                        label_params={"llabel": "Simulation"},
+                        filename=response_filename,
+                    )
+
+                    if sh_bin_label != "no_shadow_bin":
+                        # Shadow-bin systematic response inputs have not been produced,
+                        # so only the nominal shadow response can be plotted here.
+                        analysis.logger.info(
+                            "Skipping response systematic uncertainty plots for %s %s %s: "
+                            "saved shadow-bin systematic response inputs are not available.",
+                            wp,
+                            var,
+                            sh_bin_label,
+                        )
+                        continue
 
                     # detector systematics
                     # -------------------------------------------------------------------------
@@ -618,6 +828,7 @@ if __name__ == "__main__":
                             hist_var: str = var,
                             hist_shadow_bin: str = sh_bin_label,
                     ) -> ROOT.TH1:
+                        """Calculate relative uncertainty from up/down response variations."""
                         response_up, reco_up, truth_up, _ = get_response_components(f"{sys}__1up")
                         response_down, reco_down, truth_down, _ = get_response_components(
                             f"{sys}__1down"
@@ -670,6 +881,7 @@ if __name__ == "__main__":
                             *,
                             plot_args: PlotKwargs = default_args,
                     ) -> None:
+                        """Plot a group of response systematic uncertainties together."""
                         histograms = []
                         labels = []
                         colours = []
