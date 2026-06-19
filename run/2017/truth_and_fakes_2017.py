@@ -1,6 +1,5 @@
 from pathlib import Path
 
-import matplotlib.pyplot as plt
 import numpy as np
 from samples import DSID_METADATA_CACHE, NOMINAL_NAME, mc_samples
 
@@ -10,7 +9,7 @@ from utils.helper_functions import smart_join
 from utils.plotting_tools import ProfileOpts, get_axis_labels
 
 YEAR = 2017
-LOAD_SAVED_HISTS = False
+LOAD_SAVED_HISTS = True
 
 # CUTS & SELECTIONS
 # ========================================================================
@@ -276,7 +275,12 @@ def run_analysis() -> Analysis:
 if __name__ == "__main__":
     analysis = run_analysis()
     base_plotting_dir = analysis.paths.plot_dir
-    origin_colours = list(plt.rcParams["axes.prop_cycle"].by_key()["color"])[:4]
+    origin_colours = [
+        "#5DA5DA",  # Jet fakes
+        "#FDB515",  # Muon fakes
+        "#D65F3A",  # Electron fakes
+        "#B8C4C0",  # Hadronic taus
+    ]
     origin_labels = [
         "Jet fakes",
         "Muon fakes",
