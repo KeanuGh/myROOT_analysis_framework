@@ -237,6 +237,7 @@ class Analysis:
             # apply some manual settings
             for manual_setting in [
                 "binnings",
+                "histogram_vars",
                 "profiles",
                 "hists_2d",
                 "do_unweighted",

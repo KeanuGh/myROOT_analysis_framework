@@ -53,6 +53,7 @@ class Dataset:
     filters: dict[str, dict[str, FilterNode]] = field(init=False, default_factory=dict)
     selections: dict[str, list[Cut]] = field(default_factory=dict)
     all_vars: set[str] = field(default_factory=set)
+    histogram_vars: set[str] = field(default_factory=set)
     profiles: dict[str, ProfileOpts] = field(default_factory=dict)
     hists_2d: dict[str, Hist2dOpts] = field(default_factory=dict)
     lumi: float = 139.0
@@ -739,7 +740,14 @@ class Dataset:
         """Generate histograms for all variables and cuts."""
 
         histograms_dict = dict()  # to store outputs
-        output_histogram_variables = self.all_vars
+        output_histogram_variables = self.histogram_vars or self.all_vars
+        unknown_histogram_vars = output_histogram_variables - self.all_vars
+        if unknown_histogram_vars:
+            raise ValueError(
+                "Histogram variable(s) are not available in dataset columns: "
+                + ", ".join(sorted(unknown_histogram_vars))
+            )
+
         self.logger.info(f"Defining histograms for dataset {self.name}...")
         if self.logger.getEffectiveLevel() < 20 and do_prints:
             # variable MUST be in scope! (why is ROOT like this)

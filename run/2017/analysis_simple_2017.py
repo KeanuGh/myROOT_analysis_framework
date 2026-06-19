@@ -162,8 +162,8 @@ def run_analysis() -> Analysis:
     return Analysis(
         datasets,
         year=YEAR,
-        # rerun=True,
-        # regen_histograms=True,
+        rerun=not LOAD_SAVED_HISTS,
+        regen_histograms=not LOAD_SAVED_HISTS,
         do_systematics=True,
         # regen_metadata=True,
         metadata_cache=DSID_METADATA_CACHE,
@@ -173,6 +173,7 @@ def run_analysis() -> Analysis:
         log_out="both",
         extract_vars=measurement_vars,
         import_missing_columns_as_nan=True,
+        histogram_vars=set(measurement_vars),
         skip_sys={
             r".*TAUS_TRUEHADTAU_EFF_RNNID_.*",
             r".*TAUS_TRUEHADTAU_EFF_JETID_.*",

@@ -203,6 +203,18 @@ reco_measurement_vars = [
     for v in measurement_vars
     if (variable_data[v]["tag"] == "reco") and (v not in ("TauPt_res_frac", "TauPt_res"))
 ]
+truths = {
+    "MTW": "TruthMTW",
+    "TauPt": "VisTruthTauPt",
+    "TauEta": "VisTruthTauEta",
+    "TauPhi": "VisTruthTauPhi",
+    "MET_met": "TruthNeutrinoPt",
+    "MET_phi": "TruthNeutrinoPhi",
+    "AbsDeltaPhi_tau_met": "TruthAbsDeltaPhi_tau_met",
+    "TauPt_div_MET": "TruthTauPt_div_MET",
+}
+# Keep all variables used by efficiency/acceptance plots and migration/response matrices.
+histogram_vars = set(reco_measurement_vars) | set(truths.values())
 
 # define 2d histograms
 hists_2d = {
@@ -246,6 +258,7 @@ def run_analysis() -> Analysis:
         extract_vars=measurement_vars,
         import_missing_columns_as_nan=True,
         snapshot=False,
+        histogram_vars=histogram_vars,
         hists_2d=hists_2d,
         do_unweighted=True,
         binnings={
@@ -271,17 +284,6 @@ if __name__ == "__main__":
 
     analysis.full_cutflow_printout(datasets=["wtaunu_had"])
     base_plotting_dir = analysis.paths.plot_dir
-
-    truths = {
-        "MTW": "TruthMTW",
-        "TauPt": "VisTruthTauPt",
-        "TauEta": "VisTruthTauEta",
-        "TauPhi": "VisTruthTauPhi",
-        "MET_met": "TruthNeutrinoPt",
-        "MET_phi": "TruthNeutrinoPhi",
-        "AbsDeltaPhi_tau_met": "TruthAbsDeltaPhi_tau_met",
-        "TauPt_div_MET": "TruthTauPt_div_MET",
-    }
 
     # print histograms
     if not LOAD_SAVED_HISTS:

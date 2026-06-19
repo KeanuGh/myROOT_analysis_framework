@@ -11,7 +11,7 @@ from utils.plotting_tools import PlotKwargs
 from utils.variable_names import variable_data
 
 YEAR = 2017
-LOAD_SAVED_HISTS = False
+LOAD_SAVED_HISTS = True
 
 # CUTS & SELECTIONS
 # ========================================================================
@@ -269,6 +269,7 @@ def run_analysis() -> Analysis:
         log_out="both",
         extract_vars=wanted_variables,
         import_missing_columns_as_nan=True,
+        histogram_vars=set(measurement_vars),
         systematics_for_selection={".*SR_passID"},
         skip_sys={
             r".*TAUS_TRUEHADTAU_EFF_RNNID_.*",

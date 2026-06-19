@@ -170,6 +170,7 @@ def run_analysis() -> Analysis:
         log_out="both",
         extract_vars=measurement_vars,
         import_missing_columns_as_nan=True,
+        histogram_vars=set(measurement_vars),
         skip_sys={
             r".*TAUS_TRUEHADTAU_EFF_RNNID_.*",
             r".*TAUS_TRUEHADTAU_EFF_JETID_.*",
