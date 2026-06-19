@@ -297,7 +297,7 @@ if __name__ == "__main__":
 
     for selection in selections:
         wp_dir = base_plotting_dir / selection
-        fake_fraction_y_axlim = (0, 0.4) if "SR" in selection else (0, 1)
+        fake_fraction_y_axlim = (0, 1)
 
         for variable in measurement_vars:
             xlabel = get_axis_labels(variable)[0]
