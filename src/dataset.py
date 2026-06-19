@@ -379,16 +379,20 @@ class Dataset:
             systematics = self.rdataframes.keys()
         else:
             systematics = [systematic]
-        if not selection:
-            selections = self.selections.keys()
-        else:
-            selections = [selection]
-
         if self.cutflows is None:
             raise AttributeError("Must have applied cuts to obtain cutflow")
 
         for systematic in systematics:
+            systematic_selections = self.filters[systematic]
+            selections = systematic_selections.keys() if not selection else [selection]
             for selection in selections:
+                if selection not in systematic_selections:
+                    self.logger.debug(
+                        "Skipping cutflow printout for missing selection '%s' in systematic '%s'",
+                        selection,
+                        systematic,
+                    )
+                    continue
                 if path is not None:
                     path /= Path(f"{self.name}_{systematic}_{selection}_cutflow.tex")
                 self.cutflows[systematic][selection].print(latex_path=path)
@@ -438,7 +442,7 @@ class Dataset:
         """Generate cutflows for each systematic-selection"""
 
         for systematic in self.rdataframes:
-            for selection in self.selections:
+            for selection in self.filters[systematic]:
                 self.logger.info(
                     "Generating cutflow in dataset '%s' "
                     "for selection '%s' with systematic '%s'...",
