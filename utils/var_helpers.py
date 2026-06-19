@@ -240,6 +240,14 @@ derived_vars: dict[str, OtherVar] = {
         "tree": "",
         "cfunc": "is_not",
     },
+    "MatchedTruthParticle_isLeptonicTau": {
+        "var_args": [
+            "MatchedTruthParticle_isTau",
+            "MatchedTruthParticle_isHadronicTau",
+        ],
+        "tree": "",
+        "cfunc": "is_leptonic_tau",
+    },
     "nJets": {
         "var_args": ["JetPt"],
         "tree": "",

@@ -142,6 +142,10 @@ bool is_not(bool x1, bool x2, bool x3) {
 	return !x1 && !x2 && !x3;
 }
 
+bool is_leptonic_tau(bool isTau, bool isHadronicTau) {
+	return isTau && !isHadronicTau;
+}
+
 int n_vec(ROOT::VecOps::RVec<float> v) {
 	return v.size();
 }

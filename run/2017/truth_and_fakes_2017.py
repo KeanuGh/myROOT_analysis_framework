@@ -9,7 +9,7 @@ from utils.helper_functions import smart_join
 from utils.plotting_tools import ProfileOpts, get_axis_labels
 
 YEAR = 2017
-LOAD_SAVED_HISTS = True
+LOAD_SAVED_HISTS = False
 
 # CUTS & SELECTIONS
 # ========================================================================
@@ -191,6 +191,7 @@ wanted_variables = {
     "TauNCoreTracks",
     "MatchedTruthParticle_isTau",
     "MatchedTruthParticle_isHadronicTau",
+    "MatchedTruthParticle_isLeptonicTau",
     "MatchedTruthParticle_isElectron",
     "MatchedTruthParticle_isMuon",
     "MatchedTruthParticle_isPhoton",
@@ -212,6 +213,7 @@ measurement_vars_unitless = [
 measurement_vars = measurement_vars_unitless + measurement_vars_mass
 origin_vars = [
     "MatchedTruthParticle_isHadronicTau",
+    "MatchedTruthParticle_isLeptonicTau",
     "MatchedTruthParticle_isElectron",
     "MatchedTruthParticle_isMuon",
     "MatchedTruthParticle_isJet",
@@ -279,18 +281,21 @@ if __name__ == "__main__":
         "#5DA5DA",  # Jet fakes
         "#FDB515",  # Muon fakes
         "#D65F3A",  # Electron fakes
+        "#7E6AAD",  # Leptonic taus
         "#B8C4C0",  # Hadronic taus
     ]
     origin_labels = [
         "Jet fakes",
         "Muon fakes",
         "Electron fakes",
+        "Leptonic taus",
         "Hadronic taus",
     ]
     origin_suffixes = [
         "MatchedTruthParticle_isJet",
         "MatchedTruthParticle_isMuon",
         "MatchedTruthParticle_isElectron",
+        "MatchedTruthParticle_isLeptonicTau",
         "MatchedTruthParticle_isHadronicTau",
     ]
     mc_sample_names = list(datasets)

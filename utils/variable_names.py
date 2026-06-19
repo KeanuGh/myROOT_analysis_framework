@@ -607,6 +607,11 @@ variable_data: dict[str, Branch] = {
         "units": "",
         "tag": VarTag.RECO,
     },
+    "MatchedTruthParticle_isLeptonicTau": {
+        "name": r"Truth Matched Particle is Leptonic Tau",
+        "units": "",
+        "tag": VarTag.RECO,
+    },
     "MatchedTruthParticle_isElectron": {
         "name": r"Truth Matched Particle is Electron",
         "units": "",
