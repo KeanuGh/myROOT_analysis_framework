@@ -450,12 +450,16 @@ if __name__ == "__main__":
 
 
                     def unfold_scale(
-                            h,
+                            h: ROOT.TH1,
                             scale_acc_new: ROOT.TH1 = acc_new,
                             scale_acc_no_shadow: ROOT.TH1 = acc_no_shadow,
-                    ) -> ROOT.TH1D:
-                        h.Scale(1 / LUMI)
-                        return h * scale_acc_new / scale_acc_no_shadow
+                    ) -> ROOT.TH1:
+                        scaled = h.Clone(f"{h.GetName()}_scaled")
+                        scaled.SetDirectory(0)
+                        scaled.Scale(1 / LUMI)
+                        scaled.Multiply(scale_acc_new)
+                        scaled.Divide(scale_acc_no_shadow)
+                        return scaled
 
 
                     def unfold(
