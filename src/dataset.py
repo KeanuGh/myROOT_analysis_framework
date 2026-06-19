@@ -53,7 +53,7 @@ class Dataset:
     filters: dict[str, dict[str, FilterNode]] = field(init=False, default_factory=dict)
     selections: dict[str, list[Cut]] = field(default_factory=dict)
     all_vars: set[str] = field(default_factory=set)
-    histogram_vars: set[str] = field(default_factory=set)
+    histogram_vars: set[str] | None = None
     profiles: dict[str, ProfileOpts] = field(default_factory=dict)
     hists_2d: dict[str, Hist2dOpts] = field(default_factory=dict)
     lumi: float = 139.0
@@ -740,7 +740,7 @@ class Dataset:
         """Generate histograms for all variables and cuts."""
 
         histograms_dict = dict()  # to store outputs
-        output_histogram_variables = self.histogram_vars or self.all_vars
+        output_histogram_variables = self.all_vars if self.histogram_vars is None else self.histogram_vars
         unknown_histogram_vars = output_histogram_variables - self.all_vars
         if unknown_histogram_vars:
             raise ValueError(
