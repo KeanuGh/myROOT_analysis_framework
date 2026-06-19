@@ -14,7 +14,6 @@ from utils.ROOT_utils import get_th1_bin_edges
 from utils.variable_names import variable_data
 
 YEAR = 2017
-DO_SYS = True
 LOAD_SAVED_HISTS = False
 
 # CUTS & SELECTIONS
@@ -42,58 +41,19 @@ pass_loose = Cut(
     r"(TauBDTEleScore > 0.05) && "
     r"((TauRNNJetScore > 0.15) * (TauNCoreTracks == 1) + (TauRNNJetScore > 0.25) * (TauNCoreTracks == 3))",
 )
-fail_loose = Cut(
-    r"\mathrm{Fail Loose ID}",
-    r"(TauBDTEleScore > 0.05) && "
-    r"(TauRNNJetScore > 0.01) && "
-    r"!((TauRNNJetScore > 0.15) * (TauNCoreTracks == 1) + (TauRNNJetScore > 0.25) * (TauNCoreTracks == 3))",
-)
 pass_medium = Cut(
     r"\mathrm{Pass Medium ID}",
     r"(TauBDTEleScore > 0.1) && "
     r"((TauRNNJetScore > 0.25) * (TauNCoreTracks == 1) + (TauRNNJetScore > 0.4) * (TauNCoreTracks == 3))",
-)
-fail_medium = Cut(
-    r"\mathrm{Fail Medium ID}",
-    r"(TauBDTEleScore > 0.1) && "
-    r"(TauRNNJetScore > 0.01) && "
-    r"!((TauRNNJetScore > 0.25) * (TauNCoreTracks == 1) + (TauRNNJetScore > 0.4) * (TauNCoreTracks == 3))",
 )
 pass_tight = Cut(
     r"\mathrm{Pass Tight ID}",
     r"(TauBDTEleScore > 0.15) && "
     r"((TauRNNJetScore > 0.4) * (TauNCoreTracks == 1) + (TauRNNJetScore > 0.55) * (TauNCoreTracks == 3))",
 )
-fail_tight = Cut(
-    r"\mathrm{Fail Tight ID}",
-    r"(TauBDTEleScore > 0.15) && "
-    r"(TauRNNJetScore > 0.01) && "
-    r"!((TauRNNJetScore > 0.4) * (TauNCoreTracks == 1) + (TauRNNJetScore > 0.55) * (TauNCoreTracks == 3))",
-)
 pass_met170 = Cut(
     r"$E_T^{\mathrm{miss}} > 170$",
     r"MET_met > 170",
-)
-pass_100met = Cut(
-    r"$E_T^{\mathrm{miss}} < 100$",
-    r"MET_met < 100",
-)
-pass_1prong = Cut(
-    "1-prong",
-    "TauNCoreTracks == 1",
-)
-pass_3prong = Cut(
-    "3-prong",
-    "TauNCoreTracks == 3",
-)
-pass_truetau = Cut(
-    # this is a multijet background estimation. Tau is "True" in this case if it is a lepton
-    r"True Tau",
-    "MatchedTruthParticle_isHadronicTau == true || MatchedTruthParticle_isMuon == true || MatchedTruthParticle_isElectron == true",
-)
-fail_truetau = Cut(
-    r"Fake Tau",
-    "!(MatchedTruthParticle_isHadronicTau == true || MatchedTruthParticle_isMuon == true || MatchedTruthParticle_isElectron == true)",
 )
 
 # selections
@@ -206,29 +166,10 @@ if __name__ == "__main__":
         analysis[mc].calculate_systematic_uncertainties()
     analysis.full_cutflow_printout(datasets=all_samples)
     analysis.print_metadata_table(datasets=mc_samples)
-    fakes_colour = next(analysis.c_iter)
-    truths = {
-        "TauPt": "VisTruthTauPt",
-        "MTW": "TruthMTW",
-        "MET_met": "TruthNeutrinoPt",
-        "TauEta": "VisTruthTauEta",
-        "TauPhi": "VisTruthTauPhi",
-    }
-    sec_labels = {
-        "": "",
-        "1prong_": "1-prong taus",
-        "3prong_": "3-prong taus",
-        "tauplus_": r"$\tau^+$",
-        "tauminus_": r"$\tau^-$",
-    }
 
     for wp in ("loose", "medium", "tight"):
         for sec in ("", "1prong_", "3prong_", "tauplus_", "tauminus_"):
             wp_dir = base_plotting_dir / wp / sec
-
-            for var in measurement_vars:
-                if var not in truths:
-                    continue
 
             # SYSTEMATIC UNCERTAINTIES
             # ===========================================================================
