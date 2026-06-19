@@ -622,7 +622,7 @@ class Analysis:
         # legend: limit to 4 rows and reverse order (so more important samples go in front)
         ncols = len(per_hist_vars["hists"]) + bool(do_stat + do_syst) + bool(data_plot_args)
         ncols = max(ncols // 4, 1)  # need at least one column!
-        legend_kwargs = {"ncols": ncols, "loc": "upper right", "fontsize": 14}
+        legend_kwargs = {"ncols": ncols, "loc": "upper right", "fontsize": 12}
         legend_kwargs.update(legend_params if legend_params is not None else {})  # allow overwrite
         legend_handles, legend_labels = ax.get_legend_handles_labels()
         ax.legend(list(reversed(legend_handles)), list(reversed(legend_labels)), **legend_kwargs)
