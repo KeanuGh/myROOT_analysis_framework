@@ -492,12 +492,15 @@ class Analysis:
                 data_plot_args[v] = per_hist_vars[v].pop(idx)  # type: ignore
             plot_as_data = data_plot_args["hists"]
 
-        # handle custom data?
-        if not isinstance(plot_as_data, (list, tuple)):
-            plot_as_data = [plot_as_data]
-        for i, plot_data in enumerate(plot_as_data):
-            if (plot_data is not None) and isinstance(plot_data, ROOT.TH1):
-                plot_as_data[i] = Histogram1D(th1=plot_data)
+        # handle custom data overlays
+        if plot_as_data is not None:
+            if not isinstance(plot_as_data, (list, tuple)):
+                plot_as_data = [plot_as_data]
+            else:
+                plot_as_data = list(plot_as_data)
+            for i, plot_data in enumerate(plot_as_data):
+                if isinstance(plot_data, ROOT.TH1):
+                    plot_as_data[i] = Histogram1D(th1=plot_data)
 
         # unset options that depend on multiple histograms
         if n_plottables == 1:
@@ -538,7 +541,7 @@ class Analysis:
                 ratio_ax=ratio_ax,
                 per_hist_vars=per_hist_vars,
                 data_hist=plot_as_data
-                if plot_as_data
+                if plot_as_data is not None
                 else [data_plot_args["hists"]]
                 if data_plot_args
                 else None,
