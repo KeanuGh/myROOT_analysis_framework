@@ -12,6 +12,8 @@ from utils.plotting_tools import PlotKwargs
 from utils.ROOT_utils import get_th1_bin_edges, sum_th1s
 from utils.variable_names import variable_data
 
+ResponseComponents = tuple[ROOT.RooUnfoldResponse, ROOT.TH1, ROOT.TH1, ROOT.TH2]
+
 # VARIABLES
 # ========================================================================
 measurement_vars_mass = [
@@ -48,6 +50,31 @@ ITER = [
     4,
     8,
 ]
+FULL_RESPONSE_SYSTEMATICS = {
+    "TAUS_TRUEHADTAU_EFF_ELEOLR_TOTAL",
+    "TAUS_TRUEHADTAU_EFF_RECO_TOTAL",
+    "TAUS_TRUEHADTAU_EFF_TRIGGER_STATDATA161718",
+    "TAUS_TRUEHADTAU_EFF_TRIGGER_STATMC161718",
+    "TAUS_TRUEHADTAU_EFF_TRIGGER_SYST161718",
+}
+RECO_ONLY_SYSTEMATICS = {
+    "TAUS_TRUEHADTAU_SME_TES_DETECTOR_Barrel_HighPt",
+    "TAUS_TRUEHADTAU_SME_TES_DETECTOR_Barrel_LowPt",
+    "TAUS_TRUEHADTAU_SME_TES_DETECTOR_Endcap_HighPt",
+    "TAUS_TRUEHADTAU_SME_TES_DETECTOR_Endcap_LowPt",
+    "TAUS_TRUEHADTAU_SME_TES_INSITUEXP",
+    "TAUS_TRUEHADTAU_SME_TES_INSITUFIT",
+    "TAUS_TRUEHADTAU_SME_TES_MODEL_CLOSURE",
+    "TAUS_TRUEHADTAU_SME_TES_PHYSICSLIST",
+}
+
+
+def systematic_source(systematic: str) -> str:
+    for suffix in ("__1up", "__1down"):
+        if systematic.endswith(suffix):
+            return systematic.removesuffix(suffix)
+    return systematic
+
 
 if __name__ == "__main__":
     # RUN
@@ -68,23 +95,6 @@ if __name__ == "__main__":
         "TauEta": r"\eta^{\tau_\mathrm{had-vis}}",
         "TauPhi": r"\phi^{\tau_\mathrm{had-vis}}",
     }
-    systematics = {
-        "TAUS_TRUEHADTAU_EFF_ELEOLR_TOTAL",
-        "TAUS_TRUEHADTAU_EFF_RECO_TOTAL",
-        "TAUS_TRUEHADTAU_EFF_TRIGGER_STATDATA161718",
-        "TAUS_TRUEHADTAU_EFF_TRIGGER_STATMC161718",
-        "TAUS_TRUEHADTAU_EFF_TRIGGER_SYST161718",
-        "TAUS_TRUEHADTAU_SME_TES_DETECTOR_Barrel_HighPt",
-        "TAUS_TRUEHADTAU_SME_TES_DETECTOR_Barrel_LowPt",
-        "TAUS_TRUEHADTAU_SME_TES_DETECTOR_Endcap_HighPt",
-        "TAUS_TRUEHADTAU_SME_TES_DETECTOR_Endcap_LowPt",
-        "TAUS_TRUEHADTAU_SME_TES_INSITUEXP",
-        "TAUS_TRUEHADTAU_SME_TES_INSITUFIT",
-        "TAUS_TRUEHADTAU_SME_TES_MODEL_CLOSURE",
-        "TAUS_TRUEHADTAU_SME_TES_PHYSICSLIST",
-    }
-
-
     def unfolding_label(i: int) -> str:
         if i == 0:
             return "Bin-By-Bin Unfolding"
@@ -183,7 +193,7 @@ if __name__ == "__main__":
                 continue
 
             hists: dict[str, dict[str, Histogram1D]] = {}
-            response_cache = {}
+            response_cache: dict[str, ResponseComponents] = {}
 
             # shadow bins difference?
             # ========================================================
@@ -256,7 +266,7 @@ if __name__ == "__main__":
             analysis.paths.plot_dir = wp_dir / "unfolded" / var
 
             # get response
-            response, response_reco, response_truth, _ = analysis.get_response_histogram(
+            response, response_reco, response_truth, response_matrix = analysis.get_response_histogram(
                 varname_reco=var,
                 varname_truth=truths[var],
                 dataset="wtaunu_had",
@@ -265,25 +275,74 @@ if __name__ == "__main__":
                 systematic=NOMINAL_NAME,
                 return_histograms=True,
             )
+            response_cache[NOMINAL_NAME] = (
+                response,
+                response_reco,
+                response_truth,
+                response_matrix,
+            )
 
 
             def get_response_components(
                     systematic: str,
                     *,
-                    cache: dict = response_cache,
+                    cache: dict[str, ResponseComponents] = response_cache,
                     response_var: str = var,
                     response_wp: str = wp,
-            ) -> tuple[ROOT.RooUnfoldResponse, ROOT.TH1, ROOT.TH1, ROOT.TH2]:
+            ) -> ResponseComponents:
                 if systematic not in cache:
-                    cache[systematic] = analysis.get_response_histogram(
-                        varname_reco=response_var,
-                        varname_truth=truths[response_var],
-                        dataset="wtaunu_had",
-                        wp=response_wp,
-                        nprong="",
-                        systematic=systematic,
-                        return_histograms=True,
-                    )
+                    source = systematic_source(systematic)
+                    if source in FULL_RESPONSE_SYSTEMATICS:
+                        cache[systematic] = analysis.get_response_histogram(
+                            varname_reco=response_var,
+                            varname_truth=truths[response_var],
+                            dataset="wtaunu_had",
+                            wp=response_wp,
+                            nprong="",
+                            systematic=systematic,
+                            return_histograms=True,
+                        )
+                    elif source in RECO_ONLY_SYSTEMATICS:
+                        response_file = (
+                                analysis.paths.output_dir.parent
+                                / "efficiency_and_acceptance/root/wtaunu_had.root"
+                        )
+                        reco_path = f"{systematic}/{response_wp}_reco_tau/{response_var}"
+                        with ROOT.TFile(str(response_file)) as file:
+                            reco_varied = file.Get(reco_path)
+                            if not reco_varied:
+                                raise KeyError(
+                                    f"Expected shifted reco histogram '{reco_path}' "
+                                    f"in {response_file}"
+                                )
+                            reco_varied.SetDirectory(0)
+
+                        _, _, nominal_truth, nominal_matrix = cache[NOMINAL_NAME]
+                        nominal_truth_for_response = nominal_truth.Clone(
+                            f"{systematic}_{response_wp}_{response_var}_nominal_truth"
+                        )
+                        nominal_matrix_for_response = nominal_matrix.Clone(
+                            f"{systematic}_{response_wp}_{response_var}_nominal_response"
+                        )
+                        nominal_truth_for_response.SetDirectory(0)
+                        nominal_matrix_for_response.SetDirectory(0)
+
+                        response_from_shifted_reco = ROOT.RooUnfoldResponse(
+                            reco_varied,
+                            nominal_truth_for_response,
+                            nominal_matrix_for_response,
+                        )
+                        cache[systematic] = (
+                            response_from_shifted_reco,
+                            reco_varied,
+                            nominal_truth_for_response,
+                            nominal_matrix_for_response,
+                        )
+                    else:
+                        raise ValueError(
+                            f"No response-input policy is defined for systematic '{systematic}'. "
+                            "Add it to FULL_RESPONSE_SYSTEMATICS or RECO_ONLY_SYSTEMATICS."
+                        )
                 return cache[systematic]
 
 
@@ -559,12 +618,11 @@ if __name__ == "__main__":
                             hist_var: str = var,
                             hist_shadow_bin: str = sh_bin_label,
                     ) -> ROOT.TH1:
-                        response_up, reco_up, truth_up, _ = get_response_components(
-                            f"{sys}__1up"
-                        )
+                        response_up, reco_up, truth_up, _ = get_response_components(f"{sys}__1up")
                         response_down, reco_down, truth_down, _ = get_response_components(
                             f"{sys}__1down"
                         )
+
                         unfolded_up = unfold(
                             input_data,
                             iter_count,
@@ -605,108 +663,121 @@ if __name__ == "__main__":
                             sep=" | ",
                         ),
                     }
-                    analysis.plot(
-                        val=[
-                            response_sys_uncertainty(
-                                "TAUS_TRUEHADTAU_SME_TES_DETECTOR_Endcap_LowPt"
+
+                    def plot_response_systematics(
+                            sys_specs,
+                            filename: str,
+                            *,
+                            plot_args: PlotKwargs = default_args,
+                    ) -> None:
+                        histograms = []
+                        labels = []
+                        colours = []
+                        linestyles = []
+                        for sys_name, label, colour, linestyle in sys_specs:
+                            hist = response_sys_uncertainty(sys_name)
+                            histograms.append(hist)
+                            labels.append(label)
+                            colours.append(colour)
+                            linestyles.append(linestyle)
+
+                        analysis.plot(
+                            val=histograms,
+                            label=labels,
+                            colour=colours,
+                            linestyle=linestyles,
+                            **plot_args,
+                            filename=filename,
+                        )
+
+                    plot_response_systematics(
+                        [
+                            (
+                                "TAUS_TRUEHADTAU_SME_TES_DETECTOR_Endcap_LowPt",
+                                "Endcap_LowPt",
+                                (0.0, 0.0, 0.5, 1.0),
+                                "solid",
                             ),
-                            response_sys_uncertainty(
-                                "TAUS_TRUEHADTAU_SME_TES_DETECTOR_Endcap_HighPt"
+                            (
+                                "TAUS_TRUEHADTAU_SME_TES_DETECTOR_Endcap_HighPt",
+                                "Endcap_HighPt",
+                                (0.0, 0.8333333333333334, 1.0, 1.0),
+                                "solid",
                             ),
-                            response_sys_uncertainty(
-                                "TAUS_TRUEHADTAU_SME_TES_DETECTOR_Barrel_LowPt"
+                            (
+                                "TAUS_TRUEHADTAU_SME_TES_DETECTOR_Barrel_LowPt",
+                                "Barrel_LowPt",
+                                (1.0, 0.9012345679012348, 0.0, 1.0),
+                                "solid",
                             ),
-                            response_sys_uncertainty(
-                                "TAUS_TRUEHADTAU_SME_TES_DETECTOR_Barrel_HighPt"
+                            (
+                                "TAUS_TRUEHADTAU_SME_TES_DETECTOR_Barrel_HighPt",
+                                "Barrel_HighPt",
+                                (0.5, 0.0, 0.0, 1.0),
+                                "solid",
                             ),
                         ],
-                        label=[
-                            "Endcap_LowPt",
-                            "Endcap_HighPt",
-                            "Barrel_LowPt",
-                            "Barrel_HighPt",
-                        ],
-                        colour=[
-                            (0.0, 0.0, 0.5, 1.0),
-                            (0.0, 0.8333333333333334, 1.0, 1.0),
-                            (1.0, 0.9012345679012348, 0.0, 1.0),
-                            (0.5, 0.0, 0.0, 1.0),
-                        ],
-                        linestyle=[
-                            "solid",
-                            "solid",
-                            "solid",
-                            "solid",
-                        ],
-                        **default_args,
-                        filename=f"{var}_sys_DETECTOR_{sh_bin_label}_{n_iter}iter.png",
+                        f"{var}_sys_DETECTOR_{sh_bin_label}_{n_iter}iter.png",
                     )
                     # TRIGGER systematics
-                    analysis.plot(
-                        val=[
-                            response_sys_uncertainty("TAUS_TRUEHADTAU_EFF_TRIGGER_SYST161718"),
-                            response_sys_uncertainty("TAUS_TRUEHADTAU_EFF_TRIGGER_STATMC161718"),
-                            response_sys_uncertainty(
-                                "TAUS_TRUEHADTAU_EFF_TRIGGER_STATDATA161718"
+                    plot_response_systematics(
+                        [
+                            (
+                                "TAUS_TRUEHADTAU_EFF_TRIGGER_SYST161718",
+                                "TRIGGER_SYST161718",
+                                (0.0, 0.0, 0.5, 1.0),
+                                "solid",
+                            ),
+                            (
+                                "TAUS_TRUEHADTAU_EFF_TRIGGER_STATMC161718",
+                                "TRIGGER_STATMC161718_1up",
+                                (0.4901960784313725, 1.0, 0.4775458570524984, 1.0),
+                                "solid",
+                            ),
+                            (
+                                "TAUS_TRUEHADTAU_EFF_TRIGGER_STATDATA161718",
+                                "TRIGGER_STATDATA161718",
+                                (0.5, 0.0, 0.0, 1.0),
+                                "solid",
                             ),
                         ],
-                        label=[
-                            "TRIGGER_SYST161718",
-                            "TRIGGER_STATMC161718_1up",
-                            "TRIGGER_STATDATA161718",
-                        ],
-                        colour=[
-                            (0.0, 0.0, 0.5, 1.0),
-                            (0.4901960784313725, 1.0, 0.4775458570524984, 1.0),
-                            (0.5, 0.0, 0.0, 1.0),
-                        ],
-                        linestyle=[
-                            "solid",
-                            "solid",
-                            "solid",
-                        ],
-                        **default_args,
-                        filename=f"{var}_sys_TRIGGER_{sh_bin_label}_{n_iter}iter.png",
+                        f"{var}_sys_TRIGGER_{sh_bin_label}_{n_iter}iter.png",
                     )
                     # RECO systematic
-                    analysis.plot(
-                        val=[
-                            response_sys_uncertainty("TAUS_TRUEHADTAU_EFF_RECO_TOTAL"),
+                    plot_response_systematics(
+                        [
+                            (
+                                "TAUS_TRUEHADTAU_EFF_RECO_TOTAL",
+                                "EFF_RECO_TOTAL",
+                                "r",
+                                "solid",
+                            ),
                         ],
-                        label=[
-                            "EFF_RECO_TOTAL",
-                        ],
-                        colour=["r"],
-                        linestyle=[
-                            "solid",
-                        ],
-                        **default_args,
-                        filename=f"{var}_sys_RECO_{sh_bin_label}_{n_iter}iter.png",
+                        f"{var}_sys_RECO_{sh_bin_label}_{n_iter}iter.png",
                     )
                     # OTHER systematics
-                    analysis.plot(
-                        val=[
-                            response_sys_uncertainty("TAUS_TRUEHADTAU_SME_TES_INSITUEXP"),
-                            response_sys_uncertainty("TAUS_TRUEHADTAU_SME_TES_INSITUFIT"),
-                            response_sys_uncertainty("TAUS_TRUEHADTAU_SME_TES_MODEL_CLOSURE"),
+                    plot_response_systematics(
+                        [
+                            (
+                                "TAUS_TRUEHADTAU_SME_TES_INSITUEXP",
+                                "INSITUEXP",
+                                (0.0, 0.0, 0.5, 1.0),
+                                "solid",
+                            ),
+                            (
+                                "TAUS_TRUEHADTAU_SME_TES_INSITUFIT",
+                                "INSITUFIT",
+                                (0.4901960784313725, 1.0, 0.4775458570524984, 1.0),
+                                "solid",
+                            ),
+                            (
+                                "TAUS_TRUEHADTAU_SME_TES_MODEL_CLOSURE",
+                                "MODEL_CLOSURE",
+                                (0.5, 0.0, 0.0, 1.0),
+                                "solid",
+                            ),
                         ],
-                        label=[
-                            "INSITUEXP",
-                            "INSITUFIT",
-                            "MODEL_CLOSURE",
-                        ],
-                        colour=[
-                            (0.0, 0.0, 0.5, 1.0),
-                            (0.4901960784313725, 1.0, 0.4775458570524984, 1.0),
-                            (0.5, 0.0, 0.0, 1.0),
-                        ],
-                        linestyle=[
-                            "solid",
-                            "solid",
-                            "solid",
-                        ],
-                        **default_args,
-                        filename=f"{var}_sys_OTHER_{sh_bin_label}_{n_iter}iter.png",
+                        f"{var}_sys_OTHER_{sh_bin_label}_{n_iter}iter.png",
                     )
 
             # COMPARISONS
