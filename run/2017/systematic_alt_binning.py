@@ -156,8 +156,7 @@ if __name__ == "__main__":
     # RUN
     # ========================================================================
     analysis = run_analysis()
-    if LOAD_SAVED_HISTS:
-        analysis.load_hists()
+    load_analysis_hists = LOAD_SAVED_HISTS and analysis.load_hists_if_available()
 
     base_plotting_dir = analysis.paths.plot_dir
     all_samples = [analysis.data_sample] + analysis.mc_samples
@@ -209,7 +208,7 @@ if __name__ == "__main__":
                     elif v in measurement_vars_unitless:
                         default_args.update({"logx": False, "xlabel": variable_data[v]["name"]})
 
-                    if not LOAD_SAVED_HISTS:
+                    if not load_analysis_hists:
                         # save these for later
                         uncert_name = f"{v}_{sec}{wp}_{mc_sample}_uncert"
                         h = analysis[mc_sample].get_hist(
@@ -364,7 +363,7 @@ if __name__ == "__main__":
                         filename=f"{v}_sys_TRIGGER.png",
                     )
 
-    if not LOAD_SAVED_HISTS:
+    if not load_analysis_hists:
         analysis.save_hists()
     analysis.histogram_printout(to_file="txt")
     analysis.logger.info("DONE.")

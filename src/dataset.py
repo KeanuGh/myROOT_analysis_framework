@@ -51,6 +51,9 @@ class Dataset:
     histograms: dict[str, dict[str, dict[str, ROOT.TH1]]] = field(init=False, default_factory=dict)
     cutflows: dict[str, dict[str, Cutflow]] = field(init=False, default_factory=dict)
     filters: dict[str, dict[str, FilterNode]] = field(init=False, default_factory=dict)
+    selections_by_systematic: dict[str, dict[str, list[Cut]]] = field(
+        init=False, default_factory=dict
+    )
     selections: dict[str, list[Cut]] = field(default_factory=dict)
     all_vars: set[str] = field(default_factory=set)
     histogram_vars: set[str] | None = None
@@ -80,8 +83,13 @@ class Dataset:
         if (self.rdataframes is not None) and (self.selections is not None):
             self.logger.debug("Generating filters trees for dataframes...")
             for sys_name, rdf in self.rdataframes.items():
-                selections = self.selections_for_systematic(sys_name, rdf)
-                self.filters[sys_name] = self.gen_filters(rdf, selections)
+                self.selections_by_systematic[sys_name] = self.selections_for_systematic(
+                    sys_name, rdf
+                )
+                self.filters[sys_name] = self.gen_filters(
+                    rdf,
+                    self.selections_by_systematic[sys_name],
+                )
 
                 # set up cutflow for later
                 self.cutflows[sys_name] = {}
@@ -182,9 +190,11 @@ class Dataset:
             filepath = f"{self.name}.root"
 
         if selections is None:
-            selections = list(self.selections)
+            selected_selections: set[str] | None = None
         elif isinstance(selections, str):
-            selections = [selections]
+            selected_selections = {selections}
+        else:
+            selected_selections = set(selections)
         if systematics is None:
             systematics = list(self.filters)
         elif isinstance(systematics, str):
@@ -207,7 +217,16 @@ class Dataset:
 
         # save data
         n_sys = len(systematics if systematics else self.filters)
-        n_sel = len(selections if selections else self.selections)
+        n_sel = sum(
+            len(
+                [
+                    selection
+                    for selection in self.selections_by_systematic.get(sys_name, {})
+                    if selected_selections is None or selection in selected_selections
+                ]
+            )
+            for sys_name in systematics
+        )
         self.logger.info(
             "Saving snapshots of %i selections for %i systematics in dataset '%s'...",
             n_sel,
@@ -220,7 +239,9 @@ class Dataset:
             if sys_name not in systematics:
                 continue
 
-            for selection in selections:
+            for selection in self.selections_by_systematic.get(sys_name, {}):
+                if selected_selections is not None and selection not in selected_selections:
+                    continue
                 if selection not in sys_selections:
                     continue
 
@@ -340,11 +361,21 @@ class Dataset:
                             )
 
         # import cutflows
-        for sys in self.rdataframes:
-            for selection in self.selections:
-                self.cutflows[sys][selection].import_cutflow(
-                    self.histograms[sys][selection]["cutflow"],
-                    self.selections[selection],
+        for sys_name, selection_hists in self.histograms.items():
+            for selection, hists in selection_hists.items():
+                if "cutflow" not in hists:
+                    continue
+                if selection not in self.selections_by_systematic.get(sys_name, {}):
+                    self.logger.debug(
+                        "Skipping imported cutflow for missing selection '%s' in systematic '%s'",
+                        selection,
+                        sys_name,
+                    )
+                    continue
+
+                self.cutflows[sys_name][selection].import_cutflow(
+                    hists["cutflow"],
+                    self.selections_by_systematic[sys_name][selection],
                 )
 
         self.logger.info(
@@ -383,7 +414,7 @@ class Dataset:
             raise AttributeError("Must have applied cuts to obtain cutflow")
 
         for systematic in systematics:
-            systematic_selections = self.filters[systematic]
+            systematic_selections = self.selections_by_systematic[systematic]
             selections = systematic_selections.keys() if not selection else [selection]
             for selection in selections:
                 if selection not in systematic_selections:
@@ -393,9 +424,12 @@ class Dataset:
                         systematic,
                     )
                     continue
-                if path is not None:
-                    path /= Path(f"{self.name}_{systematic}_{selection}_cutflow.tex")
-                self.cutflows[systematic][selection].print(latex_path=path)
+                latex_path = (
+                    path / f"{self.name}_{systematic}_{selection}_cutflow.tex"
+                    if path is not None
+                    else None
+                )
+                self.cutflows[systematic][selection].print(latex_path=latex_path)
 
     def histogram_printout(
         self,
@@ -441,8 +475,8 @@ class Dataset:
     def gen_cutflows(self, do_print: bool = False, nominal_only: bool = True) -> None:
         """Generate cutflows for each systematic-selection"""
 
-        for systematic in self.rdataframes:
-            for selection in self.filters[systematic]:
+        for systematic, selections in self.selections_by_systematic.items():
+            for selection in selections:
                 self.logger.info(
                     "Generating cutflow in dataset '%s' "
                     "for selection '%s' with systematic '%s'...",
@@ -488,6 +522,7 @@ class Dataset:
         )
         self.histograms[systematic][name] = dict()
         self.selections[name] = self.filters[systematic][name].get_cuts()
+        self.selections_by_systematic[systematic][name] = self.selections[name]
         self.cutflows[systematic][name] = Cutflow(
             self.filters[systematic][name].df,
             logger=self.logger,
@@ -541,9 +576,10 @@ class Dataset:
         :return: Histogram
         """
         if selection is True:
-            if len(self.filters) > 1:
-                raise ValueError("More than one cutflow is present. Must specify.")
-            selection = self.selections[list(self.selections.keys())[0]]
+            systematic_filters = self.filters[systematic]
+            if len(systematic_filters) > 1:
+                raise ValueError("More than one selection is present. Must specify.")
+            selection = next(iter(systematic_filters))
 
         try:
             hist = self.histograms[systematic][selection][var]

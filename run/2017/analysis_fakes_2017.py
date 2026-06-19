@@ -288,13 +288,12 @@ if __name__ == "__main__":
     # RUN
     # ========================================================================
     analysis = run_analysis()
-    if LOAD_SAVED_HISTS:
-        analysis.load_hists()
+    load_analysis_hists = LOAD_SAVED_HISTS and analysis.load_hists_if_available()
 
     base_plotting_dir = analysis.paths.plot_dir
     all_samples = [analysis.data_sample] + analysis.mc_samples
     mc_samples = analysis.mc_samples
-    if not LOAD_SAVED_HISTS:
+    if not load_analysis_hists:
         analysis.full_cutflow_printout(datasets=all_samples)
         analysis.print_metadata_table(datasets=mc_samples)
         for mc in mc_samples:
@@ -334,7 +333,7 @@ if __name__ == "__main__":
             sec = sec_str + "_" if sec_str else ""
 
             for fakes_source in fakes_sources:
-                if not LOAD_SAVED_HISTS:
+                if not load_analysis_hists:
                     analysis.do_fakes_estimate(
                         fakes_source,
                         measurement_vars,
@@ -526,7 +525,7 @@ if __name__ == "__main__":
                 filename=f"{wp}_{fakes_source}_FF_prong_compare.png",
             )
 
-    if not LOAD_SAVED_HISTS:
+    if not load_analysis_hists:
         analysis.save_hists()
     analysis.histogram_printout(to_file="txt")
     analysis.logger.info("DONE.")

@@ -1627,12 +1627,26 @@ class Analysis:
         if isinstance(selections, str):
             selections = [selections]
         elif selections is None:
-            selections = list(self[datasets[0]].selections)
+            selections = list(self[datasets[0]].cutflows.get(systematic, {}))
 
         # table build loop
         latex_str = f"\\begin{{tabular}}{{{'l' * (len(datasets) + 1)}}}\n"
 
         for selection in selections:
+            missing_datasets = [
+                dataset
+                for dataset in datasets
+                if selection not in self[dataset].cutflows.get(systematic, {})
+            ]
+            if missing_datasets:
+                self.logger.debug(
+                    "Skipping cutflow selection '%s' for systematic '%s'; missing in %s",
+                    selection,
+                    systematic,
+                    missing_datasets,
+                )
+                continue
+
             sanitised_str = self.__sanitise_for_latex(selection)
             # header
             latex_str += "\\hline\n"
@@ -1806,6 +1820,22 @@ class Analysis:
                 loaded_count += 1
 
         self.logger.info("Loaded %s histograms from file %s", loaded_count, path)
+
+    def load_hists_if_available(
+        self, filename: str | Path | None = None, overwrite: bool = True
+    ) -> bool:
+        """Load analysis-level histograms if their ROOT file exists."""
+
+        path = self._hist_file_path(filename)
+        if not path.is_file():
+            self.logger.warning(
+                "Requested saved analysis histograms, but %s does not exist; recalculating them.",
+                path,
+            )
+            return False
+
+        self.load_hists(path, overwrite=overwrite)
+        return True
 
     def save_hists(self, filename: str | Path | None = None) -> None:
         """Save histograms to file"""

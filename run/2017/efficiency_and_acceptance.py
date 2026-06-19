@@ -334,15 +334,7 @@ if __name__ == "__main__":
     # RUN
     # ========================================================================
     analysis = run_analysis()
-    analysis_hists_file = analysis.paths.root_dir / f"{analysis.name}.root"
-    load_analysis_hists = LOAD_SAVED_HISTS and analysis_hists_file.is_file()
-    if LOAD_SAVED_HISTS and not load_analysis_hists:
-        analysis.logger.warning(
-            "Requested saved analysis histograms, but %s does not exist; recalculating them.",
-            analysis_hists_file,
-        )
-    if load_analysis_hists:
-        analysis.load_hists()
+    load_analysis_hists = LOAD_SAVED_HISTS and analysis.load_hists_if_available()
 
     analysis.full_cutflow_printout(datasets=["wtaunu_had"])
     base_plotting_dir = analysis.paths.plot_dir
