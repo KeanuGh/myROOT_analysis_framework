@@ -11,6 +11,7 @@ from utils.plotting_tools import PlotKwargs
 from utils.variable_names import variable_data
 
 YEAR = 2017
+LOAD_SAVED_HISTS = False
 
 # CUTS & SELECTIONS
 # ========================================================================
@@ -256,8 +257,8 @@ def run_analysis() -> Analysis:
     return Analysis(
         datasets,
         year=YEAR,
-        rerun=True,
-        regen_histograms=True,
+        rerun=not LOAD_SAVED_HISTS,
+        regen_histograms=not LOAD_SAVED_HISTS,
         do_systematics=False,
         # regen_metadata=True,
         metadata_cache=DSID_METADATA_CACHE,
@@ -286,13 +287,17 @@ if __name__ == "__main__":
     # RUN
     # ========================================================================
     analysis = run_analysis()
+    if LOAD_SAVED_HISTS:
+        analysis.load_hists()
+
     base_plotting_dir = analysis.paths.plot_dir
     all_samples = [analysis.data_sample] + analysis.mc_samples
     mc_samples = analysis.mc_samples
-    analysis.full_cutflow_printout(datasets=all_samples)
-    analysis.print_metadata_table(datasets=mc_samples)
-    for mc in mc_samples:
-        analysis[mc].calculate_systematic_uncertainties()
+    if not LOAD_SAVED_HISTS:
+        analysis.full_cutflow_printout(datasets=all_samples)
+        analysis.print_metadata_table(datasets=mc_samples)
+        for mc in mc_samples:
+            analysis[mc].calculate_systematic_uncertainties()
     fakes_colour = next(analysis.c_iter)
 
     wps = (
@@ -328,21 +333,22 @@ if __name__ == "__main__":
             sec = sec_str + "_" if sec_str else ""
 
             for fakes_source in fakes_sources:
-                analysis.do_fakes_estimate(
-                    fakes_source,
-                    measurement_vars,
-                    f"{sec}{wp}_CR_passID",
-                    f"{sec}{wp}_CR_failID",
-                    f"{sec}{wp}_SR_passID",
-                    f"{sec}{wp}_SR_failID",
-                    f"trueTau_{sec}{wp}_CR_passID",
-                    f"trueTau_{sec}{wp}_CR_failID",
-                    f"trueTau_{sec}{wp}_SR_passID",
-                    f"trueTau_{sec}{wp}_SR_failID",
-                    name=f"{sec}{wp}",
-                    systematic=NOMINAL_NAME,
-                    save_intermediates=True,
-                )
+                if not LOAD_SAVED_HISTS:
+                    analysis.do_fakes_estimate(
+                        fakes_source,
+                        measurement_vars,
+                        f"{sec}{wp}_CR_passID",
+                        f"{sec}{wp}_CR_failID",
+                        f"{sec}{wp}_SR_passID",
+                        f"{sec}{wp}_SR_failID",
+                        f"trueTau_{sec}{wp}_CR_passID",
+                        f"trueTau_{sec}{wp}_CR_failID",
+                        f"trueTau_{sec}{wp}_SR_passID",
+                        f"trueTau_{sec}{wp}_SR_failID",
+                        name=f"{sec}{wp}",
+                        systematic=NOMINAL_NAME,
+                        save_intermediates=True,
+                    )
 
                 # Intermediates
                 # ----------------------------------------------------------------------------
@@ -519,6 +525,7 @@ if __name__ == "__main__":
                 filename=f"{wp}_{fakes_source}_FF_prong_compare.png",
             )
 
-    analysis.save_hists()
+    if not LOAD_SAVED_HISTS:
+        analysis.save_hists()
     analysis.histogram_printout(to_file="txt")
     analysis.logger.info("DONE.")

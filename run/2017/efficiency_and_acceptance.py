@@ -285,6 +285,7 @@ hists_2d = {
     ),
 }
 NOMINAL_NAME = "T_s1thv_NOMINAL"
+LOAD_SAVED_HISTS = False
 
 
 def run_analysis() -> Analysis:
@@ -293,8 +294,8 @@ def run_analysis() -> Analysis:
     return Analysis(
         datasets,
         year=2017,
-        rerun=True,
-        regen_histograms=True,
+        rerun=not LOAD_SAVED_HISTS,
+        regen_histograms=not LOAD_SAVED_HISTS,
         do_systematics=True,
         # regen_metadata=True,
         metadata_cache=DSID_METADATA_CACHE,
@@ -319,6 +320,9 @@ if __name__ == "__main__":
     # RUN
     # ========================================================================
     analysis = run_analysis()
+    if LOAD_SAVED_HISTS:
+        analysis.load_hists()
+
     analysis.full_cutflow_printout(datasets=["wtaunu_had"])
     base_plotting_dir = analysis.paths.plot_dir
 
@@ -334,8 +338,9 @@ if __name__ == "__main__":
     }
 
     # print histograms
-    for dataset in analysis:
-        dataset.histogram_printout(to_file="txt", to_dir=analysis.paths.latex_dir)
+    if not LOAD_SAVED_HISTS:
+        for dataset in analysis:
+            dataset.histogram_printout(to_file="txt", to_dir=analysis.paths.latex_dir)
 
     working_points = ("loose", "medium", "tight")
     tau_sections = ("", "1prong_", "3prong_", "tauplus_", "tauminus_")
@@ -345,48 +350,49 @@ if __name__ == "__main__":
     for wp in working_points:
         for sec in tau_sections:
             for var in reco_measurement_vars:
-                analysis.histograms[f"{wp}_{sec}{var}_efficiency"] = bayes_divide(
-                    analysis.get_hist(
-                        var + "_unweighted",
-                        "wtaunu_had",
-                        NOMINAL_NAME,
-                        f"{wp}_{sec}truth_reco_tau",
-                    ),
-                    analysis.get_hist(
-                        var + "_unweighted",
-                        "wtaunu_had",
-                        NOMINAL_NAME,
-                        f"{sec}truth_tau",
-                    ),
-                )
-                analysis.histograms[f"{wp}_{sec}{var}_acceptance"] = bayes_divide(
-                    analysis.get_hist(
-                        var + "_unweighted",
-                        "wtaunu_had",
-                        NOMINAL_NAME,
-                        f"{wp}_{sec}truth_reco_tau",
-                    ),
-                    analysis.get_hist(
-                        var + "_unweighted",
-                        "wtaunu_had",
-                        NOMINAL_NAME,
-                        f"{wp}_{sec}reco_tau",
-                    ),
-                )
-                analysis.histograms[f"{wp}_{sec}{var}_fake_rate"] = bayes_divide(
-                    analysis.get_hist(
-                        var + "_unweighted",
-                        "wtaunu_had",
-                        NOMINAL_NAME,
-                        f"{wp}_{sec}reco_notruth_tau",
-                    ),
-                    analysis.get_hist(
-                        var + "_unweighted",
-                        "wtaunu_had",
-                        NOMINAL_NAME,
-                        f"{wp}_{sec}reco_tau",
-                    ),
-                )
+                if not LOAD_SAVED_HISTS:
+                    analysis.histograms[f"{wp}_{sec}{var}_efficiency"] = bayes_divide(
+                        analysis.get_hist(
+                            var + "_unweighted",
+                            "wtaunu_had",
+                            NOMINAL_NAME,
+                            f"{wp}_{sec}truth_reco_tau",
+                        ),
+                        analysis.get_hist(
+                            var + "_unweighted",
+                            "wtaunu_had",
+                            NOMINAL_NAME,
+                            f"{sec}truth_tau",
+                        ),
+                    )
+                    analysis.histograms[f"{wp}_{sec}{var}_acceptance"] = bayes_divide(
+                        analysis.get_hist(
+                            var + "_unweighted",
+                            "wtaunu_had",
+                            NOMINAL_NAME,
+                            f"{wp}_{sec}truth_reco_tau",
+                        ),
+                        analysis.get_hist(
+                            var + "_unweighted",
+                            "wtaunu_had",
+                            NOMINAL_NAME,
+                            f"{wp}_{sec}reco_tau",
+                        ),
+                    )
+                    analysis.histograms[f"{wp}_{sec}{var}_fake_rate"] = bayes_divide(
+                        analysis.get_hist(
+                            var + "_unweighted",
+                            "wtaunu_had",
+                            NOMINAL_NAME,
+                            f"{wp}_{sec}reco_notruth_tau",
+                        ),
+                        analysis.get_hist(
+                            var + "_unweighted",
+                            "wtaunu_had",
+                            NOMINAL_NAME,
+                            f"{wp}_{sec}reco_tau",
+                        ),
+                    )
 
                 # Plots alone
                 # =======================================================================
@@ -581,5 +587,6 @@ if __name__ == "__main__":
                 filename=f"{wp}_prong_compare_{var}_acceptance.png",
             )
 
-    analysis.save_hists()
+    if not LOAD_SAVED_HISTS:
+        analysis.save_hists()
     analysis.logger.info("DONE.")

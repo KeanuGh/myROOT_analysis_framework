@@ -16,6 +16,7 @@ from utils.variable_names import variable_data
 
 YEAR = 2017
 DO_SYS = True
+LOAD_SAVED_HISTS = False
 
 # CUTS & SELECTIONS
 # ========================================================================
@@ -191,6 +192,9 @@ if __name__ == "__main__":
     # RUN
     # ========================================================================
     analysis = run_analysis()
+    if LOAD_SAVED_HISTS:
+        analysis.load_hists()
+
     base_plotting_dir = analysis.paths.plot_dir
     all_samples = [analysis.data_sample] + analysis.mc_samples
     mc_samples = analysis.mc_samples
@@ -468,20 +472,23 @@ if __name__ == "__main__":
                     elif v in measurement_vars_unitless:
                         default_args.update({"logx": False, "xlabel": variable_data[v]["name"]})
 
-                    # save these for later
-                    uncert_name = f"{v}_{sec}{wp}_{mc_sample}_uncert"
-                    h = analysis[mc_sample].get_hist(
-                        variable=v,
-                        systematic=NOMINAL_NAME,
-                        selection=selection,
-                    )
-                    tot_uncert = analysis.get_systematic_uncertainty(v, mc_sample, selection)[0]
-                    h_uncert = ROOT.TH1F(
-                        uncert_name, uncert_name, h.GetNbinsX(), get_th1_bin_edges(h)
-                    )
-                    for i in range(h.GetNbinsX()):
-                        h_uncert.SetBinContent(i + 1, tot_uncert[i])
-                    analysis.histograms[uncert_name] = h_uncert
+                    if not LOAD_SAVED_HISTS:
+                        # save these for later
+                        uncert_name = f"{v}_{sec}{wp}_{mc_sample}_uncert"
+                        h = analysis[mc_sample].get_hist(
+                            variable=v,
+                            systematic=NOMINAL_NAME,
+                            selection=selection,
+                        )
+                        tot_uncert = analysis.get_systematic_uncertainty(
+                            v, mc_sample, selection
+                        )[0]
+                        h_uncert = ROOT.TH1F(
+                            uncert_name, uncert_name, h.GetNbinsX(), get_th1_bin_edges(h)
+                        )
+                        for i in range(h.GetNbinsX()):
+                            h_uncert.SetBinContent(i + 1, tot_uncert[i])
+                        analysis.histograms[uncert_name] = h_uncert
 
                     analysis.plot(
                         val=[
@@ -620,6 +627,7 @@ if __name__ == "__main__":
                         filename=f"{v}_sys_TRIGGER.png",
                     )
 
-    analysis.save_hists()
+    if not LOAD_SAVED_HISTS:
+        analysis.save_hists()
     analysis.histogram_printout(to_file="txt")
     analysis.logger.info("DONE.")

@@ -1753,12 +1753,58 @@ class Analysis:
                     f.write(tabulate(rows, headers=header, tablefmt="latex_raw"))
                     self.logger.info(f"Saved LaTeX histogram table to {filepath}")
 
-    def save_hists(self, filename: str | Path | None = None) -> None:
-        """Save histograms to file"""
+    def _hist_file_path(self, filename: str | Path | None = None) -> Path:
+        """Return the ROOT file path used for analysis-level histograms."""
 
         if filename is None:
             filename = self.name
-        path = self.paths.root_dir / f"{Path(filename)}.root"
+
+        path = Path(filename)
+        if not path.is_absolute():
+            path = self.paths.root_dir / path
+
+        if path.suffix != ".root":
+            path = path.with_suffix(f"{path.suffix}.root")
+
+        return path
+
+    def load_hists(self, filename: str | Path | None = None, overwrite: bool = True) -> None:
+        """Load analysis-level histograms saved by `save_hists`."""
+
+        path = self._hist_file_path(filename)
+        if not path.is_file():
+            raise FileNotFoundError(f"Analysis histogram file does not exist: {path}")
+
+        loaded_count = 0
+        with ROOT.TFile(str(path), "READ") as file:
+            if file.IsZombie():
+                raise OSError(f"Could not open analysis histogram file: {path}")
+
+            for key in file.GetListOfKeys():
+                name = key.GetName()
+                if (not overwrite) and (name in self.histograms):
+                    continue
+
+                obj = key.ReadObj()
+                if not isinstance(obj, ROOT.TH1):
+                    self.logger.debug(
+                        "Skipping non-histogram object %s from %s",
+                        name,
+                        path,
+                    )
+                    continue
+
+                hist = cast(ROOT.TH1, obj.Clone(name))
+                hist.SetDirectory(0)
+                self.histograms[name] = hist
+                loaded_count += 1
+
+        self.logger.info("Loaded %s histograms from file %s", loaded_count, path)
+
+    def save_hists(self, filename: str | Path | None = None) -> None:
+        """Save histograms to file"""
+
+        path = self._hist_file_path(filename)
 
         with ROOT.TFile(str(path), "UPDATE") as file:
             for name, hist in self.histograms.items():
