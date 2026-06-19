@@ -274,6 +274,7 @@ def run_analysis() -> Analysis:
         log_out="both",
         extract_vars=measurement_vars + ["TauPt_res_frac"],
         import_missing_columns_as_nan=True,
+        histogram_vars=set(measurement_vars),
         snapshot=False,
         hists_2d=hists_2d,
         do_weights=False,

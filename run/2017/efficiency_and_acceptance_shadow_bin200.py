@@ -21,25 +21,6 @@ pass_reco = Cut(
     r"&& ((MatchedTruthParticle_isTau + MatchedTruthParticle_isElectron + MatchedTruthParticle_isMuon + MatchedTruthParticle_isPhoton) <= 1)"
     r"&& ((TauNCoreTracks == 1) || (TauNCoreTracks == 3))",
 )
-pass_matched_reco = Cut(
-    r"Pass preselection",
-    r"(passReco == 1) && "
-    r"(TauBaselineWP == 1) && "
-    r"(abs(TauCharge) == 1) && "
-    r"passMetTrigger && "
-    r"(badJet == 0) &&"
-    r"((TauNCoreTracks == 1) || (TauNCoreTracks == 3)) &&"
-    r"(MatchedTruthParticle_isHadronicTau == true) && "
-    r"(MatchedTruthParticlePt == TruthTauPt)",
-)
-pass_trigger = Cut(
-    r"Pass trigger",
-    r"passTrigger",
-)
-pass_met_trigger = Cut(
-    r"Pass met trigger",
-    r"passMetTrigger",
-)
 pass_truth = Cut(
     r"Pass Truth",
     r"(passTruth == 1)",

@@ -269,6 +269,7 @@ def run_analysis() -> Analysis:
         log_out="both",
         extract_vars=wanted_variables,
         import_missing_columns_as_nan=True,
+        histogram_vars=set(),
         profiles=profiles,
         binnings=binnings,
     )

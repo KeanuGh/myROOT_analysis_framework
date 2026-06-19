@@ -54,7 +54,6 @@ if __name__ == "__main__":
     # ========================================================================
     analysis = Analysis(data_dict={}, year=YEAR, analysis_label=Path(__file__).stem)
     base_plotting_dir = analysis.paths.plot_dir
-    fakes_colour = next(analysis.c_iter)
     truths = {
         "TauPt": "VisTruthTauPt",
         "MTW": "TruthMTW",
