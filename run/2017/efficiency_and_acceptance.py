@@ -298,7 +298,7 @@ hists_2d = {
     ),
 }
 NOMINAL_NAME = "T_s1thv_NOMINAL"
-LOAD_SAVED_HISTS = False
+LOAD_SAVED_HISTS = True
 
 
 def run_analysis() -> Analysis:
@@ -334,7 +334,14 @@ if __name__ == "__main__":
     # RUN
     # ========================================================================
     analysis = run_analysis()
-    if LOAD_SAVED_HISTS:
+    analysis_hists_file = analysis.paths.root_dir / f"{analysis.name}.root"
+    load_analysis_hists = LOAD_SAVED_HISTS and analysis_hists_file.is_file()
+    if LOAD_SAVED_HISTS and not load_analysis_hists:
+        analysis.logger.warning(
+            "Requested saved analysis histograms, but %s does not exist; recalculating them.",
+            analysis_hists_file,
+        )
+    if load_analysis_hists:
         analysis.load_hists()
 
     analysis.full_cutflow_printout(datasets=["wtaunu_had"])
@@ -353,7 +360,7 @@ if __name__ == "__main__":
     for wp in working_points:
         for sec in tau_sections:
             for var in reco_measurement_vars:
-                if not LOAD_SAVED_HISTS:
+                if not load_analysis_hists:
                     analysis.histograms[f"{wp}_{sec}{var}_efficiency"] = bayes_divide(
                         analysis.get_hist(
                             var + "_unweighted",
@@ -590,6 +597,6 @@ if __name__ == "__main__":
                 filename=f"{wp}_prong_compare_{var}_acceptance.png",
             )
 
-    if not LOAD_SAVED_HISTS:
+    if not load_analysis_hists:
         analysis.save_hists()
     analysis.logger.info("DONE.")
