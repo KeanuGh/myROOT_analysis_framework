@@ -255,6 +255,7 @@ class Analysis:
             dataset_file = self.paths.root_dir / f"{dataset_name}.root"
             if indiv_rerun_files or not dataset_file.is_file():
                 dataset.gen_all_histograms()
+                dataset.export_histograms(dataset_file)
                 dataset.gen_cutflows()
                 if snapshot:
                     if isinstance(snapshot, dict):
@@ -265,6 +266,7 @@ class Analysis:
             elif indiv_regen_hists:
                 dataset.import_dataset(dataset_file)
                 dataset.gen_all_histograms()
+                dataset.export_histograms(dataset_file)
                 if snapshot:
                     if isinstance(snapshot, dict):
                         dataset.export_dataset(dataset_file, **snapshot)
