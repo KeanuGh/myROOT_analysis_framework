@@ -3,7 +3,7 @@ This file contains metadata about named branches in NTuples,
 useful for the logic behind cuts and generating axis labels
 """
 from enum import StrEnum
-from typing import TypedDict
+from typing import NotRequired, TypedDict
 
 
 class VarTag(StrEnum):
@@ -20,6 +20,8 @@ class Branch(TypedDict):
     name: str
     units: str
     tag: VarTag
+    truth: NotRequired[str]
+    symbol: NotRequired[str]
 
 
 # labels for cross-sections
@@ -247,6 +249,8 @@ variable_data: dict[str, Branch] = {
         "name": r"$m^{W}_{T}$",
         "units": "GeV",
         "tag": VarTag.RECO,
+        "truth": "TruthMTW",
+        "symbol": r"m^W_\mathrm{T}",
     },
     "MTW_METCategoryMTW": {
         "name": r"$m^{W}_{T}$ reco category",
@@ -287,16 +291,19 @@ variable_data: dict[str, Branch] = {
         "name": r"Tau $p_\mathrm{T}/E_\mathrm{T}^\mathrm{miss}$",
         "units": "",
         "tag": VarTag.RECO,
+        "truth": "TruthTauPt_div_MET",
     },
     "DeltaPhi_tau_met": {
         "name": r"$\Delta\phi(\tau,E_\mathrm{T}^\mathrm{miss})$",
         "units": "",
         "tag": VarTag.RECO,
+        "truth": "TruthDeltaPhi_tau_met",
     },
     "AbsDeltaPhi_tau_met": {
         "name": r"$|\Delta\phi(\tau,E_\mathrm{T}^\mathrm{miss})|$",
         "units": "",
         "tag": VarTag.RECO,
+        "truth": "TruthAbsDeltaPhi_tau_met",
     },
     # RECO-LEVEL KINEMATIC VARIABLES
     # =======================================================
@@ -426,21 +433,25 @@ variable_data: dict[str, Branch] = {
         "name": r"Electron $p_\mathrm{T}$",
         "units": "GeV",
         "tag": VarTag.RECO,
+        "truth": "TruthElePt",
     },
     "EleEta": {
         "name": r"Electron $\eta$",
         "units": "",
         "tag": VarTag.RECO,
+        "truth": "TruthEleEta",
     },
     "ElePhi": {
         "name": r"Electron $\phi$",
         "units": "",
         "tag": VarTag.RECO,
+        "truth": "TruthElePhi",
     },
     "EleE": {
         "name": r"Electron $E$",
         "units": "GeV",
         "tag": VarTag.RECO,
+        "truth": "TruthEleE",
     },
     "Ele_d0sig": {
         "name": r"Electron $d_0$ significance",
@@ -461,21 +472,25 @@ variable_data: dict[str, Branch] = {
         "name": r"Muon $p_\mathrm{T}$",
         "units": "GeV",
         "tag": VarTag.RECO,
+        "truth": "TruthMuonPt",
     },
     "MuonEta": {
         "name": r"Muon $\eta$",
         "units": "",
         "tag": VarTag.RECO,
+        "truth": "TruthMuonEta",
     },
     "MuonPhi": {
         "name": r"Muon $\phi$",
         "units": "",
         "tag": VarTag.RECO,
+        "truth": "TruthMuonPhi",
     },
     "MuonE": {
         "name": r"Muon $E$",
         "units": "GeV",
         "tag": VarTag.RECO,
+        "truth": "TruthMuonE",
     },
     "Muon_d0sig": {
         "name": r"Muon $d_0$ significance",
@@ -496,21 +511,26 @@ variable_data: dict[str, Branch] = {
         "name": "Tau Charge",
         "units": "",
         "tag": VarTag.RECO,
+        "truth": "TruthTauCharge",
     },
     "TauPt": {
         "name": r"$p_\mathrm{T}^\mathrm{had-vis}$",
         "units": "GeV",
         "tag": VarTag.RECO,
+        "truth": "VisTruthTauPt",
+        "symbol": r"p_\mathrm{T}^{\tau_\mathrm{had-vis}}",
     },
     "TauEta": {
         "name": r"Tau $\eta$",
         "units": "",
         "tag": VarTag.RECO,
+        "truth": "VisTruthTauEta",
     },
     "TauPhi": {
         "name": r"Tau $\phi$",
         "units": "",
         "tag": VarTag.RECO,
+        "truth": "VisTruthTauPhi",
     },
     "TauE": {
         "name": r"Tau $E$",
@@ -521,21 +541,25 @@ variable_data: dict[str, Branch] = {
         "name": r"Jet $p_\mathrm{T}$",
         "units": "GeV",
         "tag": VarTag.RECO,
+        "truth": "TruthJetPt",
     },
     "JetEta": {
         "name": r"Jet $\eta$",
         "units": "",
         "tag": VarTag.RECO,
+        "truth": "TruthJetEta",
     },
     "JetPhi": {
         "name": r"Jet $\phi$",
         "units": "",
         "tag": VarTag.RECO,
+        "truth": "TruthJetPhi",
     },
     "JetE": {
         "name": r"Jet $E$",
         "units": "",
         "tag": VarTag.RECO,
+        "truth": "TruthJetE",
     },
     "Jet_btag": {
         "name": r"Jet b-tag",
@@ -576,11 +600,13 @@ variable_data: dict[str, Branch] = {
         "name": r"$E_\mathrm{T}^\mathrm{miss}$",
         "units": "GeV",
         "tag": VarTag.RECO,
+        "truth": "TruthNeutrinoPt",
     },
     "MET_phi": {
         "name": r"$\phi^\mathrm{miss}$",
         "units": "",
         "tag": VarTag.RECO,
+        "truth": "TruthNeutrinoPhi",
     },
     "MatchedTruthParticlePt": {
         "name": r"Truth Matched Particle $p_\mathrm{T}$",
@@ -641,6 +667,7 @@ variable_data: dict[str, Branch] = {
         "name": r"Number of Tau tracks",
         "units": "",
         "tag": VarTag.RECO,
+        "truth": "TruthTau_nChargedTracks",
     },
     "TauPt_res_frac": {
         "name": r"$p_\mathrm{T,res}^\tau$",

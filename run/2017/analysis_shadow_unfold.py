@@ -21,6 +21,7 @@ YEAR = 2017
 LUMI = LUMI_YEAR[YEAR]
 WP = "medium"
 VARS = ("MTW", "TauPt")
+truth_vars = {var: variable_data[var]["truth"] for var in VARS}
 ITERATIONS = (
     0,
     1,
@@ -43,14 +44,6 @@ SKIP_SYS = {
 
 # CUTS & SELECTIONS
 # ========================================================================
-TRUTHS = {
-    "MTW": "TruthMTW",
-    "TauPt": "VisTruthTauPt",
-}
-SYMBOLS = {
-    "MTW": r"m^W_\mathrm{T}",
-    "TauPt": r"p_\mathrm{T}^{\tau_\mathrm{had-vis}}",
-}
 
 PASS_RECO_PRESELECTION = Cut(
     r"Pass preselection",
@@ -475,7 +468,7 @@ if __name__ == "__main__":
         },
         import_missing_columns_as_nan=True,
         snapshot=False,
-        histogram_vars=set(VARS) | set(TRUTHS.values()),
+        histogram_vars=set(VARS) | set(truth_vars.values()),
         hists_2d={
             "MTW_TruthMTW": Hist2dOpts("MTW", "TruthMTW", "reco_weight"),
             "TauPt_VisTruthTauPt": Hist2dOpts("TauPt", "VisTruthTauPt", "reco_weight"),
@@ -519,7 +512,7 @@ if __name__ == "__main__":
             },
             import_missing_columns_as_nan=True,
             snapshot=False,
-            histogram_vars=set(VARS) | set(TRUTHS.values()),
+            histogram_vars=set(VARS) | set(truth_vars.values()),
             hists_2d={
                 "MTW_TruthMTW": Hist2dOpts("MTW", "TruthMTW", "reco_weight"),
                 "TauPt_VisTruthTauPt": Hist2dOpts("TauPt", "VisTruthTauPt", "reco_weight"),
@@ -557,7 +550,7 @@ if __name__ == "__main__":
             },
             import_missing_columns_as_nan=True,
             snapshot=False,
-            histogram_vars=set(VARS) | set(TRUTHS.values()),
+            histogram_vars=set(VARS) | set(truth_vars.values()),
             hists_2d={
                 "MTW_TruthMTW": Hist2dOpts("MTW", "TruthMTW", "reco_weight"),
                 "TauPt_VisTruthTauPt": Hist2dOpts("TauPt", "VisTruthTauPt", "reco_weight"),
@@ -571,7 +564,7 @@ if __name__ == "__main__":
 
     nominal_truth_hists = {
         var: response_analysis.get_hist(
-            TRUTHS[var],
+            truth_vars[var],
             dataset="wtaunu_had",
             systematic=NOMINAL_NAME,
             selection="no_shadow_bin_truth_tau",
@@ -581,7 +574,7 @@ if __name__ == "__main__":
     split_nominal_truth_hists = (
         {
             var: split_pseudo_data_analysis.get_hist(
-                TRUTHS[var],
+                truth_vars[var],
                 dataset="wtaunu_had",
                 systematic=NOMINAL_NAME,
                 selection="no_shadow_bin_truth_tau",
@@ -745,7 +738,7 @@ if __name__ == "__main__":
         for var in vars_for_config:
             # NOMINAL UNFOLDING INPUTS
             # ----------------------------------------------------------------
-            response_matrix_name = f"{var}_{TRUTHS[var]}"
+            response_matrix_name = f"{var}_{truth_vars[var]}"
             data = measured_analysis.get_hist(
                 var,
                 dataset=measured_analysis.data_sample,
@@ -818,7 +811,7 @@ if __name__ == "__main__":
             )
 
             truth_response = response_analysis.get_hist(
-                TRUTHS[var],
+                truth_vars[var],
                 dataset="wtaunu_had",
                 systematic=NOMINAL_NAME,
                 selection=truth_selection,
@@ -894,7 +887,7 @@ if __name__ == "__main__":
                     scale_by_bin_width=True,
                     ylabel=(
                         r"$\frac{d\sigma_{W\rightarrow\tau\nu\rightarrow\mathrm{had}}}{d"
-                        + SYMBOLS[var]
+                        + variable_data[var]["symbol"]
                         + r"}$ [fb / GeV]"
                     ),
                     logx=True,
@@ -1077,7 +1070,7 @@ if __name__ == "__main__":
             plotter.paths.plot_dir = plotter.paths.output_dir / "plots" / config.label / var
             plotter.plot_2d(
                 response.matrix,
-                ylabel=f"Truth {TRUTHS[var]}",
+                ylabel=f"Truth {truth_vars[var]}",
                 xlabel=f"Reco {var}",
                 title=smart_join(config.label, var, "response matrix", sep=" | "),
                 labels=False,
@@ -1127,7 +1120,7 @@ if __name__ == "__main__":
                     "scale_by_bin_width": True,
                     "ylabel": (
                         r"$\frac{d\sigma_{W\rightarrow\tau\nu\rightarrow\mathrm{had}}}{d"
-                        + SYMBOLS[var]
+                        + variable_data[var]["symbol"]
                         + r"}$ [fb / GeV]"
                     ),
                     "logx": True,
@@ -1179,7 +1172,7 @@ if __name__ == "__main__":
                 scale_by_bin_width=True,
                 ylabel=(
                     r"$\frac{d\sigma_{W\rightarrow\tau\nu\rightarrow\mathrm{had}}}{d"
-                    + SYMBOLS[var]
+                    + variable_data[var]["symbol"]
                     + r"}$ [fb / GeV]"
                 ),
                 logx=True,
@@ -1197,7 +1190,7 @@ if __name__ == "__main__":
                     selection=truth_reco_selection,
                 )
                 split_truth_response = split_response_analysis.get_hist(
-                    TRUTHS[var],
+                    truth_vars[var],
                     dataset="wtaunu_had",
                     systematic=NOMINAL_NAME,
                     selection=truth_selection,
@@ -1283,7 +1276,7 @@ if __name__ == "__main__":
                         "scale_by_bin_width": True,
                         "ylabel": (
                             r"$\frac{d\sigma_{W\rightarrow\tau\nu\rightarrow\mathrm{had}}}{d"
-                            + SYMBOLS[var]
+                            + variable_data[var]["symbol"]
                             + r"}$ [fb / GeV]"
                         ),
                         "logx": True,
@@ -1329,7 +1322,7 @@ if __name__ == "__main__":
                     scale_by_bin_width=True,
                     ylabel=(
                         r"$\frac{d\sigma_{W\rightarrow\tau\nu\rightarrow\mathrm{had}}}{d"
-                        + SYMBOLS[var]
+                        + variable_data[var]["symbol"]
                         + r"}$ [fb / GeV]"
                     ),
                     logx=True,
