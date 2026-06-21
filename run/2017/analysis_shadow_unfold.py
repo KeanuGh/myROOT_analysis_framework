@@ -35,7 +35,7 @@ ITERATIONS = (
 FAKES_SOURCE = "TauPt"
 LOAD_SAVED_HISTS = False  # Reuse saved ROOT histograms instead of rebuilding them.
 RUN_FAKE_DIAGNOSTICS = True  # Master switch for fake-estimate validation outputs.
-RUN_PRONG_SPLIT_FAKE_CHECK = True  # Add prong-split fake estimates; costs extra RDF loops.
+RUN_INCLUSIVE_FAKE_CHECK = True  # Also build inclusive fakes for comparison with prong-split.
 DO_SPLIT_SAMPLE_CLOSURE = False  # Build even/odd MC closure samples for response validation.
 DO_FULL_SYSTEMATICS = False  # Enable full systematic response variations; slow final-mode run.
 FAKE_SCALE_SCAN = (0.0, 0.5, 1.0)  # Fake normalisation scales used in the diagnostic scan.
@@ -236,7 +236,7 @@ if __name__ == "__main__":
     )
     plotter.logger.info("Starting analysis_shadow_unfold.py")
     plotter.logger.info("RUN_FAKE_DIAGNOSTICS = %s", RUN_FAKE_DIAGNOSTICS)
-    plotter.logger.info("RUN_PRONG_SPLIT_FAKE_CHECK = %s", RUN_PRONG_SPLIT_FAKE_CHECK)
+    plotter.logger.info("RUN_INCLUSIVE_FAKE_CHECK = %s", RUN_INCLUSIVE_FAKE_CHECK)
     plotter.logger.info("DO_SPLIT_SAMPLE_CLOSURE = %s", DO_SPLIT_SAMPLE_CLOSURE)
     plotter.logger.info("DO_FULL_SYSTEMATICS = %s", DO_FULL_SYSTEMATICS)
     if DO_FULL_SYSTEMATICS:
@@ -308,39 +308,36 @@ if __name__ == "__main__":
         data_selections[cr_pass] = reco_cr_cuts + [PASS_MEDIUM]
         data_selections[cr_fail] = reco_cr_cuts + [FAIL_MEDIUM]
 
-        if RUN_FAKE_DIAGNOSTICS and RUN_PRONG_SPLIT_FAKE_CHECK:
-            for prong, names in prong_names.items():
-                pass_prong = Cut(f"{prong}-prong", f"TauNCoreTracks == {prong}")
-                data_selections[names["sr_pass"]] = data_selections[sr_pass] + [pass_prong]
-                data_selections[names["sr_fail"]] = data_selections[sr_fail] + [pass_prong]
-                data_selections[names["cr_pass"]] = data_selections[cr_pass] + [pass_prong]
-                data_selections[names["cr_fail"]] = data_selections[cr_fail] + [pass_prong]
+        for prong, names in prong_names.items():
+            pass_prong = Cut(f"{prong}-prong", f"TauNCoreTracks == {prong}")
+            data_selections[names["sr_pass"]] = data_selections[sr_pass] + [pass_prong]
+            data_selections[names["sr_fail"]] = data_selections[sr_fail] + [pass_prong]
+            data_selections[names["cr_pass"]] = data_selections[cr_pass] + [pass_prong]
+            data_selections[names["cr_fail"]] = data_selections[cr_fail] + [pass_prong]
 
         for selection in (sr_pass, sr_fail, cr_pass, cr_fail):
             mc_selections[selection] = data_selections[selection]
-        if RUN_FAKE_DIAGNOSTICS and RUN_PRONG_SPLIT_FAKE_CHECK:
-            for names in prong_names.values():
-                for selection in names.values():
-                    mc_selections[selection] = data_selections[selection]
+        for names in prong_names.values():
+            for selection in names.values():
+                mc_selections[selection] = data_selections[selection]
 
         mc_selections[true_sr_pass] = data_selections[sr_pass] + [PASS_TRUETAU]
         mc_selections[true_sr_fail] = data_selections[sr_fail] + [PASS_TRUETAU]
         mc_selections[true_cr_pass] = data_selections[cr_pass] + [PASS_TRUETAU]
         mc_selections[true_cr_fail] = data_selections[cr_fail] + [PASS_TRUETAU]
-        if RUN_FAKE_DIAGNOSTICS and RUN_PRONG_SPLIT_FAKE_CHECK:
-            for names in prong_names.values():
-                mc_selections[f"trueTau_{names['sr_pass']}"] = data_selections[
-                    names["sr_pass"]
-                ] + [PASS_TRUETAU]
-                mc_selections[f"trueTau_{names['sr_fail']}"] = data_selections[
-                    names["sr_fail"]
-                ] + [PASS_TRUETAU]
-                mc_selections[f"trueTau_{names['cr_pass']}"] = data_selections[
-                    names["cr_pass"]
-                ] + [PASS_TRUETAU]
-                mc_selections[f"trueTau_{names['cr_fail']}"] = data_selections[
-                    names["cr_fail"]
-                ] + [PASS_TRUETAU]
+        for names in prong_names.values():
+            mc_selections[f"trueTau_{names['sr_pass']}"] = data_selections[
+                names["sr_pass"]
+            ] + [PASS_TRUETAU]
+            mc_selections[f"trueTau_{names['sr_fail']}"] = data_selections[
+                names["sr_fail"]
+            ] + [PASS_TRUETAU]
+            mc_selections[f"trueTau_{names['cr_pass']}"] = data_selections[
+                names["cr_pass"]
+            ] + [PASS_TRUETAU]
+            mc_selections[f"trueTau_{names['cr_fail']}"] = data_selections[
+                names["cr_fail"]
+            ] + [PASS_TRUETAU]
 
         response_selections[truth_selection] = truth_cuts
         response_selections[reco_selection] = reco_sr_cuts + [PASS_MEDIUM]
@@ -414,11 +411,10 @@ if __name__ == "__main__":
             truth_reco_selection,
         ):
             selection_binnings[rf"^{re.escape(selection)}$"] = config_binnings
-        if RUN_FAKE_DIAGNOSTICS and RUN_PRONG_SPLIT_FAKE_CHECK:
-            for names in prong_names.values():
-                for selection in names.values():
-                    selection_binnings[rf"^{re.escape(selection)}$"] = config_binnings
-                    selection_binnings[rf"^{re.escape(f'trueTau_{selection}')}$"] = config_binnings
+        for names in prong_names.values():
+            for selection in names.values():
+                selection_binnings[rf"^{re.escape(selection)}$"] = config_binnings
+                selection_binnings[rf"^{re.escape(f'trueTau_{selection}')}$"] = config_binnings
 
     label_regex = "|".join(re.escape(config.label) for config in CONFIGS)
     truth_histogram_vars = {variable_data[var]["truth"] for var in VARS}
@@ -638,40 +634,42 @@ if __name__ == "__main__":
         # DATA-DRIVEN FAKE ESTIMATES
         # --------------------------------------------------------------------
         if not load_measured_analysis_hists:
-            # Inclusive fake estimate used by the main unfolding result.
-            measured_analysis.do_fakes_estimate(
-                FAKES_SOURCE,
-                vars_for_config,
-                cr_pass,
-                cr_fail,
-                sr_pass,
-                sr_fail,
-                true_cr_pass,
-                true_cr_fail,
-                true_sr_pass,
-                true_sr_fail,
-                name=fakes_name,
-                systematic=NOMINAL_NAME,
-                save_intermediates=True,
-            )
-            if RUN_FAKE_DIAGNOSTICS and RUN_PRONG_SPLIT_FAKE_CHECK:
-                # Prong-split fake estimates reproduce the thesis-style split before summing.
-                for prong in (1, 3):
-                    measured_analysis.do_fakes_estimate(
-                        FAKES_SOURCE,
-                        vars_for_config,
-                        f"{config.label}_{WP}_{prong}prong_CR_passID",
-                        f"{config.label}_{WP}_{prong}prong_CR_failID",
-                        f"{config.label}_{WP}_{prong}prong_SR_passID",
-                        f"{config.label}_{WP}_{prong}prong_SR_failID",
-                        f"trueTau_{config.label}_{WP}_{prong}prong_CR_passID",
-                        f"trueTau_{config.label}_{WP}_{prong}prong_CR_failID",
-                        f"trueTau_{config.label}_{WP}_{prong}prong_SR_passID",
-                        f"trueTau_{config.label}_{WP}_{prong}prong_SR_failID",
-                        name=f"{config.label}_{WP}_{prong}prong",
-                        systematic=NOMINAL_NAME,
-                        save_intermediates=True,
-                    )
+            if RUN_FAKE_DIAGNOSTICS and RUN_INCLUSIVE_FAKE_CHECK:
+                # Inclusive fakes are a diagnostic cross-check, not the nominal method.
+                measured_analysis.do_fakes_estimate(
+                    FAKES_SOURCE,
+                    vars_for_config,
+                    cr_pass,
+                    cr_fail,
+                    sr_pass,
+                    sr_fail,
+                    true_cr_pass,
+                    true_cr_fail,
+                    true_sr_pass,
+                    true_sr_fail,
+                    name=fakes_name,
+                    systematic=NOMINAL_NAME,
+                    save_intermediates=True,
+                )
+
+            # The nominal fake estimate follows the thesis method: split by tau prong
+            # and then sum the 1-prong and 3-prong predictions.
+            for prong in (1, 3):
+                measured_analysis.do_fakes_estimate(
+                    FAKES_SOURCE,
+                    vars_for_config,
+                    f"{config.label}_{WP}_{prong}prong_CR_passID",
+                    f"{config.label}_{WP}_{prong}prong_CR_failID",
+                    f"{config.label}_{WP}_{prong}prong_SR_passID",
+                    f"{config.label}_{WP}_{prong}prong_SR_failID",
+                    f"trueTau_{config.label}_{WP}_{prong}prong_CR_passID",
+                    f"trueTau_{config.label}_{WP}_{prong}prong_CR_failID",
+                    f"trueTau_{config.label}_{WP}_{prong}prong_SR_passID",
+                    f"trueTau_{config.label}_{WP}_{prong}prong_SR_failID",
+                    name=f"{config.label}_{WP}_{prong}prong",
+                    systematic=NOMINAL_NAME,
+                    save_intermediates=True,
+                )
 
         # MC FAKE-CLOSURE DIAGNOSTIC
         # --------------------------------------------------------------------
@@ -776,7 +774,15 @@ if __name__ == "__main__":
                 for background in measured_analysis.mc_samples
                 if background != "wtaunu_had"
             ]
-            fakes = measured_analysis.histograms[f"{fakes_name}_{var}_fakes_bkg_{FAKES_SOURCE}_src"]
+            prong_fakes = [
+                measured_analysis.histograms[
+                    f"{config.label}_{WP}_{prong}prong_{var}_fakes_bkg_{FAKES_SOURCE}_src"
+                ]
+                for prong in (1, 3)
+            ]
+            fakes = sum_th1s(*prong_fakes)
+            fakes.SetName(f"{config.label}_{WP}_{var}_prong_split_fakes_bkg_{FAKES_SOURCE}_src")
+            fakes.SetDirectory(0)
             all_reco_signal = response_analysis.get_hist(
                 var,
                 dataset="wtaunu_had",
@@ -919,16 +925,11 @@ if __name__ == "__main__":
                     filename=f"{config.label}_{var}_fake_scale_scan.png",
                 )
 
-            if RUN_FAKE_DIAGNOSTICS and RUN_PRONG_SPLIT_FAKE_CHECK:
-                inclusive_fakes = fakes
-                prong_fakes = [
-                    measured_analysis.histograms[
-                        f"{config.label}_{WP}_{prong}prong_{var}_fakes_bkg_{FAKES_SOURCE}_src"
-                    ]
-                    for prong in (1, 3)
+            if RUN_FAKE_DIAGNOSTICS and RUN_INCLUSIVE_FAKE_CHECK:
+                inclusive_fakes = measured_analysis.histograms[
+                    f"{fakes_name}_{var}_fakes_bkg_{FAKES_SOURCE}_src"
                 ]
-                prong_sum_fakes = sum_th1s(*prong_fakes)
-                prong_sum_fakes.SetName(f"{config.label}_{var}_prong_sum_fakes")
+                prong_sum_fakes = fakes
                 fake_prong_rows.append(
                     (
                         config.label,
@@ -1490,9 +1491,8 @@ if __name__ == "__main__":
                 "",
                 "## Inclusive versus prong-split fakes",
                 "",
-                "The thesis fake estimate is prong-split. This compares the inclusive fake "
-                "estimate used by the reduced shadow-unfold workflow against the sum of separate "
-                "1-prong and 3-prong fake estimates.",
+                "The nominal fake estimate is prong-split. This compares the optional inclusive "
+                "fake estimate against the sum of separate 1-prong and 3-prong fake estimates.",
                 "",
                 "| Configuration | Variable | Inclusive fakes | 1-prong fakes | 3-prong fakes | "
                 "Prong-sum fakes |",
