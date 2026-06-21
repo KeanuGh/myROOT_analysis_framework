@@ -21,7 +21,10 @@ YEAR = 2017
 LUMI = LUMI_YEAR[YEAR]
 WP = "medium"
 VARS = ("MTW", "TauPt")
-truth_vars = {var: variable_data[var]["truth"] for var in VARS}
+SHADOW_BINS = {
+    "MTW": (200, 250, 300),
+    "TauPt": (200, 250, 300),
+}
 ITERATIONS = (
     0,
     1,
@@ -111,12 +114,26 @@ class ResponseComponents:
 
 CONFIGS = (
     ShadowConfig("no_shadow_bin", None, mtw_min=350, taupt_min=170, met_min=170),
-    ShadowConfig("MTW_shadow_bin_200", "MTW", mtw_min=200, taupt_min=170, met_min=170),
-    ShadowConfig("MTW_shadow_bin_250", "MTW", mtw_min=250, taupt_min=170, met_min=170),
-    ShadowConfig("MTW_shadow_bin_300", "MTW", mtw_min=300, taupt_min=170, met_min=170),
-    ShadowConfig("TauPt_shadow_bin_200", "TauPt", mtw_min=350, taupt_min=100, met_min=170),
-    ShadowConfig("TauPt_shadow_bin_250", "TauPt", mtw_min=350, taupt_min=125, met_min=170),
-    ShadowConfig("TauPt_shadow_bin_300", "TauPt", mtw_min=350, taupt_min=150, met_min=170),
+    *(
+        ShadowConfig(
+            f"MTW_shadow_bin_{threshold}",
+            "MTW",
+            mtw_min=threshold,
+            taupt_min=170,
+            met_min=170,
+        )
+        for threshold in SHADOW_BINS["MTW"]
+    ),
+    *(
+        ShadowConfig(
+            f"TauPt_shadow_bin_{threshold}",
+            "TauPt",
+            mtw_min=350,
+            taupt_min=threshold / 2,
+            met_min=170,
+        )
+        for threshold in SHADOW_BINS["TauPt"]
+    ),
 )
 
 
@@ -402,6 +419,7 @@ if __name__ == "__main__":
                     selection_binnings[rf"^{re.escape(f'trueTau_{selection}')}$"] = config_binnings
 
     label_regex = "|".join(re.escape(config.label) for config in CONFIGS)
+    truth_histogram_vars = {variable_data[var]["truth"] for var in VARS}
 
     # DATAFRAME & HISTOGRAM PRODUCTION
     # ========================================================================
@@ -468,7 +486,7 @@ if __name__ == "__main__":
         },
         import_missing_columns_as_nan=True,
         snapshot=False,
-        histogram_vars=set(VARS) | set(truth_vars.values()),
+        histogram_vars=set(VARS) | truth_histogram_vars,
         hists_2d={
             "MTW_TruthMTW": Hist2dOpts("MTW", "TruthMTW", "reco_weight"),
             "TauPt_VisTruthTauPt": Hist2dOpts("TauPt", "VisTruthTauPt", "reco_weight"),
@@ -512,7 +530,7 @@ if __name__ == "__main__":
             },
             import_missing_columns_as_nan=True,
             snapshot=False,
-            histogram_vars=set(VARS) | set(truth_vars.values()),
+            histogram_vars=set(VARS) | truth_histogram_vars,
             hists_2d={
                 "MTW_TruthMTW": Hist2dOpts("MTW", "TruthMTW", "reco_weight"),
                 "TauPt_VisTruthTauPt": Hist2dOpts("TauPt", "VisTruthTauPt", "reco_weight"),
@@ -550,7 +568,7 @@ if __name__ == "__main__":
             },
             import_missing_columns_as_nan=True,
             snapshot=False,
-            histogram_vars=set(VARS) | set(truth_vars.values()),
+            histogram_vars=set(VARS) | truth_histogram_vars,
             hists_2d={
                 "MTW_TruthMTW": Hist2dOpts("MTW", "TruthMTW", "reco_weight"),
                 "TauPt_VisTruthTauPt": Hist2dOpts("TauPt", "VisTruthTauPt", "reco_weight"),
@@ -564,7 +582,7 @@ if __name__ == "__main__":
 
     nominal_truth_hists = {
         var: response_analysis.get_hist(
-            truth_vars[var],
+            variable_data[var]["truth"],
             dataset="wtaunu_had",
             systematic=NOMINAL_NAME,
             selection="no_shadow_bin_truth_tau",
@@ -574,7 +592,7 @@ if __name__ == "__main__":
     split_nominal_truth_hists = (
         {
             var: split_pseudo_data_analysis.get_hist(
-                truth_vars[var],
+                variable_data[var]["truth"],
                 dataset="wtaunu_had",
                 systematic=NOMINAL_NAME,
                 selection="no_shadow_bin_truth_tau",
@@ -738,7 +756,8 @@ if __name__ == "__main__":
         for var in vars_for_config:
             # NOMINAL UNFOLDING INPUTS
             # ----------------------------------------------------------------
-            response_matrix_name = f"{var}_{truth_vars[var]}"
+            truth_var = variable_data[var]["truth"]
+            response_matrix_name = f"{var}_{truth_var}"
             data = measured_analysis.get_hist(
                 var,
                 dataset=measured_analysis.data_sample,
@@ -811,7 +830,7 @@ if __name__ == "__main__":
             )
 
             truth_response = response_analysis.get_hist(
-                truth_vars[var],
+                truth_var,
                 dataset="wtaunu_had",
                 systematic=NOMINAL_NAME,
                 selection=truth_selection,
@@ -1070,7 +1089,7 @@ if __name__ == "__main__":
             plotter.paths.plot_dir = plotter.paths.output_dir / "plots" / config.label / var
             plotter.plot_2d(
                 response.matrix,
-                ylabel=f"Truth {truth_vars[var]}",
+                ylabel=f"Truth {truth_var}",
                 xlabel=f"Reco {var}",
                 title=smart_join(config.label, var, "response matrix", sep=" | "),
                 labels=False,
@@ -1190,7 +1209,7 @@ if __name__ == "__main__":
                     selection=truth_reco_selection,
                 )
                 split_truth_response = split_response_analysis.get_hist(
-                    truth_vars[var],
+                    truth_var,
                     dataset="wtaunu_had",
                     systematic=NOMINAL_NAME,
                     selection=truth_selection,
