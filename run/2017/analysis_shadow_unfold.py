@@ -31,13 +31,18 @@ ITERATIONS = (
 FAKES_SOURCE = "TauPt"
 DO_FULL_SYSTEMATICS = False
 LOAD_SAVED_HISTS = False
-DO_SPLIT_SAMPLE_CLOSURE = True
+DO_SPLIT_SAMPLE_CLOSURE = False
+DO_FAKE_DIAGNOSTICS = True
+FAKE_SCALE_SCAN = (0.0, 0.5, 1.0)
+FAKE_DIAGNOSTIC_ITERATION = 1
 
 SKIP_SYS = {
     r".*TAUS_TRUEHADTAU_EFF_RNNID_.*",
     r".*TAUS_TRUEHADTAU_EFF_JETID_.*",
 }
 
+# CUTS & SELECTIONS
+# ========================================================================
 TRUTHS = {
     "MTW": "TruthMTW",
     "TauPt": "VisTruthTauPt",
@@ -88,6 +93,8 @@ RESPONSE_SPLIT = Cut(r"Response split", r"(eventNumber % 2) == 0")
 PSEUDO_DATA_SPLIT = Cut(r"Pseudo-data split", r"(eventNumber % 2) == 1")
 
 
+# MODELS & CONFIGURATION
+# ========================================================================
 @dataclass(frozen=True)
 class ShadowConfig:
     """One phase-space definition used in the closure test."""
@@ -120,6 +127,8 @@ CONFIGS = (
 )
 
 
+# HISTOGRAM HELPERS
+# ========================================================================
 def crop_to_nominal_binning(source: ROOT.TH1, target: ROOT.TH1, name: str) -> ROOT.TH1:
     """Clone source into target binning, dropping one leading shadow bin if present."""
     source_edges = get_th1_bin_edges(source)
@@ -203,6 +212,8 @@ def closure_metrics(unfolded_signal: ROOT.TH1, truth: ROOT.TH1) -> tuple[float, 
 
 
 if __name__ == "__main__":
+    # SETUP
+    # ========================================================================
     output_root = Path(__file__).absolute().parent.parent.parent / "outputs" / Path(__file__).stem
     plotter = Analysis(
         data_dict={},
@@ -215,12 +226,14 @@ if __name__ == "__main__":
     plotter.logger.info("Starting analysis_shadow_unfold.py")
     plotter.logger.info("DO_FULL_SYSTEMATICS = %s", DO_FULL_SYSTEMATICS)
     plotter.logger.info("DO_SPLIT_SAMPLE_CLOSURE = %s", DO_SPLIT_SAMPLE_CLOSURE)
+    plotter.logger.info("DO_FAKE_DIAGNOSTICS = %s", DO_FAKE_DIAGNOSTICS)
     if DO_FULL_SYSTEMATICS:
         plotter.logger.info(
             "Full systematics mode enabled; missing shadow variations will fail loudly."
         )
 
-    # Build all threshold-specific measured-input selections in one pass.
+    # SELECTION BUILDING
+    # ========================================================================
     data_selections: dict[str, list[Cut]] = {}
     mc_selections: dict[str, list[Cut]] = {}
     response_selections: dict[str, list[Cut]] = {}
@@ -237,6 +250,15 @@ if __name__ == "__main__":
         true_sr_fail = f"trueTau_{sr_fail}"
         true_cr_pass = f"trueTau_{cr_pass}"
         true_cr_fail = f"trueTau_{cr_fail}"
+        prong_names = {
+            prong: {
+                "sr_pass": f"{config.label}_{WP}_{prong}prong_SR_passID",
+                "sr_fail": f"{config.label}_{WP}_{prong}prong_SR_failID",
+                "cr_pass": f"{config.label}_{WP}_{prong}prong_CR_passID",
+                "cr_fail": f"{config.label}_{WP}_{prong}prong_CR_failID",
+            }
+            for prong in (1, 3)
+        }
         truth_selection = f"{config.label}_truth_tau"
         reco_selection = f"{config.label}_{WP}_reco_tau"
         truth_reco_selection = f"{config.label}_{WP}_truth_reco_tau"
@@ -274,12 +296,39 @@ if __name__ == "__main__":
         data_selections[cr_pass] = reco_cr_cuts + [PASS_MEDIUM]
         data_selections[cr_fail] = reco_cr_cuts + [FAIL_MEDIUM]
 
+        if DO_FAKE_DIAGNOSTICS:
+            for prong, names in prong_names.items():
+                pass_prong = Cut(f"{prong}-prong", f"TauNCoreTracks == {prong}")
+                data_selections[names["sr_pass"]] = data_selections[sr_pass] + [pass_prong]
+                data_selections[names["sr_fail"]] = data_selections[sr_fail] + [pass_prong]
+                data_selections[names["cr_pass"]] = data_selections[cr_pass] + [pass_prong]
+                data_selections[names["cr_fail"]] = data_selections[cr_fail] + [pass_prong]
+
         for selection in (sr_pass, sr_fail, cr_pass, cr_fail):
             mc_selections[selection] = data_selections[selection]
+        if DO_FAKE_DIAGNOSTICS:
+            for names in prong_names.values():
+                for selection in names.values():
+                    mc_selections[selection] = data_selections[selection]
+
         mc_selections[true_sr_pass] = data_selections[sr_pass] + [PASS_TRUETAU]
         mc_selections[true_sr_fail] = data_selections[sr_fail] + [PASS_TRUETAU]
         mc_selections[true_cr_pass] = data_selections[cr_pass] + [PASS_TRUETAU]
         mc_selections[true_cr_fail] = data_selections[cr_fail] + [PASS_TRUETAU]
+        if DO_FAKE_DIAGNOSTICS:
+            for names in prong_names.values():
+                mc_selections[f"trueTau_{names['sr_pass']}"] = data_selections[
+                    names["sr_pass"]
+                ] + [PASS_TRUETAU]
+                mc_selections[f"trueTau_{names['sr_fail']}"] = data_selections[
+                    names["sr_fail"]
+                ] + [PASS_TRUETAU]
+                mc_selections[f"trueTau_{names['cr_pass']}"] = data_selections[
+                    names["cr_pass"]
+                ] + [PASS_TRUETAU]
+                mc_selections[f"trueTau_{names['cr_fail']}"] = data_selections[
+                    names["cr_fail"]
+                ] + [PASS_TRUETAU]
 
         response_selections[truth_selection] = truth_cuts
         response_selections[reco_selection] = reco_sr_cuts + [PASS_MEDIUM]
@@ -353,9 +402,16 @@ if __name__ == "__main__":
             truth_reco_selection,
         ):
             selection_binnings[rf"^{re.escape(selection)}$"] = config_binnings
+        if DO_FAKE_DIAGNOSTICS:
+            for names in prong_names.values():
+                for selection in names.values():
+                    selection_binnings[rf"^{re.escape(selection)}$"] = config_binnings
+                    selection_binnings[rf"^{re.escape(f'trueTau_{selection}')}$"] = config_binnings
 
     label_regex = "|".join(re.escape(config.label) for config in CONFIGS)
 
+    # DATAFRAME & HISTOGRAM PRODUCTION
+    # ========================================================================
     measured_analysis = Analysis(
         analysis_samples(mc_selections, data_selections=data_selections, snapshot=False),
         year=YEAR,
@@ -538,8 +594,18 @@ if __name__ == "__main__":
 
     closure_rows: list[tuple[str, str, int, float, float, float]] = []
     split_closure_rows: list[tuple[str, str, int, float, float, float]] = []
+    fake_budget_rows: list[
+        tuple[str, str, float, float, float, float, float, float, float, float]
+    ] = []
+    fake_scale_rows: list[tuple[str, str, float, float, float, float]] = []
+    fake_mc_closure_rows: list[tuple[str, float, float, float, float, float]] = []
+    fake_prong_rows: list[tuple[str, str, float, float, float, float]] = []
 
+    # FAKE ESTIMATION, UNFOLDING & DIAGNOSTICS
+    # ========================================================================
     for config in CONFIGS:
+        # CURRENT SHADOW CONFIGURATION
+        # --------------------------------------------------------------------
         vars_for_config = VARS if config.unfolded_var is None else (config.unfolded_var,)
         sr_pass = f"{config.label}_{WP}_SR_passID"
         sr_fail = f"{config.label}_{WP}_SR_failID"
@@ -555,7 +621,11 @@ if __name__ == "__main__":
         fakes_name = f"{config.label}_{WP}"
 
         plotter.logger.info("Running variable-specific shadow-bin closure for %s", config.label)
+
+        # DATA-DRIVEN FAKE ESTIMATES
+        # --------------------------------------------------------------------
         if not load_measured_analysis_hists:
+            # Inclusive fake estimate used by the main unfolding result.
             measured_analysis.do_fakes_estimate(
                 FAKES_SOURCE,
                 vars_for_config,
@@ -571,6 +641,101 @@ if __name__ == "__main__":
                 systematic=NOMINAL_NAME,
                 save_intermediates=True,
             )
+            if DO_FAKE_DIAGNOSTICS:
+                # Prong-split fake estimates reproduce the thesis-style split before summing.
+                for prong in (1, 3):
+                    measured_analysis.do_fakes_estimate(
+                        FAKES_SOURCE,
+                        vars_for_config,
+                        f"{config.label}_{WP}_{prong}prong_CR_passID",
+                        f"{config.label}_{WP}_{prong}prong_CR_failID",
+                        f"{config.label}_{WP}_{prong}prong_SR_passID",
+                        f"{config.label}_{WP}_{prong}prong_SR_failID",
+                        f"trueTau_{config.label}_{WP}_{prong}prong_CR_passID",
+                        f"trueTau_{config.label}_{WP}_{prong}prong_CR_failID",
+                        f"trueTau_{config.label}_{WP}_{prong}prong_SR_passID",
+                        f"trueTau_{config.label}_{WP}_{prong}prong_SR_failID",
+                        name=f"{config.label}_{WP}_{prong}prong",
+                        systematic=NOMINAL_NAME,
+                        save_intermediates=True,
+                    )
+
+        # MC FAKE-CLOSURE DIAGNOSTIC
+        # --------------------------------------------------------------------
+        if DO_FAKE_DIAGNOSTICS:
+            mc_fake_hists = {}
+            for selection_name in (sr_pass, sr_fail, cr_pass, cr_fail):
+                all_mc = measured_analysis.sum_hists(
+                    [
+                        measured_analysis.get_hist(
+                            variable=FAKES_SOURCE,
+                            dataset=mc_sample,
+                            systematic=NOMINAL_NAME,
+                            selection=selection_name,
+                            allow_generation=True,
+                        )
+                        for mc_sample in measured_analysis.mc_samples
+                    ]
+                )
+                true_mc = measured_analysis.sum_hists(
+                    [
+                        measured_analysis.get_hist(
+                            variable=FAKES_SOURCE,
+                            dataset=mc_sample,
+                            systematic=NOMINAL_NAME,
+                            selection=f"trueTau_{selection_name}",
+                            allow_generation=True,
+                        )
+                        for mc_sample in measured_analysis.mc_samples
+                    ]
+                )
+                fake_mc = all_mc - true_mc
+                fake_mc.SetName(f"{config.label}_{selection_name}_{FAKES_SOURCE}_mc_fake")
+                fake_mc.SetDirectory(0)
+                mc_fake_hists[selection_name] = fake_mc
+
+            mc_fake_factor = mc_fake_hists[cr_pass] / mc_fake_hists[cr_fail]
+            mc_fake_factor.SetName(f"{config.label}_{FAKES_SOURCE}_mc_fake_factor")
+            predicted_mc_fake = mc_fake_hists[sr_fail] * mc_fake_factor
+            predicted_mc_fake.SetName(f"{config.label}_{FAKES_SOURCE}_predicted_mc_fake")
+            actual_mc_fake = mc_fake_hists[sr_pass]
+            mean_dev, max_dev, integral_ratio = closure_metrics(predicted_mc_fake, actual_mc_fake)
+            fake_mc_closure_rows.append(
+                (
+                    config.label,
+                    actual_mc_fake.Integral(),
+                    predicted_mc_fake.Integral(),
+                    mean_dev,
+                    max_dev,
+                    integral_ratio,
+                )
+            )
+
+            plotter.paths.plot_dir = (
+                plotter.paths.output_dir / "plots" / config.label / "fake_diagnostics"
+            )
+            plotter.plot(
+                [actual_mc_fake, predicted_mc_fake],
+                label=["Actual MC fake in SR pass-ID", "Predicted MC fake from fake factor"],
+                colour=["k", "b"],
+                histstyle=["step", "step"],
+                xlabel=variable_data[FAKES_SOURCE]["name"] + " [GeV]",
+                kind="overlay",
+                do_stat=True,
+                do_syst=False,
+                title=smart_join(config.label, FAKES_SOURCE, "MC fake closure", sep=" | "),
+                scale_by_bin_width=False,
+                ylabel="Events",
+                logx=True,
+                ratio_plot=True,
+                ratio_label="Predicted / actual",
+                ratio_axlim=(0.0, 2.0),
+                label_params={"llabel": "", "loc": 1},
+                filename=f"{config.label}_{FAKES_SOURCE}_mc_fake_closure.png",
+            )
+
+        # CENTRAL-VALUE MODE NOTICE
+        # --------------------------------------------------------------------
         if not DO_FULL_SYSTEMATICS:
             plotter.logger.info(
                 "DO_FULL_SYSTEMATICS is False: producing central-value closure only for %s.",
@@ -578,6 +743,8 @@ if __name__ == "__main__":
             )
 
         for var in vars_for_config:
+            # NOMINAL UNFOLDING INPUTS
+            # ----------------------------------------------------------------
             response_matrix_name = f"{var}_{TRUTHS[var]}"
             data = measured_analysis.get_hist(
                 var,
@@ -630,6 +797,26 @@ if __name__ == "__main__":
             signal = fiducial_reco_signal.Clone(f"{config.label}_{var}_fiducial_signal")
             signal.SetDirectory(0)
 
+            prompt_background = sum_th1s(*backgrounds)
+            data_sig_no_fake = data - prompt_background - nonfiducial_signal
+            data_sig_no_fake.SetName(f"{config.label}_{var}_data_minus_prompt_nonfiducial")
+            fake_budget_rows.append(
+                (
+                    config.label,
+                    var,
+                    data.Integral(),
+                    prompt_background.Integral(),
+                    fakes.Integral(),
+                    nonfiducial_signal.Integral(),
+                    data_sig.Integral(),
+                    data_sig_no_fake.Integral(),
+                    fiducial_reco_signal.Integral(),
+                    fiducial_reco_signal.Integral() / data_sig.Integral()
+                    if data_sig.Integral() != 0
+                    else float("nan"),
+                )
+            )
+
             truth_response = response_analysis.get_hist(
                 TRUTHS[var],
                 dataset="wtaunu_had",
@@ -651,6 +838,114 @@ if __name__ == "__main__":
             nominal_truth = nominal_truth_hists[var]
             truth = Histogram1D(th1=nominal_truth) / LUMI
 
+            # FAKE-SUBTRACTION DIAGNOSTICS
+            # ----------------------------------------------------------------
+            if DO_FAKE_DIAGNOSTICS:
+                scaled_fake_unfolded = []
+                for fake_scale in FAKE_SCALE_SCAN:
+                    scaled_fakes = fakes.Clone(
+                        f"{config.label}_{var}_fake_scale_{fake_scale:g}_fakes"
+                    )
+                    scaled_fakes.SetDirectory(0)
+                    scaled_fakes.Scale(fake_scale)
+                    scaled_data_sig = data - prompt_background - scaled_fakes - nonfiducial_signal
+                    scaled_data_sig.SetName(
+                        f"{config.label}_{var}_fake_scale_{fake_scale:g}_data_signal"
+                    )
+                    fake_scale_rows.append(
+                        (
+                            config.label,
+                            var,
+                            fake_scale,
+                            scaled_data_sig.Integral(),
+                            fiducial_reco_signal.Integral(),
+                            fiducial_reco_signal.Integral() / scaled_data_sig.Integral()
+                            if scaled_data_sig.Integral() != 0
+                            else float("nan"),
+                        )
+                    )
+                    scaled_unfolded, _ = unfold_histogram(
+                        plotter,
+                        scaled_data_sig,
+                        response,
+                        FAKE_DIAGNOSTIC_ITERATION,
+                    )
+                    scaled_unfolded = scale_and_crop_unfolded(
+                        scaled_unfolded,
+                        nominal_truth,
+                        f"{config.label}_{var}_fake_scale_{fake_scale:g}_unfolded",
+                    )
+                    scaled_fake_unfolded.append(scaled_unfolded)
+
+                plotter.paths.plot_dir = (
+                    plotter.paths.output_dir / "plots" / config.label / var / "fake_diagnostics"
+                )
+                plotter.plot(
+                    [truth, *scaled_fake_unfolded],
+                    label=["Truth MC"]
+                    + [f"Unfolded data, fake scale {scale:g}" for scale in FAKE_SCALE_SCAN],
+                    colour=["r", "k", "tab:orange", "b"],
+                    histstyle=["step", "step", "step", "step"],
+                    xlabel=variable_data[var]["name"] + " [GeV]",
+                    kind="overlay",
+                    do_stat=True,
+                    do_syst=False,
+                    title=smart_join(config.label, var, "fake scale scan", sep=" | "),
+                    scale_by_bin_width=True,
+                    ylabel=(
+                        r"$\frac{d\sigma_{W\rightarrow\tau\nu\rightarrow\mathrm{had}}}{d"
+                        + SYMBOLS[var]
+                        + r"}$ [fb / GeV]"
+                    ),
+                    logx=True,
+                    ratio_plot=True,
+                    ratio_label="Data / MC",
+                    ratio_axlim=(0.5, 1.5),
+                    label_params={"llabel": "", "loc": 1},
+                    filename=f"{config.label}_{var}_fake_scale_scan.png",
+                )
+
+                inclusive_fakes = fakes
+                prong_fakes = [
+                    measured_analysis.histograms[
+                        f"{config.label}_{WP}_{prong}prong_{var}_fakes_bkg_{FAKES_SOURCE}_src"
+                    ]
+                    for prong in (1, 3)
+                ]
+                prong_sum_fakes = sum_th1s(*prong_fakes)
+                prong_sum_fakes.SetName(f"{config.label}_{var}_prong_sum_fakes")
+                fake_prong_rows.append(
+                    (
+                        config.label,
+                        var,
+                        inclusive_fakes.Integral(),
+                        prong_fakes[0].Integral(),
+                        prong_fakes[1].Integral(),
+                        prong_sum_fakes.Integral(),
+                    )
+                )
+                plotter.plot(
+                    [inclusive_fakes, prong_sum_fakes],
+                    label=["Inclusive fake estimate", "1-prong + 3-prong fake estimate"],
+                    colour=["k", "b"],
+                    histstyle=["step", "step"],
+                    xlabel=variable_data[var]["name"] + " [GeV]",
+                    kind="overlay",
+                    do_stat=True,
+                    do_syst=False,
+                    title=smart_join(config.label, var, "fake prong split", sep=" | "),
+                    scale_by_bin_width=False,
+                    ylabel="Events",
+                    logx=True,
+                    ratio_plot=True,
+                    ratio_label="Prong sum / inclusive",
+                    ratio_axlim=(0.5, 1.5),
+                    label_params={"llabel": "", "loc": 1},
+                    filename=f"{config.label}_{var}_inclusive_vs_prong_split_fakes.png",
+                )
+
+            # RESPONSE SYSTEMATIC DIAGNOSTICS
+            # ----------------------------------------------------------------
             if DO_FULL_SYSTEMATICS:
                 sys_names = sorted(
                     {
@@ -777,6 +1072,8 @@ if __name__ == "__main__":
                     filename=f"{config.label}_{var}_response_systematics.png",
                 )
 
+            # RESPONSE MATRIX PLOT
+            # ----------------------------------------------------------------
             plotter.paths.plot_dir = plotter.paths.output_dir / "plots" / config.label / var
             plotter.plot_2d(
                 response.matrix,
@@ -788,6 +1085,8 @@ if __name__ == "__main__":
                 filename=f"{config.label}_{var}_response_matrix.png",
             )
 
+            # MAIN UNFOLDING RESULT
+            # ----------------------------------------------------------------
             unfolded_by_iteration = {}
             iteration_counts = ITERATIONS
             for iter_count in iteration_counts:
@@ -858,6 +1157,8 @@ if __name__ == "__main__":
                     filename=f"{config.label}_{var}_{iter_count}iter_covariance.png",
                 )
 
+            # UNFOLDING ITERATION COMPARISON
+            # ----------------------------------------------------------------
             plotter.paths.plot_dir = (
                 plotter.paths.output_dir / "plots" / config.label / var / "compare"
             )
@@ -886,6 +1187,8 @@ if __name__ == "__main__":
                 filename=f"{config.label}_{var}_iteration_compare.png",
             )
 
+            # SPLIT-SAMPLE MC CLOSURE
+            # ----------------------------------------------------------------
             if split_response_analysis is not None and split_pseudo_data_analysis is not None:
                 split_reco = split_response_analysis.get_hist(
                     var,
@@ -1034,6 +1337,8 @@ if __name__ == "__main__":
                     filename=f"{config.label}_{var}_split_closure_iteration_compare.png",
                 )
 
+    # SUMMARY OUTPUT
+    # ========================================================================
     summary_lines = [
         "# Variable-specific shadow-bin unfolding closure summary",
         "",
@@ -1074,6 +1379,120 @@ if __name__ == "__main__":
         split_summary_path = output_root / "split_closure_summary.md"
         split_summary_path.write_text("\n".join(split_summary_lines) + "\n")
         plotter.logger.info("Saved split-sample closure summary to %s", split_summary_path)
+
+    if DO_FAKE_DIAGNOSTICS:
+        fake_summary_lines = [
+            "# Fake-estimate diagnostics",
+            "",
+            "These diagnostics test whether the data-driven fake estimate is driving the "
+            "normalisation of the unfolded data input. They do not change the nominal unfolded "
+            "result; they provide cross-checks of the fake subtraction.",
+            "",
+            "## Pre-unfolding budget",
+            "",
+            "`data_sig` is the nominal unfolded input before unfolding:",
+            "`data - prompt backgrounds - fake estimate - nonfiducial signal`.",
+            "",
+            "| Configuration | Variable | Data | Prompt bkg | Fakes | Nonfid signal | "
+            "Data sig | Data sig, no fakes | Fid reco signal | Fid reco / data sig |",
+            "|---|---|---:|---:|---:|---:|---:|---:|---:|---:|",
+        ]
+        for row in fake_budget_rows:
+            (
+                config_label,
+                var,
+                data_integral,
+                prompt_bkg,
+                fakes_integral,
+                nonfid,
+                data_sig,
+                data_sig_no_fake,
+                fid_reco,
+                fid_over_data_sig,
+            ) = row
+            fake_summary_lines.append(
+                f"| {config_label} | {var} | {data_integral:.3f} | {prompt_bkg:.3f} | "
+                f"{fakes_integral:.3f} | {nonfid:.3f} | {data_sig:.3f} | "
+                f"{data_sig_no_fake:.3f} | {fid_reco:.3f} | {fid_over_data_sig:.3f} |"
+            )
+
+        fake_summary_lines.extend(
+            [
+                "",
+                "## Fake-scale scan",
+                "",
+                f"The unfolded diagnostic plots use `{FAKE_DIAGNOSTIC_ITERATION}` Bayesian "
+                "iteration(s). The table below shows the pre-unfolding signal integral for each "
+                "fake scale.",
+                "",
+                "| Configuration | Variable | Fake scale | Data sig | Fid reco signal | "
+                "Fid reco / data sig |",
+                "|---|---|---:|---:|---:|---:|",
+            ]
+        )
+        for (
+            config_label,
+            var,
+            fake_scale,
+            data_sig,
+            fid_reco,
+            fid_over_data_sig,
+        ) in fake_scale_rows:
+            fake_summary_lines.append(
+                f"| {config_label} | {var} | {fake_scale:.2f} | {data_sig:.3f} | "
+                f"{fid_reco:.3f} | {fid_over_data_sig:.3f} |"
+            )
+
+        fake_summary_lines.extend(
+            [
+                "",
+                "## MC fake closure",
+                "",
+                "This checks the fake-factor transfer in MC only, using the known non-true-tau "
+                "component as the target. The fake factor is built in `TauPt`, matching the "
+                "nominal fake source variable.",
+                "",
+                "| Configuration | Actual MC fake | Predicted MC fake | Mean deviation | "
+                "Max deviation | Integral ratio |",
+                "|---|---:|---:|---:|---:|---:|",
+            ]
+        )
+        for (
+            config_label,
+            actual_fake,
+            predicted_fake,
+            mean_dev,
+            max_dev,
+            integral_ratio,
+        ) in fake_mc_closure_rows:
+            fake_summary_lines.append(
+                f"| {config_label} | {actual_fake:.3f} | {predicted_fake:.3f} | "
+                f"{mean_dev:.3f} | {max_dev:.3f} | {integral_ratio:.3f} |"
+            )
+
+        fake_summary_lines.extend(
+            [
+                "",
+                "## Inclusive versus prong-split fakes",
+                "",
+                "The thesis fake estimate is prong-split. This compares the inclusive fake "
+                "estimate used by the reduced shadow-unfold workflow against the sum of separate "
+                "1-prong and 3-prong fake estimates.",
+                "",
+                "| Configuration | Variable | Inclusive fakes | 1-prong fakes | 3-prong fakes | "
+                "Prong-sum fakes |",
+                "|---|---|---:|---:|---:|---:|",
+            ]
+        )
+        for config_label, var, inclusive, one_prong, three_prong, prong_sum in fake_prong_rows:
+            fake_summary_lines.append(
+                f"| {config_label} | {var} | {inclusive:.3f} | {one_prong:.3f} | "
+                f"{three_prong:.3f} | {prong_sum:.3f} |"
+            )
+
+        fake_summary_path = output_root / "fake_diagnostics_summary.md"
+        fake_summary_path.write_text("\n".join(fake_summary_lines) + "\n")
+        plotter.logger.info("Saved fake diagnostics summary to %s", fake_summary_path)
 
     if not load_measured_analysis_hists:
         measured_analysis.save_hists()
