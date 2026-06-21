@@ -33,12 +33,13 @@ ITERATIONS = (
     # 8,
 )
 FAKES_SOURCE = "TauPt"
-DO_FULL_SYSTEMATICS = False
-LOAD_SAVED_HISTS = False
-DO_SPLIT_SAMPLE_CLOSURE = False
-DO_FAKE_DIAGNOSTICS = True
-FAKE_SCALE_SCAN = (0.0, 0.5, 1.0)
-FAKE_DIAGNOSTIC_ITERATION = 1
+LOAD_SAVED_HISTS = False  # Reuse saved ROOT histograms instead of rebuilding them.
+RUN_FAKE_DIAGNOSTICS = True  # Master switch for fake-estimate validation outputs.
+RUN_PRONG_SPLIT_FAKE_CHECK = True  # Add prong-split fake estimates; costs extra RDF loops.
+DO_SPLIT_SAMPLE_CLOSURE = False  # Build even/odd MC closure samples for response validation.
+DO_FULL_SYSTEMATICS = False  # Enable full systematic response variations; slow final-mode run.
+FAKE_SCALE_SCAN = (0.0, 0.5, 1.0)  # Fake normalisation scales used in the diagnostic scan.
+FAKE_DIAGNOSTIC_ITERATION = 1  # Bayesian iteration count used for fake-scale scan plots.
 
 SKIP_SYS = {
     r".*TAUS_TRUEHADTAU_EFF_RNNID_.*",
@@ -234,9 +235,10 @@ if __name__ == "__main__":
         log_out="both",
     )
     plotter.logger.info("Starting analysis_shadow_unfold.py")
-    plotter.logger.info("DO_FULL_SYSTEMATICS = %s", DO_FULL_SYSTEMATICS)
+    plotter.logger.info("RUN_FAKE_DIAGNOSTICS = %s", RUN_FAKE_DIAGNOSTICS)
+    plotter.logger.info("RUN_PRONG_SPLIT_FAKE_CHECK = %s", RUN_PRONG_SPLIT_FAKE_CHECK)
     plotter.logger.info("DO_SPLIT_SAMPLE_CLOSURE = %s", DO_SPLIT_SAMPLE_CLOSURE)
-    plotter.logger.info("DO_FAKE_DIAGNOSTICS = %s", DO_FAKE_DIAGNOSTICS)
+    plotter.logger.info("DO_FULL_SYSTEMATICS = %s", DO_FULL_SYSTEMATICS)
     if DO_FULL_SYSTEMATICS:
         plotter.logger.info(
             "Full systematics mode enabled; missing shadow variations will fail loudly."
@@ -306,7 +308,7 @@ if __name__ == "__main__":
         data_selections[cr_pass] = reco_cr_cuts + [PASS_MEDIUM]
         data_selections[cr_fail] = reco_cr_cuts + [FAIL_MEDIUM]
 
-        if DO_FAKE_DIAGNOSTICS:
+        if RUN_FAKE_DIAGNOSTICS and RUN_PRONG_SPLIT_FAKE_CHECK:
             for prong, names in prong_names.items():
                 pass_prong = Cut(f"{prong}-prong", f"TauNCoreTracks == {prong}")
                 data_selections[names["sr_pass"]] = data_selections[sr_pass] + [pass_prong]
@@ -316,7 +318,7 @@ if __name__ == "__main__":
 
         for selection in (sr_pass, sr_fail, cr_pass, cr_fail):
             mc_selections[selection] = data_selections[selection]
-        if DO_FAKE_DIAGNOSTICS:
+        if RUN_FAKE_DIAGNOSTICS and RUN_PRONG_SPLIT_FAKE_CHECK:
             for names in prong_names.values():
                 for selection in names.values():
                     mc_selections[selection] = data_selections[selection]
@@ -325,7 +327,7 @@ if __name__ == "__main__":
         mc_selections[true_sr_fail] = data_selections[sr_fail] + [PASS_TRUETAU]
         mc_selections[true_cr_pass] = data_selections[cr_pass] + [PASS_TRUETAU]
         mc_selections[true_cr_fail] = data_selections[cr_fail] + [PASS_TRUETAU]
-        if DO_FAKE_DIAGNOSTICS:
+        if RUN_FAKE_DIAGNOSTICS and RUN_PRONG_SPLIT_FAKE_CHECK:
             for names in prong_names.values():
                 mc_selections[f"trueTau_{names['sr_pass']}"] = data_selections[
                     names["sr_pass"]
@@ -412,7 +414,7 @@ if __name__ == "__main__":
             truth_reco_selection,
         ):
             selection_binnings[rf"^{re.escape(selection)}$"] = config_binnings
-        if DO_FAKE_DIAGNOSTICS:
+        if RUN_FAKE_DIAGNOSTICS and RUN_PRONG_SPLIT_FAKE_CHECK:
             for names in prong_names.values():
                 for selection in names.values():
                     selection_binnings[rf"^{re.escape(selection)}$"] = config_binnings
@@ -652,7 +654,7 @@ if __name__ == "__main__":
                 systematic=NOMINAL_NAME,
                 save_intermediates=True,
             )
-            if DO_FAKE_DIAGNOSTICS:
+            if RUN_FAKE_DIAGNOSTICS and RUN_PRONG_SPLIT_FAKE_CHECK:
                 # Prong-split fake estimates reproduce the thesis-style split before summing.
                 for prong in (1, 3):
                     measured_analysis.do_fakes_estimate(
@@ -673,7 +675,7 @@ if __name__ == "__main__":
 
         # MC FAKE-CLOSURE DIAGNOSTIC
         # --------------------------------------------------------------------
-        if DO_FAKE_DIAGNOSTICS:
+        if RUN_FAKE_DIAGNOSTICS:
             mc_fake_hists = {}
             for selection_name in (sr_pass, sr_fail, cr_pass, cr_fail):
                 all_mc = measured_analysis.sum_hists(
@@ -852,7 +854,7 @@ if __name__ == "__main__":
 
             # FAKE-SUBTRACTION DIAGNOSTICS
             # ----------------------------------------------------------------
-            if DO_FAKE_DIAGNOSTICS:
+            if RUN_FAKE_DIAGNOSTICS:
                 scaled_fake_unfolded = []
                 for fake_scale in FAKE_SCALE_SCAN:
                     scaled_fakes = fakes.Clone(
@@ -917,6 +919,7 @@ if __name__ == "__main__":
                     filename=f"{config.label}_{var}_fake_scale_scan.png",
                 )
 
+            if RUN_FAKE_DIAGNOSTICS and RUN_PRONG_SPLIT_FAKE_CHECK:
                 inclusive_fakes = fakes
                 prong_fakes = [
                     measured_analysis.histograms[
@@ -1392,7 +1395,7 @@ if __name__ == "__main__":
         split_summary_path.write_text("\n".join(split_summary_lines) + "\n")
         plotter.logger.info("Saved split-sample closure summary to %s", split_summary_path)
 
-    if DO_FAKE_DIAGNOSTICS:
+    if RUN_FAKE_DIAGNOSTICS:
         fake_summary_lines = [
             "# Fake-estimate diagnostics",
             "",
