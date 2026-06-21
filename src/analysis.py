@@ -1427,6 +1427,12 @@ class Analysis:
                 self[mc].filters[systematic][SR_failID_mc].df.Define(ff_weight_col, ff_weight)
             )
 
+        ROOT.RDF.Experimental.AddProgressBar(
+            self[self.data_sample].filters[systematic][SR_failID_data].df
+        )
+        for mc in self.mc_samples:
+            ROOT.RDF.Experimental.AddProgressBar(self[mc].filters[systematic][SR_failID_mc].df)
+
         # background estimation in target variables
         ff_hists: dict[str, tuple[HistResultPtr, dict[str, HistResultPtr]]] = {}
         for target_var in fakes_target_vars:
