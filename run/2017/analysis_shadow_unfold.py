@@ -82,6 +82,7 @@ class ShadowConfig:
     mtw_min: float
     taupt_min: float
     met_min: float
+    unfolded_var: str | None = None
 
 
 @dataclass(frozen=True)
@@ -94,16 +95,50 @@ class ResponseComponents:
     matrix: ROOT.TH2
 
 
-def shadow_config(threshold: int | None) -> ShadowConfig:
-    """Return the standard no-shadow or shadow-bin thresholds."""
+def shadow_config(threshold: int | None, unfolded_var: str | None = None) -> ShadowConfig:
+    """Return a no-shadow config or a variable-specific shadow-bin config."""
     if threshold is None:
         return ShadowConfig("no_shadow_bin", mtw_min=350, taupt_min=170, met_min=170)
+
+    if unfolded_var == "MTW":
+        return ShadowConfig(
+            f"{unfolded_var}_shadow_bin_{threshold}",
+            mtw_min=threshold,
+            taupt_min=170,
+            met_min=170,
+            unfolded_var=unfolded_var,
+        )
+
+    if unfolded_var == "TauPt":
+        return ShadowConfig(
+            f"{unfolded_var}_shadow_bin_{threshold}",
+            mtw_min=350,
+            taupt_min=threshold / 2,
+            met_min=170,
+            unfolded_var=unfolded_var,
+        )
+
+    raise ValueError(f"Unknown shadow-bin unfolded variable: {unfolded_var}")
+
+
+def analysis_configs() -> tuple[ShadowConfig, ...]:
+    """Build the no-shadow control plus variable-specific shadow configurations."""
     return ShadowConfig(
-        f"shadow_bin_{threshold}",
-        mtw_min=threshold,
-        taupt_min=threshold / 2,
-        met_min=threshold / 2,
+        "no_shadow_bin",
+        mtw_min=350,
+        taupt_min=170,
+        met_min=170,
+    ), *(
+        shadow_config(threshold, unfolded_var)
+        for unfolded_var in VARS
+        for threshold in SHADOW_THRESHOLDS
+        if threshold is not None
     )
+
+
+def variables_for_config(config: ShadowConfig) -> tuple[str, ...]:
+    """Return the variables that should be unfolded for one configuration."""
+    return VARS if config.unfolded_var is None else (config.unfolded_var,)
 
 
 def measured_selection_name(config: ShadowConfig, region: str) -> str:
@@ -136,23 +171,39 @@ def variable_binnings(config: ShadowConfig) -> dict[str, np.ndarray]:
     if config.label == "no_shadow_bin":
         return BINNINGS
 
-    mtw_bins = np.array(
-        [config.mtw_min, 350, 375, 400, 430, 465, 500, 550, 600, 700, 850, 1000, 2000],
-        dtype="double",
-    )
-    taupt_bins = np.array(
-        [config.taupt_min, 170, 200, 250, 300, 350, 425, 500, 600, 1000],
-        dtype="double",
-    )
-    return BINNINGS | {
-        "MTW": mtw_bins,
-        "TruthMTW": mtw_bins,
-        "TauPt": taupt_bins,
-        "VisTruthTauPt": taupt_bins,
-        "MET_met": taupt_bins,
-        "TruthNeutrinoPt": taupt_bins,
-        "TruthTauPt": taupt_bins,
-    }
+    binnings = dict(BINNINGS)
+    if config.unfolded_var == "MTW":
+        mtw_bins = np.array(
+            [
+                config.mtw_min,
+                350,
+                375,
+                400,
+                430,
+                465,
+                500,
+                550,
+                600,
+                700,
+                850,
+                1000,
+                2000,
+            ],
+            dtype="double",
+        )
+        binnings["MTW"] = mtw_bins
+        binnings["TruthMTW"] = mtw_bins
+    elif config.unfolded_var == "TauPt":
+        taupt_bins = np.array(
+            [config.taupt_min, 170, 200, 250, 300, 350, 425, 500, 600, 1000],
+            dtype="double",
+        )
+        binnings["TauPt"] = taupt_bins
+        binnings["VisTruthTauPt"] = taupt_bins
+    else:
+        raise ValueError(f"Unknown shadow-bin unfolded variable: {config.unfolded_var}")
+
+    return binnings
 
 
 def combined_binnings(configs: tuple[ShadowConfig, ...]) -> dict[str, dict[str, np.ndarray]]:
@@ -481,7 +532,7 @@ def calculate_fake_estimates(analysis: Analysis, config: ShadowConfig) -> None:
     name = f"{config.label}_medium"
     analysis.do_fakes_estimate(
         FAKES_SOURCE,
-        VARS,
+        variables_for_config(config),
         measured_selection_name(config, "CR_passID"),
         measured_selection_name(config, "CR_failID"),
         measured_selection_name(config, "SR_passID"),
@@ -677,7 +728,7 @@ def run_config(
     response_analysis: Analysis,
     nominal_truth_hists: dict[str, ROOT.TH1],
 ) -> list[tuple[str, str, int, float, float, float]]:
-    """Run measured inputs, response production, unfolding, and plots for one config."""
+    """Run fake estimates, unfolding, and plots for one configuration."""
     plotter.logger.info("Running full shadow-bin closure for %s", config.label)
     calculate_fake_estimates(measured, config)
     if not DO_FULL_SYSTEMATICS:
@@ -688,7 +739,7 @@ def run_config(
 
     results: list[tuple[str, str, int, float, float, float]] = []
 
-    for var in VARS:
+    for var in variables_for_config(config):
         data_sig, signal = measured_inputs(measured, config, var)
         response = response_components(response_analysis, config, var)
         nominal_truth = nominal_truth_hists[var]
@@ -734,7 +785,7 @@ def run_config(
                 "do_stat": True,
                 "do_syst": False,
                 "title": smart_join(
-                    "Full shadow-bin unfolding",
+                    "Variable-specific shadow-bin unfolding",
                     config.label,
                     "Medium Tau ID",
                     r"$\sqrt{s} = 13$TeV",
@@ -804,7 +855,7 @@ def write_closure_summary(
 ) -> None:
     """Write a small markdown summary of the signal-MC closure metrics."""
     lines = [
-        "# Shadow-bin unfolding closure summary",
+        "# Variable-specific shadow-bin unfolding closure summary",
         "",
         f"DO_FULL_SYSTEMATICS: `{DO_FULL_SYSTEMATICS}`",
         "",
@@ -837,7 +888,7 @@ if __name__ == "__main__":
             "Full systematics mode enabled; missing shadow variations will fail loudly."
         )
 
-    configs = tuple(shadow_config(threshold) for threshold in SHADOW_THRESHOLDS)
+    configs = analysis_configs()
     no_shadow_config = shadow_config(None)
     measured_analysis = build_measured_analysis(configs, output_root)
     measured_analysis.print_metadata_table(datasets=measured_analysis.mc_samples)
