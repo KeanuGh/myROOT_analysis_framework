@@ -31,6 +31,7 @@ ITERATIONS = (
 FAKES_SOURCE = "TauPt"
 DO_FULL_SYSTEMATICS = False
 LOAD_SAVED_HISTS = False
+DO_SPLIT_SAMPLE_CLOSURE = True
 
 SKIP_SYS = {
     r".*TAUS_TRUEHADTAU_EFF_RNNID_.*",
@@ -83,6 +84,8 @@ TRUTH_HAD_TAU = Cut(
     r"TruthTau_isHadronic && ((TruthTau_nChargedTracks == 1) || "
     r"(TruthTau_nChargedTracks == 3))",
 )
+RESPONSE_SPLIT = Cut(r"Response split", r"(eventNumber % 2) == 0")
+PSEUDO_DATA_SPLIT = Cut(r"Pseudo-data split", r"(eventNumber % 2) == 1")
 
 
 @dataclass(frozen=True)
@@ -211,6 +214,7 @@ if __name__ == "__main__":
     )
     plotter.logger.info("Starting analysis_shadow_unfold.py")
     plotter.logger.info("DO_FULL_SYSTEMATICS = %s", DO_FULL_SYSTEMATICS)
+    plotter.logger.info("DO_SPLIT_SAMPLE_CLOSURE = %s", DO_SPLIT_SAMPLE_CLOSURE)
     if DO_FULL_SYSTEMATICS:
         plotter.logger.info(
             "Full systematics mode enabled; missing shadow variations will fail loudly."
@@ -220,6 +224,8 @@ if __name__ == "__main__":
     data_selections: dict[str, list[Cut]] = {}
     mc_selections: dict[str, list[Cut]] = {}
     response_selections: dict[str, list[Cut]] = {}
+    split_response_selections: dict[str, list[Cut]] = {}
+    split_pseudo_data_selections: dict[str, list[Cut]] = {}
     selection_binnings: dict[str, dict[str, np.ndarray]] = {"": BINNINGS}
 
     for config in CONFIGS:
@@ -278,6 +284,30 @@ if __name__ == "__main__":
         response_selections[truth_selection] = truth_cuts
         response_selections[reco_selection] = reco_sr_cuts + [PASS_MEDIUM]
         response_selections[truth_reco_selection] = truth_cuts + reco_sr_cuts + [PASS_MEDIUM]
+        split_response_selections[truth_selection] = [RESPONSE_SPLIT] + truth_cuts
+        split_response_selections[reco_selection] = [
+            RESPONSE_SPLIT,
+            *reco_sr_cuts,
+            PASS_MEDIUM,
+        ]
+        split_response_selections[truth_reco_selection] = [
+            RESPONSE_SPLIT,
+            *truth_cuts,
+            *reco_sr_cuts,
+            PASS_MEDIUM,
+        ]
+        split_pseudo_data_selections[truth_selection] = [PSEUDO_DATA_SPLIT] + truth_cuts
+        split_pseudo_data_selections[reco_selection] = [
+            PSEUDO_DATA_SPLIT,
+            *reco_sr_cuts,
+            PASS_MEDIUM,
+        ]
+        split_pseudo_data_selections[truth_reco_selection] = [
+            PSEUDO_DATA_SPLIT,
+            *truth_cuts,
+            *reco_sr_cuts,
+            PASS_MEDIUM,
+        ]
 
         config_binnings = dict(BINNINGS)
         if config.unfolded_var == "MTW":
@@ -356,6 +386,7 @@ if __name__ == "__main__":
         skip_sys=SKIP_SYS,
         binnings=selection_binnings,
     )
+    load_measured_analysis_hists = LOAD_SAVED_HISTS and measured_analysis.load_hists_if_available()
     measured_analysis.print_metadata_table(datasets=measured_analysis.mc_samples)
 
     response_analysis = Analysis(
@@ -384,6 +415,7 @@ if __name__ == "__main__":
             "VisTruthTauEta",
             "TruthTau_nChargedTracks",
             "TruthTau_isHadronic",
+            "eventNumber",
         },
         import_missing_columns_as_nan=True,
         snapshot=False,
@@ -400,6 +432,87 @@ if __name__ == "__main__":
         binnings=selection_binnings,
     )
 
+    if DO_SPLIT_SAMPLE_CLOSURE:
+        split_response_analysis = Analysis(
+            {"wtaunu_had": signal_sample(selections=split_response_selections)},
+            year=YEAR,
+            rerun=not LOAD_SAVED_HISTS,
+            regen_histograms=not LOAD_SAVED_HISTS,
+            do_systematics=False,
+            metadata_cache=DSID_METADATA_CACHE,
+            ttree=NOMINAL_NAME,
+            analysis_label="analysis_shadow_unfold_split_response",
+            output_dir=output_root / "split_response",
+            log_level=10,
+            log_out="both",
+            extract_vars={
+                "MTW",
+                "TauPt",
+                "MET_met",
+                "TauEta",
+                "TauBDTEleScore",
+                "TauRNNJetScore",
+                "TauNCoreTracks",
+                "TruthMTW",
+                "VisTruthTauPt",
+                "TruthNeutrinoPt",
+                "VisTruthTauEta",
+                "TruthTau_nChargedTracks",
+                "TruthTau_isHadronic",
+                "eventNumber",
+            },
+            import_missing_columns_as_nan=True,
+            snapshot=False,
+            histogram_vars=set(VARS) | set(TRUTHS.values()),
+            hists_2d={
+                "MTW_TruthMTW": Hist2dOpts("MTW", "TruthMTW", "reco_weight"),
+                "TauPt_VisTruthTauPt": Hist2dOpts("TauPt", "VisTruthTauPt", "reco_weight"),
+            },
+            do_unweighted=True,
+            binnings=selection_binnings,
+        )
+        split_pseudo_data_analysis = Analysis(
+            {"wtaunu_had": signal_sample(selections=split_pseudo_data_selections)},
+            year=YEAR,
+            rerun=not LOAD_SAVED_HISTS,
+            regen_histograms=not LOAD_SAVED_HISTS,
+            do_systematics=False,
+            metadata_cache=DSID_METADATA_CACHE,
+            ttree=NOMINAL_NAME,
+            analysis_label="analysis_shadow_unfold_split_pseudo_data",
+            output_dir=output_root / "split_pseudo_data",
+            log_level=10,
+            log_out="both",
+            extract_vars={
+                "MTW",
+                "TauPt",
+                "MET_met",
+                "TauEta",
+                "TauBDTEleScore",
+                "TauRNNJetScore",
+                "TauNCoreTracks",
+                "TruthMTW",
+                "VisTruthTauPt",
+                "TruthNeutrinoPt",
+                "VisTruthTauEta",
+                "TruthTau_nChargedTracks",
+                "TruthTau_isHadronic",
+                "eventNumber",
+            },
+            import_missing_columns_as_nan=True,
+            snapshot=False,
+            histogram_vars=set(VARS) | set(TRUTHS.values()),
+            hists_2d={
+                "MTW_TruthMTW": Hist2dOpts("MTW", "TruthMTW", "reco_weight"),
+                "TauPt_VisTruthTauPt": Hist2dOpts("TauPt", "VisTruthTauPt", "reco_weight"),
+            },
+            do_unweighted=True,
+            binnings=selection_binnings,
+        )
+    else:
+        split_response_analysis = None
+        split_pseudo_data_analysis = None
+
     nominal_truth_hists = {
         var: response_analysis.get_hist(
             TRUTHS[var],
@@ -409,8 +522,22 @@ if __name__ == "__main__":
         )
         for var in VARS
     }
+    split_nominal_truth_hists = (
+        {
+            var: split_pseudo_data_analysis.get_hist(
+                TRUTHS[var],
+                dataset="wtaunu_had",
+                systematic=NOMINAL_NAME,
+                selection="no_shadow_bin_truth_tau",
+            )
+            for var in VARS
+        }
+        if split_pseudo_data_analysis is not None
+        else {}
+    )
 
     closure_rows: list[tuple[str, str, int, float, float, float]] = []
+    split_closure_rows: list[tuple[str, str, int, float, float, float]] = []
 
     for config in CONFIGS:
         vars_for_config = VARS if config.unfolded_var is None else (config.unfolded_var,)
@@ -428,21 +555,22 @@ if __name__ == "__main__":
         fakes_name = f"{config.label}_{WP}"
 
         plotter.logger.info("Running variable-specific shadow-bin closure for %s", config.label)
-        measured_analysis.do_fakes_estimate(
-            FAKES_SOURCE,
-            vars_for_config,
-            cr_pass,
-            cr_fail,
-            sr_pass,
-            sr_fail,
-            true_cr_pass,
-            true_cr_fail,
-            true_sr_pass,
-            true_sr_fail,
-            name=fakes_name,
-            systematic=NOMINAL_NAME,
-            save_intermediates=True,
-        )
+        if not load_measured_analysis_hists:
+            measured_analysis.do_fakes_estimate(
+                FAKES_SOURCE,
+                vars_for_config,
+                cr_pass,
+                cr_fail,
+                sr_pass,
+                sr_fail,
+                true_cr_pass,
+                true_cr_fail,
+                true_sr_pass,
+                true_sr_fail,
+                name=fakes_name,
+                systematic=NOMINAL_NAME,
+                save_intermediates=True,
+            )
         if not DO_FULL_SYSTEMATICS:
             plotter.logger.info(
                 "DO_FULL_SYSTEMATICS is False: producing central-value closure only for %s.",
@@ -758,10 +886,162 @@ if __name__ == "__main__":
                 filename=f"{config.label}_{var}_iteration_compare.png",
             )
 
+            if split_response_analysis is not None and split_pseudo_data_analysis is not None:
+                split_reco = split_response_analysis.get_hist(
+                    var,
+                    dataset="wtaunu_had",
+                    systematic=NOMINAL_NAME,
+                    selection=truth_reco_selection,
+                )
+                split_truth_response = split_response_analysis.get_hist(
+                    TRUTHS[var],
+                    dataset="wtaunu_had",
+                    systematic=NOMINAL_NAME,
+                    selection=truth_selection,
+                )
+                split_matrix = split_response_analysis.get_hist(
+                    response_matrix_name,
+                    dataset="wtaunu_had",
+                    systematic=NOMINAL_NAME,
+                    selection=truth_reco_selection,
+                )
+                split_response = ResponseComponents(
+                    response=ROOT.RooUnfoldResponse(split_reco, split_truth_response, split_matrix),
+                    reco=split_reco,
+                    truth=split_truth_response,
+                    matrix=split_matrix,
+                )
+
+                pseudo_all_reco_signal = split_pseudo_data_analysis.get_hist(
+                    var,
+                    dataset="wtaunu_had",
+                    systematic=NOMINAL_NAME,
+                    selection=reco_selection,
+                )
+                pseudo_fiducial_reco_signal = split_pseudo_data_analysis.get_hist(
+                    var,
+                    dataset="wtaunu_had",
+                    systematic=NOMINAL_NAME,
+                    selection=truth_reco_selection,
+                )
+                pseudo_nonfiducial_signal = (
+                    pseudo_all_reco_signal - pseudo_fiducial_reco_signal
+                )
+                pseudo_nonfiducial_signal.SetName(
+                    f"{config.label}_{var}_split_nonfiducial_signal"
+                )
+                pseudo_nonfiducial_signal.SetDirectory(0)
+                pseudo_data_signal = pseudo_all_reco_signal - pseudo_nonfiducial_signal
+                pseudo_data_signal.SetName(f"{config.label}_{var}_split_pseudo_data_signal")
+                pseudo_data_signal.SetDirectory(0)
+
+                split_nominal_truth = split_nominal_truth_hists[var]
+                split_truth = Histogram1D(th1=split_nominal_truth) / LUMI
+                split_unfolded_by_iteration = {}
+                for iter_count in iteration_counts:
+                    split_signal_unfolded, _ = unfold_histogram(
+                        plotter,
+                        pseudo_data_signal,
+                        split_response,
+                        iter_count,
+                    )
+                    split_signal_unfolded = scale_and_crop_unfolded(
+                        split_signal_unfolded,
+                        split_nominal_truth,
+                        f"{config.label}_{var}_{iter_count}iter_split_signal_unfolded",
+                    )
+                    split_unfolded_by_iteration[iter_count] = split_signal_unfolded
+                    mean_dev, max_dev, integral_ratio = closure_metrics(
+                        split_signal_unfolded,
+                        split_truth.TH1,
+                    )
+                    split_closure_rows.append(
+                        (config.label, var, iter_count, mean_dev, max_dev, integral_ratio)
+                    )
+
+                    plotter.paths.plot_dir = (
+                        plotter.paths.output_dir / "plots" / config.label / var / "split_closure"
+                    )
+                    split_plot_args: PlotKwargs = {
+                        "label": ["Held-out Truth MC", "Unfolded Held-out Signal MC"],
+                        "colour": ["r", "b"],
+                        "histstyle": ["step", "step"],
+                        "xlabel": variable_data[var]["name"] + " [GeV]",
+                        "kind": "overlay",
+                        "do_stat": True,
+                        "do_syst": False,
+                        "title": smart_join(
+                            "Split-sample MC closure",
+                            config.label,
+                            "Medium Tau ID",
+                            r"$\sqrt{s} = 13$TeV",
+                            sep=" | ",
+                        ),
+                        "scale_by_bin_width": True,
+                        "ylabel": (
+                            r"$\frac{d\sigma_{W\rightarrow\tau\nu\rightarrow\mathrm{had}}}{d"
+                            + SYMBOLS[var]
+                            + r"}$ [fb / GeV]"
+                        ),
+                        "logx": True,
+                        "ratio_plot": True,
+                        "ratio_label": "Unfolded / Truth",
+                        "ratio_axlim": (0.5, 1.5),
+                        "label_params": {"llabel": "", "loc": 1},
+                    }
+                    plotter.plot(
+                        [split_truth, split_signal_unfolded],
+                        **split_plot_args,
+                        filename=f"{config.label}_{var}_{iter_count}iter_split_closure.png",
+                    )
+                    plotter.plot(
+                        [split_truth, split_signal_unfolded],
+                        **split_plot_args,
+                        logy=True,
+                        filename=f"{config.label}_{var}_{iter_count}iter_split_closure_logy.png",
+                    )
+
+                plotter.paths.plot_dir = (
+                    plotter.paths.output_dir
+                    / "plots"
+                    / config.label
+                    / var
+                    / "split_closure"
+                    / "compare"
+                )
+                plotter.plot(
+                    [split_truth] + [split_unfolded_by_iteration[i] for i in iteration_counts],
+                    label=["Held-out Truth"]
+                    + [
+                        "Bin-by-bin unfolding"
+                        if iter_count == 0
+                        else f"Bayesian unfolding, {iter_count} iterations"
+                        for iter_count in iteration_counts
+                    ],
+                    xlabel=variable_data[var]["name"] + " [GeV]",
+                    kind="overlay",
+                    do_stat=True,
+                    do_syst=False,
+                    title=smart_join(config.label, var, "split-sample closure", sep=" | "),
+                    scale_by_bin_width=True,
+                    ylabel=(
+                        r"$\frac{d\sigma_{W\rightarrow\tau\nu\rightarrow\mathrm{had}}}{d"
+                        + SYMBOLS[var]
+                        + r"}$ [fb / GeV]"
+                    ),
+                    logx=True,
+                    label_params={"llabel": "", "loc": 1},
+                    filename=f"{config.label}_{var}_split_closure_iteration_compare.png",
+                )
+
     summary_lines = [
         "# Variable-specific shadow-bin unfolding closure summary",
         "",
         f"DO_FULL_SYSTEMATICS: `{DO_FULL_SYSTEMATICS}`",
+        f"DO_SPLIT_SAMPLE_CLOSURE: `{DO_SPLIT_SAMPLE_CLOSURE}`",
+        "",
+        "These rows are same-sample MC self-closure checks. They verify bookkeeping, but they are "
+        "not independent validation because the signal input and response use the same MC sample.",
         "",
         "| Configuration | Variable | Iterations | Mean deviation | Max deviation | Integral ratio |",
         "|---|---|---:|---:|---:|---:|",
@@ -774,4 +1054,28 @@ if __name__ == "__main__":
     summary_path = output_root / "closure_summary.md"
     summary_path.write_text("\n".join(summary_lines) + "\n")
     plotter.logger.info("Saved closure summary to %s", summary_path)
+
+    if split_closure_rows:
+        split_summary_lines = [
+            "# Split-sample shadow-bin unfolding closure summary",
+            "",
+            "The response is built from even-numbered events and the pseudo-data/truth target "
+            "from odd-numbered events. This is the independent MC closure test; exact agreement "
+            "is not guaranteed by construction.",
+            "",
+            "| Configuration | Variable | Iterations | Mean deviation | Max deviation | Integral ratio |",
+            "|---|---|---:|---:|---:|---:|",
+        ]
+        for config_label, var, iter_count, mean_dev, max_dev, integral_ratio in split_closure_rows:
+            split_summary_lines.append(
+                f"| {config_label} | {var} | {iter_count} | {mean_dev:.3f} | "
+                f"{max_dev:.3f} | {integral_ratio:.3f} |"
+            )
+        split_summary_path = output_root / "split_closure_summary.md"
+        split_summary_path.write_text("\n".join(split_summary_lines) + "\n")
+        plotter.logger.info("Saved split-sample closure summary to %s", split_summary_path)
+
+    if not load_measured_analysis_hists:
+        measured_analysis.save_hists()
+
     plotter.logger.info("DONE.")
