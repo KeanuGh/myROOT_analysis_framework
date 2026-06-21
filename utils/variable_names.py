@@ -248,6 +248,11 @@ variable_data: dict[str, Branch] = {
         "units": "GeV",
         "tag": VarTag.RECO,
     },
+    "MTW_METCategoryMTW": {
+        "name": r"$m^{W}_{T}$ reco category",
+        "units": "",
+        "tag": VarTag.RECO,
+    },
     "TruthMTW": {
         "name": r"Truth $m^{W}_{T}$",
         "units": "GeV",

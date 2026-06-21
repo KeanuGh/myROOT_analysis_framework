@@ -90,12 +90,20 @@ double calc_abs_dphi(double phi1, double phi2) {
 
 double mt(double l1_pt, double l2_pt, double l1_phi, double l2_phi) {
 	return std::sqrt(2.0 * l1_pt * l2_pt * (1 - std::cos(calc_dphi(l1_phi, l2_phi))));
-};
+}; 
 
 double mt(ROOT::VecOps::RVec<float> l1_pt, float l2_pt, ROOT::VecOps::RVec<float> l1_phi, float l2_phi) {
 	double dphi = std::abs(l1_phi[0] - l2_phi);
 	if (dphi > PI) dphi = 2 * PI - dphi;
 	return std::sqrt(2.0 * l1_pt[0] * l2_pt * (1 - std::cos(dphi)));
+};
+
+double mtw_met_shadow_category_mtw(double tau_pt, double met, double tau_phi, double met_phi) {
+	double mtw = mt(tau_pt, met, tau_phi, met_phi);
+	if (mtw < 350.0 && met >= 170.0) return 0.5;
+	if (mtw >= 350.0 && met < 170.0) return 1.5;
+	if (mtw < 350.0 && met < 170.0) return 2.5;
+	return mtw;
 };
 
 double vy(double x1, double x2) {

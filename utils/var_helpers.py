@@ -103,6 +103,16 @@ derived_vars: dict[str, OtherVar] = {
         "tree": "",
         "cfunc": "mt",
     },
+    "MTW_METCategoryMTW": {
+        "var_args": [
+            "TauPt",
+            "MET_met",
+            "TauPhi",
+            "MET_phi",
+        ],
+        "tree": "",
+        "cfunc": "mtw_met_shadow_category_mtw",
+    },
     "TruthMTW": {  # truth boson mt
         "var_args": [
             "VisTruthTauPt",

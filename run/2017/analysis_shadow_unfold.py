@@ -4,6 +4,9 @@ from pathlib import Path
 
 import numpy as np
 import ROOT
+from binnings import BINNINGS
+from samples import DSID_METADATA_CACHE, NOMINAL_NAME, analysis_samples, signal_sample
+
 from src.analysis import Analysis
 from src.cutting import Cut
 from src.datasetbuilder import LUMI_YEAR
@@ -14,13 +17,11 @@ from utils.plotting_tools import Hist2dOpts, PlotKwargs
 from utils.ROOT_utils import get_th1_bin_edges, sum_th1s
 from utils.variable_names import variable_data
 
-from binnings import BINNINGS
-from samples import DSID_METADATA_CACHE, NOMINAL_NAME, analysis_samples, signal_sample
-
 YEAR = 2017
 LUMI = LUMI_YEAR[YEAR]
 WP = "medium"
 VARS = ("MTW", "TauPt")
+MTW_MET_CATEGORY_VAR = "MTW_METCategoryMTW"
 ITERATIONS = (
     0,
     1,
@@ -94,6 +95,10 @@ class ShadowConfig:
     mtw_min: float
     taupt_min: float
     met_min: float
+    reco_var: str | None = None
+    truth_mtw_min: float | None = None
+    truth_taupt_min: float | None = None
+    truth_met_min: float | None = None
 
 
 @dataclass(frozen=True)
@@ -111,6 +116,17 @@ CONFIGS = (
     ShadowConfig("MTW_shadow_bin_200", "MTW", mtw_min=200, taupt_min=170, met_min=170),
     ShadowConfig("MTW_shadow_bin_250", "MTW", mtw_min=250, taupt_min=170, met_min=170),
     ShadowConfig("MTW_shadow_bin_300", "MTW", mtw_min=300, taupt_min=170, met_min=170),
+    ShadowConfig(
+        "MTW_MET_category_shadow_bin_250",
+        "MTW",
+        mtw_min=250,
+        taupt_min=170,
+        met_min=125,
+        reco_var=MTW_MET_CATEGORY_VAR,
+        truth_mtw_min=350,
+        truth_taupt_min=170,
+        truth_met_min=170,
+    ),
     ShadowConfig("TauPt_shadow_bin_200", "TauPt", mtw_min=350, taupt_min=100, met_min=170),
     ShadowConfig("TauPt_shadow_bin_250", "TauPt", mtw_min=350, taupt_min=125, met_min=170),
     ShadowConfig("TauPt_shadow_bin_300", "TauPt", mtw_min=350, taupt_min=150, met_min=170),
@@ -223,6 +239,9 @@ if __name__ == "__main__":
     selection_binnings: dict[str, dict[str, np.ndarray]] = {"": BINNINGS}
 
     for config in CONFIGS:
+        truth_mtw_min = config.truth_mtw_min or config.mtw_min
+        truth_taupt_min = config.truth_taupt_min or config.taupt_min
+        truth_met_min = config.truth_met_min or config.met_min
         sr_pass = f"{config.label}_{WP}_SR_passID"
         sr_fail = f"{config.label}_{WP}_SR_failID"
         cr_pass = f"{config.label}_{WP}_CR_passID"
@@ -253,9 +272,9 @@ if __name__ == "__main__":
             PASS_TRUTH,
             Cut(
                 r"Pass truth fiducial region",
-                f"(VisTruthTauPt > {config.taupt_min:g}) && "
-                f"(TruthMTW > {config.mtw_min:g}) && "
-                f"(TruthNeutrinoPt > {config.met_min:g})"
+                f"(VisTruthTauPt > {truth_taupt_min:g}) && "
+                f"(TruthMTW > {truth_mtw_min:g}) && "
+                f"(TruthNeutrinoPt > {truth_met_min:g})"
                 r"&& ((TruthTau_nChargedTracks == 1) || (TruthTau_nChargedTracks == 3))"
                 r"&& (((abs(VisTruthTauEta) < 1.37) || (1.52 < abs(VisTruthTauEta))) "
                 r"&& (abs(VisTruthTauEta) < 2.47))",
@@ -280,7 +299,18 @@ if __name__ == "__main__":
         response_selections[truth_reco_selection] = truth_cuts + reco_sr_cuts + [PASS_MEDIUM]
 
         config_binnings = dict(BINNINGS)
-        if config.unfolded_var == "MTW":
+        if config.reco_var == MTW_MET_CATEGORY_VAR:
+            mtw_truth_bins = np.array(
+                [350, 375, 400, 430, 465, 500, 550, 600, 700, 850, 1000, 2000],
+                dtype="double",
+            )
+            mtw_category_bins = np.array(
+                [0, 1, 2, 3, 350, 375, 400, 430, 465, 500, 550, 600, 700, 850, 1000, 2000],
+                dtype="double",
+            )
+            config_binnings[MTW_MET_CATEGORY_VAR] = mtw_category_bins
+            config_binnings["TruthMTW"] = mtw_truth_bins
+        elif config.unfolded_var == "MTW":
             mtw_bins = np.array(
                 [
                     config.mtw_min,
@@ -347,9 +377,10 @@ if __name__ == "__main__":
             "TauRNNJetScore",
             "TauNCoreTracks",
             "TauCharge",
+            MTW_MET_CATEGORY_VAR,
         },
         import_missing_columns_as_nan=True,
-        histogram_vars=set(VARS),
+        histogram_vars=set(VARS) | {MTW_MET_CATEGORY_VAR},
         systematics_for_selection={rf"^({label_regex})_{WP}_SR_passID$"}
         if DO_FULL_SYSTEMATICS
         else set(),
@@ -384,12 +415,18 @@ if __name__ == "__main__":
             "VisTruthTauEta",
             "TruthTau_nChargedTracks",
             "TruthTau_isHadronic",
+            MTW_MET_CATEGORY_VAR,
         },
         import_missing_columns_as_nan=True,
         snapshot=False,
-        histogram_vars=set(VARS) | set(TRUTHS.values()),
+        histogram_vars=set(VARS) | set(TRUTHS.values()) | {MTW_MET_CATEGORY_VAR},
         hists_2d={
             "MTW_TruthMTW": Hist2dOpts("MTW", "TruthMTW", "reco_weight"),
+            f"{MTW_MET_CATEGORY_VAR}_TruthMTW": Hist2dOpts(
+                MTW_MET_CATEGORY_VAR,
+                "TruthMTW",
+                "reco_weight",
+            ),
             "TauPt_VisTruthTauPt": Hist2dOpts("TauPt", "VisTruthTauPt", "reco_weight"),
         },
         do_unweighted=True,
@@ -414,6 +451,7 @@ if __name__ == "__main__":
 
     for config in CONFIGS:
         vars_for_config = VARS if config.unfolded_var is None else (config.unfolded_var,)
+        fakes_vars_for_config = tuple(config.reco_var or var for var in vars_for_config)
         sr_pass = f"{config.label}_{WP}_SR_passID"
         sr_fail = f"{config.label}_{WP}_SR_failID"
         cr_pass = f"{config.label}_{WP}_CR_passID"
@@ -430,7 +468,7 @@ if __name__ == "__main__":
         plotter.logger.info("Running variable-specific shadow-bin closure for %s", config.label)
         measured_analysis.do_fakes_estimate(
             FAKES_SOURCE,
-            vars_for_config,
+            fakes_vars_for_config,
             cr_pass,
             cr_fail,
             sr_pass,
@@ -450,21 +488,23 @@ if __name__ == "__main__":
             )
 
         for var in vars_for_config:
+            reco_var = config.reco_var or var
+            response_matrix_name = f"{reco_var}_{TRUTHS[var]}"
             data = measured_analysis.get_hist(
-                var,
+                reco_var,
                 dataset=measured_analysis.data_sample,
                 systematic=NOMINAL_NAME,
                 selection=sr_pass,
             )
             signal = measured_analysis.get_hist(
-                var,
+                reco_var,
                 dataset="wtaunu_had",
                 systematic=NOMINAL_NAME,
                 selection=sr_pass,
             )
             backgrounds = [
                 measured_analysis.get_hist(
-                    var,
+                    reco_var,
                     dataset=background,
                     systematic=NOMINAL_NAME,
                     selection=sr_pass,
@@ -473,16 +513,16 @@ if __name__ == "__main__":
                 if background != "wtaunu_had"
             ]
             fakes = measured_analysis.histograms[
-                f"{fakes_name}_{var}_fakes_bkg_{FAKES_SOURCE}_src"
+                f"{fakes_name}_{reco_var}_fakes_bkg_{FAKES_SOURCE}_src"
             ]
             background = sum_th1s(*(backgrounds + [fakes]))
             data_sig = data - background
-            data_sig.SetName(f"{config.label}_{var}_data_minus_background")
-            signal = signal.Clone(f"{config.label}_{var}_signal")
+            data_sig.SetName(f"{config.label}_{reco_var}_data_minus_background")
+            signal = signal.Clone(f"{config.label}_{reco_var}_signal")
             signal.SetDirectory(0)
 
             reco = response_analysis.get_hist(
-                var,
+                reco_var,
                 dataset="wtaunu_had",
                 systematic=NOMINAL_NAME,
                 selection=reco_selection,
@@ -494,7 +534,7 @@ if __name__ == "__main__":
                 selection=truth_selection,
             )
             matrix = response_analysis.get_hist(
-                f"{var}_{TRUTHS[var]}",
+                response_matrix_name,
                 dataset="wtaunu_had",
                 systematic=NOMINAL_NAME,
                 selection=truth_reco_selection,
@@ -523,7 +563,13 @@ if __name__ == "__main__":
                         "DO_FULL_SYSTEMATICS is enabled but no response systematics exist."
                     )
 
-                nominal_unfolded, _ = unfold_histogram(plotter, signal, response, 0)
+                response_reference_iter = 1 if config.reco_var is not None else 0
+                nominal_unfolded, _ = unfold_histogram(
+                    plotter,
+                    signal,
+                    response,
+                    response_reference_iter,
+                )
                 nominal_unfolded = scale_and_crop_unfolded(
                     nominal_unfolded,
                     nominal_truth,
@@ -536,25 +582,25 @@ if __name__ == "__main__":
                     down = f"{sys_name}__1down"
                     try:
                         reco_up = response_analysis.get_hist(
-                            var,
+                            reco_var,
                             dataset="wtaunu_had",
                             systematic=up,
                             selection=reco_selection,
                         )
                         reco_down = response_analysis.get_hist(
-                            var,
+                            reco_var,
                             dataset="wtaunu_had",
                             systematic=down,
                             selection=reco_selection,
                         )
                         matrix_up = response_analysis.get_hist(
-                            f"{var}_{TRUTHS[var]}",
+                            response_matrix_name,
                             dataset="wtaunu_had",
                             systematic=up,
                             selection=truth_reco_selection,
                         )
                         matrix_down = response_analysis.get_hist(
-                            f"{var}_{TRUTHS[var]}",
+                            response_matrix_name,
                             dataset="wtaunu_had",
                             systematic=down,
                             selection=truth_reco_selection,
@@ -577,8 +623,18 @@ if __name__ == "__main__":
                         truth=truth_response,
                         matrix=matrix_down,
                     )
-                    unfolded_up, _ = unfold_histogram(plotter, signal, response_up, 0)
-                    unfolded_down, _ = unfold_histogram(plotter, signal, response_down, 0)
+                    unfolded_up, _ = unfold_histogram(
+                        plotter,
+                        signal,
+                        response_up,
+                        response_reference_iter,
+                    )
+                    unfolded_down, _ = unfold_histogram(
+                        plotter,
+                        signal,
+                        response_down,
+                        response_reference_iter,
+                    )
                     unfolded_up = scale_and_crop_unfolded(
                         unfolded_up,
                         nominal_truth,
@@ -622,7 +678,7 @@ if __name__ == "__main__":
             plotter.plot_2d(
                 response.matrix,
                 ylabel=f"Truth {TRUTHS[var]}",
-                xlabel=f"Reco {var}",
+                xlabel=f"Reco {reco_var}",
                 title=smart_join(config.label, var, "response matrix", sep=" | "),
                 labels=False,
                 label_params={"llabel": ""},
@@ -630,7 +686,13 @@ if __name__ == "__main__":
             )
 
             unfolded_by_iteration = {}
-            for iter_count in ITERATIONS:
+            iteration_counts = tuple(i for i in ITERATIONS if not (config.reco_var and i == 0))
+            if config.reco_var is not None and 0 in ITERATIONS:
+                plotter.logger.info(
+                    "Skipping bin-by-bin unfolding for %s because reco and truth axes differ.",
+                    config.label,
+                )
+            for iter_count in iteration_counts:
                 data_unfolded, data_cov = unfold_histogram(plotter, data_sig, response, iter_count)
                 signal_unfolded, _ = unfold_histogram(plotter, signal, response, iter_count)
                 data_unfolded = scale_and_crop_unfolded(
@@ -702,13 +764,13 @@ if __name__ == "__main__":
                 plotter.paths.output_dir / "plots" / config.label / var / "compare"
             )
             plotter.plot(
-                [truth] + [unfolded_by_iteration[i] for i in ITERATIONS],
+                [truth] + [unfolded_by_iteration[i] for i in iteration_counts],
                 label=["Truth"]
                 + [
                     "Bin-by-bin unfolding"
                     if iter_count == 0
                     else f"Bayesian unfolding, {iter_count} iterations"
-                    for iter_count in ITERATIONS
+                    for iter_count in iteration_counts
                 ],
                 xlabel=variable_data[var]["name"] + " [GeV]",
                 kind="overlay",
