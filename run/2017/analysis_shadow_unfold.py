@@ -1,3 +1,4 @@
+import re
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -105,6 +106,31 @@ def shadow_config(threshold: int | None) -> ShadowConfig:
     )
 
 
+def measured_selection_name(config: ShadowConfig, region: str) -> str:
+    """Selection name for one measured-input SR/CR and ID region."""
+    return f"{config.label}_{WP}_{region}"
+
+
+def true_tau_selection_name(config: ShadowConfig, region: str) -> str:
+    """Truth-matched selection name used for prompt-tau subtraction in fake factors."""
+    return f"trueTau_{measured_selection_name(config, region)}"
+
+
+def truth_selection_name(config: ShadowConfig) -> str:
+    """Truth-only response selection name for one threshold configuration."""
+    return f"{config.label}_truth_tau"
+
+
+def reco_selection_name(config: ShadowConfig) -> str:
+    """Reco-only response selection name for one threshold configuration."""
+    return f"{config.label}_{WP}_reco_tau"
+
+
+def truth_reco_selection_name(config: ShadowConfig) -> str:
+    """Matched truth-and-reco response selection name for one threshold configuration."""
+    return f"{config.label}_{WP}_truth_reco_tau"
+
+
 def variable_binnings(config: ShadowConfig) -> dict[str, np.ndarray]:
     """Build the binning dictionary for one threshold configuration."""
     if config.label == "no_shadow_bin":
@@ -127,6 +153,34 @@ def variable_binnings(config: ShadowConfig) -> dict[str, np.ndarray]:
         "TruthNeutrinoPt": taupt_bins,
         "TruthTauPt": taupt_bins,
     }
+
+
+def combined_binnings(configs: tuple[ShadowConfig, ...]) -> dict[str, dict[str, np.ndarray]]:
+    """Map each threshold-specific selection to its matching bin edges."""
+    binnings = {"": BINNINGS}
+    for config in configs:
+        config_binnings = variable_binnings(config)
+        selection_names = [
+            measured_selection_name(config, "SR_passID"),
+            measured_selection_name(config, "SR_failID"),
+            measured_selection_name(config, "CR_passID"),
+            measured_selection_name(config, "CR_failID"),
+            true_tau_selection_name(config, "SR_passID"),
+            true_tau_selection_name(config, "SR_failID"),
+            true_tau_selection_name(config, "CR_passID"),
+            true_tau_selection_name(config, "CR_failID"),
+            truth_selection_name(config),
+            reco_selection_name(config),
+            truth_reco_selection_name(config),
+        ]
+        for selection in selection_names:
+            binnings[rf"^{re.escape(selection)}$"] = config_binnings
+    return binnings
+
+
+def config_label_regex(configs: tuple[ShadowConfig, ...]) -> str:
+    """Regex alternation for all configured threshold labels."""
+    return "|".join(re.escape(config.label) for config in configs)
 
 
 def pass_reco_preselection() -> Cut:
@@ -181,14 +235,17 @@ def measured_selections(config: ShadowConfig) -> tuple[dict[str, list[Cut]], dic
         Cut(r"$E_T^{\mathrm{miss}}$ control region", f"MET_met < {config.met_min:g}"),
     ]
     selections = {
-        "medium_SR_passID": sr_base + [PASS_MEDIUM],
-        "medium_SR_failID": sr_base + [FAIL_MEDIUM],
-        "medium_CR_passID": cr_base + [PASS_MEDIUM],
-        "medium_CR_failID": cr_base + [FAIL_MEDIUM],
+        measured_selection_name(config, "SR_passID"): sr_base + [PASS_MEDIUM],
+        measured_selection_name(config, "SR_failID"): sr_base + [FAIL_MEDIUM],
+        measured_selection_name(config, "CR_passID"): cr_base + [PASS_MEDIUM],
+        measured_selection_name(config, "CR_failID"): cr_base + [FAIL_MEDIUM],
     }
     mc_selections = dict(selections)
-    for name, cuts in selections.items():
-        mc_selections[f"trueTau_{name}"] = cuts + [PASS_TRUETAU]
+    for region in ("SR_passID", "SR_failID", "CR_passID", "CR_failID"):
+        selection_name = measured_selection_name(config, region)
+        mc_selections[true_tau_selection_name(config, region)] = (
+            selections[selection_name] + [PASS_TRUETAU]
+        )
     return selections, mc_selections
 
 
@@ -197,9 +254,9 @@ def response_selections(config: ShadowConfig) -> dict[str, list[Cut]]:
     truth_cuts = truth_phase_space_cuts(config)
     reco_cuts = reco_phase_space_cuts(config)
     return {
-        "truth_tau": truth_cuts,
-        "medium_reco_tau": reco_cuts + [PASS_MEDIUM],
-        "medium_truth_reco_tau": truth_cuts + reco_cuts + [PASS_MEDIUM],
+        truth_selection_name(config): truth_cuts,
+        reco_selection_name(config): reco_cuts + [PASS_MEDIUM],
+        truth_reco_selection_name(config): truth_cuts + reco_cuts + [PASS_MEDIUM],
     }
 
 
@@ -265,11 +322,32 @@ def unfold_label(iter_count: int) -> str:
     return f"Bayesian unfolding, {iter_count} iterations"
 
 
-def build_measured_analysis(config: ShadowConfig, output_root: Path) -> Analysis:
-    """Regenerate data, background, and fake-estimate input histograms."""
-    data_selections, mc_selections = measured_selections(config)
+def all_measured_selections(
+    configs: tuple[ShadowConfig, ...],
+) -> tuple[dict[str, list[Cut]], dict[str, list[Cut]]]:
+    """Combine the measured-input selections for all thresholds into one run."""
+    data_selections: dict[str, list[Cut]] = {}
+    mc_selections: dict[str, list[Cut]] = {}
+    for config in configs:
+        config_data_selections, config_mc_selections = measured_selections(config)
+        data_selections.update(config_data_selections)
+        mc_selections.update(config_mc_selections)
+    return data_selections, mc_selections
+
+
+def all_response_selections(configs: tuple[ShadowConfig, ...]) -> dict[str, list[Cut]]:
+    """Combine the response selections for all thresholds into one run."""
+    selections: dict[str, list[Cut]] = {}
+    for config in configs:
+        selections.update(response_selections(config))
+    return selections
+
+
+def build_measured_analysis(configs: tuple[ShadowConfig, ...], output_root: Path) -> Analysis:
+    """Regenerate data, background, and fake-estimate input histograms once."""
+    data_selections, mc_selections = all_measured_selections(configs)
     datasets = analysis_samples(mc_selections, data_selections=data_selections, snapshot=False)
-    binnings = variable_binnings(config)
+    label_regex = config_label_regex(configs)
     return Analysis(
         datasets,
         year=YEAR,
@@ -278,8 +356,8 @@ def build_measured_analysis(config: ShadowConfig, output_root: Path) -> Analysis
         do_systematics=DO_FULL_SYSTEMATICS,
         metadata_cache=DSID_METADATA_CACHE,
         ttree=NOMINAL_NAME,
-        analysis_label=f"analysis_shadow_unfold_{config.label}_measured",
-        output_dir=output_root / config.label / "measured",
+        analysis_label="analysis_shadow_unfold_measured",
+        output_dir=output_root / "measured",
         log_level=10,
         log_out="both",
         extract_vars={
@@ -294,16 +372,18 @@ def build_measured_analysis(config: ShadowConfig, output_root: Path) -> Analysis
         },
         import_missing_columns_as_nan=True,
         histogram_vars=set(VARS),
-        systematics_for_selection={r"^medium_SR_passID$"} if DO_FULL_SYSTEMATICS else set(),
+        systematics_for_selection={rf"^({label_regex})_{WP}_SR_passID$"}
+        if DO_FULL_SYSTEMATICS
+        else set(),
         skip_sys=SKIP_SYS,
-        binnings={"": binnings},
+        binnings=combined_binnings(configs),
     )
 
 
-def build_response_analysis(config: ShadowConfig, output_root: Path) -> Analysis:
-    """Regenerate signal-only response inputs in the same shadow phase space."""
-    selections = response_selections(config)
-    binnings = variable_binnings(config)
+def build_response_analysis(configs: tuple[ShadowConfig, ...], output_root: Path) -> Analysis:
+    """Regenerate signal-only response inputs for all thresholds once."""
+    selections = all_response_selections(configs)
+    label_regex = config_label_regex(configs)
     hists_2d = {
         "MTW_TruthMTW": Hist2dOpts("MTW", "TruthMTW", "reco_weight"),
         "TauPt_VisTruthTauPt": Hist2dOpts("TauPt", "VisTruthTauPt", "reco_weight"),
@@ -316,8 +396,8 @@ def build_response_analysis(config: ShadowConfig, output_root: Path) -> Analysis
         do_systematics=DO_FULL_SYSTEMATICS,
         metadata_cache=DSID_METADATA_CACHE,
         ttree=NOMINAL_NAME,
-        analysis_label=f"analysis_shadow_unfold_{config.label}_response",
-        output_dir=output_root / config.label / "response",
+        analysis_label="analysis_shadow_unfold_response",
+        output_dir=output_root / "response",
         log_level=10,
         log_out="both",
         extract_vars={
@@ -340,48 +420,54 @@ def build_response_analysis(config: ShadowConfig, output_root: Path) -> Analysis
         histogram_vars=set(VARS) | set(TRUTHS.values()),
         hists_2d=hists_2d,
         do_unweighted=True,
-        systematics_for_selection={r"^medium_(truth_)?reco_tau$"}
+        systematics_for_selection={rf"^({label_regex})_{WP}_(reco_tau|truth_reco_tau)$"}
         if DO_FULL_SYSTEMATICS
         else set(),
         skip_sys=SKIP_SYS,
-        binnings={"": binnings},
+        binnings=combined_binnings(configs),
     )
 
 
 def response_components(
-    analysis: Analysis, var: str, systematic: str = NOMINAL_NAME
+    analysis: Analysis,
+    config: ShadowConfig,
+    var: str,
+    systematic: str = NOMINAL_NAME,
 ) -> ResponseComponents:
     """Load the response components from a signal-only response analysis."""
     reco = analysis.get_hist(
         var,
         dataset="wtaunu_had",
         systematic=systematic,
-        selection="medium_reco_tau",
+        selection=reco_selection_name(config),
     )
     truth = analysis.get_hist(
         TRUTHS[var],
         dataset="wtaunu_had",
         systematic=NOMINAL_NAME if systematic != NOMINAL_NAME else systematic,
-        selection="truth_tau",
+        selection=truth_selection_name(config),
     )
     matrix = analysis.get_hist(
         f"{var}_{TRUTHS[var]}",
         dataset="wtaunu_had",
         systematic=systematic,
-        selection="medium_truth_reco_tau",
+        selection=truth_reco_selection_name(config),
     )
     response = ROOT.RooUnfoldResponse(reco, truth, matrix)
     return ResponseComponents(response=response, reco=reco, truth=truth, matrix=matrix)
 
 
-def nominal_truth_references(nominal_response_analysis: Analysis) -> dict[str, ROOT.TH1]:
+def nominal_truth_references(
+    response_analysis: Analysis,
+    no_shadow_config: ShadowConfig,
+) -> dict[str, ROOT.TH1]:
     """Extract nominal fiducial truth histograms used for cropping and closure."""
     return {
-        var: nominal_response_analysis.get_hist(
+        var: response_analysis.get_hist(
             TRUTHS[var],
             dataset="wtaunu_had",
             systematic=NOMINAL_NAME,
-            selection="truth_tau",
+            selection=truth_selection_name(no_shadow_config),
         )
         for var in VARS
     }
@@ -396,14 +482,14 @@ def calculate_fake_estimates(analysis: Analysis, config: ShadowConfig) -> None:
     analysis.do_fakes_estimate(
         FAKES_SOURCE,
         VARS,
-        "medium_CR_passID",
-        "medium_CR_failID",
-        "medium_SR_passID",
-        "medium_SR_failID",
-        "trueTau_medium_CR_passID",
-        "trueTau_medium_CR_failID",
-        "trueTau_medium_SR_passID",
-        "trueTau_medium_SR_failID",
+        measured_selection_name(config, "CR_passID"),
+        measured_selection_name(config, "CR_failID"),
+        measured_selection_name(config, "SR_passID"),
+        measured_selection_name(config, "SR_failID"),
+        true_tau_selection_name(config, "CR_passID"),
+        true_tau_selection_name(config, "CR_failID"),
+        true_tau_selection_name(config, "SR_passID"),
+        true_tau_selection_name(config, "SR_failID"),
         name=name,
         systematic=NOMINAL_NAME,
         save_intermediates=True,
@@ -418,24 +504,25 @@ def measured_inputs(
         raise ValueError("Measured analysis has no data sample.")
 
     name = f"{config.label}_medium"
+    signal_selection = measured_selection_name(config, "SR_passID")
     data = analysis.get_hist(
         var,
         dataset=analysis.data_sample,
         systematic=NOMINAL_NAME,
-        selection="medium_SR_passID",
+        selection=signal_selection,
     )
     signal = analysis.get_hist(
         var,
         dataset="wtaunu_had",
         systematic=NOMINAL_NAME,
-        selection="medium_SR_passID",
+        selection=signal_selection,
     )
     backgrounds = [
         analysis.get_hist(
             var,
             dataset=background,
             systematic=NOMINAL_NAME,
-            selection="medium_SR_passID",
+            selection=signal_selection,
         )
         for background in analysis.mc_samples
         if background != "wtaunu_had"
@@ -516,12 +603,12 @@ def plot_response_systematics(
 
     hists = []
     labels = []
-    nominal_response = response_components(response_analysis, var)
+    nominal_response = response_components(response_analysis, config, var)
     nominal_signal = response_analysis.get_hist(
         var,
         dataset="wtaunu_had",
         systematic=NOMINAL_NAME,
-        selection="medium_reco_tau",
+        selection=reco_selection_name(config),
     )
     nominal_unfolded, _ = unfold_histogram(plotter, nominal_signal, nominal_response, 0)
     nominal_unfolded = scale_and_crop_unfolded(
@@ -534,8 +621,8 @@ def plot_response_systematics(
         up = f"{sys_name}__1up"
         down = f"{sys_name}__1down"
         try:
-            response_up = response_components(response_analysis, var, up)
-            response_down = response_components(response_analysis, var, down)
+            response_up = response_components(response_analysis, config, var, up)
+            response_down = response_components(response_analysis, config, var, down)
         except KeyError as exc:
             raise KeyError(
                 f"Missing full shadow-region response systematic for {config.label} {var}: "
@@ -586,14 +673,12 @@ def plot_response_systematics(
 def run_config(
     plotter: Analysis,
     config: ShadowConfig,
-    output_root: Path,
+    measured: Analysis,
     response_analysis: Analysis,
     nominal_truth_hists: dict[str, ROOT.TH1],
 ) -> list[tuple[str, str, int, float, float, float]]:
     """Run measured inputs, response production, unfolding, and plots for one config."""
     plotter.logger.info("Running full shadow-bin closure for %s", config.label)
-    measured = build_measured_analysis(config, output_root)
-    measured.print_metadata_table(datasets=measured.mc_samples)
     calculate_fake_estimates(measured, config)
     if not DO_FULL_SYSTEMATICS:
         plotter.logger.info(
@@ -605,7 +690,7 @@ def run_config(
 
     for var in VARS:
         data_sig, signal = measured_inputs(measured, config, var)
-        response = response_components(response_analysis, var)
+        response = response_components(response_analysis, config, var)
         nominal_truth = nominal_truth_hists[var]
         truth = Histogram1D(th1=nominal_truth) / LUMI
         plot_response_systematics(plotter, response_analysis, config, var, nominal_truth)
@@ -752,22 +837,19 @@ if __name__ == "__main__":
             "Full systematics mode enabled; missing shadow variations will fail loudly."
         )
 
+    configs = tuple(shadow_config(threshold) for threshold in SHADOW_THRESHOLDS)
     no_shadow_config = shadow_config(None)
-    nominal_response = build_response_analysis(no_shadow_config, output_root)
-    nominal_truth_hists = nominal_truth_references(nominal_response)
+    measured_analysis = build_measured_analysis(configs, output_root)
+    measured_analysis.print_metadata_table(datasets=measured_analysis.mc_samples)
+    response_analysis = build_response_analysis(configs, output_root)
+    nominal_truth_hists = nominal_truth_references(response_analysis, no_shadow_config)
     closure_rows = []
-    for threshold in SHADOW_THRESHOLDS:
-        config = shadow_config(threshold)
-        response_analysis = (
-            nominal_response
-            if config.label == no_shadow_config.label
-            else build_response_analysis(config, output_root)
-        )
+    for config in configs:
         closure_rows.extend(
             run_config(
                 plotter,
                 config,
-                output_root,
+                measured_analysis,
                 response_analysis,
                 nominal_truth_hists,
             )

@@ -683,6 +683,7 @@ class Dataset:
         name: str = "",
         title: str = "",
         histtype: Literal["TH1F", "TH1D", "TH1I", "TH1C", "TH1L", "TH1S"] = "TH1F",
+        selection: str | None = None,
     ) -> ROOT.TH1F:
         """Define 1D histogram from variable with correct binnings"""
         allowed_histtypes = ["TH1F", "TH1D", "TH1I", "TH1C", "TH1L", "TH1S"]
@@ -696,7 +697,7 @@ class Dataset:
         return ROOT.__getattr__(histtype)(
             name if name else variable,
             title if title else name if name else variable,
-            *ROOT_utils.get_TH1_bin_args(**self.get_binnings(variable)),
+            *ROOT_utils.get_TH1_bin_args(**self.get_binnings(variable, selection)),
         )
 
     def define_th2(
@@ -706,6 +707,7 @@ class Dataset:
         name: str = "",
         title: str = "",
         histtype: Literal["TH2F", "TH2D", "TH2I", "TH2C", "TH2L", "TH2S"] = "TH2F",
+        selection: str | None = None,
     ) -> ROOT.TH1F:
         """Define 2D histogram from variables with correct binnings"""
         allowed_histtypes = ["TH2F", "TH2D", "TH2I", "TH2C", "TH2L", "TH2S"]
@@ -720,8 +722,8 @@ class Dataset:
         return ROOT.__getattr__(histtype)(
             name if name else f"{x}_{y}",
             title if title else name if name else f"{x}_{y}",
-            *ROOT_utils.get_TH1_bin_args(**self.get_binnings(x)),
-            *ROOT_utils.get_TH1_bin_args(**self.get_binnings(y)),
+            *ROOT_utils.get_TH1_bin_args(**self.get_binnings(x, selection)),
+            *ROOT_utils.get_TH1_bin_args(**self.get_binnings(y, selection)),
         )
 
     def define_profile(
@@ -767,7 +769,13 @@ class Dataset:
             selection,
         )
         histname = smart_join(self.name, systematic, selection, variable)
-        th1 = self.define_th1(variable=variable, name=histname, title=histname, histtype=histtype)
+        th1 = self.define_th1(
+            variable=variable,
+            name=histname,
+            title=histname,
+            histtype=histtype,
+            selection=selection,
+        )
 
         if selection:
             h_ptr = self.filters[systematic][selection].df.Fill(th1, fill_cols)
@@ -846,13 +854,18 @@ class Dataset:
 
                     # define histogram
                     hist_name = smart_join(sys_name, selection, variable_name)
-                    th1 = self.define_th1(variable_name, hist_name, hist_name)
+                    th1 = self.define_th1(
+                        variable_name, hist_name, hist_name, selection=selection
+                    )
                     th1_ptr_map[selection][variable_name] = sel_df.Fill(th1, fill_cols)
 
                     if self.do_unweighted:
                         hist_name_unweighted = hist_name + "_unweighted"
                         th1_unweighted = self.define_th1(
-                            variable_name, hist_name_unweighted, hist_name
+                            variable_name,
+                            hist_name_unweighted,
+                            hist_name,
+                            selection=selection,
                         )
                         th1_ptr_map[selection][variable_name + "_unweighted"] = sel_df.Fill(
                             th1_unweighted, [variable_name]
@@ -872,7 +885,12 @@ class Dataset:
                         ]:
                             eff_sys_name = sys_wgt.removeprefix("weight_")
                             hist_name = smart_join(eff_sys_name, selection, variable_name)
-                            th1 = self.define_th1(variable_name, hist_name, hist_name)
+                            th1 = self.define_th1(
+                                variable_name,
+                                hist_name,
+                                hist_name,
+                                selection=selection,
+                            )
                             th1_ptr_map[selection][f"{variable_name}|{eff_sys_name}"] = (
                                 sel_df.Fill(th1, [variable_name, sys_wgt])
                             )
@@ -920,7 +938,13 @@ class Dataset:
                         selection,
                         f"{hist2d_opts.x}_{hist2d_opts.y}",
                     )
-                    th2 = self.define_th2(hist2d_opts.x, hist2d_opts.y, hist_name, hist_name)
+                    th2 = self.define_th2(
+                        hist2d_opts.x,
+                        hist2d_opts.y,
+                        hist_name,
+                        hist_name,
+                        selection=selection,
+                    )
                     th1_ptr_map[selection][f"{hist2d_opts.x}_{hist2d_opts.y}"] = sel_df.Fill(
                         th2, fill_cols
                     )
@@ -948,6 +972,7 @@ class Dataset:
                                 hist2d_opts.y,
                                 hist_name,
                                 hist_name,
+                                selection=selection,
                             )
                             th1_ptr_map[selection][
                                 f"{hist2d_opts.x}_{hist2d_opts.y}|{eff_sys_name}"
@@ -959,7 +984,11 @@ class Dataset:
                             sys_name, selection, f"{hist2d_opts.x}_{hist2d_opts.y}", "unweighted"
                         )
                         th2_unweighted = self.define_th2(
-                            hist2d_opts.x, hist2d_opts.y, hist_name_unweighted, hist_name
+                            hist2d_opts.x,
+                            hist2d_opts.y,
+                            hist_name_unweighted,
+                            hist_name,
+                            selection=selection,
                         )
                         th1_ptr_map[selection][f"{hist2d_opts.x}_{hist2d_opts.y}_unweighted"] = (
                             sel_df.Fill(th2_unweighted, [hist2d_opts.x, hist2d_opts.y])
