@@ -30,12 +30,17 @@ COMPONENT_COLOURS = {
 }
 LOAD_SAVED_HISTS = True  # Reuse saved ROOT histograms, generating only missing pieces.
 REUSE_SHADOW_UNFOLD_MEASURED_OUTPUT = True  # Read matching dataset/hist caches from main script.
-RUN_EVENT_LEVEL_PRONG_DIAGNOSTICS = True  # One wtaunu_had pass for weighted/unweighted prong checks.
+RUN_EVENT_LEVEL_PRONG_DIAGNOSTICS = (
+    False  # One wtaunu_had pass for weighted/unweighted prong checks.
+)
 PLOT_CONTROL_REGION_COMPOSITION = False  # Plot data and nonfake MC in fake-factor regions.
 PLOT_PASS_ID_VALIDATION = False  # Plot pass-ID data-minus-nonfake against fake prediction.
 PLOT_FAKE_FACTORS = False  # Plot the 1-prong and 3-prong fake factors.
 PLOT_NONFAKE_COMPONENTS = False  # Plot per-sample nonfake MC in the pass-ID signal region.
-RUN_FAKE_SOURCE_CROSSCHECK = True  # Also test using MTW itself as the fake-factor source.
+RUN_FAKE_SOURCE_CROSSCHECK = False  # Expensive MTW-source diagnostic; enable only when needed.
+RUN_FULL_FAKE_TRANSFER_VALIDATION = True  # Run cache-only and sideband fake-transfer checks.
+RUN_SIDE_BAND_TRANSFER_EVENT_LOOPS = True  # Build new sideband hists when not already cached.
+PLOT_FAKE_TRANSFER_VALIDATION = False  # Optional transfer-validation plots.
 PRONG_WEIGHT_LABELS = ("raw", "mcWeight", "weight", "truth_weight", "reco_weight")
 DSID_DIAGNOSTIC_STAGE_LABELS = (
     "reco preselection, truth matched",
@@ -115,6 +120,15 @@ class ShadowConfig:
     met_min: float
 
 
+@dataclass(frozen=True)
+class TransferTest:
+    name: str
+    label: str
+    derivation_extra_cuts: tuple[Cut, ...]
+    validation_extra_cuts: tuple[Cut, ...]
+    is_independent: bool
+
+
 CONFIGS = (
     ShadowConfig("no_shadow_bin", None, mtw_min=350, taupt_min=170, met_min=170),
     *(
@@ -128,6 +142,63 @@ CONFIGS = (
         for threshold in SHADOW_BINS
     ),
 )
+
+
+def hist_integral(hist: ROOT.TH1) -> float:
+    return float(hist.Integral())
+
+
+def fake_factor_bin_health(
+    numerator: ROOT.TH1,
+    denominator: ROOT.TH1,
+) -> tuple[int, int]:
+    denominator_total = sum(
+        abs(denominator.GetBinContent(bin_idx))
+        for bin_idx in range(1, denominator.GetNbinsX() + 1)
+    )
+    tiny_threshold = max(10.0, 0.01 * denominator_total)
+    negative_numerator_bins = 0
+    tiny_denominator_bins = 0
+    for bin_idx in range(1, denominator.GetNbinsX() + 1):
+        if numerator.GetBinContent(bin_idx) < 0:
+            negative_numerator_bins += 1
+        denominator_value = denominator.GetBinContent(bin_idx)
+        if denominator_value <= 0 or abs(denominator_value) < tiny_threshold:
+            tiny_denominator_bins += 1
+    return negative_numerator_bins, tiny_denominator_bins
+
+
+def source_prediction_with_modified_fake_factor(
+    numerator: ROOT.TH1,
+    denominator: ROOT.TH1,
+    sr_fail_fake_like: ROOT.TH1,
+    treatment: str,
+) -> float:
+    first_bin_numerator = 0.0
+    first_bin_denominator = 0.0
+    if treatment == "merge 170-250 GeV":
+        for bin_idx in range(1, denominator.GetNbinsX() + 1):
+            bin_low = denominator.GetBinLowEdge(bin_idx)
+            bin_high = bin_low + denominator.GetBinWidth(bin_idx)
+            if bin_low >= 170 and bin_high <= 250:
+                first_bin_numerator += numerator.GetBinContent(bin_idx)
+                first_bin_denominator += denominator.GetBinContent(bin_idx)
+        merged_fake_factor = (
+            first_bin_numerator / first_bin_denominator if first_bin_denominator != 0 else 0.0
+        )
+
+    predicted = 0.0
+    for bin_idx in range(1, denominator.GetNbinsX() + 1):
+        den = denominator.GetBinContent(bin_idx)
+        fake_factor = numerator.GetBinContent(bin_idx) / den if den != 0 else 0.0
+        bin_low = denominator.GetBinLowEdge(bin_idx)
+        bin_high = bin_low + denominator.GetBinWidth(bin_idx)
+        if treatment == "floor negative bins":
+            fake_factor = max(fake_factor, 0.0)
+        elif treatment == "merge 170-250 GeV" and bin_low >= 170 and bin_high <= 250:
+            fake_factor = merged_fake_factor
+        predicted += sr_fail_fake_like.GetBinContent(bin_idx) * fake_factor
+    return predicted
 
 
 if __name__ == "__main__":
@@ -155,12 +226,23 @@ if __name__ == "__main__":
     validator.logger.info("PLOT_FAKE_FACTORS = %s", PLOT_FAKE_FACTORS)
     validator.logger.info("PLOT_NONFAKE_COMPONENTS = %s", PLOT_NONFAKE_COMPONENTS)
     validator.logger.info("RUN_FAKE_SOURCE_CROSSCHECK = %s", RUN_FAKE_SOURCE_CROSSCHECK)
+    validator.logger.info(
+        "RUN_FULL_FAKE_TRANSFER_VALIDATION = %s", RUN_FULL_FAKE_TRANSFER_VALIDATION
+    )
+    validator.logger.info(
+        "RUN_SIDE_BAND_TRANSFER_EVENT_LOOPS = %s", RUN_SIDE_BAND_TRANSFER_EVENT_LOOPS
+    )
+    validator.logger.info("PLOT_FAKE_TRANSFER_VALIDATION = %s", PLOT_FAKE_TRANSFER_VALIDATION)
 
     # SELECTION BUILDING
     # ========================================================================
     data_selections: dict[str, list[Cut]] = {}
     mc_selections: dict[str, list[Cut]] = {}
     selection_binnings: dict[str, dict[str, np.ndarray]] = {"": BINNINGS}
+    transfer_data_selections: dict[str, list[Cut]] = {}
+    transfer_mc_selections: dict[str, list[Cut]] = {}
+    transfer_selection_binnings: dict[str, dict[str, np.ndarray]] = {"": BINNINGS}
+    transfer_tests_by_config: dict[str, tuple[TransferTest, ...]] = {}
 
     for config in CONFIGS:
         sr_pass = f"{config.label}_{WP}_SR_passID"
@@ -191,6 +273,60 @@ if __name__ == "__main__":
             Cut(r"$m_T^W$ threshold", f"MTW > {config.mtw_min:g}"),
             Cut(r"$E_T^{\mathrm{miss}}$ control region", f"MET_met < {config.met_min:g}"),
         ]
+        transfer_tests = [
+            TransferTest(
+                "met_cr_split",
+                "derive MET < 120, validate 120 <= MET < 170",
+                (
+                    Cut(r"$m_T^W$ threshold", f"MTW > {config.mtw_min:g}"),
+                    Cut(r"$E_T^{\mathrm{miss}} < 120$", "MET_met < 120"),
+                ),
+                (
+                    Cut(r"$m_T^W$ threshold", f"MTW > {config.mtw_min:g}"),
+                    Cut(
+                        r"$120 <= E_T^{\mathrm{miss}} < 170$",
+                        "(MET_met >= 120) && (MET_met < 170)",
+                    ),
+                ),
+                True,
+            ),
+            TransferTest(
+                "sr_met_proxy",
+                "derive MET < 170, validate 170 <= MET < 250",
+                (
+                    Cut(r"$m_T^W$ threshold", f"MTW > {config.mtw_min:g}"),
+                    Cut(r"$E_T^{\mathrm{miss}} < 170$", "MET_met < 170"),
+                ),
+                (
+                    Cut(r"$m_T^W$ threshold", f"MTW > {config.mtw_min:g}"),
+                    Cut(
+                        r"$170 <= E_T^{\mathrm{miss}} < 250$",
+                        "(MET_met >= 170) && (MET_met < 250)",
+                    ),
+                ),
+                False,
+            ),
+        ]
+        if config.unfolded_var == "MTW":
+            transfer_tests.append(
+                TransferTest(
+                    "mtw_cr_split",
+                    "derive shadow MTW CR, validate nominal MTW sideband",
+                    (
+                        Cut(
+                            r"shadow $m_T^W$ sideband",
+                            f"(MTW >= {config.mtw_min:g}) && (MTW < 350)",
+                        ),
+                        Cut(r"$E_T^{\mathrm{miss}} < 170$", "MET_met < 170"),
+                    ),
+                    (
+                        Cut(r"$m_T^W >= 350$", "MTW >= 350"),
+                        Cut(r"$E_T^{\mathrm{miss}} < 170$", "MET_met < 170"),
+                    ),
+                    True,
+                )
+            )
+        transfer_tests_by_config[config.label] = tuple(transfer_tests)
         truth_cuts = [
             PASS_TRUTH,
             TRUTH_HAD_TAU,
@@ -287,6 +423,52 @@ if __name__ == "__main__":
             ):
                 selection_binnings[rf"^{re.escape(selection)}$"] = config_binnings
 
+        if RUN_FULL_FAKE_TRANSFER_VALIDATION:
+            transfer_base_cuts = [
+                PASS_RECO_PRESELECTION,
+                Cut(r"$p_T^\tau$ threshold", f"TauPt > {config.taupt_min:g}"),
+                PASS_ETA,
+            ]
+            for transfer_test in transfer_tests_by_config[config.label]:
+                for prong in (1, 3):
+                    pass_prong = Cut(f"{prong}-prong", f"TauNCoreTracks == {prong}")
+                    selection_prefix = f"{config.label}_{transfer_test.name}_{WP}_{prong}prong"
+                    transfer_data_selections[f"{selection_prefix}_derive_passID"] = (
+                        transfer_base_cuts
+                        + list(transfer_test.derivation_extra_cuts)
+                        + [PASS_MEDIUM, pass_prong]
+                    )
+                    transfer_data_selections[f"{selection_prefix}_derive_failID"] = (
+                        transfer_base_cuts
+                        + list(transfer_test.derivation_extra_cuts)
+                        + [FAIL_MEDIUM, pass_prong]
+                    )
+                    transfer_data_selections[f"{selection_prefix}_validate_passID"] = (
+                        transfer_base_cuts
+                        + list(transfer_test.validation_extra_cuts)
+                        + [PASS_MEDIUM, pass_prong]
+                    )
+                    transfer_data_selections[f"{selection_prefix}_validate_failID"] = (
+                        transfer_base_cuts
+                        + list(transfer_test.validation_extra_cuts)
+                        + [FAIL_MEDIUM, pass_prong]
+                    )
+                    for suffix in (
+                        "derive_passID",
+                        "derive_failID",
+                        "validate_passID",
+                        "validate_failID",
+                    ):
+                        selection = f"{selection_prefix}_{suffix}"
+                        transfer_mc_selections[selection] = transfer_data_selections[selection]
+                        transfer_mc_selections[f"trueTau_{selection}"] = transfer_data_selections[
+                            selection
+                        ] + [PASS_TRUETAU]
+                        transfer_selection_binnings[rf"^{re.escape(selection)}$"] = config_binnings
+                        transfer_selection_binnings[rf"^{re.escape(f'trueTau_{selection}')}$"] = (
+                            config_binnings
+                        )
+
     # DATAFRAME & HISTOGRAM PRODUCTION
     # ========================================================================
     shadow_unfold_measured_output = (
@@ -373,6 +555,15 @@ if __name__ == "__main__":
     weight_decomposition_rows: list[tuple[str, str, str, float, float, float, float]] = []
     pass_validation_rows: list[tuple[str, str, float, float, float]] = []
     fake_source_crosscheck_rows: list[tuple[str, str, float, float, float]] = []
+    fake_factor_health_rows: list[
+        tuple[str, str, str, str, str, float, float, int, int, float, float, float, float]
+    ] = []
+    negative_bin_rows: list[
+        tuple[str, str, str, str, float, float, int, int, float, float, float, float]
+    ] = []
+    transfer_validation_rows: list[
+        tuple[str, str, str, str, str, float, float, int, int, float, float, float, float]
+    ] = []
 
     # FAKE ESTIMATION
     # ========================================================================
@@ -418,6 +609,313 @@ if __name__ == "__main__":
                         systematic=NOMINAL_NAME,
                         save_intermediates=False,
                     )
+
+    # CACHE-ONLY FAKE-FACTOR HEALTH
+    # ========================================================================
+    if RUN_FULL_FAKE_TRANSFER_VALIDATION:
+        validator.logger.info("Running cache-only fake-factor diagnostics...")
+        for config in CONFIGS:
+            for prong in (1, 3):
+                prefix = f"{config.label}_{WP}_{prong}prong"
+                numerator = analysis.histograms[f"{prefix}_{FAKES_SOURCE}_FF_numerator"]
+                denominator = analysis.histograms[f"{prefix}_{FAKES_SOURCE}_FF_denominator"]
+                sr_fail_fake_like = analysis.histograms[
+                    f"{prefix}_{FAKES_SOURCE}_FF_fakes_data_est"
+                ]
+                predicted = analysis.histograms[f"{prefix}_MTW_fakes_bkg_{FAKES_SOURCE}_src"]
+                negative_numerator_bins, tiny_denominator_bins = fake_factor_bin_health(
+                    numerator, denominator
+                )
+                target_data = analysis.get_hist(
+                    "MTW",
+                    dataset=analysis.data_sample,
+                    systematic=NOMINAL_NAME,
+                    selection=f"{config.label}_{WP}_{prong}prong_SR_passID",
+                    allow_generation=True,
+                )
+                target_nonfake = sum_th1s(
+                    *[
+                        analysis.get_hist(
+                            "MTW",
+                            dataset=mc_sample,
+                            systematic=NOMINAL_NAME,
+                            selection=f"trueTau_{config.label}_{WP}_{prong}prong_SR_passID",
+                            allow_generation=True,
+                        )
+                        for mc_sample in analysis.mc_samples
+                    ]
+                )
+                target = target_data - target_nonfake
+                fake_factor_health_rows.append(
+                    (
+                        config.label,
+                        f"{prong}-prong",
+                        FAKES_SOURCE,
+                        "nominal CR",
+                        "SR pass-ID MTW",
+                        hist_integral(numerator),
+                        hist_integral(denominator),
+                        negative_numerator_bins,
+                        tiny_denominator_bins,
+                        hist_integral(sr_fail_fake_like),
+                        hist_integral(predicted),
+                        hist_integral(target),
+                        hist_integral(predicted) / hist_integral(target)
+                        if hist_integral(target) != 0
+                        else float("nan"),
+                    )
+                )
+
+        config = CONFIGS[0]
+        prong = 3
+        prefix = f"{config.label}_{WP}_{prong}prong"
+        numerator = analysis.histograms[f"{prefix}_{FAKES_SOURCE}_FF_numerator"]
+        denominator = analysis.histograms[f"{prefix}_{FAKES_SOURCE}_FF_denominator"]
+        sr_fail_fake_like = analysis.histograms[f"{prefix}_{FAKES_SOURCE}_FF_fakes_data_est"]
+        negative_numerator_bins, tiny_denominator_bins = fake_factor_bin_health(
+            numerator, denominator
+        )
+        target_data = analysis.get_hist(
+            FAKES_SOURCE,
+            dataset=analysis.data_sample,
+            systematic=NOMINAL_NAME,
+            selection=f"{config.label}_{WP}_{prong}prong_SR_passID",
+            allow_generation=True,
+        )
+        target_nonfake = sum_th1s(
+            *[
+                analysis.get_hist(
+                    FAKES_SOURCE,
+                    dataset=mc_sample,
+                    systematic=NOMINAL_NAME,
+                    selection=f"trueTau_{config.label}_{WP}_{prong}prong_SR_passID",
+                    allow_generation=True,
+                )
+                for mc_sample in analysis.mc_samples
+            ]
+        )
+        target = target_data - target_nonfake
+        for treatment in ("nominal signed", "floor negative bins", "merge 170-250 GeV"):
+            predicted = source_prediction_with_modified_fake_factor(
+                numerator,
+                denominator,
+                sr_fail_fake_like,
+                treatment,
+            )
+            negative_bin_rows.append(
+                (
+                    config.label,
+                    f"{prong}-prong",
+                    FAKES_SOURCE,
+                    treatment,
+                    hist_integral(numerator),
+                    hist_integral(denominator),
+                    negative_numerator_bins,
+                    tiny_denominator_bins,
+                    hist_integral(sr_fail_fake_like),
+                    predicted,
+                    hist_integral(target),
+                    predicted / hist_integral(target)
+                    if hist_integral(target) != 0
+                    else float("nan"),
+                )
+            )
+
+    # SIDE-BAND FAKE-TRANSFER VALIDATION
+    # ========================================================================
+    if RUN_FULL_FAKE_TRANSFER_VALIDATION:
+        sideband_output = output_root / "sideband_transfer"
+        sideband_hist_cache = (
+            sideband_output / "root" / "validate_shadow_fakes_sideband_transfer.root"
+        )
+        sideband_dataset_cache_available = (sideband_output / "root").is_dir() and any(
+            path.name != sideband_hist_cache.name
+            for path in (sideband_output / "root").glob("*.root")
+        )
+        sideband_hist_cache_available = sideband_hist_cache.is_file()
+        run_sideband_event_loops = RUN_SIDE_BAND_TRANSFER_EVENT_LOOPS and (
+            not LOAD_SAVED_HISTS or not sideband_hist_cache_available
+        )
+
+        if sideband_hist_cache_available and LOAD_SAVED_HISTS:
+            validator.logger.info(
+                "Using cached sideband transfer histograms from %s", sideband_output
+            )
+        elif sideband_dataset_cache_available and LOAD_SAVED_HISTS:
+            validator.logger.info(
+                "Sideband dataset cache exists, but transfer histograms are missing; "
+                "running one batched histogram pass."
+            )
+        elif run_sideband_event_loops:
+            validator.logger.info("Running new ROOT sideband transfer selections...")
+        else:
+            validator.logger.info(
+                "Skipping sideband event loops; using cached sideband histograms only."
+            )
+
+        sideband_analysis = None
+        loaded_sideband_hists = False
+        if sideband_dataset_cache_available or run_sideband_event_loops:
+            sideband_analysis = Analysis(
+                analysis_samples(
+                    transfer_mc_selections,
+                    data_selections=transfer_data_selections,
+                    snapshot=False,
+                ),
+                year=YEAR,
+                rerun=run_sideband_event_loops,
+                regen_histograms=run_sideband_event_loops,
+                do_systematics=False,
+                metadata_cache=DSID_METADATA_CACHE,
+                ttree=NOMINAL_NAME,
+                analysis_label="validate_shadow_fakes_sideband_transfer",
+                output_dir=sideband_output,
+                log_level=10,
+                log_out="both" if run_sideband_event_loops else "console",
+                extract_vars={
+                    "MTW",
+                    "TauPt",
+                    "MET_met",
+                    "TauEta",
+                    "TauBDTEleScore",
+                    "TauRNNJetScore",
+                    "TauNCoreTracks",
+                    "TauCharge",
+                },
+                import_missing_columns_as_nan=True,
+                snapshot=False,
+                histogram_vars={"MTW", FAKES_SOURCE},
+                binnings=transfer_selection_binnings,
+            )
+            loaded_sideband_hists = (
+                LOAD_SAVED_HISTS and sideband_analysis.load_hists_if_available()
+            )
+
+        if sideband_analysis and (loaded_sideband_hists or run_sideband_event_loops):
+            for config in CONFIGS:
+                for transfer_test in transfer_tests_by_config[config.label]:
+                    for prong in (1, 3):
+                        prefix = f"{config.label}_{transfer_test.name}_{WP}_{prong}prong"
+                        estimate_name = f"{prefix}_{FAKES_SOURCE}_src"
+                        derive_pass = f"{prefix}_derive_passID"
+                        derive_fail = f"{prefix}_derive_failID"
+                        validate_pass = f"{prefix}_validate_passID"
+                        validate_fail = f"{prefix}_validate_failID"
+
+                        if not loaded_sideband_hists:
+                            sideband_analysis.do_fakes_estimate(
+                                FAKES_SOURCE,
+                                ("MTW",),
+                                derive_pass,
+                                derive_fail,
+                                validate_pass,
+                                validate_fail,
+                                f"trueTau_{derive_pass}",
+                                f"trueTau_{derive_fail}",
+                                f"trueTau_{validate_pass}",
+                                f"trueTau_{validate_fail}",
+                                name=estimate_name,
+                                systematic=NOMINAL_NAME,
+                                save_intermediates=True,
+                            )
+
+                        numerator = sideband_analysis.histograms[
+                            f"{estimate_name}_{FAKES_SOURCE}_FF_numerator"
+                        ]
+                        denominator = sideband_analysis.histograms[
+                            f"{estimate_name}_{FAKES_SOURCE}_FF_denominator"
+                        ]
+                        validation_fail_input = sideband_analysis.histograms[
+                            f"{estimate_name}_{FAKES_SOURCE}_FF_fakes_data_est"
+                        ]
+                        prediction = sideband_analysis.histograms[
+                            f"{estimate_name}_MTW_fakes_bkg_{FAKES_SOURCE}_src"
+                        ]
+                        negative_numerator_bins, tiny_denominator_bins = fake_factor_bin_health(
+                            numerator, denominator
+                        )
+
+                        target_data = sideband_analysis.get_hist(
+                            "MTW",
+                            dataset=sideband_analysis.data_sample,
+                            systematic=NOMINAL_NAME,
+                            selection=validate_pass,
+                            allow_generation=True,
+                        )
+                        target_nonfake = sum_th1s(
+                            *[
+                                sideband_analysis.get_hist(
+                                    "MTW",
+                                    dataset=mc_sample,
+                                    systematic=NOMINAL_NAME,
+                                    selection=f"trueTau_{validate_pass}",
+                                    allow_generation=True,
+                                )
+                                for mc_sample in sideband_analysis.mc_samples
+                            ]
+                        )
+                        target = target_data - target_nonfake
+                        transfer_validation_rows.append(
+                            (
+                                config.label,
+                                f"{prong}-prong",
+                                FAKES_SOURCE,
+                                transfer_test.name,
+                                transfer_test.label,
+                                hist_integral(numerator),
+                                hist_integral(denominator),
+                                negative_numerator_bins,
+                                tiny_denominator_bins,
+                                hist_integral(validation_fail_input),
+                                hist_integral(prediction),
+                                hist_integral(target),
+                                hist_integral(prediction) / hist_integral(target)
+                                if hist_integral(target) != 0
+                                else float("nan"),
+                            )
+                        )
+
+                        if PLOT_FAKE_TRANSFER_VALIDATION:
+                            sideband_analysis.paths.plot_dir = (
+                                output_root
+                                / "plots"
+                                / "fake_transfer_validation"
+                                / config.label
+                                / transfer_test.name
+                            )
+                            sideband_analysis.plot(
+                                [target, prediction],
+                                label=[
+                                    "Data - nonfake MC in validation pass-ID",
+                                    "Fake prediction",
+                                ],
+                                colour=["k", "tab:blue"],
+                                histstyle=["step", "step"],
+                                xlabel=variable_data["MTW"]["name"] + " [GeV]",
+                                kind="overlay",
+                                do_stat=True,
+                                do_syst=False,
+                                title=smart_join(
+                                    config.label,
+                                    f"{prong}-prong",
+                                    transfer_test.name,
+                                    sep=" | ",
+                                ),
+                                scale_by_bin_width=False,
+                                ylabel="Events",
+                                logx=True,
+                                ratio_plot=True,
+                                ratio_label="Prediction / target",
+                                ratio_axlim=(0.0, 3.0),
+                                label_params={"llabel": "", "loc": 1},
+                                filename=(
+                                    f"{config.label}_{transfer_test.name}_{prong}prong"
+                                    "_fake_transfer_validation.png"
+                                ),
+                            )
+
+            if run_sideband_event_loops:
+                sideband_analysis.save_hists()
 
     # CONTROL-REGION COMPOSITION
     # ========================================================================
@@ -1770,6 +2268,189 @@ if __name__ == "__main__":
             summary_lines.append(
                 f"| {config_label} | {var} | {taupt_sourced:.3f} | {mtw_sourced:.3f} | "
                 f"{ratio:.3f} |"
+            )
+
+    if RUN_FULL_FAKE_TRANSFER_VALIDATION:
+        summary_lines.extend(
+            [
+                "",
+                "## Full fake-transfer validation",
+                "",
+                "This section collects the fast fake-transfer checks. Cache-only rows reuse the "
+                "`analysis_shadow_unfold` measured ROOT output. Sideband rows are produced from "
+                "the isolated `outputs/validate_shadow_fakes/sideband_transfer/` cache when "
+                "available, or from the minimal new sideband selections when explicitly enabled.",
+                "",
+                "### Cache-only fake-factor health",
+                "",
+                "| Configuration | Prong | Source variable | Derivation region | Validation region | "
+                "CR numerator | CR denominator | Negative numerator bins | Tiny/non-positive denominator bins | "
+                "Validation fail-ID input | Predicted fakes | Validation target | Prediction / target |",
+                "|---|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|",
+            ]
+        )
+        for (
+            config_label,
+            prong_label,
+            source_var,
+            derivation_region,
+            validation_region,
+            cr_numerator,
+            cr_denominator,
+            negative_numerator_bins,
+            tiny_denominator_bins,
+            validation_fail_input,
+            predicted,
+            target,
+            ratio,
+        ) in fake_factor_health_rows:
+            summary_lines.append(
+                f"| {config_label} | {prong_label} | {source_var} | {derivation_region} | "
+                f"{validation_region} | {cr_numerator:.3f} | {cr_denominator:.3f} | "
+                f"{negative_numerator_bins} | {tiny_denominator_bins} | "
+                f"{validation_fail_input:.3f} | {predicted:.3f} | {target:.3f} | "
+                f"{ratio:.3f} |"
+            )
+
+        summary_lines.extend(
+            [
+                "",
+                "### Negative-bin treatment",
+                "",
+                "This is a source-variable diagnostic for the no-shadow 3-prong fake factor. "
+                "It can be done from cached `TauPt` histograms. It does not exactly reproduce "
+                "the target `MTW` shape under altered fake-factor bin treatments, because that "
+                "would require event-level or 2D `TauPt` versus `MTW` information.",
+                "",
+                "| Configuration | Prong | Source variable | Treatment | CR numerator | CR denominator | "
+                "Negative numerator bins | Tiny/non-positive denominator bins | SR fail input | "
+                "Predicted fakes | Pass-ID target | Prediction / target |",
+                "|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|",
+            ]
+        )
+        for (
+            config_label,
+            prong_label,
+            source_var,
+            treatment,
+            cr_numerator,
+            cr_denominator,
+            negative_numerator_bins,
+            tiny_denominator_bins,
+            validation_fail_input,
+            predicted,
+            target,
+            ratio,
+        ) in negative_bin_rows:
+            summary_lines.append(
+                f"| {config_label} | {prong_label} | {source_var} | {treatment} | "
+                f"{cr_numerator:.3f} | {cr_denominator:.3f} | "
+                f"{negative_numerator_bins} | {tiny_denominator_bins} | "
+                f"{validation_fail_input:.3f} | {predicted:.3f} | {target:.3f} | "
+                f"{ratio:.3f} |"
+            )
+
+        summary_lines.extend(
+            [
+                "",
+                "### Independent sideband transfer",
+                "",
+                "| Configuration | Prong | Source variable | Transfer test | Region definition | "
+                "CR numerator | CR denominator | Negative numerator bins | Tiny/non-positive denominator bins | "
+                "Validation fail-ID input | Predicted fakes | Validation target | Prediction / target |",
+                "|---|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|",
+            ]
+        )
+        if transfer_validation_rows:
+            for (
+                config_label,
+                prong_label,
+                source_var,
+                transfer_test,
+                region_label,
+                cr_numerator,
+                cr_denominator,
+                negative_numerator_bins,
+                tiny_denominator_bins,
+                validation_fail_input,
+                predicted,
+                target,
+                ratio,
+            ) in transfer_validation_rows:
+                summary_lines.append(
+                    f"| {config_label} | {prong_label} | {source_var} | {transfer_test} | "
+                    f"{region_label} | {cr_numerator:.3f} | {cr_denominator:.3f} | "
+                    f"{negative_numerator_bins} | {tiny_denominator_bins} | "
+                    f"{validation_fail_input:.3f} | {predicted:.3f} | {target:.3f} | "
+                    f"{ratio:.3f} |"
+                )
+        else:
+            summary_lines.append(
+                "| sideband transfer | - | - | skipped | no cached sideband histograms and "
+                "event loops disabled | nan | nan | 0 | 0 | nan | nan | nan | nan |"
+            )
+
+        large_transfer_mismatches = [
+            row for row in transfer_validation_rows if np.isfinite(row[-1]) and row[-1] > 1.5
+        ]
+        negative_source_shift = {
+            treatment: predicted
+            for (
+                _config_label,
+                _prong_label,
+                _source_var,
+                treatment,
+                _cr_numerator,
+                _cr_denominator,
+                _negative_numerator_bins,
+                _tiny_denominator_bins,
+                _validation_fail_input,
+                predicted,
+                _target,
+                _ratio,
+            ) in negative_bin_rows
+        }
+        nominal_negative_prediction = negative_source_shift.get("nominal signed", float("nan"))
+        floored_negative_prediction = negative_source_shift.get("floor negative bins", float("nan"))
+        merged_negative_prediction = negative_source_shift.get("merge 170-250 GeV", float("nan"))
+        summary_lines.extend(
+            [
+                "",
+                "### Recommendation",
+                "",
+            ]
+        )
+        if transfer_validation_rows and large_transfer_mismatches:
+            summary_lines.append(
+                "The sideband transfer rows contain prediction/target ratios above `1.5`, "
+                "so the `TauPt` fake factor should not yet be treated as validated in the "
+                "shadow-bin phase space. The next defensible analysis development would be "
+                "a sideband-validated alternative parameterisation, most likely a 2D fake "
+                "factor in `(TauPt, MTW)` or `(TauPt, MET_met)`."
+            )
+        elif transfer_validation_rows:
+            summary_lines.append(
+                "The sideband transfer rows do not show a large integral overprediction by "
+                "this simple threshold test. If shapes are also acceptable, the current "
+                "`TauPt` fake factor may be adequate for the tested sidebands."
+            )
+        else:
+            summary_lines.append(
+                "No sideband transfer rows were produced in this run. The cache-only checks "
+                "remain useful, but they are not enough to validate fake-factor transfer."
+            )
+        summary_lines.append(
+            "`MTW` as a fake-factor source remains diagnostic only, because `MTW` is the "
+            "measured observable and using it directly could sculpt the unfolded spectrum."
+        )
+        if np.isfinite(nominal_negative_prediction):
+            summary_lines.append(
+                "For the no-shadow 3-prong source-variable diagnostic, the nominal signed "
+                f"prediction is `{nominal_negative_prediction:.3f}`, the negative-bin-floored "
+                f"prediction is `{floored_negative_prediction:.3f}`, and the merged low-`TauPt` "
+                f"prediction is `{merged_negative_prediction:.3f}`. This should be used to "
+                "decide whether bin merging is worth testing in a later nominal-analysis variant, "
+                "not as an automatic correction."
             )
 
     summary_path = output_root / "shadow_fake_validation_summary.md"
