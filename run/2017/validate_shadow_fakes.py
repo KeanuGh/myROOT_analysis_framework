@@ -41,6 +41,10 @@ RUN_FAKE_SOURCE_CROSSCHECK = False  # Expensive MTW-source diagnostic; enable on
 RUN_FULL_FAKE_TRANSFER_VALIDATION = True  # Run cache-only and sideband fake-transfer checks.
 RUN_SIDE_BAND_TRANSFER_EVENT_LOOPS = True  # Build new sideband hists when not already cached.
 PLOT_FAKE_TRANSFER_VALIDATION = False  # Optional transfer-validation plots.
+TRANSFER_VALIDATION_CONFIGS = ("MTW_shadow_bin_300",)  # Keep smoke tests to one shadow setup.
+TRANSFER_VALIDATION_TESTS = ("met_cr_split",)  # Directly test the observed MET-transfer issue.
+TRANSFER_VALIDATION_PRONGS = (1, 3)  # Check both prongs without broadening the phase space.
+RUN_TAUPT_MET_2D_FEASIBILITY_CHECK = True  # Document whether a true 2D FF is derivable here.
 PRONG_WEIGHT_LABELS = ("raw", "mcWeight", "weight", "truth_weight", "reco_weight")
 DSID_DIAGNOSTIC_STAGE_LABELS = (
     "reco preselection, truth matched",
@@ -201,6 +205,14 @@ def source_prediction_with_modified_fake_factor(
     return predicted
 
 
+def use_transfer_validation_config(config: ShadowConfig) -> bool:
+    return config.label in TRANSFER_VALIDATION_CONFIGS
+
+
+def use_transfer_validation_test(transfer_test: TransferTest) -> bool:
+    return transfer_test.name in TRANSFER_VALIDATION_TESTS
+
+
 if __name__ == "__main__":
     # SETUP
     # ========================================================================
@@ -233,6 +245,12 @@ if __name__ == "__main__":
         "RUN_SIDE_BAND_TRANSFER_EVENT_LOOPS = %s", RUN_SIDE_BAND_TRANSFER_EVENT_LOOPS
     )
     validator.logger.info("PLOT_FAKE_TRANSFER_VALIDATION = %s", PLOT_FAKE_TRANSFER_VALIDATION)
+    validator.logger.info("TRANSFER_VALIDATION_CONFIGS = %s", TRANSFER_VALIDATION_CONFIGS)
+    validator.logger.info("TRANSFER_VALIDATION_TESTS = %s", TRANSFER_VALIDATION_TESTS)
+    validator.logger.info("TRANSFER_VALIDATION_PRONGS = %s", TRANSFER_VALIDATION_PRONGS)
+    validator.logger.info(
+        "RUN_TAUPT_MET_2D_FEASIBILITY_CHECK = %s", RUN_TAUPT_MET_2D_FEASIBILITY_CHECK
+    )
 
     # SELECTION BUILDING
     # ========================================================================
@@ -423,14 +441,16 @@ if __name__ == "__main__":
             ):
                 selection_binnings[rf"^{re.escape(selection)}$"] = config_binnings
 
-        if RUN_FULL_FAKE_TRANSFER_VALIDATION:
+        if RUN_FULL_FAKE_TRANSFER_VALIDATION and use_transfer_validation_config(config):
             transfer_base_cuts = [
                 PASS_RECO_PRESELECTION,
                 Cut(r"$p_T^\tau$ threshold", f"TauPt > {config.taupt_min:g}"),
                 PASS_ETA,
             ]
             for transfer_test in transfer_tests_by_config[config.label]:
-                for prong in (1, 3):
+                if not use_transfer_validation_test(transfer_test):
+                    continue
+                for prong in TRANSFER_VALIDATION_PRONGS:
                     pass_prong = Cut(f"{prong}-prong", f"TauNCoreTracks == {prong}")
                     selection_prefix = f"{config.label}_{transfer_test.name}_{WP}_{prong}prong"
                     transfer_data_selections[f"{selection_prefix}_derive_passID"] = (
@@ -564,6 +584,7 @@ if __name__ == "__main__":
     transfer_validation_rows: list[
         tuple[str, str, str, str, str, float, float, int, int, float, float, float, float]
     ] = []
+    taupt_met_feasibility_rows: list[tuple[str, str, str, str, str, str]] = []
 
     # FAKE ESTIMATION
     # ========================================================================
@@ -793,8 +814,12 @@ if __name__ == "__main__":
 
         if sideband_analysis and (loaded_sideband_hists or run_sideband_event_loops):
             for config in CONFIGS:
+                if not use_transfer_validation_config(config):
+                    continue
                 for transfer_test in transfer_tests_by_config[config.label]:
-                    for prong in (1, 3):
+                    if not use_transfer_validation_test(transfer_test):
+                        continue
+                    for prong in TRANSFER_VALIDATION_PRONGS:
                         prefix = f"{config.label}_{transfer_test.name}_{WP}_{prong}prong"
                         estimate_name = f"{prefix}_{FAKES_SOURCE}_src"
                         derive_pass = f"{prefix}_derive_passID"
@@ -874,6 +899,21 @@ if __name__ == "__main__":
                                 else float("nan"),
                             )
                         )
+
+                        if (
+                            RUN_TAUPT_MET_2D_FEASIBILITY_CHECK
+                            and transfer_test.name == "met_cr_split"
+                        ):
+                            taupt_met_feasibility_rows.append(
+                                (
+                                    config.label,
+                                    f"{prong}-prong",
+                                    "TauPt x MET_met",
+                                    "MET < 120",
+                                    "120 <= MET < 170",
+                                    "not directly derivable from this independent split",
+                                )
+                            )
 
                         if PLOT_FAKE_TRANSFER_VALIDATION:
                             sideband_analysis.paths.plot_dir = (
@@ -2281,6 +2321,13 @@ if __name__ == "__main__":
                 "the isolated `outputs/validate_shadow_fakes/sideband_transfer/` cache when "
                 "available, or from the minimal new sideband selections when explicitly enabled.",
                 "",
+                "The current transfer-validation defaults are intentionally narrow, so this can "
+                "act as a smoke test for the real analysis rather than a full production sweep.",
+                "",
+                f"- transfer-validation configs: `{TRANSFER_VALIDATION_CONFIGS}`",
+                f"- transfer-validation tests: `{TRANSFER_VALIDATION_TESTS}`",
+                f"- transfer-validation prongs: `{TRANSFER_VALIDATION_PRONGS}`",
+                "",
                 "### Cache-only fake-factor health",
                 "",
                 "| Configuration | Prong | Source variable | Derivation region | Validation region | "
@@ -2390,6 +2437,37 @@ if __name__ == "__main__":
                 "event loops disabled | nan | nan | 0 | 0 | nan | nan | nan | nan |"
             )
 
+        if taupt_met_feasibility_rows:
+            summary_lines.extend(
+                [
+                    "",
+                    "### TauPt x MET_met fake-factor feasibility",
+                    "",
+                    "A literal two-dimensional `(TauPt, MET_met)` fake factor cannot be "
+                    "independently derived in `MET < 120` and then applied in "
+                    "`120 <= MET < 170` using the same MET bins, because the derivation and "
+                    "validation MET bins do not overlap. The current smoke test therefore uses "
+                    "the selected MET-transfer row to decide whether MET dependence is worth "
+                    "modelling, rather than claiming a validated 2D fake factor.",
+                    "",
+                    "| Configuration | Prong | Candidate source model | Derivation MET region | "
+                    "Validation MET region | Status |",
+                    "|---|---|---|---|---|---|",
+                ]
+            )
+            for (
+                config_label,
+                prong_label,
+                source_model,
+                derivation_met,
+                validation_met,
+                status,
+            ) in taupt_met_feasibility_rows:
+                summary_lines.append(
+                    f"| {config_label} | {prong_label} | {source_model} | "
+                    f"{derivation_met} | {validation_met} | {status} |"
+                )
+
         large_transfer_mismatches = [
             row for row in transfer_validation_rows if np.isfinite(row[-1]) and row[-1] > 1.5
         ]
@@ -2425,8 +2503,10 @@ if __name__ == "__main__":
                 "The sideband transfer rows contain prediction/target ratios above `1.5`, "
                 "so the `TauPt` fake factor should not yet be treated as validated in the "
                 "shadow-bin phase space. The next defensible analysis development would be "
-                "a sideband-validated alternative parameterisation, most likely a 2D fake "
-                "factor in `(TauPt, MTW)` or `(TauPt, MET_met)`."
+                "a sideband-validated MET-dependence model. A literal 2D `(TauPt, MET_met)` "
+                "fake factor needs a derivation region with overlapping MET bins, or it should "
+                "be treated as a systematic/threshold-variation study rather than a nominal "
+                "correction."
             )
         elif transfer_validation_rows:
             summary_lines.append(
