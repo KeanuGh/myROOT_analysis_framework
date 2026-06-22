@@ -20,10 +20,21 @@ from utils.variable_names import variable_data
 YEAR = 2017
 LUMI = LUMI_YEAR[YEAR]
 WP = "medium"
-VARS = ("MTW", "TauPt")
+VARS = (
+    "MTW",
+    "TauPt",
+)
 SHADOW_BINS = {
-    "MTW": (200, 250, 300),
-    "TauPt": (200, 250, 300),
+    "MTW": (
+        200,
+        250,
+        300,
+    ),
+    "TauPt": (
+        200,
+        250,
+        300,
+    ),
 }
 ITERATIONS = (
     0,
@@ -35,11 +46,15 @@ ITERATIONS = (
 FAKES_SOURCE = "TauPt"
 LOAD_SAVED_HISTS = False  # Reuse saved ROOT histograms instead of rebuilding them.
 RUN_FAKE_DIAGNOSTICS = True  # Master switch for fake-estimate validation outputs.
-RUN_INCLUSIVE_FAKE_CHECK = True  # Also build inclusive fakes for comparison with prong-split.
+BUILD_INCLUSIVE_FAKES = True  # Build inclusive fakes; nominal only if prong-split is disabled.
+USE_PRONG_SPLIT_FAKES = True  # Build and use the thesis prong-split fake estimate as nominal.
 DO_SPLIT_SAMPLE_CLOSURE = False  # Build even/odd MC closure samples for response validation.
 DO_FULL_SYSTEMATICS = False  # Enable full systematic response variations; slow final-mode run.
 FAKE_SCALE_SCAN = (0.0, 0.5, 1.0)  # Fake normalisation scales used in the diagnostic scan.
 FAKE_DIAGNOSTIC_ITERATION = 1  # Bayesian iteration count used for fake-scale scan plots.
+
+if not BUILD_INCLUSIVE_FAKES and not USE_PRONG_SPLIT_FAKES:
+    raise ValueError("Enable BUILD_INCLUSIVE_FAKES, USE_PRONG_SPLIT_FAKES, or both.")
 
 SKIP_SYS = {
     r".*TAUS_TRUEHADTAU_EFF_RNNID_.*",
@@ -225,18 +240,20 @@ def closure_metrics(unfolded_signal: ROOT.TH1, truth: ROOT.TH1) -> tuple[float, 
 if __name__ == "__main__":
     # SETUP
     # ========================================================================
-    output_root = Path(__file__).absolute().parent.parent.parent / "outputs" / Path(__file__).stem
+    output_label = Path(__file__).stem
+    output_root = Path(__file__).absolute().parent.parent.parent / "outputs" / output_label
     plotter = Analysis(
         data_dict={},
         year=YEAR,
-        analysis_label=Path(__file__).stem,
+        analysis_label=output_label,
         output_dir=output_root,
         log_level=10,
         log_out="both",
     )
     plotter.logger.info("Starting analysis_shadow_unfold.py")
     plotter.logger.info("RUN_FAKE_DIAGNOSTICS = %s", RUN_FAKE_DIAGNOSTICS)
-    plotter.logger.info("RUN_INCLUSIVE_FAKE_CHECK = %s", RUN_INCLUSIVE_FAKE_CHECK)
+    plotter.logger.info("BUILD_INCLUSIVE_FAKES = %s", BUILD_INCLUSIVE_FAKES)
+    plotter.logger.info("USE_PRONG_SPLIT_FAKES = %s", USE_PRONG_SPLIT_FAKES)
     plotter.logger.info("DO_SPLIT_SAMPLE_CLOSURE = %s", DO_SPLIT_SAMPLE_CLOSURE)
     plotter.logger.info("DO_FULL_SYSTEMATICS = %s", DO_FULL_SYSTEMATICS)
     if DO_FULL_SYSTEMATICS:
@@ -634,8 +651,8 @@ if __name__ == "__main__":
         # DATA-DRIVEN FAKE ESTIMATES
         # --------------------------------------------------------------------
         if not load_measured_analysis_hists:
-            if RUN_FAKE_DIAGNOSTICS and RUN_INCLUSIVE_FAKE_CHECK:
-                # Inclusive fakes are a diagnostic cross-check, not the nominal method.
+            if BUILD_INCLUSIVE_FAKES:
+                # Inclusive fakes are nominal only when prong-split fakes are disabled.
                 measured_analysis.do_fakes_estimate(
                     FAKES_SOURCE,
                     vars_for_config,
@@ -652,24 +669,25 @@ if __name__ == "__main__":
                     save_intermediates=True,
                 )
 
-            # The nominal fake estimate follows the thesis method: split by tau prong
-            # and then sum the 1-prong and 3-prong predictions.
-            for prong in (1, 3):
-                measured_analysis.do_fakes_estimate(
-                    FAKES_SOURCE,
-                    vars_for_config,
-                    f"{config.label}_{WP}_{prong}prong_CR_passID",
-                    f"{config.label}_{WP}_{prong}prong_CR_failID",
-                    f"{config.label}_{WP}_{prong}prong_SR_passID",
-                    f"{config.label}_{WP}_{prong}prong_SR_failID",
-                    f"trueTau_{config.label}_{WP}_{prong}prong_CR_passID",
-                    f"trueTau_{config.label}_{WP}_{prong}prong_CR_failID",
-                    f"trueTau_{config.label}_{WP}_{prong}prong_SR_passID",
-                    f"trueTau_{config.label}_{WP}_{prong}prong_SR_failID",
-                    name=f"{config.label}_{WP}_{prong}prong",
-                    systematic=NOMINAL_NAME,
-                    save_intermediates=True,
-                )
+            if USE_PRONG_SPLIT_FAKES:
+                # The nominal fake estimate follows the thesis method: split by tau prong
+                # and then sum the 1-prong and 3-prong predictions.
+                for prong in (1, 3):
+                    measured_analysis.do_fakes_estimate(
+                        FAKES_SOURCE,
+                        vars_for_config,
+                        f"{config.label}_{WP}_{prong}prong_CR_passID",
+                        f"{config.label}_{WP}_{prong}prong_CR_failID",
+                        f"{config.label}_{WP}_{prong}prong_SR_passID",
+                        f"{config.label}_{WP}_{prong}prong_SR_failID",
+                        f"trueTau_{config.label}_{WP}_{prong}prong_CR_passID",
+                        f"trueTau_{config.label}_{WP}_{prong}prong_CR_failID",
+                        f"trueTau_{config.label}_{WP}_{prong}prong_SR_passID",
+                        f"trueTau_{config.label}_{WP}_{prong}prong_SR_failID",
+                        name=f"{config.label}_{WP}_{prong}prong",
+                        systematic=NOMINAL_NAME,
+                        save_intermediates=True,
+                    )
 
         # MC FAKE-CLOSURE DIAGNOSTIC
         # --------------------------------------------------------------------
@@ -774,15 +792,24 @@ if __name__ == "__main__":
                 for background in measured_analysis.mc_samples
                 if background != "wtaunu_had"
             ]
-            prong_fakes = [
-                measured_analysis.histograms[
-                    f"{config.label}_{WP}_{prong}prong_{var}_fakes_bkg_{FAKES_SOURCE}_src"
+            if USE_PRONG_SPLIT_FAKES:
+                prong_fakes = [
+                    measured_analysis.histograms[
+                        f"{config.label}_{WP}_{prong}prong_{var}_fakes_bkg_{FAKES_SOURCE}_src"
+                    ]
+                    for prong in (1, 3)
                 ]
-                for prong in (1, 3)
-            ]
-            fakes = sum_th1s(*prong_fakes)
-            fakes.SetName(f"{config.label}_{WP}_{var}_prong_split_fakes_bkg_{FAKES_SOURCE}_src")
-            fakes.SetDirectory(0)
+                fakes = sum_th1s(*prong_fakes)
+                fakes.SetName(
+                    f"{config.label}_{WP}_{var}_prong_split_fakes_bkg_{FAKES_SOURCE}_src"
+                )
+                fakes.SetDirectory(0)
+                plotter.logger.info("Using prong-split fake estimate for %s %s.", config.label, var)
+            else:
+                fakes = measured_analysis.histograms[
+                    f"{fakes_name}_{var}_fakes_bkg_{FAKES_SOURCE}_src"
+                ]
+                plotter.logger.info("Using inclusive fake estimate for %s %s.", config.label, var)
             all_reco_signal = response_analysis.get_hist(
                 var,
                 dataset="wtaunu_had",
@@ -925,7 +952,7 @@ if __name__ == "__main__":
                     filename=f"{config.label}_{var}_fake_scale_scan.png",
                 )
 
-            if RUN_FAKE_DIAGNOSTICS and RUN_INCLUSIVE_FAKE_CHECK:
+            if RUN_FAKE_DIAGNOSTICS and BUILD_INCLUSIVE_FAKES and USE_PRONG_SPLIT_FAKES:
                 inclusive_fakes = measured_analysis.histograms[
                     f"{fakes_name}_{var}_fakes_bkg_{FAKES_SOURCE}_src"
                 ]
