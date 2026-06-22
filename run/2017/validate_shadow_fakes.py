@@ -18,6 +18,7 @@ WP = "medium"
 VARS = ("MTW",)
 SHADOW_BINS = (200, 300)
 FAKES_SOURCE = "TauPt"
+FAKES_SOURCE_CROSSCHECK = "MTW"
 COMPONENT_COLOURS = {
     "data": "k",
     "wtaunu_had": "tab:blue",
@@ -34,6 +35,29 @@ PLOT_CONTROL_REGION_COMPOSITION = False  # Plot data and nonfake MC in fake-fact
 PLOT_PASS_ID_VALIDATION = False  # Plot pass-ID data-minus-nonfake against fake prediction.
 PLOT_FAKE_FACTORS = False  # Plot the 1-prong and 3-prong fake factors.
 PLOT_NONFAKE_COMPONENTS = False  # Plot per-sample nonfake MC in the pass-ID signal region.
+RUN_FAKE_SOURCE_CROSSCHECK = True  # Also test using MTW itself as the fake-factor source.
+PRONG_WEIGHT_LABELS = ("raw", "mcWeight", "weight", "truth_weight", "reco_weight")
+DSID_DIAGNOSTIC_STAGE_LABELS = (
+    "reco preselection, truth matched",
+    "medium pass-ID, truth matched",
+)
+WEIGHT_DECOMPOSITION_LABELS = (
+    "weight",
+    "weight / TauRecoSF",
+    "weight / selectionSF",
+    "weight / TriggerSF",
+    "weight / prwWeight",
+    "weight / jvtSF",
+    "weight / fjvtSF",
+)
+WEIGHT_DECOMPOSITION_BRANCHES = {
+    "TauRecoSF",
+    "selectionSF",
+    "TriggerSF",
+    "prwWeight",
+    "jvtSF",
+    "fjvtSF",
+}
 
 
 # CUTS & SELECTIONS
@@ -130,6 +154,7 @@ if __name__ == "__main__":
     validator.logger.info("PLOT_PASS_ID_VALIDATION = %s", PLOT_PASS_ID_VALIDATION)
     validator.logger.info("PLOT_FAKE_FACTORS = %s", PLOT_FAKE_FACTORS)
     validator.logger.info("PLOT_NONFAKE_COMPONENTS = %s", PLOT_NONFAKE_COMPONENTS)
+    validator.logger.info("RUN_FAKE_SOURCE_CROSSCHECK = %s", RUN_FAKE_SOURCE_CROSSCHECK)
 
     # SELECTION BUILDING
     # ========================================================================
@@ -298,6 +323,9 @@ if __name__ == "__main__":
             "TauPt",
             "MET_met",
             "TauEta",
+            "mcWeight",
+            "weight",
+            *WEIGHT_DECOMPOSITION_BRANCHES,
             "TauBDTEleScore",
             "TauRNNJetScore",
             "TauNCoreTracks",
@@ -340,7 +368,11 @@ if __name__ == "__main__":
     wtaunu_had_stage_rows: list[tuple[str, str, float, float, float]] = []
     truth_cut_prong_rows: list[tuple[str, str, str, str, float, float, float, float, float]] = []
     reco_prong_weight_rows: list[tuple[str, str, float, float, float, float, float, float, float]] = []
+    reco_weight_component_rows: list[tuple[str, str, str, float, float, float, float]] = []
+    dsid_prong_weight_rows: list[tuple[str, int, str, str, str, float, float, float, float]] = []
+    weight_decomposition_rows: list[tuple[str, str, str, float, float, float, float]] = []
     pass_validation_rows: list[tuple[str, str, float, float, float]] = []
+    fake_source_crosscheck_rows: list[tuple[str, str, float, float, float]] = []
 
     # FAKE ESTIMATION
     # ========================================================================
@@ -364,6 +396,28 @@ if __name__ == "__main__":
                     systematic=NOMINAL_NAME,
                     save_intermediates=True,
                 )
+        if RUN_FAKE_SOURCE_CROSSCHECK and FAKES_SOURCE_CROSSCHECK != FAKES_SOURCE:
+            target_vars = tuple(var for var in vars_for_config if var == FAKES_SOURCE_CROSSCHECK)
+            if target_vars:
+                for prong in (1, 3):
+                    crosscheck_name = (
+                        f"{config.label}_{WP}_{prong}prong_{FAKES_SOURCE_CROSSCHECK}_src"
+                    )
+                    analysis.do_fakes_estimate(
+                        FAKES_SOURCE_CROSSCHECK,
+                        target_vars,
+                        f"{config.label}_{WP}_{prong}prong_CR_passID",
+                        f"{config.label}_{WP}_{prong}prong_CR_failID",
+                        f"{config.label}_{WP}_{prong}prong_SR_passID",
+                        f"{config.label}_{WP}_{prong}prong_SR_failID",
+                        f"trueTau_{config.label}_{WP}_{prong}prong_CR_passID",
+                        f"trueTau_{config.label}_{WP}_{prong}prong_CR_failID",
+                        f"trueTau_{config.label}_{WP}_{prong}prong_SR_passID",
+                        f"trueTau_{config.label}_{WP}_{prong}prong_SR_failID",
+                        name=crosscheck_name,
+                        systematic=NOMINAL_NAME,
+                        save_intermediates=False,
+                    )
 
     # CONTROL-REGION COMPOSITION
     # ========================================================================
@@ -607,6 +661,11 @@ if __name__ == "__main__":
     # WTAUNU_HAD EVENT-LEVEL PRONG DIAGNOSTICS
     # ========================================================================
     if RUN_EVENT_LEVEL_PRONG_DIAGNOSTICS:
+        wtaunu_dsids = sorted(analysis.metadata.dataset_dsids["wtaunu_had"])
+        dsid_index_cases = "\n".join(
+            f"                if (mcChannel == {dsid}) {{ return {idx}; }}"
+            for idx, dsid in enumerate(wtaunu_dsids)
+        )
         mtw_thresholds = ", ".join(f"{config.mtw_min:g}" for config in CONFIGS)
         taupt_thresholds = ", ".join(f"{config.taupt_min:g}" for config in CONFIGS)
         met_thresholds = ", ".join(f"{config.met_min:g}" for config in CONFIGS)
@@ -620,15 +679,34 @@ if __name__ == "__main__":
             std::atomic<unsigned long long> truthProngUnweighted[3][3][5][2];
             std::atomic<double> recoProngWeighted[3][4][2];
             std::atomic<unsigned long long> recoProngUnweighted[3][4][2];
+            std::atomic<double> recoProngWeightComponents[3][4][5][2];
+            std::atomic<double> dsidRecoProngWeightComponents[3][{len(wtaunu_dsids)}][2][5][2];
+            std::atomic<double> recoWeightDecomposition[3][{len(WEIGHT_DECOMPOSITION_LABELS)}][2];
+            std::atomic<double> dsidRecoWeightDecomposition
+                [3][{len(wtaunu_dsids)}][{len(WEIGHT_DECOMPOSITION_LABELS)}][2];
             double mtwThresholds[3] = {{{mtw_thresholds}}};
             double tauptThresholds[3] = {{{taupt_thresholds}}};
             double metThresholds[3] = {{{met_thresholds}}};
+
+            int dsidIndex(int mcChannel) {{
+{dsid_index_cases}
+                return -1;
+            }}
 
             void addAtomic(std::atomic<double>& target, double value) {{
                 double current = target.load(std::memory_order_relaxed);
                 while (!target.compare_exchange_weak(
                     current, current + value, std::memory_order_relaxed
                 )) {{}}
+            }}
+
+            template <typename Weight, typename Component>
+            double removeWeightComponent(Weight weight, Component component) {{
+                double componentValue = static_cast<double>(component);
+                if (!std::isfinite(componentValue) || componentValue == 0.0) {{
+                    return 0.0;
+                }}
+                return static_cast<double>(weight) / componentValue;
             }}
 
             void resetTruthProngSculpting() {{
@@ -645,12 +723,38 @@ if __name__ == "__main__":
                         for (int prong = 0; prong < 2; ++prong) {{
                             recoProngWeighted[config][stage][prong].store(0.0);
                             recoProngUnweighted[config][stage][prong].store(0);
+                            for (int weight = 0; weight < 5; ++weight) {{
+                                recoProngWeightComponents[config][stage][weight][prong].store(0.0);
+                            }}
+                        }}
+                    }}
+                    for (int dsid = 0; dsid < {len(wtaunu_dsids)}; ++dsid) {{
+                        for (int stage = 0; stage < 2; ++stage) {{
+                            for (int weight = 0; weight < 5; ++weight) {{
+                                for (int prong = 0; prong < 2; ++prong) {{
+                                    dsidRecoProngWeightComponents[config][dsid][stage][weight][prong]
+                                        .store(0.0);
+                                }}
+                            }}
+                        }}
+                    }}
+                    for (int weight = 0; weight < {len(WEIGHT_DECOMPOSITION_LABELS)}; ++weight) {{
+                        for (int prong = 0; prong < 2; ++prong) {{
+                            recoWeightDecomposition[config][weight][prong].store(0.0);
+                        }}
+                    }}
+                    for (int dsid = 0; dsid < {len(wtaunu_dsids)}; ++dsid) {{
+                        for (int weight = 0; weight < {len(WEIGHT_DECOMPOSITION_LABELS)}; ++weight) {{
+                            for (int prong = 0; prong < 2; ++prong) {{
+                                dsidRecoWeightDecomposition[config][dsid][weight][prong]
+                                    .store(0.0);
+                            }}
                         }}
                     }}
                 }}
             }}
 
-            template <typename SampleID, typename PassTruth, typename TruthHad,
+            template <typename McChannel, typename SampleID, typename PassTruth, typename TruthHad,
                       typename TruthNTracks, typename VisPt, typename TruthMtw,
                       typename NuPt, typename TruthEta, typename TruthWeight,
                       typename PassReco, typename TauBaseline, typename TauCharge,
@@ -658,8 +762,12 @@ if __name__ == "__main__":
                       typename MatchedHadTau, typename MatchedMuon, typename MatchedElectron,
                       typename MatchedPhoton, typename RecoNTracks, typename TauPt,
                       typename TauEta, typename RecoMtw, typename Met,
-                      typename EleScore, typename JetScore, typename RecoWeight>
+                      typename EleScore, typename JetScore, typename McWeight,
+                      typename EventWeight, typename RecoWeight, typename TauRecoSf,
+                      typename SelectionSf, typename TriggerSf, typename PrwWeight,
+                      typename JvtSf, typename FjvtSf>
             int recordProngDiagnostics(
+                McChannel mcChannel,
                 SampleID sampleID,
                 PassTruth passTruth,
                 TruthHad truthHad,
@@ -686,8 +794,17 @@ if __name__ == "__main__":
                 Met met,
                 EleScore eleScore,
                 JetScore jetScore,
-                RecoWeight recoWeight
+                McWeight mcWeight,
+                EventWeight eventWeight,
+                RecoWeight recoWeight,
+                TauRecoSf tauRecoSf,
+                SelectionSf selectionSf,
+                TriggerSf triggerSf,
+                PrwWeight prwWeight,
+                JvtSf jvtSf,
+                FjvtSf fjvtSf
             ) {{
+                int dsid = dsidIndex(static_cast<int>(mcChannel));
                 int subsampleIndex = -1;
                 if (sampleID == sampleToId_wtaunu_had["full"]) {{
                     subsampleIndex = 1;
@@ -756,6 +873,22 @@ if __name__ == "__main__":
                         recoStage[1] = passSignalRegion && truthMatched;
                         recoStage[2] = passSignalRegion && passMedium;
                         recoStage[3] = passSignalRegion && passMedium && truthMatched;
+                        double weights[5] = {{
+                            1.0,
+                            static_cast<double>(mcWeight),
+                            static_cast<double>(eventWeight),
+                            static_cast<double>(truthWeight),
+                            static_cast<double>(recoWeight),
+                        }};
+                        double decomposedWeights[{len(WEIGHT_DECOMPOSITION_LABELS)}] = {{
+                            static_cast<double>(eventWeight),
+                            removeWeightComponent(eventWeight, tauRecoSf),
+                            removeWeightComponent(eventWeight, selectionSf),
+                            removeWeightComponent(eventWeight, triggerSf),
+                            removeWeightComponent(eventWeight, prwWeight),
+                            removeWeightComponent(eventWeight, jvtSf),
+                            removeWeightComponent(eventWeight, fjvtSf),
+                        }};
 
                         for (int stage = 0; stage < 4; ++stage) {{
                             if (!recoStage[stage]) {{
@@ -767,6 +900,47 @@ if __name__ == "__main__":
                             );
                             recoProngUnweighted[config][stage][recoProngIndex]
                                 .fetch_add(1, std::memory_order_relaxed);
+                            for (int weightIndex = 0; weightIndex < 5; ++weightIndex) {{
+                                addAtomic(
+                                    recoProngWeightComponents[config][stage][weightIndex][recoProngIndex],
+                                    weights[weightIndex]
+                                );
+                            }}
+                        }}
+
+                        if (dsid >= 0) {{
+                            bool dsidStage[2] = {{
+                                recoStage[1],
+                                recoStage[3],
+                            }};
+                            for (int stage = 0; stage < 2; ++stage) {{
+                                if (!dsidStage[stage]) {{
+                                    continue;
+                                }}
+                                for (int weightIndex = 0; weightIndex < 5; ++weightIndex) {{
+                                    addAtomic(
+                                        dsidRecoProngWeightComponents
+                                            [config][dsid][stage][weightIndex][recoProngIndex],
+                                        weights[weightIndex]
+                                    );
+                                }}
+                            }}
+                        }}
+
+                        if (recoStage[3]) {{
+                            for (int weightIndex = 0; weightIndex < {len(WEIGHT_DECOMPOSITION_LABELS)}; ++weightIndex) {{
+                                addAtomic(
+                                    recoWeightDecomposition[config][weightIndex][recoProngIndex],
+                                    decomposedWeights[weightIndex]
+                                );
+                                if (dsid >= 0) {{
+                                    addAtomic(
+                                        dsidRecoWeightDecomposition
+                                            [config][dsid][weightIndex][recoProngIndex],
+                                        decomposedWeights[weightIndex]
+                                    );
+                                }}
+                            }}
                         }}
                     }}
                 }}
@@ -790,6 +964,29 @@ if __name__ == "__main__":
             unsigned long long getRecoProngUnweighted(int config, int stage, int prong) {{
                 return recoProngUnweighted[config][stage][prong].load();
             }}
+
+            double getRecoProngWeightComponent(
+                int config, int stage, int weightIndex, int prong
+            ) {{
+                return recoProngWeightComponents[config][stage][weightIndex][prong].load();
+            }}
+
+            double getDsidRecoProngWeightComponent(
+                int config, int dsid, int stage, int weightIndex, int prong
+            ) {{
+                return dsidRecoProngWeightComponents[config][dsid][stage][weightIndex][prong]
+                    .load();
+            }}
+
+            double getRecoWeightDecomposition(int config, int weightIndex, int prong) {{
+                return recoWeightDecomposition[config][weightIndex][prong].load();
+            }}
+
+            double getDsidRecoWeightDecomposition(
+                int config, int dsid, int weightIndex, int prong
+            ) {{
+                return dsidRecoWeightDecomposition[config][dsid][weightIndex][prong].load();
+            }}
         }}
         """
         )
@@ -800,13 +997,14 @@ if __name__ == "__main__":
             .Define(
                 "_prong_diagnostics",
                 "shadowFakeValidation::recordProngDiagnostics("
-                "SampleID, passTruth, TruthTau_isHadronic, TruthTau_nChargedTracks, "
+                "mcChannel, SampleID, passTruth, TruthTau_isHadronic, TruthTau_nChargedTracks, "
                 "VisTruthTauPt, TruthMTW, TruthNeutrinoPt, VisTruthTauEta, truth_weight, "
                 "passReco, TauBaselineWP, TauCharge, passMetTrigger, badJet, "
                 "MatchedTruthParticle_isTau, MatchedTruthParticle_isHadronicTau, "
                 "MatchedTruthParticle_isMuon, MatchedTruthParticle_isElectron, "
                 "MatchedTruthParticle_isPhoton, TauNCoreTracks, TauPt, TauEta, MTW, "
-                "MET_met, TauBDTEleScore, TauRNNJetScore, reco_weight)",
+                "MET_met, TauBDTEleScore, TauRNNJetScore, mcWeight, weight, reco_weight, "
+                "TauRecoSF, selectionSF, TriggerSF, prwWeight, jvtSF, fjvtSF)",
             )
             .Sum("_prong_diagnostics")
             .GetValue()
@@ -917,6 +1115,94 @@ if __name__ == "__main__":
                         weighted_ratio / unweighted_ratio if unweighted_ratio != 0 else float("nan"),
                     )
                 )
+                raw_ratio = unweighted_ratio
+                for weight_idx, weight_label in enumerate(PRONG_WEIGHT_LABELS):
+                    one_prong = ROOT.shadowFakeValidation.getRecoProngWeightComponent(
+                        config_idx, stage_idx, weight_idx, 0
+                    )
+                    three_prong = ROOT.shadowFakeValidation.getRecoProngWeightComponent(
+                        config_idx, stage_idx, weight_idx, 1
+                    )
+                    ratio = three_prong / one_prong if one_prong != 0 else float("nan")
+                    reco_weight_component_rows.append(
+                        (
+                            config.label,
+                            stage_label,
+                            weight_label,
+                            one_prong,
+                            three_prong,
+                            ratio,
+                            ratio / raw_ratio if raw_ratio != 0 else float("nan"),
+                        )
+                    )
+
+            for dsid_idx, dsid in enumerate(wtaunu_dsids):
+                phys_short = analysis.metadata[dsid].phys_short
+                for stage_idx, stage_label in enumerate(DSID_DIAGNOSTIC_STAGE_LABELS):
+                    raw_one_prong = ROOT.shadowFakeValidation.getDsidRecoProngWeightComponent(
+                        config_idx, dsid_idx, stage_idx, 0, 0
+                    )
+                    raw_three_prong = ROOT.shadowFakeValidation.getDsidRecoProngWeightComponent(
+                        config_idx, dsid_idx, stage_idx, 0, 1
+                    )
+                    raw_ratio = (
+                        raw_three_prong / raw_one_prong
+                        if raw_one_prong != 0
+                        else float("nan")
+                    )
+                    for weight_idx, weight_label in enumerate(PRONG_WEIGHT_LABELS):
+                        one_prong = ROOT.shadowFakeValidation.getDsidRecoProngWeightComponent(
+                            config_idx, dsid_idx, stage_idx, weight_idx, 0
+                        )
+                        three_prong = ROOT.shadowFakeValidation.getDsidRecoProngWeightComponent(
+                            config_idx, dsid_idx, stage_idx, weight_idx, 1
+                        )
+                        ratio = three_prong / one_prong if one_prong != 0 else float("nan")
+                        dsid_prong_weight_rows.append(
+                            (
+                                config.label,
+                                dsid,
+                                phys_short,
+                                stage_label,
+                                weight_label,
+                                one_prong,
+                                three_prong,
+                                ratio,
+                                ratio / raw_ratio if raw_ratio != 0 else float("nan"),
+                            )
+                        )
+
+            dsid_700451_idx = wtaunu_dsids.index(700451) if 700451 in wtaunu_dsids else None
+            for scope_label, dsid_idx in (("all DSIDs", None), ("DSID 700451", dsid_700451_idx)):
+                if dsid_idx is None and scope_label != "all DSIDs":
+                    continue
+                for weight_idx, weight_label in enumerate(WEIGHT_DECOMPOSITION_LABELS):
+                    if dsid_idx is None:
+                        one_prong = ROOT.shadowFakeValidation.getRecoWeightDecomposition(
+                            config_idx, weight_idx, 0
+                        )
+                        three_prong = ROOT.shadowFakeValidation.getRecoWeightDecomposition(
+                            config_idx, weight_idx, 1
+                        )
+                    else:
+                        one_prong = ROOT.shadowFakeValidation.getDsidRecoWeightDecomposition(
+                            config_idx, dsid_idx, weight_idx, 0
+                        )
+                        three_prong = ROOT.shadowFakeValidation.getDsidRecoWeightDecomposition(
+                            config_idx, dsid_idx, weight_idx, 1
+                        )
+                    total = one_prong + three_prong
+                    weight_decomposition_rows.append(
+                        (
+                            config.label,
+                            scope_label,
+                            weight_label,
+                            one_prong,
+                            three_prong,
+                            three_prong / one_prong if one_prong != 0 else float("nan"),
+                            three_prong / total if total != 0 else float("nan"),
+                        )
+                    )
     else:
         for config in CONFIGS:
             wtaunu_had_stage_rows.append((config.label, "event-level diagnostics skipped", 0, 0, float("nan")))
@@ -998,6 +1284,29 @@ if __name__ == "__main__":
                 )
             )
 
+            if RUN_FAKE_SOURCE_CROSSCHECK and var == FAKES_SOURCE_CROSSCHECK:
+                crosscheck_fakes = [
+                    analysis.histograms[
+                        f"{config.label}_{WP}_{prong}prong_{FAKES_SOURCE_CROSSCHECK}_src_"
+                        f"{var}_fakes_bkg_{FAKES_SOURCE_CROSSCHECK}_src"
+                    ]
+                    for prong in (1, 3)
+                ]
+                crosscheck_sum_fakes = sum_th1s(*crosscheck_fakes)
+                crosscheck_sum_fakes.SetName(f"{config.label}_{var}_mtw_sourced_fakes")
+                crosscheck_sum_fakes.SetDirectory(0)
+                fake_source_crosscheck_rows.append(
+                    (
+                        config.label,
+                        var,
+                        prong_sum_fakes.Integral(),
+                        crosscheck_sum_fakes.Integral(),
+                        crosscheck_sum_fakes.Integral() / prong_sum_fakes.Integral()
+                        if prong_sum_fakes.Integral() != 0
+                        else float("nan"),
+                    )
+                )
+
             if PLOT_PASS_ID_VALIDATION:
                 analysis.paths.plot_dir = output_root / "plots" / config.label / var / "pass_id"
                 analysis.plot(
@@ -1031,6 +1340,7 @@ if __name__ == "__main__":
         f"- fake source variable: `{FAKES_SOURCE}`",
         f"- tau ID: `{WP}`",
         "- nominal fake method: separate 1-prong and 3-prong fake estimates, then sum",
+        f"- fake-source cross-check: `{FAKES_SOURCE_CROSSCHECK}`",
         f"- reused `analysis_shadow_unfold` measured output: `{can_reuse_shadow_unfold}`",
         "",
         "## Control-region composition",
@@ -1146,6 +1456,25 @@ if __name__ == "__main__":
     summary_lines.extend(
         [
             "",
+            "### Pass-ID 3-prong fractions before fake subtraction",
+            "",
+            "This is the same pass-ID signal-region balance as a within-component 3-prong "
+            "fraction. It is easier to compare with data than the 3p/1p ratio.",
+            "",
+            "| Configuration | Component | Total yield | 3-prong fraction |",
+            "|---|---|---:|---:|",
+        ]
+    )
+    for config_label, component, one_prong, three_prong, _ratio in prong_balance_rows:
+        total = one_prong + three_prong
+        summary_lines.append(
+            f"| {config_label} | {component} | {total:.3f} | "
+            f"{three_prong / total if total != 0 else float('nan'):.3f} |"
+        )
+
+    summary_lines.extend(
+        [
+            "",
             "## wtaunu_had prong balance by stage",
             "",
             "This checks where the `wtaunu_had` 3-prong excess enters: at truth fiducial "
@@ -1235,6 +1564,178 @@ if __name__ == "__main__":
     summary_lines.extend(
         [
             "",
+            "### wtaunu_had reco prong ratios by weight definition",
+            "",
+            "This splits the same reconstructed selections by weight definition. `raw` is the "
+            "unweighted event count, `mcWeight` and `weight` are ntuple branches, and "
+            "`truth_weight`/`reco_weight` are the framework's luminosity- and DSID-scaled "
+            "weights.",
+            "",
+            "| Configuration | Stage | Weight definition | 1-prong | 3-prong | 3-prong / 1-prong | Ratio / raw ratio |",
+            "|---|---|---|---:|---:|---:|---:|",
+        ]
+    )
+    for (
+        config_label,
+        stage_label,
+        weight_label,
+        one_prong,
+        three_prong,
+        ratio,
+        ratio_over_raw,
+    ) in reco_weight_component_rows:
+        summary_lines.append(
+            f"| {config_label} | {stage_label} | {weight_label} | {one_prong:.3f} | "
+            f"{three_prong:.3f} | {ratio:.3f} | {ratio_over_raw:.3f} |"
+        )
+
+    summary_lines.extend(
+        [
+            "",
+            "## wtaunu_had DSID-level reco prong ratios",
+            "",
+            "This breaks the same reconstructed `wtaunu_had` prong check down by DSID. "
+            "The most important row for the current problem is `medium pass-ID, truth matched` "
+            "with `reco_weight`, because that is the dominant nonfake signal subtraction used "
+            "in the fake validation target.",
+            "",
+            "### Top DSID contributors after medium pass-ID",
+            "",
+            "| Configuration | DSID | Physics short | Weight definition | 1-prong | 3-prong | 3-prong / 1-prong | Fraction of weighted 3-prong yield |",
+            "|---|---:|---|---|---:|---:|---:|---:|",
+        ]
+    )
+    for config in CONFIGS:
+        top_rows = [
+            row
+            for row in dsid_prong_weight_rows
+            if row[0] == config.label
+            and row[3] == "medium pass-ID, truth matched"
+            and row[4] == "reco_weight"
+        ]
+        total_three_prong = sum(row[6] for row in top_rows)
+        for (
+            config_label,
+            dsid,
+            phys_short,
+            _stage_label,
+            weight_label,
+            one_prong,
+            three_prong,
+            ratio,
+            _ratio_over_raw,
+        ) in sorted(top_rows, key=lambda row: row[6], reverse=True):
+            summary_lines.append(
+                f"| {config_label} | {dsid} | `{phys_short}` | {weight_label} | "
+                f"{one_prong:.3f} | {three_prong:.3f} | {ratio:.3f} | "
+                f"{three_prong / total_three_prong if total_three_prong != 0 else float('nan'):.3f} |"
+            )
+
+    summary_lines.extend(
+        [
+            "",
+            "### DSID selected-yield fractions and internal pronginess",
+            "",
+            "This normalises the DSID rows in two different ways. `Raw selected yield frac` "
+            "and `Reco selected yield frac` say how much of the selected `wtaunu_had` sample "
+            "comes from that DSID. The internal 3-prong fractions say whether that DSID is "
+            "itself more or less 3-prong-heavy.",
+            "",
+            "| Configuration | DSID | Physics short | Raw selected yield frac | Raw 3-prong fraction | Reco selected yield frac | Reco 3-prong fraction | Reco/raw 3-prong fraction shift |",
+            "|---|---:|---|---:|---:|---:|---:|---:|",
+        ]
+    )
+    for config in CONFIGS:
+        raw_rows = {
+            row[1]: row
+            for row in dsid_prong_weight_rows
+            if row[0] == config.label
+            and row[3] == "medium pass-ID, truth matched"
+            and row[4] == "raw"
+        }
+        reco_rows = {
+            row[1]: row
+            for row in dsid_prong_weight_rows
+            if row[0] == config.label
+            and row[3] == "medium pass-ID, truth matched"
+            and row[4] == "reco_weight"
+        }
+        total_raw = sum(row[5] + row[6] for row in raw_rows.values())
+        total_reco = sum(row[5] + row[6] for row in reco_rows.values())
+        for dsid, reco_row in sorted(
+            reco_rows.items(), key=lambda item: item[1][5] + item[1][6], reverse=True
+        ):
+            raw_row = raw_rows[dsid]
+            raw_total = raw_row[5] + raw_row[6]
+            reco_total = reco_row[5] + reco_row[6]
+            raw_three_fraction = raw_row[6] / raw_total if raw_total != 0 else float("nan")
+            reco_three_fraction = reco_row[6] / reco_total if reco_total != 0 else float("nan")
+            summary_lines.append(
+                f"| {config.label} | {dsid} | `{reco_row[2]}` | "
+                f"{raw_total / total_raw if total_raw != 0 else float('nan'):.3f} | "
+                f"{raw_three_fraction:.3f} | "
+                f"{reco_total / total_reco if total_reco != 0 else float('nan'):.3f} | "
+                f"{reco_three_fraction:.3f} | "
+                f"{reco_three_fraction / raw_three_fraction if raw_three_fraction != 0 else float('nan'):.3f} |"
+            )
+
+    summary_lines.extend(
+        [
+            "",
+            "### Full DSID weight comparison",
+            "",
+            "| Configuration | DSID | Physics short | Stage | Weight definition | 1-prong | 3-prong | 3-prong / 1-prong | Ratio / raw ratio |",
+            "|---|---:|---|---|---|---:|---:|---:|---:|",
+        ]
+    )
+    for (
+        config_label,
+        dsid,
+        phys_short,
+        stage_label,
+        weight_label,
+        one_prong,
+        three_prong,
+        ratio,
+        ratio_over_raw,
+    ) in dsid_prong_weight_rows:
+        summary_lines.append(
+            f"| {config_label} | {dsid} | `{phys_short}` | {stage_label} | "
+            f"{weight_label} | {one_prong:.3f} | {three_prong:.3f} | "
+            f"{ratio:.3f} | {ratio_over_raw:.3f} |"
+        )
+
+    summary_lines.extend(
+        [
+            "",
+            "## wtaunu_had weight-component removal diagnostic",
+            "",
+            "This tests which exposed branch in the DTA `weight` product most affects the "
+            "medium pass-ID, truth-matched prong balance. Each row recomputes the same selected "
+            "yield with the named component divided out of `weight`; it is a diagnostic only, "
+            "not an analysis prescription.",
+            "",
+            "| Configuration | Scope | Weight expression | 1-prong | 3-prong | 3p/1p | 3-prong fraction |",
+            "|---|---|---|---:|---:|---:|---:|",
+        ]
+    )
+    for (
+        config_label,
+        scope_label,
+        weight_label,
+        one_prong,
+        three_prong,
+        ratio,
+        three_fraction,
+    ) in weight_decomposition_rows:
+        summary_lines.append(
+            f"| {config_label} | {scope_label} | `{weight_label}` | "
+            f"{one_prong:.3f} | {three_prong:.3f} | {ratio:.3f} | {three_fraction:.3f} |"
+        )
+
+    summary_lines.extend(
+        [
+            "",
             "## Pass-ID fake validation",
             "",
             "This compares the prong-split fake prediction against `data - nonfake MC` in the "
@@ -1249,6 +1750,27 @@ if __name__ == "__main__":
         summary_lines.append(
             f"| {config_label} | {var} | {target:.3f} | {prediction:.3f} | {ratio:.3f} |"
         )
+
+    if fake_source_crosscheck_rows:
+        summary_lines.extend(
+            [
+                "",
+                "## Fake-source variable cross-check",
+                "",
+                f"The nominal estimate is sourced in `{FAKES_SOURCE}`. This cross-check rebuilds "
+                f"the same pass-ID fake prediction using `{FAKES_SOURCE_CROSSCHECK}` as the fake-factor "
+                "source variable. It tests whether the large fake subtraction is mainly caused by "
+                "parameterising the fake factor in the wrong variable.",
+                "",
+                "| Configuration | Target variable | TauPt-sourced fakes | MTW-sourced fakes | MTW / TauPt |",
+                "|---|---|---:|---:|---:|",
+            ]
+        )
+        for config_label, var, taupt_sourced, mtw_sourced, ratio in fake_source_crosscheck_rows:
+            summary_lines.append(
+                f"| {config_label} | {var} | {taupt_sourced:.3f} | {mtw_sourced:.3f} | "
+                f"{ratio:.3f} |"
+            )
 
     summary_path = output_root / "shadow_fake_validation_summary.md"
     summary_path.write_text("\n".join(summary_lines) + "\n")
