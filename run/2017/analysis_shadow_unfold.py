@@ -127,6 +127,7 @@ class FakeControlRegion:
     selection_tag: str
     output_tag: str
     cuts: tuple[Cut, ...]
+    shared_across_configs: bool
 
 
 # Original thesis-style fake control region. Uncomment this block and comment
@@ -134,6 +135,7 @@ class FakeControlRegion:
 # FAKE_CONTROL_REGION = FakeControlRegion(
 #     selection_tag="CR",
 #     output_tag="",
+#     shared_across_configs=False,
 #     cuts=(
 #         PASS_RECO_PRESELECTION,
 #         Cut(r"$p_T^\tau$ threshold", "TauPt > {taupt_min:g}"),
@@ -145,6 +147,7 @@ class FakeControlRegion:
 FAKE_CONTROL_REGION = FakeControlRegion(
     selection_tag="lowMET_CR",
     output_tag="_lowMET",
+    shared_across_configs=True,
     cuts=(
         PASS_RECO_PRESELECTION,
         Cut(r"$p_T^\tau > 170$", "TauPt > 170"),
@@ -417,6 +420,78 @@ def fill_width_shifted_fake_prediction(
         )
     analysis.histograms[output_name] = shifted_prediction
     return shifted_prediction
+
+
+def fill_fake_predictions_from_factor(
+    analysis: Analysis,
+    *,
+    target_vars: tuple[str, ...],
+    sr_pass_selection: str,
+    sr_fail_selection: str,
+    true_sr_fail_selection: str,
+    ff_hist: ROOT.TH1,
+    output_prefix: str,
+) -> None:
+    """Apply an already-derived fake factor to one SR fail-ID region."""
+    ROOT.gInterpreter.Declare(
+        f"TH1* FF_hist_{output_prefix} = reinterpret_cast<TH1*>({ROOT.addressof(ff_hist)});"
+    )
+    ff_weight_col = f"FF_weight_{output_prefix}_{FAKES_SOURCE}"
+    ff_weight = (
+        f"reco_weight"
+        f" * FF_hist_{output_prefix}->GetBinContent("
+        f"FF_hist_{output_prefix}->FindBin({FAKES_SOURCE}))"
+    )
+
+    data_df = (
+        analysis[analysis.data_sample]
+        .filters[NOMINAL_NAME][sr_fail_selection]
+        .df.Define(ff_weight_col, ff_weight)
+    )
+    mc_dfs = {
+        mc_sample: analysis[mc_sample]
+        .filters[NOMINAL_NAME][true_sr_fail_selection]
+        .df.Define(ff_weight_col, ff_weight)
+        for mc_sample in analysis.mc_samples
+    }
+
+    ff_hists = {}
+    for target_var in target_vars:
+        hist_name = f"{output_prefix}_{target_var}_fakes_bkg_{FAKES_SOURCE}_src"
+        h_bins = analysis[analysis.data_sample].get_binnings(target_var, sr_pass_selection)
+        data_hist = ROOT.TH1F(
+            f"{hist_name}_data",
+            hist_name,
+            *ROOT_utils.get_TH1_bin_args(**h_bins),
+        )
+        data_ptr = data_df.Fill(data_hist, [target_var, ff_weight_col])
+
+        mc_ptrs = []
+        for mc_sample, mc_df in mc_dfs.items():
+            mc_hist = ROOT.TH1F(
+                f"{hist_name}_{mc_sample}",
+                hist_name,
+                *ROOT_utils.get_TH1_bin_args(**h_bins),
+            )
+            mc_ptrs.append(mc_df.Fill(mc_hist, [target_var, ff_weight_col]))
+        ff_hists[target_var] = (hist_name, data_ptr, mc_ptrs)
+
+    for target_var, (hist_name, data_ptr, mc_ptrs) in ff_hists.items():
+        analysis.logger.info(
+            "Calculating fake background estimate for %s with cached FF name: '%s'...",
+            target_var,
+            output_prefix,
+        )
+        fake_prediction = data_ptr.GetValue() - sum_th1s(*[ptr.GetValue() for ptr in mc_ptrs])
+        fake_prediction.SetName(hist_name)
+        fake_prediction.SetTitle(hist_name)
+        fake_prediction.SetDirectory(0)
+        for bin_idx in range(1, fake_prediction.GetNbinsX() + 1):
+            fake_prediction.SetBinError(
+                bin_idx,
+                fake_prediction.GetBinContent(bin_idx) * 0.1,
+            )
+        analysis.histograms[hist_name] = fake_prediction
 
 
 if __name__ == "__main__":
@@ -870,6 +945,7 @@ if __name__ == "__main__":
     wtaunu_prong_rows: list[
         tuple[str, str, str, float, float, float, float, float, float, float]
     ] = []
+    fake_factor_cache: dict[tuple[str, str, tuple[float, ...]], ROOT.TH1] = {}
 
     # FAKE ESTIMATION, UNFOLDING & DIAGNOSTICS
     # ========================================================================
@@ -907,23 +983,56 @@ if __name__ == "__main__":
         # DATA-DRIVEN FAKE ESTIMATES
         # --------------------------------------------------------------------
         if not load_measured_analysis_hists:
+            ff_bins = measured_analysis[measured_analysis.data_sample].get_binnings(
+                FAKES_SOURCE,
+                fake_cr_pass,
+            )["bins"]
+            ff_bin_key = tuple(float(bin_edge) for bin_edge in ff_bins)
+
             if BUILD_INCLUSIVE_FAKES:
                 # Inclusive fakes are nominal only when prong-split fakes are disabled.
-                measured_analysis.do_fakes_estimate(
-                    FAKES_SOURCE,
-                    vars_for_config,
-                    fake_cr_pass,
-                    fake_cr_fail,
-                    sr_pass,
-                    sr_fail,
-                    true_fake_cr_pass,
-                    true_fake_cr_fail,
-                    true_sr_pass,
-                    true_sr_fail,
-                    name=fakes_name,
-                    systematic=NOMINAL_NAME,
-                    save_intermediates=True,
-                )
+                cache_key = (FAKE_CONTROL_REGION.selection_tag, "inclusive", ff_bin_key)
+                if FAKE_CONTROL_REGION.shared_across_configs and cache_key in fake_factor_cache:
+                    cached_ff = fake_factor_cache[cache_key]
+                    current_ff = cached_ff.Clone(f"{fakes_name}_{FAKES_SOURCE}_FF")
+                    current_ff.SetDirectory(0)
+                    measured_analysis.histograms[current_ff.GetName()] = current_ff
+                    plotter.logger.info(
+                        "Reusing cached inclusive fake factor for %s from '%s'.",
+                        config.label,
+                        FAKE_CONTROL_REGION.selection_tag,
+                    )
+                    fill_fake_predictions_from_factor(
+                        measured_analysis,
+                        target_vars=vars_for_config,
+                        sr_pass_selection=sr_pass,
+                        sr_fail_selection=sr_fail,
+                        true_sr_fail_selection=true_sr_fail,
+                        ff_hist=current_ff,
+                        output_prefix=fakes_name,
+                    )
+                else:
+                    measured_analysis.do_fakes_estimate(
+                        FAKES_SOURCE,
+                        vars_for_config,
+                        fake_cr_pass,
+                        fake_cr_fail,
+                        sr_pass,
+                        sr_fail,
+                        true_fake_cr_pass,
+                        true_fake_cr_fail,
+                        true_sr_pass,
+                        true_sr_fail,
+                        name=fakes_name,
+                        systematic=NOMINAL_NAME,
+                        save_intermediates=True,
+                    )
+                    if FAKE_CONTROL_REGION.shared_across_configs:
+                        cached_ff = measured_analysis.histograms[
+                            f"{fakes_name}_{FAKES_SOURCE}_FF"
+                        ].Clone(f"cached_{FAKE_CONTROL_REGION.selection_tag}_inclusive_FF")
+                        cached_ff.SetDirectory(0)
+                        fake_factor_cache[cache_key] = cached_ff
 
             if USE_PRONG_SPLIT_FAKES:
                 # The nominal fake estimate follows the thesis method: split by tau prong
@@ -940,22 +1049,59 @@ if __name__ == "__main__":
                         f"{config.label}_{WP}_{prong}prong_"
                         f"{FAKE_CONTROL_REGION.selection_tag}_failID"
                     )
-
-                    measured_analysis.do_fakes_estimate(
-                        FAKES_SOURCE,
-                        vars_for_config,
-                        prong_fake_cr_pass,
-                        prong_fake_cr_fail,
-                        f"{config.label}_{WP}_{prong}prong_SR_passID",
-                        f"{config.label}_{WP}_{prong}prong_SR_failID",
-                        f"trueTau_{prong_fake_cr_pass}",
-                        f"trueTau_{prong_fake_cr_fail}",
-                        f"trueTau_{config.label}_{WP}_{prong}prong_SR_passID",
-                        f"trueTau_{config.label}_{WP}_{prong}prong_SR_failID",
-                        name=prong_fakes_name,
-                        systematic=NOMINAL_NAME,
-                        save_intermediates=True,
+                    prong_sr_pass = f"{config.label}_{WP}_{prong}prong_SR_passID"
+                    prong_sr_fail = f"{config.label}_{WP}_{prong}prong_SR_failID"
+                    true_prong_sr_fail = f"trueTau_{prong_sr_fail}"
+                    cache_key = (
+                        FAKE_CONTROL_REGION.selection_tag,
+                        f"{prong}prong",
+                        ff_bin_key,
                     )
+
+                    if FAKE_CONTROL_REGION.shared_across_configs and cache_key in fake_factor_cache:
+                        cached_ff = fake_factor_cache[cache_key]
+                        current_ff = cached_ff.Clone(f"{prong_fakes_name}_{FAKES_SOURCE}_FF")
+                        current_ff.SetDirectory(0)
+                        measured_analysis.histograms[current_ff.GetName()] = current_ff
+                        plotter.logger.info(
+                            "Reusing cached %s-prong fake factor for %s from '%s'.",
+                            prong,
+                            config.label,
+                            FAKE_CONTROL_REGION.selection_tag,
+                        )
+                        fill_fake_predictions_from_factor(
+                            measured_analysis,
+                            target_vars=vars_for_config,
+                            sr_pass_selection=prong_sr_pass,
+                            sr_fail_selection=prong_sr_fail,
+                            true_sr_fail_selection=true_prong_sr_fail,
+                            ff_hist=current_ff,
+                            output_prefix=prong_fakes_name,
+                        )
+                    else:
+                        measured_analysis.do_fakes_estimate(
+                            FAKES_SOURCE,
+                            vars_for_config,
+                            prong_fake_cr_pass,
+                            prong_fake_cr_fail,
+                            prong_sr_pass,
+                            prong_sr_fail,
+                            f"trueTau_{prong_fake_cr_pass}",
+                            f"trueTau_{prong_fake_cr_fail}",
+                            f"trueTau_{config.label}_{WP}_{prong}prong_SR_passID",
+                            true_prong_sr_fail,
+                            name=prong_fakes_name,
+                            systematic=NOMINAL_NAME,
+                            save_intermediates=True,
+                        )
+                        if FAKE_CONTROL_REGION.shared_across_configs:
+                            cached_ff = measured_analysis.histograms[
+                                f"{prong_fakes_name}_{FAKES_SOURCE}_FF"
+                            ].Clone(
+                                f"cached_{FAKE_CONTROL_REGION.selection_tag}_{prong}prong_FF"
+                            )
+                            cached_ff.SetDirectory(0)
+                            fake_factor_cache[cache_key] = cached_ff
 
         # MC FAKE-CLOSURE DIAGNOSTIC
         # --------------------------------------------------------------------
