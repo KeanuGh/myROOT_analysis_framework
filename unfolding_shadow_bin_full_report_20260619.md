@@ -21,11 +21,11 @@ The current implementation is therefore a defensible fiducial unfolding treatmen
 3. Subtract reconstructed `wtaunu_had` events that fail the nominal truth fiducial definition as a nonfiducial signal contribution.
 4. Unfold the remaining input with a response built from nominal truth-fiducial signal.
 
-The numerical closure and fake-diagnostic results quoted below are mostly based on the last completed diagnostic run:
+The latest completed cleaned production run is:
 
-`outputs/analysis_shadow_unfold/logs/analysis_shadow_unfold_2026-06-21_17-56-54.log`
+`outputs/analysis_shadow_unfold/logs/analysis_shadow_unfold_2026-06-23_16-38-32.log`
 
-That log ends with `DONE.` and wrote the closure, split-closure, and fake-diagnostic summaries. After the 2026-06-23 cleanup, `run/2017/analysis_shadow_unfold.py` has not yet been rerun; the cleanup separated production logic from validation-only studies without changing the central `MTW` workflow definition.
+That log ends with `DONE.` and wrote the current cleaned `MTW` closure summary. It has `RUN_FAKE_WIDTH_SYSTEMATIC = True`, so it also propagates the validated 1-prong tau-width fake-source shift through the unfolded result. Earlier fake-diagnostic and split-closure sections in this report remain based on the dedicated validation runs listed in their sections.
 
 ## Scope Of The Current Closure Test
 
@@ -44,12 +44,14 @@ After the 2026-06-23 cleanup, the production script is intentionally narrow:
 - prongs: inclusive `1+3`, with prong-split fake factors
 - variable: `MTW`
 - systematics: disabled, `DO_FULL_SYSTEMATICS = False`
+- 1-prong tau-width fake-source shift: enabled, `RUN_FAKE_WIDTH_SYSTEMATIC = True`
 - fake-factor source: `TauPt`
 - fake control region: `TauPt > 170` and `MET_met < 100`
 - fake diagnostics: moved to `run/2017/validations/`
 - split-sample closure: moved to `run/2017/validations/validate_split_sample_unfolding_closure.py`
 - shadow thresholds:
-  - `MTW`: `200`, `250`, `300` GeV lower reconstructed threshold
+  - current run: `MTW` no-shadow and `250` GeV lower reconstructed threshold
+  - earlier diagnostic runs: `MTW` `200`, `250`, and `300` GeV lower reconstructed thresholds
 
 The current script no longer includes the temporary `MTW_MET_category_shadow_bin_250` diagnostic. That category test was useful for diagnosing MET-related reco failures, but it is not part of the current analysis path because the nonfiducial signal correction addresses the actual fiducial mismatch more cleanly.
 
@@ -61,36 +63,18 @@ Summary file:
 
 `outputs/analysis_shadow_unfold/closure_summary.md`
 
-Relevant rows from the completed nonfiducial-corrected run:
-
-The `TauPt` rows are retained here as diagnostic evidence from the pre-cleanup study. They are not produced by the current cleaned `analysis_shadow_unfold.py` production path, which is now `MTW` only.
+Relevant rows from the latest cleaned production run:
 
 | Configuration | Variable | Iterations | Mean deviation | Max deviation | Integral ratio |
 |---|---|---:|---:|---:|---:|
 | no_shadow_bin | MTW | 0 | 0.000 | 0.000 | 1.000 |
 | no_shadow_bin | MTW | 1 | 0.001 | 0.007 | 1.000 |
 | no_shadow_bin | MTW | 2 | 0.001 | 0.010 | 1.000 |
-| MTW_shadow_bin_200 | MTW | 0 | 0.000 | 0.000 | 1.000 |
-| MTW_shadow_bin_200 | MTW | 1 | 0.001 | 0.007 | 1.000 |
-| MTW_shadow_bin_200 | MTW | 2 | 0.001 | 0.010 | 1.000 |
 | MTW_shadow_bin_250 | MTW | 0 | 0.000 | 0.000 | 1.000 |
 | MTW_shadow_bin_250 | MTW | 1 | 0.001 | 0.007 | 1.000 |
 | MTW_shadow_bin_250 | MTW | 2 | 0.001 | 0.010 | 1.000 |
-| MTW_shadow_bin_300 | MTW | 0 | 0.000 | 0.000 | 1.000 |
-| MTW_shadow_bin_300 | MTW | 1 | 0.001 | 0.007 | 1.000 |
-| MTW_shadow_bin_300 | MTW | 2 | 0.001 | 0.010 | 1.000 |
-| no_shadow_bin | TauPt | 0 | 0.000 | 0.000 | 1.000 |
-| no_shadow_bin | TauPt | 1 | 0.001 | 0.005 | 1.000 |
-| no_shadow_bin | TauPt | 2 | 0.001 | 0.006 | 1.000 |
-| TauPt_shadow_bin_200 | TauPt | 0 | 0.000 | 0.000 | 1.000 |
-| TauPt_shadow_bin_200 | TauPt | 1 | 0.001 | 0.005 | 1.000 |
-| TauPt_shadow_bin_200 | TauPt | 2 | 0.001 | 0.006 | 1.000 |
-| TauPt_shadow_bin_250 | TauPt | 0 | 0.000 | 0.000 | 1.000 |
-| TauPt_shadow_bin_250 | TauPt | 1 | 0.001 | 0.005 | 1.000 |
-| TauPt_shadow_bin_250 | TauPt | 2 | 0.001 | 0.006 | 1.000 |
-| TauPt_shadow_bin_300 | TauPt | 0 | 0.000 | 0.000 | 1.000 |
-| TauPt_shadow_bin_300 | TauPt | 1 | 0.001 | 0.005 | 1.000 |
-| TauPt_shadow_bin_300 | TauPt | 2 | 0.001 | 0.006 | 1.000 |
+
+Earlier pre-cleanup diagnostic runs also demonstrated the same per-mille `MTW` closure for the `200` and `300` GeV shadow thresholds and for diagnostic `TauPt` configurations. Those rows are retained in the historical validation sections below, but they are not produced by the current cleaned production configuration.
 
 This is a decisive improvement over the pre-correction variable-specific run, where Bayesian-unfolded signal MC overshot truth by roughly 9-15% in integral, and over the earlier full-shadow-response attempt, where the response and measured input were defined in inconsistent reconstructed phase spaces.
 
@@ -121,15 +105,196 @@ The correction sizes from the completed run are:
 | Configuration | Variable | Nonfiducial fraction of reco signal |
 |---|---|---:|
 | no_shadow_bin | MTW | 10.4% |
-| no_shadow_bin | TauPt | 10.4% |
-| MTW_shadow_bin_200 | MTW | 12.2% |
 | MTW_shadow_bin_250 | MTW | 11.4% |
-| MTW_shadow_bin_300 | MTW | 11.4% |
-| TauPt_shadow_bin_200 | TauPt | 8.0% |
-| TauPt_shadow_bin_250 | TauPt | 8.1% |
-| TauPt_shadow_bin_300 | TauPt | 8.4% |
 
 These values are large enough to explain the previous nonclosure. They are also physically sensible: relaxing the reconstructed selection admits more reco-selected signal that is not part of the nominal truth fiducial target.
+
+## Current Tau-width Fake-source Shift
+
+The latest cleaned run also propagated the validated `TauTrackWidthPt1000PV`
+`application_to_lowmet` width-shape shift through the final `MTW` unfolding. This
+is applied only to the 1-prong fake component; the 3-prong component is kept
+nominal because the high-MET 3-prong validation target remains negative after
+nonfake subtraction and is not physically usable as a transfer target.
+
+Summary file:
+
+`outputs/analysis_shadow_unfold/closure_summary.md`
+
+| Configuration | Nominal fakes | Width-shifted fakes | Nominal data sig | Shifted data sig | Fid reco / nominal data sig | Fid reco / shifted data sig |
+|---|---:|---:|---:|---:|---:|---:|
+| no_shadow_bin | 226.136 | 182.892 | 661.192 | 704.437 | 1.355 | 1.272 |
+| MTW_shadow_bin_250 | 243.815 | 198.235 | 675.028 | 720.608 | 1.384 | 1.296 |
+
+The width shift therefore reduces the total fake estimate by about `19%` in the
+no-shadow configuration and about `18.7%` in the `MTW` 250 GeV shadow-bin
+configuration. It moves the data-derived signal input closer to the fiducial
+reco signal expectation, but it does not remove the normalisation tension:
+
+- no-shadow: fiducial reco / data signal improves from `1.355` to `1.272`;
+- `MTW_shadow_bin_250`: fiducial reco / data signal improves from `1.384` to
+  `1.296`.
+
+Representative current-run plots:
+
+| no-shadow width shift | `MTW` shadow 250 width shift |
+|---|---|
+| <img src="outputs/analysis_shadow_unfold/plots/no_shadow_bin/MTW/fake_width_systematic/no_shadow_bin_MTW_TauTrackWidthPt1000PV_1iter_fake_width_shift.png" width="390"> | <img src="outputs/analysis_shadow_unfold/plots/MTW_shadow_bin_250/MTW/fake_width_systematic/MTW_shadow_bin_250_MTW_TauTrackWidthPt1000PV_1iter_fake_width_shift.png" width="390"> |
+
+Interpretation:
+the tau-width shift behaves in the expected direction and is large enough to be
+a credible 1-prong fake-source composition uncertainty. It should still not be
+treated as a nominal correction without a final systematic prescription. The
+remaining discrepancy is still too large to attribute entirely to the 1-prong
+width-shape transfer; the 3-prong/nonfake-subtraction issue remains separate.
+
+## Pre-Unfolding Stack Check
+
+Question:
+Before interpreting any unfolded result, does the ordinary reconstructed-level
+Data/MC comparison already show the normalisation problem?
+
+Implementation:
+- script: `run/2017/analysis_shadow_unfold.py`
+- output summary: `outputs/analysis_shadow_unfold/closure_summary.md`
+- mode: cache/output inspection only; no new ROOT event loops were run for this
+  check.
+
+The current production script does not yet save a conventional SR stack plot
+with data overlaid on stacked signal, prompt backgrounds, and fake estimate.
+However, the current output summary contains the same ingredients. For a
+standard pre-unfolding stack, the reconstructed-level prediction is:
+
+```text
+prediction = fiducial reco signal + nonfiducial reco signal + prompt backgrounds + fakes
+```
+
+The table below compares this reconstructed-level prediction to the observed
+data. The "no fakes" column is not a proposed nominal model; it is a diagnostic
+showing the same stack with only the fake component removed.
+
+| Configuration | Data | Prediction without fakes | Pred./data without fakes | Prediction with nominal fakes | Pred./data with nominal fakes | Prediction with width-shift fakes | Pred./data with width-shift fakes |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| no_shadow_bin, `MTW` | 1351.000 | 1359.867 | 1.007 | 1586.003 | 1.174 | 1542.759 | 1.142 |
+| `MTW_shadow_bin_250`, `MTW` | 1428.000 | 1443.273 | 1.011 | 1687.088 | 1.181 | 1641.508 | 1.150 |
+
+Result:
+the pre-unfolding stack already identifies the core issue. Without the fake
+component, the reconstructed-level MC prediction agrees with data at about the
+`1%` level. Adding the current nominal fake estimate makes the prediction
+overshoot data by about `17-18%`. Applying the validated 1-prong tau-width
+shape shift reduces this to about `14-15%`, but it does not solve the
+normalisation problem.
+
+Interpretation:
+the disagreement is visible before unfolding. The unfolding machinery is not
+creating the normalisation tension; it is propagating a data-minus-background
+input that has already been driven low by the fake subtraction. This reinforces
+the conclusion from the fake-scale diagnostics: the immediate analysis problem
+is the fake estimate/background composition at reconstructed level, not the
+Bayesian unfolding iteration or response closure.
+
+Recommendation:
+add explicit pre-unfolding SR stack plots to the production or validation
+workflow before doing further unfolding scans. The useful plot set is:
+
+- nominal current fake model;
+- no-fake diagnostic overlay;
+- 1-prong tau-width shifted fake model;
+- optionally the thesis/inclusive fake model for direct comparison.
+
+These plots should be generated from saved histograms where possible. They are
+more thesis-useful than another unfolding rerun for diagnosing the current
+Data/MC normalisation.
+
+## Current Working Interpretation Of The Fake-Normalisation Problem
+
+Question:
+Why does the reconstructed-level Data/MC comparison agree at the `1%` level
+without the data-driven fake estimate, but overshoot data once the corrected fake
+estimate is added?
+
+This section is a synthesis of the validation studies above. It is not a new
+ROOT run.
+
+Observed evidence:
+
+| Observation | Evidence | Current interpretation |
+|---|---|---|
+| The fake-factor formula was genuinely corrected | commit `5d9535a`; see "Fake-background implementation corrected" below | The post-fix fake estimate should not be rejected merely because it is larger than the thesis-era estimate. The old implementation was not the intended anti-ID transfer. |
+| No-fake reconstructed stack agrees with data at about `1%` | `outputs/analysis_shadow_unfold/closure_summary.md` | This is suspiciously good and may be an accidental cancellation. It does not prove the true jet-fake contribution is zero. |
+| Adding the current fake estimate overshoots data by `17-18%` | pre-unfolding stack check above | The disagreement is present before unfolding; the Bayesian unfolding is not creating the normalisation tension. |
+| Fake-factor transfer works in control-like regions | low-MET and MTW-sideband validation summaries | The fake method is not globally broken. It works where the validation target is well behaved. |
+| Fake-factor transfer is strained in high-`MET` signal-like regions | MET-binned and low-MET fake-region validations | The high-`MET` application region has different composition/kinematics from the fake-factor derivation region. |
+| The 1-prong tau-width shift moves the fake estimate in the right direction | tau-width composition and reweighting summaries | Tau-width is a credible fake-source composition systematic for 1-prong fakes, not yet a central correction. |
+| The 3-prong high-`MET` validation target is negative before fake prediction | nonfake-subtraction validation | The 3-prong problem is dominated by nonfake MC, especially `wtaunu_had`, not by fake-factor binning alone. |
+| `wtaunu_had` is too 3-prong-heavy after weighting | prong-balance diagnostics | The reconstructed nonfake subtraction likely has a prong-dependent modelling or weighting issue. |
+
+The current best interpretation is therefore:
+
+1. The corrected fake-factor algebra is likely right.
+2. The current high-`MET` fake transfer is not fully reliable, especially for
+   1-prong composition and 3-prong validation targets.
+3. The 3-prong issue is not primarily a fake-factor issue; the pass-ID
+   `data - nonfake MC` target is already negative because the nonfake
+   `wtaunu_had` subtraction is too large.
+4. The apparently excellent no-fake Data/MC agreement may be an accidental
+   cancellation between missing real jet fakes and an over-large MC/nonfake
+   prediction.
+
+### Open Double-Counting Check
+
+The most important unresolved question is whether the current reconstructed
+stack double counts fake-like MC when the data-driven fake estimate is added.
+
+The needed diagnostic is a standard reconstructed-level stack comparison with
+the MC split by truth category:
+
+```text
+1. all MC, no data-driven fakes
+2. all MC + data-driven fakes
+3. prompt/true-tau-like MC only + data-driven fakes
+4. fake-like reconstructed MC only
+```
+
+The decisive comparison is:
+
+```text
+all MC + fakes
+vs
+prompt/true-tau-like MC only + fakes
+```
+
+If removing fake-like reconstructed MC from the stack restores agreement, the
+issue is double counting: the data-driven estimate should replace that MC
+component rather than be added on top of it. If the stack still overshoots after
+fake-like MC is removed, then the fake estimate itself is too large or the
+nonfake subtraction is still overestimated.
+
+### Truth-Category Audit Still Needed
+
+The report currently has extensive prong-balance and nonfake-subtraction
+diagnostics, but it does not yet contain a full reconstructed truth-category
+audit. The next validation should split the selected MC into categories such as:
+
+- true hadronic tau;
+- true electron or muon matched;
+- photon matched;
+- unmatched or light-jet fake-like;
+- other/unknown.
+
+This check matters because the fake-factor method subtracts "nonfake" MC from
+the anti-ID data before applying the fake factor. If the truth-category
+definition used for that subtraction is too narrow or too broad, the fake
+prediction can be biased. In particular, photon-matched tau candidates have not
+yet been isolated in the current report.
+
+Recommendation:
+the next production-relevant validation should be a pre-unfolding stack
+decomposition, not another unfolding scan. It should use the saved histograms
+where possible and only run new dataframe loops for truth-category histograms
+that are not already cached. A nominal fake-model change should wait until this
+double-counting/truth-category question is resolved.
 
 ## Representative Plots
 
@@ -141,15 +306,9 @@ The no-shadow `MTW` result also closes after the same correction:
 
 <img src="outputs/analysis_shadow_unfold/plots/no_shadow_bin/MTW/no_shadow_bin_MTW_1iter_unfolded.png" width="520">
 
-The `TauPt` 250 GeV shadow-bin result shows the same closure behaviour:
+The cleaned production run no longer emits `TauPt` plots; those are historical diagnostics only. The current `MTW` response matrix remains populated and broadly diagonal:
 
-<img src="outputs/analysis_shadow_unfold/plots/TauPt_shadow_bin_250/TauPt/TauPt_shadow_bin_250_TauPt_1iter_unfolded.png" width="520">
-
-Response matrices remain populated and broadly diagonal:
-
-| `MTW` shadow 250 response | `TauPt` shadow 250 response |
-|---|---|
-| <img src="outputs/analysis_shadow_unfold/plots/MTW_shadow_bin_250/MTW/MTW_shadow_bin_250_MTW_response_matrix.png" width="390"> | <img src="outputs/analysis_shadow_unfold/plots/TauPt_shadow_bin_250/TauPt/TauPt_shadow_bin_250_TauPt_response_matrix.png" width="390"> |
+<img src="outputs/analysis_shadow_unfold/plots/MTW_shadow_bin_250/MTW/MTW_shadow_bin_250_MTW_response_matrix.png" width="520">
 
 ## Fake-Estimate Diagnostics From The Diagnostic Run
 
@@ -179,10 +338,8 @@ For `MTW`, the budget shows a clear pattern:
 
 | Configuration | Data | Prompt bkg | Fakes | Nonfid signal | Data sig | Data sig, no fakes | Fid reco signal | Fid reco / data sig |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
-| no_shadow_bin | 1351.000 | 359.137 | 153.018 | 104.534 | 734.311 | 887.328 | 896.196 | 1.220 |
-| MTW_shadow_bin_200 | 1443.000 | 396.431 | 247.637 | 130.798 | 668.134 | 915.771 | 938.950 | 1.405 |
-| MTW_shadow_bin_250 | 1428.000 | 388.381 | 233.220 | 120.776 | 685.623 | 918.843 | 934.116 | 1.362 |
-| MTW_shadow_bin_300 | 1415.000 | 381.473 | 219.925 | 119.753 | 693.850 | 913.775 | 929.191 | 1.339 |
+| no_shadow_bin | 1351.000 | 359.137 | 226.136 | 104.534 | 661.192 | 887.328 | 896.196 | 1.355 |
+| MTW_shadow_bin_250 | 1428.000 | 388.381 | 243.815 | 120.776 | 675.028 | 918.843 | 934.116 | 1.384 |
 
 For `TauPt`, the same effect is present but smaller:
 
@@ -198,7 +355,7 @@ The striking point is that `data_sig, no fakes` is already close to the fiducial
 For example, in `MTW_shadow_bin_250`:
 
 ```text
-data_sig with full fakes = 685.623
+data_sig with full fakes = 675.028
 data_sig with no fakes   = 918.843
 fiducial reco signal MC  = 934.116
 ```
@@ -1195,6 +1352,443 @@ but the extrapolation to MET > 170 must be validated and covered by a systematic
 
 That is a more defensible direction than forcing a separate `120 <= MET < 170` fake factor when the validation shows that region has negative/tiny source bins.
 
+### Fake-factor size compared with the ATLAS high-mass tau+MET note
+
+Question:
+Are our fake rates comparable to the high-mass `tau + MET` fake-factor estimate?
+
+The answer is: only qualitatively. Numerically, our current medium-ID fake factors are much smaller than the fake factors quoted in the ATLAS high-mass `tau + MET` note. This means the large fake subtraction seen in the current unfolding workflow is not caused by an unusually large transfer factor. It is more likely caused by the size and composition of the fail-ID application sample, or by how the nonfake MC subtraction is being applied.
+
+The closest ATLAS note values are Table 14 of:
+
+```text
+/home/keanu/Uni_Stuff_Queen_Mary/Reading list/High-mass resonances to taunu may 21 NOTE.pdf
+```
+
+The public paper corresponding to that analysis is ATLAS Collaboration, "Search for high-mass resonances in final states with a tau-lepton and missing transverse momentum with the ATLAS detector", Phys. Rev. D 109 (2024) 112008, arXiv:2402.16576: https://arxiv.org/abs/2402.16576.
+
+The ATLAS note quotes the following high-`pT` fake factors:
+
+| Source | Prong | `TauPt` bin | Fake factor |
+|---|---:|---:|---:|
+| ATLAS high-mass note, Table 14 | 1 | 350-500 GeV | `0.362 +/- 0.016` |
+| ATLAS high-mass note, Table 14 | 1 | 500-1000 GeV | `0.336 +/- 0.032` |
+| ATLAS high-mass note, Table 14 | 3 | 350-500 GeV | `0.116 +/- 0.009` |
+| ATLAS high-mass note, Table 14 | 3 | 500-1000 GeV | `0.083 +/- 0.015` |
+
+The current `analysis_shadow_unfold.py` low-MET fake factors saved in:
+
+```text
+outputs/analysis_shadow_unfold/measured/root/analysis_shadow_unfold_measured.root
+```
+
+are:
+
+| Source | Prong | `TauPt` bin | Fake factor |
+|---|---:|---:|---:|
+| this analysis, `no_shadow_bin_medium_1prong_lowMET_TauPt_FF` | 1 | 350-425 GeV | `0.055` |
+| this analysis, `no_shadow_bin_medium_1prong_lowMET_TauPt_FF` | 1 | 425-500 GeV | `0.034` |
+| this analysis, `no_shadow_bin_medium_1prong_lowMET_TauPt_FF` | 1 | 500-600 GeV | `0.034` |
+| this analysis, `no_shadow_bin_medium_1prong_lowMET_TauPt_FF` | 1 | 600-1000 GeV | `0.027` |
+| this analysis, `no_shadow_bin_medium_3prong_lowMET_TauPt_FF` | 3 | 350-425 GeV | `0.013` |
+| this analysis, `no_shadow_bin_medium_3prong_lowMET_TauPt_FF` | 3 | 425-500 GeV | `0.0077` |
+| this analysis, `no_shadow_bin_medium_3prong_lowMET_TauPt_FF` | 3 | 500-600 GeV | `0.0072` |
+| this analysis, `no_shadow_bin_medium_3prong_lowMET_TauPt_FF` | 3 | 600-1000 GeV | `0.0084` |
+
+So the current fake factors are lower than the note by roughly:
+
+| Prong | Region | Approximate difference |
+|---:|---|---:|
+| 1 | 350-500 GeV | ATLAS note is about `6-11x` larger |
+| 1 | 500-1000 GeV | ATLAS note is about `10-12x` larger |
+| 3 | 350-500 GeV | ATLAS note is about `9-15x` larger |
+| 3 | 500-1000 GeV | ATLAS note is about `10x` larger |
+
+This is not necessarily a contradiction, because the two measurements are not defining the same conditional probability. Important differences are:
+
+| Ingredient | ATLAS high-mass `tau + MET` note | Current shadow-unfolding workflow |
+|---|---|---|
+| Tau ID numerator | Loose ID | Medium ID |
+| Anti-ID denominator | fail Loose, pass VeryLoose | fail Medium, `TauRNNJetScore > 0.01` |
+| Application region | signal-like anti-ID region | high-MET fail-medium region used for unfolding subtraction |
+| Derivation region | `MET < 100`, `pT_tau / MET` removed, multijet-enriched | low-MET candidate, but with this analysis's medium-ID definitions |
+| Signal/search phase space | high-mass resonance search with balanced `0.7 < pT_tau / MET < 1.3` in SR | charged-current `W -> tau nu` unfolding with `MTW` as the measurement variable |
+| Final treatment | fake estimate plus high-`mT` tail treatment and fake-transfer systematics | fake subtraction before fiducial unfolding |
+
+The correction to the "they should be identical" intuition is therefore:
+
+> They should show similar qualitative behaviour only if the fake-source composition is similar: prong-split, `TauPt` dependent, and generally decreasing at high `TauPt`. They should not be expected to have identical numerical values unless the tau-ID working point, anti-ID floor, control region, signal/application region, trigger/year mixture, and nonfake subtraction are also matched.
+
+The current comparison still gives a useful diagnostic. Because our fake factors are much smaller than the ATLAS note values, the fake-subtraction tension is unlikely to be fixed by asking why our transfer factor is too large. The next direct check should be:
+
+```text
+fake yield = fake factor * (SR fail-ID data - SR fail-ID nonfake MC)
+```
+
+split by prong, `TauPt` source bin, and truth category. If the final fake yield is too large despite small fake factors, the fail-ID application input is the place to debug.
+
+The most useful like-for-like validation would be to reproduce the note as closely as possible inside this framework:
+
+1. build a validation-only Loose/VeryLoose fake-factor calculation;
+2. use `MET < 100` and remove the `TauPt / MET` balance requirement;
+3. bin exactly as Table 14, especially `350-500` and `500-1000` GeV;
+4. compare the resulting fake factors directly to the note;
+5. then switch only the ID definition back to medium to isolate the working-point effect.
+
+That would answer whether the large numerical difference comes mainly from the ID/anti-ID definition, the event phase space, or the available samples.
+
+### New validation scripts for the fake-normalisation audit
+
+The remaining fake-estimate checks are now split into focused validation scripts
+rather than being added to the main unfolding workflow. They are validation-only
+studies and write under `outputs/validate_shadow_fakes/`.
+
+| Question | Script | Output summary | Runtime mode |
+|---|---|---|---|
+| Does adding data-driven fakes double-count fake-like MC already present in the reconstructed MC stack? | `run/2017/validations/validate_preunfolding_stack_composition.py` | `outputs/validate_shadow_fakes/preunfolding_stack_composition/preunfolding_stack_composition_summary.md` | cache-only |
+| Why do small `TauPt` fake factors produce a large total fake prediction? | `run/2017/validations/validate_failid_fake_application_breakdown.py` | `outputs/validate_shadow_fakes/failid_fake_application_breakdown/failid_fake_application_breakdown_summary.md` | cache-only |
+| Can this framework reproduce the high-mass `tau + MET` note fake factors when using a Loose/VeryLoose-style definition? | `run/2017/validations/validate_note_like_loose_fake_factor.py` | `outputs/validate_shadow_fakes/note_like_loose_fake_factor/note_like_loose_fake_factor_summary.md` | first run may build a small cache |
+
+The first script produces reconstructed-level stack-composition plots for
+`no_shadow_bin` and `MTW_shadow_bin_250`. The key comparison is:
+
+```text
+all MC, no data-driven fakes
+all MC + data-driven fakes
+nonfake MC + data-driven fakes
+fake-like MC only
+```
+
+If `nonfake MC + data-driven fakes` agrees better than `all MC + data-driven
+fakes`, the fake estimate should be treated as replacing fake-like MC, not as
+an additive component on top of it.
+
+#### Pre-unfolding stack-composition result
+
+The cache-only stack-composition validation has now been run:
+
+```text
+pixi run python run/2017/validations/validate_preunfolding_stack_composition.py
+```
+
+It wrote:
+
+- summary: `outputs/validate_shadow_fakes/preunfolding_stack_composition/preunfolding_stack_composition_summary.md`
+- plots:
+  - `outputs/validate_shadow_fakes/preunfolding_stack_composition/plots/no_shadow_bin_preunfolding_stack_composition.png`
+  - `outputs/validate_shadow_fakes/preunfolding_stack_composition/plots/MTW_shadow_bin_250_preunfolding_stack_composition.png`
+
+The `tight_layout` warning printed by matplotlib is only a plotting-layout
+warning; the summary and plots were produced.
+
+| Configuration | Data | All MC, no fakes | All MC + fakes | Nonfake MC + fakes | Fake-like MC only | Fakes | All MC/data | (All MC + fakes)/data | (Nonfake + fakes)/data |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| `no_shadow_bin` | 1351.000 | 1359.868 | 1586.004 | 1472.324 | 113.679 | 226.136 | 1.007 | 1.174 | 1.090 |
+| `MTW_shadow_bin_250` | 1428.000 | 1443.273 | 1687.088 | 1562.702 | 124.386 | 243.815 | 1.011 | 1.181 | 1.094 |
+
+Interpretation:
+the reconstructed MC stack without data-driven fakes already agrees with data
+at about the `1%` level. Adding the current data-driven fake estimate on top of
+all MC overshoots data by about `17-18%`, so an additive treatment double-counts
+something fake-like. Replacing fake-like MC with the data-driven fake estimate
+improves the comparison, but still overshoots by about `9%`.
+
+This means fake-like MC double-counting is part of the bookkeeping problem, but
+it is not the full explanation. The data-driven fake estimate itself is roughly
+twice the size of the fake-like MC component in these reconstructed selections.
+The next diagnostic should therefore be the fail-ID application breakdown:
+
+```text
+predicted fakes = FF(TauPt bin) * [SR fail-ID data - SR fail-ID nonfake MC]
+```
+
+split by prong and `TauPt` source bin. That test should identify whether the
+large fake yield is driven by the SR fail-ID input population, the fake-factor
+values, or the nonfake subtraction.
+
+The second script makes the fake yield algebra visible source-bin by source-bin:
+
+```text
+predicted fakes in bin = FF(TauPt bin) * [SR fail-ID data - SR fail-ID nonfake MC]
+```
+
+This is the direct test of whether the large fake prediction is driven by the
+transfer factor itself or by the fail-ID application population. It also reports
+the available sample-level fake-like/nonfake split in the SR fail-ID selection.
+
+#### Fail-ID fake-application breakdown result
+
+The fail-ID breakdown has now been run:
+
+```text
+pixi run python run/2017/validations/validate_failid_fake_application_breakdown.py
+```
+
+It wrote:
+
+```text
+outputs/validate_shadow_fakes/failid_fake_application_breakdown/failid_fake_application_breakdown_summary.md
+```
+
+The important result is that the large total fake prediction is not caused by
+large fake-factor values. It is driven by the size of the SR fail-ID application
+input, especially in the low-`TauPt` 1-prong bins.
+
+| Configuration | Prong | Dominant source bins | Predicted fakes in dominant bins | Approx. share of prong prediction |
+|---|---:|---|---:|---:|
+| `no_shadow_bin` | 1 | `170-200`, `200-250` GeV | `81.736 + 68.002` | `0.709` |
+| `no_shadow_bin` | 3 | `170-250` GeV | `2.465 + 3.908` | `0.419` |
+| `MTW_shadow_bin_250` | 1 | `170-200`, `200-250` GeV | `96.188 + 69.212` | `0.727` |
+| `MTW_shadow_bin_250` | 3 | `170-250` GeV | `3.118 + 4.461` | `0.459` |
+
+For the no-shadow case, the 1-prong fake prediction is about `211` events and
+the 3-prong prediction is about `15` events. For `MTW_shadow_bin_250`, the
+corresponding numbers are about `227` and `16.5` events. This means the final
+fake estimate is overwhelmingly a 1-prong low-`TauPt` subtraction.
+
+The saved cache only contains the current framework `trueTau_...` nonfake split,
+not a full truth-category split into hadronic tau, leptonic tau, electron, muon,
+photon, and unmatched candidates. Within the available split, the SR fail-ID MC
+fake-like component is mainly from `zll` and `wlnu`, while `wtaunu_had` is
+almost entirely classified as nonfake/true-tau in the fail-ID selections. For
+example, in `MTW_shadow_bin_250`:
+
+| Prong | Sample | All SR fail-ID MC | TrueTau/nonfake MC | Fake-like MC | Fake-like fraction |
+|---:|---|---:|---:|---:|---:|
+| 1 | `zll` | `562.501` | `203.565` | `358.936` | `0.638` |
+| 1 | `wlnu` | `164.985` | `107.903` | `57.082` | `0.346` |
+| 1 | `wtaunu_had` | `357.816` | `355.380` | `2.435` | `0.007` |
+| 3 | `zll` | `280.960` | `106.252` | `174.708` | `0.622` |
+| 3 | `wlnu` | `90.423` | `54.494` | `35.929` | `0.397` |
+| 3 | `wtaunu_had` | `213.062` | `213.004` | `0.058` | `0.000` |
+
+Interpretation:
+the fake-factor values themselves are small and decreasing with `TauPt`, as
+expected. The large fake subtraction comes from multiplying those small fake
+factors by a large fail-ID application population. The most important bin
+range for any future fake-model change is therefore `TauPt = 170-250` GeV in
+the 1-prong fail-ID signal-region input.
+
+Recommendation:
+before making a nominal fake-model change, add or generate the full
+truth-category split for the SR fail-ID application region. The current cache
+can show sample-level fake-like/nonfake behaviour, but it cannot yet answer
+whether photons, leptonic tau/electron/muon candidates, or unmatched jets are
+driving the relevant fail-ID population.
+
+#### Fail-ID truth-category audit result
+
+The category-level fail-ID audit has now been run:
+
+```text
+pixi run python run/2017/validations/validate_failid_truth_categories.py
+```
+
+It wrote:
+
+- summary: `outputs/validate_shadow_fakes/failid_truth_categories/failid_truth_categories_summary.md`
+- totals CSV: `outputs/validate_shadow_fakes/failid_truth_categories/failid_truth_category_totals.csv`
+- source-bin CSV: `outputs/validate_shadow_fakes/failid_truth_categories/failid_truth_category_source_bins.csv`
+
+This was a new event-loop run, but it is narrow: MC only, `TauPt` histograms
+only, `no_shadow_bin` and `MTW_shadow_bin_250`, and only SR fail-ID selections.
+
+The total SR fail-ID MC composition is:
+
+| Configuration | Prong | Data fail-ID | All MC fail-ID | Hadronic tau | Electron | Photon | Jet-like/unmatched |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| `no_shadow_bin` | 1 | `3148.000` | `1182.745` | `0.419` | `0.225` | `0.298` | `0.037` |
+| `no_shadow_bin` | 3 | `1157.000` | `653.918` | `0.452` | `0.223` | `0.281` | `0.030` |
+| `MTW_shadow_bin_250` | 1 | `3335.000` | `1258.185` | `0.421` | `0.223` | `0.298` | `0.037` |
+| `MTW_shadow_bin_250` | 3 | `1198.000` | `683.725` | `0.450` | `0.223` | `0.281` | `0.031` |
+
+The category composition in the low-`TauPt` source bins that dominate the fake
+prediction, `170-250 GeV`, is:
+
+| Configuration | Prong | Total MC in `170-250` | Hadronic tau | Photon | Electron | Jet-like/unmatched |
+|---|---:|---:|---:|---:|---:|---:|
+| `no_shadow_bin` | 1 | `816.453` | `0.410` | `0.305` | `0.226` | `0.037` |
+| `no_shadow_bin` | 3 | `350.598` | `0.459` | `0.298` | `0.196` | `0.030` |
+| `MTW_shadow_bin_250` | 1 | `887.151` | `0.413` | `0.306` | `0.222` | `0.036` |
+| `MTW_shadow_bin_250` | 3 | `374.966` | `0.452` | `0.298` | `0.200` | `0.032` |
+
+Interpretation:
+the fail-ID MC in the application region is not mostly conventional
+jet-like/unmatched candidates. It is dominated by hadronic-tau, photon, and
+electron matched candidates. The jet-like/unmatched category is only about
+`3-4%` of the MC fail-ID population.
+
+This matters because the current framework `trueTau_...` subtraction removes
+matched hadronic tau, electron, and muon candidates:
+
+```text
+MatchedTruthParticle_isHadronicTau == true
+|| MatchedTruthParticle_isMuon == true
+|| MatchedTruthParticle_isElectron == true
+```
+
+It does not remove photon-matched candidates, and the photon-matched component
+is large: about `28-31%` of the fail-ID MC in the relevant `TauPt` bins. If the
+analysis concept is "subtract real/prompt non-jet backgrounds from the anti-ID
+data before estimating jet fakes", photon-matched candidates may need explicit
+treatment rather than being folded into the data-driven fake estimate by
+default.
+
+This does not by itself solve the full normalisation problem. The data fail-ID
+yield is much larger than the summed MC fail-ID yield, so even subtracting
+additional MC categories cannot make the data-driven estimate disappear.
+However, the audit identifies a concrete definition choice that should be
+checked against the intended fake-factor method:
+
+```text
+Should photon-matched tau candidates be part of the nonfake MC subtraction,
+or should they be treated as part of the data-driven fake estimate?
+```
+
+Recommendation:
+the next code-level test should be a validation-only fake estimate with
+`trueTau_...` replaced by an expanded "non-jet/nonfake" subtraction that also
+includes photons, and possibly leptonic-tau matches. Compare the resulting
+pre-unfolding stack and fake yield to the current baseline. This is a much more
+targeted test than another unfolding rerun.
+
+#### Photon-expanded nonfake subtraction test
+
+The photon-expanded subtraction test has now been run:
+
+```text
+pixi run python run/2017/validations/validate_photon_nonfake_subtraction.py
+```
+
+It wrote:
+
+- summary: `outputs/validate_shadow_fakes/photon_nonfake_subtraction/photon_nonfake_subtraction_summary.md`
+- CSV: `outputs/validate_shadow_fakes/photon_nonfake_subtraction/photon_nonfake_subtraction_summary.csv`
+- cache: `outputs/validate_shadow_fakes/photon_nonfake_subtraction/root/validate_photon_nonfake_subtraction.root`
+
+This was a new event-loop validation, not a nominal production change. It
+compares three nonfake-subtraction definitions:
+
+| Model | Nonfake subtraction definition |
+|---|---|
+| `current` | hadronic tau, electron, muon |
+| `with_photon` | current plus photon-matched candidates |
+| `with_photon_leptonic_tau` | current plus photon and leptonic-tau candidates |
+
+The resulting inclusive fake yields and stack ratios are:
+
+| Configuration | Model | Data pass-ID | All MC pass-ID | Nonfake MC pass-ID | Fakes | All MC + fakes / data | Nonfake MC + fakes / data |
+|---|---|---:|---:|---:|---:|---:|---:|
+| `no_shadow_bin` | `current` | `1351.000` | `1359.867` | `1246.190` | `226.136` | `1.174` | `1.090` |
+| `no_shadow_bin` | `with_photon` | `1351.000` | `1359.867` | `1347.350` | `182.380` | `1.142` | `1.132` |
+| `no_shadow_bin` | `with_photon_leptonic_tau` | `1351.000` | `1359.867` | `1350.060` | `181.381` | `1.141` | `1.134` |
+| `MTW_shadow_bin_250` | `current` | `1351.000` | `1359.867` | `1246.190` | `226.136` | `1.174` | `1.090` |
+| `MTW_shadow_bin_250` | `with_photon` | `1351.000` | `1359.867` | `1347.350` | `182.380` | `1.142` | `1.132` |
+| `MTW_shadow_bin_250` | `with_photon_leptonic_tau` | `1351.000` | `1359.867` | `1350.060` | `181.381` | `1.141` | `1.134` |
+
+Per-prong fake yields show where the change enters:
+
+| Configuration | Prong | Model | Fake yield |
+|---|---:|---|---:|
+| `no_shadow_bin` | 1 | `current` | `210.924` |
+| `no_shadow_bin` | 1 | `with_photon` | `175.809` |
+| `no_shadow_bin` | 1 | `with_photon_leptonic_tau` | `175.001` |
+| `no_shadow_bin` | 3 | `current` | `15.212` |
+| `no_shadow_bin` | 3 | `with_photon` | `6.571` |
+| `no_shadow_bin` | 3 | `with_photon_leptonic_tau` | `6.380` |
+
+The `MTW_shadow_bin_250` rows give the same integrated yields in this test
+because the measured pass-ID/fail-ID phase space is the same for the selected
+production configuration; the shadow-bin difference enters the response, not
+this inclusive fake-yield diagnostic.
+
+Interpretation:
+including photon-matched candidates in the nonfake subtraction has a real but
+limited effect. It reduces the total fake prediction from about `226` to about
+`182` events, a reduction of roughly `19%`. Most of that reduction is in the
+dominant 1-prong component, but the relative reduction is larger for 3-prong
+(`15.2` to `6.6` events).
+
+This does **not** solve the pre-unfolding normalisation issue. If the stack is
+formed as `all MC + data-driven fakes`, the ratio improves from `1.174` to
+`1.142`, but the stack still over-predicts data. If the stack is formed as
+`nonfake MC + data-driven fakes`, moving photon candidates into the nonfake MC
+definition actually raises the ratio from `1.090` to about `1.132`, because the
+pass-ID photon contribution added to the nonfake stack is larger than the fake
+yield reduction.
+
+Recommendation:
+do not promote photon-expanded subtraction to the nominal fake model yet. It is
+a plausible definition systematic, and it confirms that the current fake-like
+category is not purely jet-like. However, the main issue remains broader than
+photon treatment alone: the baseline all-MC stack is already approximately at
+the data yield, so adding any sizeable data-driven fake component tends to
+over-count unless the corresponding fake-like MC component is removed or the
+fake-factor method is redefined more carefully.
+
+The third script is the like-for-like comparison requested after reading the
+high-mass `tau + MET` note. It uses `TauLooseWP == 1` for the numerator and
+`TauLooseWP == 0 && TauRNNJetScore > 0.01` as the available VeryLoose-style
+anti-ID proxy. Because no exact VeryLoose branch has been found in the current
+ntuples, this remains an approximation. The comparison is still useful: if the
+Loose-proxy result approaches Table 14 while the medium-reference result stays
+small, the large numerical difference is mainly an ID/anti-ID working-point
+effect.
+
+#### Note-like Loose fake-factor comparison result
+
+The note-like Loose/VeryLoose-proxy validation has now been run:
+
+```text
+pixi run python run/2017/validations/validate_note_like_loose_fake_factor.py
+```
+
+It wrote:
+
+```text
+outputs/validate_shadow_fakes/note_like_loose_fake_factor/note_like_loose_fake_factor_summary.md
+```
+
+This run did build its own small validation cache under:
+
+```text
+outputs/validate_shadow_fakes/note_like_loose_fake_factor/root/
+```
+
+The comparison to Table 14 of the high-mass `tau + MET` note is:
+
+| ID model | Prong | `TauPt` bin [GeV] | This validation FF | ATLAS note FF | This / ATLAS note |
+|---|---:|---:|---:|---:|---:|
+| Loose numerator / fail Loose plus `TauRNNJetScore > 0.01` proxy denominator | 1 | 350-500 | `0.10322` | `0.362` | `0.285` |
+| Loose numerator / fail Loose plus `TauRNNJetScore > 0.01` proxy denominator | 1 | 500-1000 | `0.07020` | `0.336` | `0.209` |
+| Loose numerator / fail Loose plus `TauRNNJetScore > 0.01` proxy denominator | 3 | 350-500 | `0.03152` | `0.116` | `0.272` |
+| Loose numerator / fail Loose plus `TauRNNJetScore > 0.01` proxy denominator | 3 | 500-1000 | `0.02063` | `0.083` | `0.249` |
+
+The same phase-space test with medium-ID definitions gives:
+
+| ID model | Prong | `TauPt` bin [GeV] | Fake factor |
+|---|---:|---:|---:|
+| Medium numerator / fail Medium plus `TauRNNJetScore > 0.01` denominator | 1 | 350-500 | `0.04844` |
+| Medium numerator / fail Medium plus `TauRNNJetScore > 0.01` denominator | 1 | 500-1000 | `0.03232` |
+| Medium numerator / fail Medium plus `TauRNNJetScore > 0.01` denominator | 3 | 350-500 | `0.01102` |
+| Medium numerator / fail Medium plus `TauRNNJetScore > 0.01` denominator | 3 | 500-1000 | `0.00760` |
+
+Interpretation:
+switching from medium-ID to a Loose-proxy definition increases the fake factors
+by roughly a factor of `2-3`, which is the expected direction. However, the
+Loose-proxy fake factors are still only about `20-30%` of the ATLAS note values.
+The difference is therefore not explained by the medium-vs-loose working point
+alone. The remaining difference could come from the lack of an exact VeryLoose
+denominator branch, the event phase space, trigger/year/sample composition, or
+the note's multijet-enrichment details that are not exactly reproduced here.
+
+Recommendation:
+do not use the ATLAS note values as a direct numerical target for this analysis.
+Use them as qualitative support for the method structure: prong-split,
+`TauPt`-dependent fake factors and explicit transfer/shape uncertainties. The
+next useful validation is not another high-`TauPt` fake-factor comparison; it is
+the full truth-category audit of the fail-ID application region.
+
 ### Proposed low-MET fake-enriched validation experiment
 
 The next fake-estimate test should be a deliberately low-MET, fake-enriched derivation region. This is not yet a proposed nominal change to the unfolding. It is a targeted validation experiment to decide whether the current fake-factor control region is too close to the unstable upper-MET sideband.
@@ -1898,7 +2492,35 @@ The thesis image snapshot corresponds to the older analysis state. The current a
 
 The fake estimate implementation was corrected to match the intended fake-factor method.
 
-The important conceptual change is that the target-variable fake shape is built from the fail-ID side of the method, not from weighted pass-ID MC. This matters because the fake estimate should be data-driven in the fail-ID control side and then transferred into the pass-ID signal side using the fake factor.
+The material change is commit `5d9535a` (`Fix fake factor implementation`). That
+commit fixed two mistakes in `Analysis.do_fakes_estimate()`:
+
+1. the MC subtraction used in the fake-factor numerator and denominator had the
+   pass-ID and fail-ID selections swapped;
+2. the target-variable fake prediction was built from fake-factor-weighted
+   pass-ID MC rather than from fake-factor-weighted fail-ID data with true-tau
+   MC subtracted.
+
+Before the fix, the effective fake estimate was therefore not the intended
+data-driven anti-ID transfer. The corrected target-variable estimate is:
+
+```text
+fake prediction in target variable =
+    FF(source variable) * SR_failID_data
+  - FF(source variable) * trueTau_SR_failID_MC
+```
+
+where:
+
+```text
+FF = (CR_passID_data - trueTau_CR_passID_MC)
+   / (CR_failID_data - trueTau_CR_failID_MC)
+```
+
+The important conceptual change is that the target-variable fake shape is built
+from the fail-ID side of the method, not from weighted pass-ID MC. This matters
+because the fake estimate should be data-driven in the fail-ID control side and
+then transferred into the pass-ID signal side using the fake factor.
 
 Expected consequence:
 

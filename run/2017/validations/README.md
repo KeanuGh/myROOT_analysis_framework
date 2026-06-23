@@ -28,17 +28,30 @@ referenced later.
 | `validate_mc_fake_closure.py` | Cache-only preservation of the old MC-only fake closure check using the known non-true-tau MC component as the fake target. | seconds |
 | `validate_split_sample_unfolding_closure.py` | Cache-only split-sample MC unfolding closure check using historical `split_response` and `split_pseudo_data` outputs. | seconds if caches exist |
 | `validate_prong_model_unfolding_impact.py` | Cache-only propagated unfolding test for a prong-dependent `wtaunu_had` modelling variation. Requires prong-split response selections from the historical output or a dedicated producer. | seconds if caches exist |
+| `validate_preunfolding_stack_composition.py` | Cache-only reconstructed-level stack audit. It checks whether adding data-driven fakes double-counts fake-like MC already present in the MC stack. | seconds |
+| `validate_failid_fake_application_breakdown.py` | Cache-only source-bin audit of how small `TauPt` fake factors become a large SR fake prediction. It also reports the available sample-level fail-ID fake-like/nonfake split. | seconds |
+| `validate_failid_truth_categories.py` | Focused SR fail-ID truth-category audit. It decomposes the `TauPt` application population into hadronic tau, leptonic tau, electron, muon, photon, and jet-like/unmatched categories for `no_shadow_bin` and `MTW_shadow_bin_250`. | minutes first run, seconds cached |
+| `validate_photon_nonfake_subtraction.py` | Validation-only fake-estimate variant that adds photon-matched candidates, and optionally leptonic tau, to the MC nonfake subtraction. It tests whether photon treatment materially reduces the fake yield and reconstructed stack overshoot. | minutes first run, seconds cached |
+| `validate_note_like_loose_fake_factor.py` | Validation-only comparison to the ATLAS high-mass `tau + MET` note. It builds Loose/VeryLoose-proxy fake factors in `MET < 100` and compares the `350-500` and `500-1000` GeV bins to Table 14. | minutes first run, seconds cached |
 
 ## Next Script To Run
 
-The next validation to run for the fake-source reweighting diagnostic is:
+The next validation sequence for the fake-normalisation issue is:
 
 ```bash
-pixi run python run/2017/validations/validate_tau_width_reweighting.py
+pixi run python run/2017/validations/validate_preunfolding_stack_composition.py
+pixi run python run/2017/validations/validate_failid_fake_application_breakdown.py
+pixi run python run/2017/validations/validate_failid_truth_categories.py
+pixi run python run/2017/validations/validate_photon_nonfake_subtraction.py
+pixi run python run/2017/validations/validate_note_like_loose_fake_factor.py
 ```
 
-It writes its summary to:
+They write summaries to:
 
 ```text
-outputs/validate_shadow_fakes/tau_width_reweighting/tau_width_reweighting_summary.md
+outputs/validate_shadow_fakes/preunfolding_stack_composition/preunfolding_stack_composition_summary.md
+outputs/validate_shadow_fakes/failid_fake_application_breakdown/failid_fake_application_breakdown_summary.md
+outputs/validate_shadow_fakes/failid_truth_categories/failid_truth_categories_summary.md
+outputs/validate_shadow_fakes/photon_nonfake_subtraction/photon_nonfake_subtraction_summary.md
+outputs/validate_shadow_fakes/note_like_loose_fake_factor/note_like_loose_fake_factor_summary.md
 ```
