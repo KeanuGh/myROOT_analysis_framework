@@ -36,7 +36,6 @@ WIDTH_VARIABLES = ("TauTrackWidthPt1000PV", "TauTrackWidthPt500PV")
 CONFIG_LABEL = "tau_width_reweighting"
 TAUPT_MIN = 170
 PRONGS = (1, 3)
-MAX_WIDTH_WEIGHT = 5.0
 LOAD_SAVED_HISTS = True
 RUN_EVENT_LOOPS_IF_CACHE_MISSING = True
 PLOT_REWEIGHTING_COMPARISON = True
@@ -117,7 +116,11 @@ def positive_shape(hist: ROOT.TH1, name: str) -> ROOT.TH1:
     return shape
 
 
-def width_ratio_hist(numerator: ROOT.TH1, denominator: ROOT.TH1, name: str) -> ROOT.TH1:
+def width_ratio_hist(
+    numerator: ROOT.TH1,
+    denominator: ROOT.TH1,
+    name: str,
+) -> ROOT.TH1:
     ratio_hist = numerator.Clone(name)
     ratio_hist.SetDirectory(0)
     for bin_idx in range(1, ratio_hist.GetNbinsX() + 1):
@@ -126,10 +129,7 @@ def width_ratio_hist(numerator: ROOT.TH1, denominator: ROOT.TH1, name: str) -> R
         if denominator_value <= 0:
             ratio_hist.SetBinContent(bin_idx, 0.0)
         else:
-            ratio_hist.SetBinContent(
-                bin_idx,
-                min(MAX_WIDTH_WEIGHT, numerator_value / denominator_value),
-            )
+            ratio_hist.SetBinContent(bin_idx, numerator_value / denominator_value)
         ratio_hist.SetBinError(bin_idx, 0.0)
     return ratio_hist
 
@@ -285,7 +285,7 @@ if __name__ == "__main__":
         + ", ".join(f"`{width_variable}`" for width_variable in WIDTH_VARIABLES),
         f"- fake-factor source variable: `{FAKES_SOURCE}`",
         f"- target variable: `{VARIABLE}`",
-        f"- width weights are capped at `{MAX_WIDTH_WEIGHT}`",
+        "- width weights are uncapped",
         f"- cache file: `{CACHE_FILE.relative_to(REPO_ROOT)}`",
         f"- event loops run in this invocation: `{run_event_loops}`",
         "",
@@ -454,7 +454,7 @@ if __name__ == "__main__":
             )
             lines.append(f"- `{analysis.paths.plot_dir / filename}`")
 
-    if run_event_loops:
+    if run_event_loops and not loaded_hists:
         analysis.save_hists(filename=CACHE_FILE.name)
 
     write_markdown(SUMMARY_PATH, lines)

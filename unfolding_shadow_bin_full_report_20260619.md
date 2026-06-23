@@ -2,7 +2,7 @@
 
 Initial check: 2026-06-19
 
-Updated: 2026-06-22
+Updated: 2026-06-23
 
 ## Executive Summary
 
@@ -10,8 +10,8 @@ The current closure study shows that the shadow-bin unfolding now closes for sig
 
 The key result is:
 
-- `MTW` signal-MC closure is at the per-mille level for no-shadow and all variable-specific MTW shadow-bin configurations.
-- `TauPt` signal-MC closure is also at the per-mille level for no-shadow and all variable-specific TauPt shadow-bin configurations.
+- `MTW` signal-MC closure is at the per-mille level for no-shadow and all MTW shadow-bin configurations tested.
+- `TauPt` signal-MC closure was also demonstrated at the per-mille level during the diagnostic phase, but the cleaned production script now runs `MTW` only because that is the measured observable.
 - The earlier 10-30% closure failure was not caused primarily by the shadow-bin threshold itself. It was caused by unfolding reconstructed signal events that pass the reco selection but do not belong to the nominal truth fiducial phase space.
 
 The current implementation is therefore a defensible fiducial unfolding treatment:
@@ -21,11 +21,11 @@ The current implementation is therefore a defensible fiducial unfolding treatmen
 3. Subtract reconstructed `wtaunu_had` events that fail the nominal truth fiducial definition as a nonfiducial signal contribution.
 4. Unfold the remaining input with a response built from nominal truth-fiducial signal.
 
-This report is based on the last completed run:
+The numerical closure and fake-diagnostic results quoted below are mostly based on the last completed diagnostic run:
 
 `outputs/analysis_shadow_unfold/logs/analysis_shadow_unfold_2026-06-21_17-56-54.log`
 
-That log ends with `DONE.` and wrote the closure, split-closure, and fake-diagnostic summaries.
+That log ends with `DONE.` and wrote the closure, split-closure, and fake-diagnostic summaries. After the 2026-06-23 cleanup, `run/2017/analysis_shadow_unfold.py` has not yet been rerun; the cleanup separated production logic from validation-only studies without changing the central `MTW` workflow definition.
 
 ## Scope Of The Current Closure Test
 
@@ -37,19 +37,19 @@ It writes to:
 
 `outputs/analysis_shadow_unfold`
 
-The test is intentionally narrow:
+After the 2026-06-23 cleanup, the production script is intentionally narrow:
 
 - year: `2017`
 - tau ID: `medium`
-- prongs: inclusive `1+3`
-- variables: `MTW`, `TauPt`
+- prongs: inclusive `1+3`, with prong-split fake factors
+- variable: `MTW`
 - systematics: disabled, `DO_FULL_SYSTEMATICS = False`
 - fake-factor source: `TauPt`
-- fake diagnostics: enabled
-- split-sample closure: enabled
+- fake control region: `TauPt > 170` and `MET_met < 100`
+- fake diagnostics: moved to `run/2017/validations/`
+- split-sample closure: moved to `run/2017/validations/validate_split_sample_unfolding_closure.py`
 - shadow thresholds:
   - `MTW`: `200`, `250`, `300` GeV lower reconstructed threshold
-  - `TauPt`: `100`, `125`, `150` GeV lower reconstructed threshold
 
 The current script no longer includes the temporary `MTW_MET_category_shadow_bin_250` diagnostic. That category test was useful for diagnosing MET-related reco failures, but it is not part of the current analysis path because the nonfiducial signal correction addresses the actual fiducial mismatch more cleanly.
 
@@ -62,6 +62,8 @@ Summary file:
 `outputs/analysis_shadow_unfold/closure_summary.md`
 
 Relevant rows from the completed nonfiducial-corrected run:
+
+The `TauPt` rows are retained here as diagnostic evidence from the pre-cleanup study. They are not produced by the current cleaned `analysis_shadow_unfold.py` production path, which is now `MTW` only.
 
 | Configuration | Variable | Iterations | Mean deviation | Max deviation | Integral ratio |
 |---|---|---:|---:|---:|---:|
@@ -149,13 +151,15 @@ Response matrices remain populated and broadly diagonal:
 |---|---|
 | <img src="outputs/analysis_shadow_unfold/plots/MTW_shadow_bin_250/MTW/MTW_shadow_bin_250_MTW_response_matrix.png" width="390"> | <img src="outputs/analysis_shadow_unfold/plots/TauPt_shadow_bin_250/TauPt/TauPt_shadow_bin_250_TauPt_response_matrix.png" width="390"> |
 
-## Fake-Estimate Diagnostics From The Latest Run
+## Fake-Estimate Diagnostics From The Diagnostic Run
 
 Summary file:
 
 `outputs/analysis_shadow_unfold/fake_diagnostics_summary.md`
 
-The latest run added three fake-estimate diagnostics:
+This section records the pre-cleanup diagnostic output. The same questions are now owned by dedicated scripts under `run/2017/validations/`, so this section should be read as historical evidence rather than a description of the current production runner.
+
+The diagnostic run added three fake-estimate diagnostics:
 
 1. a pre-unfolding event budget;
 2. a fake-scale scan, where the fake estimate is scaled by `0`, `0.5`, and `1`;
@@ -1589,7 +1593,7 @@ Implementation:
 - width proxies: `TauTrackWidthPt1000PV`, `TauTrackWidthPt500PV`
 - fake-factor source variable: `TauPt`
 - target observable: `MTW`
-- width weights capped at `5.0`
+- width weights are uncapped; the dedicated cap scan below found no sparse-bin instability requiring a cap
 
 This is a diagnostic, not a proposed nominal correction. It tests two directions:
 
@@ -1660,6 +1664,37 @@ In integral terms, the candidate 1-prong systematic size is:
 | `TauTrackWidthPt1000PV` | 210.924 | 167.680 | `-20.5%` |
 | `TauTrackWidthPt500PV` | 210.924 | 178.643 | `-15.3%` |
 
+### Tau-width max-weight cap validation
+
+Question:
+Does the tau-width reweighting depend on a few sparse width bins with very large shape-ratio weights?
+
+Implementation:
+- script: `run/2017/validations/validate_tau_width_reweighting.py`
+- output summary: `outputs/validate_shadow_fakes/tau_width_reweighting/tau_width_reweighting_summary.md`
+- CSV table: `outputs/validate_shadow_fakes/tau_width_reweighting/tau_width_max_weight_scan.csv`
+- plot: `outputs/validate_shadow_fakes/tau_width_reweighting/plots/tau_width_max_weight_scan/TauTrackWidthPt1000PV_1prong_max_weight_scan.png`
+- cache: `outputs/validate_shadow_fakes/tau_width_reweighting/root/validate_tau_width_max_weight_scan.root`
+- scan target: `TauTrackWidthPt1000PV`, 1-prong, `application_to_lowmet` direction
+
+Result:
+
+| Cap | Max uncapped ratio | Capped bins | Application-shape yield fraction in capped bins | Prediction | Target | Prediction / target |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| uncapped | 1.267 | 0 | 0.0000 | 167.680 | 163.335 | 1.027 |
+| 10 | 1.267 | 0 | 0.0000 | 167.680 | 163.335 | 1.027 |
+| 5 | 1.267 | 0 | 0.0000 | 167.680 | 163.335 | 1.027 |
+| 3 | 1.267 | 0 | 0.0000 | 167.680 | 163.335 | 1.027 |
+| 2 | 1.267 | 0 | 0.0000 | 167.680 | 163.335 | 1.027 |
+
+Representative appendix plot:
+
+<img src="outputs/validate_shadow_fakes/tau_width_reweighting/plots/tau_width_max_weight_scan/TauTrackWidthPt1000PV_1prong_max_weight_scan.png" width="520">
+
+Interpretation:
+
+The candidate tau-width systematic does **not** require a cap for the tested production-relevant case. The largest uncapped width-shape ratio is only `1.267`, and no bins are affected by caps of `10`, `5`, `3`, or `2`. Therefore the main analysis should keep the width ratio uncapped unless a later, broader scan finds a genuinely sparse-bin instability.
+
 For a final binned analysis implementation, the cleanest treatment is a **shape-and-normalisation uncertainty**:
 
 ```text
@@ -1682,43 +1717,22 @@ with negative bins clipped only if strictly required by the downstream covarianc
 
 This should be described in the thesis as a **fake-source composition uncertainty**, not as a correction to the central fake estimate. The motivation is that the low-MET fake-factor denominator and high-MET anti-ID application region have demonstrably different tau-width shapes, and ATLAS high-mass `tau + MET` analyses use tau-width or tau-seed-width variations to assess this transfer/composition effect.
 
-Implementation status in `analysis_shadow_unfold.py`:
+Implementation status after the 2026-06-23 cleanup:
 
-The main shadow-unfolding script has been updated to propagate this candidate systematic through the unfolding as a diagnostic, controlled by:
+The tau-width study is now validation-only and no longer lives in the central `analysis_shadow_unfold.py` production path. The relevant scripts are:
 
-```python
-RUN_FAKE_WIDTH_SYSTEMATIC = True
-FAKE_WIDTH_SYSTEMATIC_VARS = ("MTW",)
-FAKE_WIDTH_VARIABLES = ("TauTrackWidthPt1000PV", "TauTrackWidthPt500PV")
-```
+- `run/2017/validations/validate_tau_width_composition.py`
+- `run/2017/validations/validate_tau_width_reweighting.py`
 
-The implementation:
+The validation implementation:
 
 - leaves the nominal fake estimate unchanged;
-- only shifts the 1-prong fake component;
-- leaves the 3-prong fake component nominal;
-- builds `application_to_lowmet` shifted fake templates for both width proxies;
-- forms shifted unfolded inputs as `data - prompt backgrounds - shifted fakes - nonfiducial signal`;
-- unfolds the shifted inputs with the fake-diagnostic iteration count;
-- writes comparison plots under:
+- studies the 1-prong fake component, where the width-shape effect is observable;
+- compares `TauTrackWidthPt1000PV` and `TauTrackWidthPt500PV`;
+- tests whether an `application_to_lowmet` width reweighting moves the fake prediction in the expected direction;
+- writes the diagnostic output under `outputs/validate_shadow_fakes/`.
 
-```text
-outputs/analysis_shadow_unfold/plots/<configuration>/MTW/fake_width_systematic/
-```
-
-and appends a table to:
-
-```text
-outputs/analysis_shadow_unfold/fake_diagnostics_summary.md
-```
-
-This has been implemented and static-checked, but the full `analysis_shadow_unfold.py` production run should be launched separately because it scans the full measured samples. The intended command is:
-
-```bash
-pixi run python run/2017/analysis_shadow_unfold.py
-```
-
-For a first production check, keep `FAKE_WIDTH_SYSTEMATIC_VARS = ("MTW",)` so the script only propagates the uncertainty for the actual measured observable.
+This remains evidence for a possible **fake-source composition uncertainty**. It is not yet a nominal correction and should not be folded into the production script unless a later systematic-uncertainty implementation is explicitly chosen.
 
 ### High-MET 3-prong nonfake-subtraction diagnostic
 
@@ -1959,34 +1973,64 @@ Several changes are not physics changes but affect generated outputs:
 
 These should not be interpreted as physics differences.
 
-### 8. Optional `wtaunu_had` prong-composition systematic switch
+### 8. Production script and validation scripts are now separated
 
-The current `analysis_shadow_unfold.py` script now includes an optional diagnostic/systematic switch:
+The current `analysis_shadow_unfold.py` script has been cleaned up so that it is no longer the validation playground. It now owns the central production-style closure workflow:
 
-```python
-RUN_WTAUNU_PRONG_SYSTEMATIC = False
+- variable: `MTW`;
+- configurations: no-shadow plus `MTW` shadow thresholds `200`, `250`, and `300` GeV;
+- tau ID working point: `medium`;
+- fake estimate: prong-split `TauPt` fake factors;
+- fake derivation region: low-MET fake-enriched region with `TauPt > 170` and `MET_met < 100`;
+- nonfiducial signal subtraction before unfolding;
+- central-value response/unfolding with `DO_FULL_SYSTEMATICS = False` by default.
+
+Validation and diagnostic logic that used to live inside `analysis_shadow_unfold.py` has been moved into dedicated scripts under:
+
+```text
+run/2017/validations/
 ```
 
-When enabled, the script builds separate 1-prong and 3-prong reconstructed `wtaunu_had` response pieces. It then applies explicit prong scale factors, currently:
+The moved validations include:
 
-```python
-WTAUNU_PRONG_VARIATIONS = {
-    "reduce_3prong_20pct": {1: 1.0, 3: 0.8},
-}
+| Validation question | Script |
+|---|---|
+| fake-scale unfolding impact | `run/2017/validations/validate_fake_scale_unfolding.py` |
+| MC-only fake closure | `run/2017/validations/validate_mc_fake_closure.py` |
+| split-sample MC unfolding closure | `run/2017/validations/validate_split_sample_unfolding_closure.py` |
+| propagated `wtaunu_had` prong-composition impact | `run/2017/validations/validate_prong_model_unfolding_impact.py` |
+| inclusive versus prong-split fake factors | `run/2017/validations/validate_inclusive_prong_fakes.py` |
+| tau-width fake-source composition/reweighting | `run/2017/validations/validate_tau_width_composition.py`, `run/2017/validations/validate_tau_width_reweighting.py` |
+| low-MET and ATLAS-like fake-region tests | `run/2017/validations/validate_low_met_fake_region.py`, `run/2017/validations/validate_atlas_like_fake_transfer.py` |
+
+The physics status of these tests is unchanged: they remain validation evidence, not nominal corrections. The important implementation change is organisational. Future thesis write-up should describe `analysis_shadow_unfold.py` as the central MTW shadow-unfolding workflow and cite the validation scripts separately when discussing alternative fake models or modelling uncertainties.
+
+### 9. Fake-factor runtime optimisation
+
+The low-MET fake-enriched control region is identical for all shadow-bin configurations:
+
+```text
+passReco, baseline tau, passMetTrigger, eta acceptance, TauPt > 170, MET_met < 100
 ```
 
-This is not a nominal correction. It is a way to quantify how sensitive the unfolded result is to the reconstructed `wtaunu_had` prong composition, which the validation studies identified as a major source of the high-MET 3-prong tension.
+Previously, `analysis_shadow_unfold.py` recomputed the fake-factor numerator, denominator, and source-variable fake factor separately for every shadow-bin configuration and prong. The 2026-06-23 run showed that this was expensive: each inclusive, 1-prong, or 3-prong fake estimate took roughly `8-9` minutes, and the same low-MET fake-factor derivation was repeated for each configuration.
 
-Implementation details:
+The script now marks the active low-MET fake control region as shared:
 
-- script: `run/2017/analysis_shadow_unfold.py`
-- flag: `RUN_WTAUNU_PRONG_SYSTEMATIC`
-- varied objects: reconstructed signal projection, response matrix, and nonfiducial signal correction
-- nominal result: unchanged when the flag is off
-- expected output when enabled: `outputs/analysis_shadow_unfold/plots/<configuration>/<variable>/wtaunu_prong_systematic/`
-- summary table: `outputs/analysis_shadow_unfold/fake_diagnostics_summary.md`, under `wtaunu_had prong-composition modelling systematic`
+```python
+shared_across_configs=True
+```
 
-This should be treated as a modelling diagnostic unless a stronger external or upstream justification is found for a specific prong-dependent correction. A defensible thesis phrasing would be: "a prong-composition modelling uncertainty on the reconstructed `W -> tau nu` signal component was evaluated."
+For shared control regions, the script computes each nominal fake factor once per prong category and fake-factor source binning:
+
+- 1-prong;
+- 3-prong.
+
+Later shadow-bin configurations reuse the cached fake-factor histogram and only run the SR fail-ID application step for the current target selection. The cache key includes the `TauPt` fake-factor bin edges, so configurations with different `TauPt` shadow-bin source binnings do not accidentally reuse an incompatible fake factor. This does not change the fake-factor algebra or the nominal physics definition. It only avoids rescanning the same low-MET CR numerator and denominator repeatedly when the CR and source binning are genuinely identical.
+
+The original thesis-style CR is commented out with `shared_across_configs=False`, because that CR depends on the shadow-bin thresholds and should not reuse fake factors across configurations without an explicit validation.
+
+Inclusive fake factors are no longer part of the main production script. They remain a validation-only comparison in `run/2017/validations/validate_inclusive_prong_fakes.py`.
 
 ## Comparison With Thesis Snapshot
 
@@ -2006,7 +2050,7 @@ For `analysis_shadow_unfold`, there is no direct thesis snapshot equivalent. It 
 
 ## Current Conclusion
 
-The corrected variable-specific shadow-bin unfolding now has signal-MC closure for `MTW` and `TauPt`.
+The corrected variable-specific shadow-bin unfolding demonstrated signal-MC closure for both `MTW` and `TauPt` during the diagnostic phase. The current cleaned production script runs the `MTW` workflow only, because `MTW` is the measurement target.
 
 The previous failure to close was not evidence that shadow bins are intrinsically bad. It was evidence that the measured reconstructed input and the fiducial truth target were inconsistent. Once reconstructed nonfiducial signal is removed before unfolding, the closure problem essentially disappears.
 
@@ -2021,6 +2065,6 @@ The next physics decision is therefore split into two tracks:
 1. carry this correction into the main `unfolding_2017` workflow;
 2. enable full systematic variations in the same corrected phase space;
 3. test a stability-first MET-dependent fake model in the validation scripts, starting with coarser `TauPt` bins or a prong-dependent treatment in the upper-MET control slice;
-4. update the thesis unfolding chapter to describe the nonfiducial signal correction, split-sample closure validation, and fake-estimate diagnostics.
+4. update the thesis unfolding chapter to describe the nonfiducial signal correction, split-sample closure validation, and fake-estimate diagnostics, making clear which studies are validation-only scripts rather than part of the central production runner.
 
 The current result is strong enough to support moving forward with the corrected unfolding implementation, but not yet strong enough to claim that the unfolded data/MC normalisation tension is understood.

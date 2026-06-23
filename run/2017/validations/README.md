@@ -24,6 +24,10 @@ referenced later.
 | `validate_prong_balance_scale.py` | Cache-only implied `wtaunu_had` prong scale-factor diagnostic after subtracting fakes and other nonfake MC. Tests whether a stable 3-prong correction is defensible. | seconds |
 | `validate_prong_balance_thresholds.py` | Focused high-MET threshold extension of the implied `wtaunu_had` prong scale-factor check. It keeps the `300-350 GeV` MTW shadow interval in the histogram binning, then tests whether the 3-prong imbalance appears in the shadow interval or only in the broader high-MTW region. | minutes first run, seconds cached |
 | `validate_fake_health.py` | Cheap fake-factor source-bin health summary from cached validation histograms. | seconds |
+| `validate_fake_scale_unfolding.py` | Cache-only preservation of the old fake-scale unfolding diagnostic. It unfolds the saved `analysis_shadow_unfold` input with fake scales `0`, `0.5`, and `1.0`. | seconds |
+| `validate_mc_fake_closure.py` | Cache-only preservation of the old MC-only fake closure check using the known non-true-tau MC component as the fake target. | seconds |
+| `validate_split_sample_unfolding_closure.py` | Cache-only split-sample MC unfolding closure check using historical `split_response` and `split_pseudo_data` outputs. | seconds if caches exist |
+| `validate_prong_model_unfolding_impact.py` | Cache-only propagated unfolding test for a prong-dependent `wtaunu_had` modelling variation. Requires prong-split response selections from the historical output or a dedicated producer. | seconds if caches exist |
 
 ## Next Script To Run
 
