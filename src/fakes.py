@@ -191,7 +191,7 @@ def fill_fake_predictions_from_factor(
     fakes_source: str,
     systematic: str,
 ) -> None:
-    """Apply an already-derived fake factor to one SR fail-ID region."""
+    """Apply an already-derived fake factor to one SR anti-ID region."""
     ff_symbol = f"FF_hist_{output_prefix or 'default'}_{fakes_source}"
     ROOT.gInterpreter.Declare(
         f"TH1* {ff_symbol} = reinterpret_cast<TH1*>({ROOT.addressof(ff_hist)});"

@@ -48,7 +48,7 @@ ITERATIONS = (
 )
 FAKES_SOURCE = "TauPt"
 LOAD_SAVED_HISTS = True  # Reuse saved ROOT histograms instead of rebuilding them.
-USE_NONFAKE_BACKGROUND_SUBTRACTION = True  # Replace fake-like MC with data-driven fakes.
+USE_MC_CONTAMINATION_SUBTRACTION = True  # Replace jet-fake-like MC with data-driven fakes.
 DO_FULL_SYSTEMATICS = False  # Enable full systematic response variations; slow final-mode run.
 RUN_FAKE_WIDTH_SYSTEMATIC = True  # Propagate the validated 1-prong tau-width fake systematic.
 FAKE_WIDTH_VARIABLE = "TauTrackWidthPt1000PV"
@@ -87,13 +87,16 @@ PASS_ETA = Cut(
     r"(((abs(TauEta) < 1.37) || (1.52 < abs(TauEta))) && (abs(TauEta) < 2.47))",
 )
 PASS_TRUETAU = Cut(
-    r"True Tau",
+    r"MC contamination",
     "MatchedTruthParticle_isHadronicTau == true || "
     "MatchedTruthParticle_isMuon == true || "
     "MatchedTruthParticle_isElectron == true",
-    # To test photon-matched candidates as nonfake MC, uncomment the line below
+    # This selection defines the MC contamination subtracted in the fake-factor
+    # method. The historical "trueTau_" histogram prefix is kept for cache
+    # compatibility; it is not the fiducial signal truth definition.
+    # To test photon-matched candidates as MC contamination, uncomment the line below
     # and rebuild measured histograms. Cached trueTau histograms use this active
-    # definition and must not be mixed with a different nonfake definition.
+    # definition and must not be mixed with a different contamination definition.
     # " || MatchedTruthParticle_isPhoton == true",
 )
 PASS_TRUTH = Cut(r"Pass Truth", r"(passTruth == 1)")
@@ -622,7 +625,7 @@ if __name__ == "__main__":
                 for background in measured_analysis.mc_samples
                 if background != "wtaunu_had"
             ]
-            nonfake_backgrounds = [
+            mc_contamination_backgrounds = [
                 measured_analysis.get_hist(
                     var,
                     dataset=background,
@@ -681,15 +684,19 @@ if __name__ == "__main__":
             all_background = sum_th1s(*all_backgrounds)
             all_background.SetName(f"{config.label}_{var}_all_mc_background")
             all_background.SetDirectory(0)
-            nonfake_background = sum_th1s(*nonfake_backgrounds)
-            nonfake_background.SetName(f"{config.label}_{var}_nonfake_mc_background")
-            nonfake_background.SetDirectory(0)
-            fake_like_background = all_background - nonfake_background
-            fake_like_background.SetName(f"{config.label}_{var}_fake_like_mc_background")
-            fake_like_background.SetDirectory(0)
+            mc_contamination_background = sum_th1s(*mc_contamination_backgrounds)
+            mc_contamination_background.SetName(
+                f"{config.label}_{var}_mc_contamination_background"
+            )
+            mc_contamination_background.SetDirectory(0)
+            jet_fake_like_background = all_background - mc_contamination_background
+            jet_fake_like_background.SetName(f"{config.label}_{var}_jet_fake_like_mc_background")
+            jet_fake_like_background.SetDirectory(0)
 
             nominal_background = (
-                nonfake_background if USE_NONFAKE_BACKGROUND_SUBTRACTION else all_background
+                mc_contamination_background
+                if USE_MC_CONTAMINATION_SUBTRACTION
+                else all_background
             )
             background = sum_th1s(nominal_background, fakes)
             data_sig = data - background - nonfiducial_signal
@@ -702,16 +709,18 @@ if __name__ == "__main__":
             data_sig_all_bkg_with_fakes.SetName(
                 f"{config.label}_{var}_data_minus_all_background_fakes_nonfiducial"
             )
-            data_sig_no_fake = data - nonfake_background - nonfiducial_signal
-            data_sig_no_fake.SetName(f"{config.label}_{var}_data_minus_nonfake_nonfiducial")
+            data_sig_no_fake = data - mc_contamination_background - nonfiducial_signal
+            data_sig_no_fake.SetName(
+                f"{config.label}_{var}_data_minus_mc_contamination_nonfiducial"
+            )
             fake_budget_rows.append(
                 (
                     config.label,
                     var,
                     data.Integral(),
                     all_background.Integral(),
-                    nonfake_background.Integral(),
-                    fake_like_background.Integral(),
+                    mc_contamination_background.Integral(),
+                    jet_fake_like_background.Integral(),
                     fakes.Integral(),
                     nonfiducial_signal.Integral(),
                     data_sig.Integral(),
@@ -1177,9 +1186,9 @@ if __name__ == "__main__":
             "",
             "`data_sig` is the nominal unfolded input before unfolding:",
             (
-                "`data - nonfake MC backgrounds - prong-split fake estimate - "
+                "`data - MC-contamination backgrounds - prong-split fake estimate - "
                 "nonfiducial signal`."
-                if USE_NONFAKE_BACKGROUND_SUBTRACTION
+                if USE_MC_CONTAMINATION_SUBTRACTION
                 else (
                     "`data - all MC backgrounds - prong-split fake estimate - "
                     "nonfiducial signal`."
@@ -1191,9 +1200,9 @@ if __name__ == "__main__":
                 "background convention for comparison only."
             ),
             "",
-            "| Configuration | Variable | Data | All MC bkg | Nonfake MC bkg | "
-            "Fake-like MC bkg | Fakes | Nonfid signal | "
-            "Data sig, nonfake bkg + fakes | Data sig, all bkg + fakes diagnostic | "
+            "| Configuration | Variable | Data | All MC bkg | MC-contam bkg | "
+            "Jet-fake-like MC bkg | Fakes | Nonfid signal | "
+            "Data sig, MC-contam bkg + fakes | Data sig, all bkg + fakes diagnostic | "
             "Data sig, no fakes | Fid reco signal | Fid reco / data sig |",
             "|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|",
         ]
@@ -1204,8 +1213,8 @@ if __name__ == "__main__":
             var,
             data_integral,
             all_bkg,
-            nonfake_bkg,
-            fake_like_bkg,
+            mc_contamination_bkg,
+            jet_fake_like_bkg,
             fakes_integral,
             nonfid,
             data_sig,
@@ -1216,7 +1225,7 @@ if __name__ == "__main__":
         ) = row
         summary_lines.append(
             f"| {config_label} | {var} | {data_integral:.3f} | {all_bkg:.3f} | "
-            f"{nonfake_bkg:.3f} | {fake_like_bkg:.3f} | {fakes_integral:.3f} | "
+            f"{mc_contamination_bkg:.3f} | {jet_fake_like_bkg:.3f} | {fakes_integral:.3f} | "
             f"{nonfid:.3f} | {data_sig:.3f} | {data_sig_all_bkg_with_fakes:.3f} | "
             f"{data_sig_no_fake:.3f} | {fid_reco:.3f} | {fid_over_data_sig:.3f} |"
         )
@@ -1230,7 +1239,7 @@ if __name__ == "__main__":
             "When enabled, this applies the validated `application_to_lowmet` tau-width "
             "shape reweighting to the 1-prong fake component only. The 3-prong fake "
             "component is left nominal because the validation target there is not "
-            "physically usable after nonfake subtraction.",
+            "physically usable after MC-contamination subtraction.",
             "",
             "| Configuration | Variable | Width proxy | Iterations | Nominal fakes | Shifted fakes | "
             "Nominal data sig | Shifted data sig | Fid reco / nominal data sig | "

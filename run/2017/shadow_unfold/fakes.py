@@ -13,7 +13,7 @@ def fake_like_histogram(
     *,
     name: str,
 ) -> ROOT.TH1:
-    """Return data minus true-tau/nonfake MC for one validation selection."""
+    """Return data minus MC contamination for one validation selection."""
     data_hist = analysis.get_hist(
         variable,
         dataset=analysis.data_sample,
@@ -21,7 +21,7 @@ def fake_like_histogram(
         selection=selection,
         allow_generation=True,
     )
-    nonfake_hist = sum_th1s(
+    mc_contamination_hist = sum_th1s(
         *[
             analysis.get_hist(
                 variable,
@@ -33,7 +33,7 @@ def fake_like_histogram(
             for mc_sample in analysis.mc_samples
         ]
     )
-    fake_like = data_hist - nonfake_hist
+    fake_like = data_hist - mc_contamination_hist
     fake_like.SetName(name)
     fake_like.SetDirectory(0)
     return fake_like
