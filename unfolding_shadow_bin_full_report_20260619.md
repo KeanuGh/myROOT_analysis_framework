@@ -1409,6 +1409,317 @@ Recommended next steps:
 3. compare unfolded data with current fakes, low-MET fakes, and no fakes;
 4. keep the signal-like 3-prong proxy caveat explicit in the thesis write-up.
 
+### ATLAS-like high-MET fake-transfer validation
+
+Question:
+Can the low-MET fake-enriched fake-factor strategy used in the ATLAS high-mass `tau + MET` search transfer into a high-MET validation region closer to their alternative validation region?
+
+Implementation:
+- script: `run/2017/validations/validate_atlas_like_fake_transfer.py`
+- outputs: `outputs/validate_shadow_fakes/atlas_like_fake_transfer/`
+- summary: `outputs/validate_shadow_fakes/atlas_like_fake_transfer/atlas_like_fake_transfer_summary.md`
+- cache: `outputs/validate_shadow_fakes/atlas_like_fake_transfer/root/validate_atlas_like_fake_transfer.root`
+- mode: new ROOT event loops were run once; reruns should be cache-only
+
+The script derives prong-split `TauPt` fake factors in low-MET fake-enriched regions:
+
+```text
+0 <= MET < 100
+30 <= MET < 100
+50 <= MET < 100
+70 <= MET < 100
+0 <= MET < 150
+```
+
+and applies them to high-MET imbalanced validation targets:
+
+```text
+MTW >= 240, MET >= 170, TauPt / MET < 0.7
+MTW >= 350, MET >= 170, TauPt / MET < 0.7
+```
+
+Important technical caveat:
+The `MTW` histogram binning used by this analysis starts at `350 GeV`:
+
+```text
+[350, 375, 400, 430, 465, 500, 550, 600, 700, 850, 1000, 2000]
+```
+
+Therefore, the `MTW >= 240` and `MTW >= 350` rows have the same `MTW`-histogram target integrals in this output. The `MTW >= 240` selection is applied at event level, but the resulting `MTW` histogram cannot display or integrate the `240-350 GeV` part of the validation region. This means the current run is still useful for testing the high-MET imbalanced population **inside the nominal unfolded MTW range**, but it is not yet a complete reproduction of the ATLAS-style `MTW > 240 GeV` validation region. A true reproduction needs a validation-specific `MTW` binning that starts below `350 GeV`.
+
+Compact result:
+
+| Validation target | Prong | MET-window spread | Prediction / target |
+| --- | ---: | --- | ---: |
+| high-MET imbalanced, nominal MTW bins | 1 | `0 <= MET < 100` to `0 <= MET < 150` | `0.660-0.683` |
+| high-MET imbalanced, nominal MTW bins | 3 | `0 <= MET < 100` to `0 <= MET < 150` | `0.215-0.220` |
+| high-MET imbalanced, nominal MTW bins | combined | `0 <= MET < 100` to `0 <= MET < 150` | `0.538-0.556` |
+
+Representative rows from the summary:
+
+| MET window | Prong | CR numerator | CR denominator | Problem bins | Predicted fakes | Validation target | Prediction / target |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `0 <= MET < 100` | 1 | 326482.055 | 2990296.991 | 0 neg num, 3 tiny den | 8.059 | 11.817 | 0.682 |
+| `70 <= MET < 100` | 1 | 17267.916 | 173139.106 | 0 neg num, 2 tiny den | 7.795 | 11.817 | 0.660 |
+| `0 <= MET < 150` | 1 | 330160.575 | 3022820.504 | 0 neg num, 3 tiny den | 8.072 | 11.817 | 0.683 |
+| `0 <= MET < 100` | 3 | 38779.324 | 703576.617 | 0 neg num, 1 tiny den | 0.958 | 4.429 | 0.216 |
+| `70 <= MET < 100` | 3 | 2200.863 | 48901.341 | 0 neg num, 0 tiny den | 0.975 | 4.429 | 0.220 |
+| `0 <= MET < 150` | 3 | 39145.866 | 716173.416 | 0 neg num, 0 tiny den | 0.956 | 4.429 | 0.216 |
+
+The most important feature is that the MET-window envelope is very small. The five low-MET windows produce almost identical fake predictions. That means the ATLAS-style MET-window variations, at least in this implementation and binning, do not cover the discrepancy in the high-MET imbalanced validation region.
+
+The 1-prong prediction undershoots the high-MET imbalanced target by about `30-35%`. The 3-prong prediction undershoots by roughly a factor of five. This is the opposite direction from the earlier signal-like high-MET pass-ID proxy, where the fake subtraction looked too large once compared with the total unfolding budget. The difference matters: this imbalanced validation region is not the nominal SR, and the absolute yields are small. It is best interpreted as a transfer/composition stress test, not as a direct correction factor for the nominal analysis.
+
+Representative plots:
+
+| 1-prong high-MET imbalanced | 3-prong high-MET imbalanced |
+| --- | --- |
+| <img src="outputs/validate_shadow_fakes/atlas_like_fake_transfer/plots/atlas_like_fake_transfer/atlas_like_low_met_atlas_like_high_met_imbalanced_1prong_atlas_like_fake_transfer.png" width="390"> | <img src="outputs/validate_shadow_fakes/atlas_like_fake_transfer/plots/atlas_like_fake_transfer/atlas_like_low_met_atlas_like_high_met_imbalanced_3prong_atlas_like_fake_transfer.png" width="390"> |
+
+Interpretation:
+
+- The low-MET fake-factor numerator and denominator are healthy in this test; there are no negative numerator bins.
+- Varying the low-MET window barely changes the predicted high-MET imbalanced fake yield.
+- This validation therefore does **not** support the idea that a simple MET-window envelope is enough to cover the fake-transfer problem.
+- The failure is stronger for 3-prong candidates, again pointing towards fake-source composition or nonfake-subtraction modelling rather than just a bad MET threshold.
+- Because the nominal `MTW` bins start at `350 GeV`, a proper ATLAS-like `MTW > 240 GeV` validation still needs a validation-specific binning before this can be used as a thesis-quality reproduction of their validation-region logic.
+
+Recommendation:
+
+Do not promote this ATLAS-like low-MET model to the nominal fake estimate yet. The useful conclusion is narrower:
+
+1. low-MET fake-factor derivation is statistically healthy;
+2. MET-window variations alone do not explain the high-MET transfer mismatch;
+3. the next validation should either add a custom `MTW` binning down to `240 GeV` for the ATLAS-like region, or move to the fake-source composition handle, i.e. a read-only audit for tau seed-width / tau-width variables.
+
+### Tau-width fake-composition validation
+
+Question:
+Does the low-MET fake-factor determination region have the same tau-width shape as the high-MET anti-ID application region, or is there evidence for fake-source composition mismatch?
+
+Implementation:
+- script: `run/2017/validations/validate_tau_width_composition.py`
+- outputs: `outputs/validate_shadow_fakes/tau_width_composition/`
+- summary: `outputs/validate_shadow_fakes/tau_width_composition/tau_width_composition_summary.md`
+- cache: `outputs/validate_shadow_fakes/tau_width_composition/root/validate_tau_width_composition.root`
+- mode: new ROOT event loops were run once; reruns should be cache-only
+
+The validation uses tau track-width branches found in the input ntuples:
+
+```text
+TauTrackWidthPt1000PV
+TauTrackWidthPt500PV
+TauTrackWidthPt1000TV
+TauTrackWidthPt500TV
+```
+
+These are not exactly named "tau jet seed width", but they are plausible width-like proxies for the same underlying issue: whether the fake-like tau candidates are narrow or broad, which is sensitive to fake-source composition. In the ATLAS high-mass `tau + MET` analysis, tau jet seed width is used to assess quark/gluon composition differences between the multijet fake-factor region and the anti-ID application region.
+
+The comparison is made on fake-like histograms:
+
+```text
+data - nonfake MC
+```
+
+for:
+
+- low-MET fake-factor denominator, `MET < 100`;
+- nominal high-MET anti-ID application region, `MTW >= 350`, `MET >= 170`;
+- ATLAS-like high-MET imbalanced anti-ID region, `MTW >= 350`, `MET >= 170`, `TauPt / MET < 0.7`.
+
+The cleanest comparison is the nominal high-MET anti-ID region, because it has much larger yield and far fewer negative bins than the imbalanced validation region.
+
+Key rows:
+
+| Variable | Prong | Comparison | Low-MET fake-like yield | Target fake-like yield | Low-MET mean | Target mean | Relative mean shift | L1 shape distance |
+| --- | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| `TauTrackWidthPt1000PV` | 1 | nominal high-MET anti-ID | 2977426.152 | 1990.266 | 0.02325 | 0.04404 | 0.894 | 0.134 |
+| `TauTrackWidthPt500PV` | 1 | nominal high-MET anti-ID | 2982159.157 | 2121.601 | 0.02623 | 0.06031 | 1.299 | 0.176 |
+| `TauTrackWidthPt1000TV` | 1 | nominal high-MET anti-ID | 2971979.477 | 2231.217 | 0.02322 | 0.03773 | 0.625 | 0.166 |
+| `TauTrackWidthPt500TV` | 1 | nominal high-MET anti-ID | 2976933.974 | 2264.718 | 0.02623 | 0.04524 | 0.725 | 0.182 |
+| `TauTrackWidthPt1000PV` | 3 | nominal high-MET anti-ID | 703499.007 | 715.962 | 0.01568 | 0.02002 | 0.277 | 0.131 |
+| `TauTrackWidthPt500PV` | 3 | nominal high-MET anti-ID | 703600.854 | 718.103 | 0.01667 | 0.02149 | 0.289 | 0.131 |
+| `TauTrackWidthPt1000TV` | 3 | nominal high-MET anti-ID | 702422.088 | 720.750 | 0.01570 | 0.02036 | 0.297 | 0.134 |
+| `TauTrackWidthPt500TV` | 3 | nominal high-MET anti-ID | 702691.866 | 720.272 | 0.01674 | 0.02107 | 0.258 | 0.130 |
+
+The high-MET anti-ID fake-like population is consistently wider than the low-MET fake-factor denominator. The effect is strongest for 1-prong candidates:
+
+- `TauTrackWidthPt1000PV`: mean width increases by about `89%`;
+- `TauTrackWidthPt500PV`: mean width increases by about `130%`;
+- `TauTrackWidthPt1000TV`: mean width increases by about `63%`;
+- `TauTrackWidthPt500TV`: mean width increases by about `73%`.
+
+The 3-prong shifts are smaller but still systematic, around `26-30%`. This supports the hypothesis that the low-MET fake-factor determination region and high-MET anti-ID application region have different fake-like tau compositions.
+
+The ATLAS-like high-MET imbalanced region shows even larger shape distances in some rows, especially 3-prong, but its fake-like yield is very small and many bins become negative after nonfake subtraction. Those rows should be treated as qualitative only.
+
+Representative plots:
+
+| 1-prong `TauTrackWidthPt1000PV` | 3-prong `TauTrackWidthPt1000PV` |
+| --- | --- |
+| <img src="outputs/validate_shadow_fakes/tau_width_composition/plots/tau_width_composition/TauTrackWidthPt1000PV_1prong_tau_width_composition.png" width="390"> | <img src="outputs/validate_shadow_fakes/tau_width_composition/plots/tau_width_composition/TauTrackWidthPt1000PV_3prong_tau_width_composition.png" width="390"> |
+
+Interpretation:
+
+- This is the first direct evidence, in our own ntuples, for a fake-source/composition mismatch between the low-MET fake-factor denominator and the high-MET anti-ID application region.
+- The result is qualitatively aligned with the ATLAS tau+MET treatment: a width-like tau variable can diagnose differences between the fake-factor measurement region and the application region.
+- This does not by itself define a correction, because `data - nonfake MC` subtraction in sparse high-MET regions can produce negative bins and the branch is a track-width proxy rather than the exact ATLAS seed-width observable.
+- It does justify treating fake-source composition as a real systematic candidate rather than a speculative explanation.
+
+Recommendation:
+
+Do not immediately reweight the nominal fake estimate. The next defensible validation step is to build a width-reweighting diagnostic:
+
+1. derive a low-MET-to-high-MET anti-ID width reweighting using the highest-statistics comparison, preferably nominal high-MET anti-ID rather than the sparse imbalanced region;
+2. apply that reweighting to the low-MET fake-factor denominator or to the fake-factor prediction as a systematic variation;
+3. compare the shifted fake prediction to the existing low-MET and current fake predictions;
+4. if the effect is large and stable across `TauTrackWidthPt1000PV` and `TauTrackWidthPt500PV`, treat it as a fake-source composition uncertainty.
+
+### Tau-width reweighting diagnostic
+
+Question:
+If the high-MET anti-ID application region has a different tau-width shape from the low-MET fake-factor denominator, does an ATLAS-like width reweighting move the fake prediction in the expected direction?
+
+Implementation:
+- script: `run/2017/validations/validate_tau_width_reweighting.py`
+- outputs: `outputs/validate_shadow_fakes/tau_width_reweighting/`
+- summary: `outputs/validate_shadow_fakes/tau_width_reweighting/tau_width_reweighting_summary.md`
+- cache: `outputs/validate_shadow_fakes/tau_width_reweighting/root/validate_tau_width_reweighting_multiwidth.root`
+- mode: new ROOT event loops were run once; later reruns should use the cached ROOT file
+- width proxies: `TauTrackWidthPt1000PV`, `TauTrackWidthPt500PV`
+- fake-factor source variable: `TauPt`
+- target observable: `MTW`
+- width weights capped at `5.0`
+
+This is a diagnostic, not a proposed nominal correction. It tests two directions:
+
+- `application_to_lowmet`: reweight the high-MET anti-ID application events so their tau-width shape looks more like the low-MET fake-factor denominator. This is the ATLAS-like systematic direction.
+- `lowmet_to_application`: the opposite stress test, upweighting the broader high-MET-like width tail. This is diagnostic only and should not be used as the nominal correction.
+
+Result:
+
+| Width variable | Prong | Prediction | Integral | Target integral | Prediction / target | Relative to nominal fake prediction |
+| --- | ---: | --- | ---: | ---: | ---: | ---: |
+| `TauTrackWidthPt1000PV` | 1 | nominal low-MET fake factor | 210.924 | 163.335 | 1.291 | 1.000 |
+| `TauTrackWidthPt1000PV` | 1 | `application_to_lowmet` width reweight | 167.680 | 163.335 | 1.027 | 0.795 |
+| `TauTrackWidthPt1000PV` | 1 | `lowmet_to_application` width reweight | 247.168 | 163.335 | 1.513 | 1.172 |
+| `TauTrackWidthPt500PV` | 1 | nominal low-MET fake factor | 210.924 | 163.335 | 1.291 | 1.000 |
+| `TauTrackWidthPt500PV` | 1 | `application_to_lowmet` width reweight | 178.643 | 163.335 | 1.094 | 0.847 |
+| `TauTrackWidthPt500PV` | 1 | `lowmet_to_application` width reweight | 305.434 | 163.335 | 1.870 | 1.448 |
+| `TauTrackWidthPt1000PV` | 3 | nominal low-MET fake factor | 15.212 | -58.523 | -0.260 | 1.000 |
+| `TauTrackWidthPt1000PV` | 3 | `application_to_lowmet` width reweight | 15.135 | -58.523 | -0.259 | 0.995 |
+| `TauTrackWidthPt1000PV` | 3 | `lowmet_to_application` width reweight | 18.199 | -58.523 | -0.311 | 1.196 |
+| `TauTrackWidthPt500PV` | 3 | nominal low-MET fake factor | 15.212 | -58.523 | -0.260 | 1.000 |
+| `TauTrackWidthPt500PV` | 3 | `application_to_lowmet` width reweight | 15.537 | -58.523 | -0.265 | 1.021 |
+| `TauTrackWidthPt500PV` | 3 | `lowmet_to_application` width reweight | 17.864 | -58.523 | -0.305 | 1.174 |
+
+Representative plots:
+
+| 1-prong `TauTrackWidthPt1000PV` | 1-prong `TauTrackWidthPt500PV` |
+| --- | --- |
+| <img src="outputs/validate_shadow_fakes/tau_width_reweighting/plots/tau_width_reweighting/TauTrackWidthPt1000PV_1prong_tau_width_reweighting.png" width="390"> | <img src="outputs/validate_shadow_fakes/tau_width_reweighting/plots/tau_width_reweighting/TauTrackWidthPt500PV_1prong_tau_width_reweighting.png" width="390"> |
+
+| 3-prong `TauTrackWidthPt1000PV` | 3-prong `TauTrackWidthPt500PV` |
+| --- | --- |
+| <img src="outputs/validate_shadow_fakes/tau_width_reweighting/plots/tau_width_reweighting/TauTrackWidthPt1000PV_3prong_tau_width_reweighting.png" width="390"> | <img src="outputs/validate_shadow_fakes/tau_width_reweighting/plots/tau_width_reweighting/TauTrackWidthPt500PV_3prong_tau_width_reweighting.png" width="390"> |
+
+Interpretation:
+
+For 1-prong candidates, both width proxies move in the expected direction if the fake-source composition mismatch is real. The nominal low-MET fake factor overpredicts the high-MET pass-ID target by about `29%`. Reweighting the high-MET anti-ID application region toward the low-MET width shape reduces the prediction:
+
+- `TauTrackWidthPt1000PV`: prediction/target improves from `1.291` to `1.027`;
+- `TauTrackWidthPt500PV`: prediction/target improves from `1.291` to `1.094`.
+
+The opposite stress-test direction increases the prediction and worsens the agreement:
+
+- `TauTrackWidthPt1000PV`: prediction/target becomes `1.513`;
+- `TauTrackWidthPt500PV`: prediction/target becomes `1.870`.
+
+The two proxies do not give identical shifts, but they agree on the qualitative direction: the broader high-MET anti-ID width shape is associated with a larger fake prediction, and correcting the application region back toward the low-MET width shape reduces the overprediction.
+
+For 3-prong candidates, the validation target is still negative after nonfake subtraction. That makes the prediction/target ratio physically uninterpretable as a closure metric. The ATLAS-like direction barely changes the prediction for either proxy (`0.995` and `1.021` relative to nominal), while the reverse stress test increases the prediction by about `17-20%`. This reinforces the earlier conclusion that the high-MET 3-prong pass-ID target is dominated by nonfake-subtraction/pathology rather than by a clean fake population.
+
+Recommendation:
+
+Do not promote width reweighting to the nominal fake estimate yet. The useful conclusion is that width/composition effects are large enough to be a credible fake-source systematic for the 1-prong high-MET transfer, and that conclusion is now supported by two stable width proxies. The next step should be to define this as a systematic-style envelope rather than a correction: compare the nominal low-MET fake estimate with the `application_to_lowmet` shifted prediction for the final 1-prong fake component. The 3-prong issue should remain a separate nonfake-subtraction and MC-composition problem, not be absorbed into this width-reweighting test.
+
+Proposed systematic prescription:
+
+- Keep the nominal fake estimate unchanged.
+- Apply this uncertainty only to the **1-prong** fake component.
+- Use `TauTrackWidthPt1000PV` as the representative width-composition proxy.
+- Use `TauTrackWidthPt500PV` as a robustness/envelope cross-check.
+- Define the shifted 1-prong fake prediction from the `application_to_lowmet` direction, because this is the ATLAS-like direction: reweight the high-MET anti-ID application region so its width shape matches the low-MET fake-factor denominator.
+- Do not use `lowmet_to_application` as a nominal systematic variation. It is a stress test showing that upweighting the high-MET-like width tail worsens the agreement.
+- Do not assign this width-composition uncertainty to 3-prong until the negative high-MET 3-prong `data - nonfake MC` target is understood.
+
+In integral terms, the candidate 1-prong systematic size is:
+
+| Width proxy | Nominal fake prediction | Shifted prediction | Relative shift |
+| --- | ---: | ---: | ---: |
+| `TauTrackWidthPt1000PV` | 210.924 | 167.680 | `-20.5%` |
+| `TauTrackWidthPt500PV` | 210.924 | 178.643 | `-15.3%` |
+
+For a final binned analysis implementation, the cleanest treatment is a **shape-and-normalisation uncertainty**:
+
+```text
+nominal bin = nominal 1-prong fake prediction
+shifted bin = application_to_lowmet reweighted 1-prong fake prediction
+uncertainty bin = max(
+    |nominal - TauTrackWidthPt1000PV shifted|,
+    |nominal - TauTrackWidthPt500PV shifted|
+)
+```
+
+If the framework requires explicit up/down templates, this can be symmetrised around the nominal prediction:
+
+```text
+down bin = nominal bin - uncertainty bin
+up bin   = nominal bin + uncertainty bin
+```
+
+with negative bins clipped only if strictly required by the downstream covariance machinery. The unsymmetrised shifted histograms should still be kept in the validation output, because they show the physical direction of the composition effect.
+
+This should be described in the thesis as a **fake-source composition uncertainty**, not as a correction to the central fake estimate. The motivation is that the low-MET fake-factor denominator and high-MET anti-ID application region have demonstrably different tau-width shapes, and ATLAS high-mass `tau + MET` analyses use tau-width or tau-seed-width variations to assess this transfer/composition effect.
+
+Implementation status in `analysis_shadow_unfold.py`:
+
+The main shadow-unfolding script has been updated to propagate this candidate systematic through the unfolding as a diagnostic, controlled by:
+
+```python
+RUN_FAKE_WIDTH_SYSTEMATIC = True
+FAKE_WIDTH_SYSTEMATIC_VARS = ("MTW",)
+FAKE_WIDTH_VARIABLES = ("TauTrackWidthPt1000PV", "TauTrackWidthPt500PV")
+```
+
+The implementation:
+
+- leaves the nominal fake estimate unchanged;
+- only shifts the 1-prong fake component;
+- leaves the 3-prong fake component nominal;
+- builds `application_to_lowmet` shifted fake templates for both width proxies;
+- forms shifted unfolded inputs as `data - prompt backgrounds - shifted fakes - nonfiducial signal`;
+- unfolds the shifted inputs with the fake-diagnostic iteration count;
+- writes comparison plots under:
+
+```text
+outputs/analysis_shadow_unfold/plots/<configuration>/MTW/fake_width_systematic/
+```
+
+and appends a table to:
+
+```text
+outputs/analysis_shadow_unfold/fake_diagnostics_summary.md
+```
+
+This has been implemented and static-checked, but the full `analysis_shadow_unfold.py` production run should be launched separately because it scans the full measured samples. The intended command is:
+
+```bash
+pixi run python run/2017/analysis_shadow_unfold.py
+```
+
+For a first production check, keep `FAKE_WIDTH_SYSTEMATIC_VARS = ("MTW",)` so the script only propagates the uncertainty for the actual measured observable.
+
 ### High-MET 3-prong nonfake-subtraction diagnostic
 
 The negative high-MET 3-prong validation target was then isolated with a cache-only diagnostic:
@@ -1647,6 +1958,35 @@ Several changes are not physics changes but affect generated outputs:
 - old `run/2017_viva` files are treated as historical backup and excluded from active checking.
 
 These should not be interpreted as physics differences.
+
+### 8. Optional `wtaunu_had` prong-composition systematic switch
+
+The current `analysis_shadow_unfold.py` script now includes an optional diagnostic/systematic switch:
+
+```python
+RUN_WTAUNU_PRONG_SYSTEMATIC = False
+```
+
+When enabled, the script builds separate 1-prong and 3-prong reconstructed `wtaunu_had` response pieces. It then applies explicit prong scale factors, currently:
+
+```python
+WTAUNU_PRONG_VARIATIONS = {
+    "reduce_3prong_20pct": {1: 1.0, 3: 0.8},
+}
+```
+
+This is not a nominal correction. It is a way to quantify how sensitive the unfolded result is to the reconstructed `wtaunu_had` prong composition, which the validation studies identified as a major source of the high-MET 3-prong tension.
+
+Implementation details:
+
+- script: `run/2017/analysis_shadow_unfold.py`
+- flag: `RUN_WTAUNU_PRONG_SYSTEMATIC`
+- varied objects: reconstructed signal projection, response matrix, and nonfiducial signal correction
+- nominal result: unchanged when the flag is off
+- expected output when enabled: `outputs/analysis_shadow_unfold/plots/<configuration>/<variable>/wtaunu_prong_systematic/`
+- summary table: `outputs/analysis_shadow_unfold/fake_diagnostics_summary.md`, under `wtaunu_had prong-composition modelling systematic`
+
+This should be treated as a modelling diagnostic unless a stronger external or upstream justification is found for a specific prong-dependent correction. A defensible thesis phrasing would be: "a prong-composition modelling uncertainty on the reconstructed `W -> tau nu` signal component was evaluated."
 
 ## Comparison With Thesis Snapshot
 

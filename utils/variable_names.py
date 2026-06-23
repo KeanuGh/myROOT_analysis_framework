@@ -537,6 +537,26 @@ variable_data: dict[str, Branch] = {
         "units": "GeV",
         "tag": VarTag.RECO,
     },
+    "TauTrackWidthPt1000PV": {
+        "name": r"Tau track width, $p_\mathrm{T} > 1\,\mathrm{GeV}$, PV",
+        "units": "",
+        "tag": VarTag.RECO,
+    },
+    "TauTrackWidthPt500PV": {
+        "name": r"Tau track width, $p_\mathrm{T} > 0.5\,\mathrm{GeV}$, PV",
+        "units": "",
+        "tag": VarTag.RECO,
+    },
+    "TauTrackWidthPt1000TV": {
+        "name": r"Tau track width, $p_\mathrm{T} > 1\,\mathrm{GeV}$, TV",
+        "units": "",
+        "tag": VarTag.RECO,
+    },
+    "TauTrackWidthPt500TV": {
+        "name": r"Tau track width, $p_\mathrm{T} > 0.5\,\mathrm{GeV}$, TV",
+        "units": "",
+        "tag": VarTag.RECO,
+    },
     "JetPt": {
         "name": r"Jet $p_\mathrm{T}$",
         "units": "GeV",
