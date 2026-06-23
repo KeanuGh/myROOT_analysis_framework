@@ -3,12 +3,12 @@ from __future__ import annotations
 import ROOT
 from common import REPO_ROOT, VALIDATION_OUTPUT, get_root_hist, write_markdown
 from samples import NOMINAL_NAME
-from shadow_unfold.histograms import closure_metrics, scale_and_crop_unfolded, unfold_histogram
 from shadow_unfold.models import ResponseComponents
 
 from src.analysis import Analysis
 from src.datasetbuilder import LUMI_YEAR
 from src.histogram import Histogram1D
+from src.unfolding import closure_metrics, scale_and_crop_unfolded, unfold_histogram
 from utils.variable_names import variable_data
 
 YEAR = 2017

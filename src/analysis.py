@@ -14,10 +14,11 @@ import ROOT
 from matplotlib import ticker
 from tabulate import tabulate
 
-from models.analysis import AnalysisPath, BinByBinUnfoldingResult, FloatArray, HistResultPtr
+from models.analysis import AnalysisPath, BinByBinUnfoldingResult, FloatArray
 from src.dataset import Dataset
 from src.datasetbuilder import LUMI_YEAR, DatasetBuilder
 from src.dsid_meta import DatasetMetadata
+from src.fakes import build_fake_factor_batched
 from src.histogram import Histogram1D
 from src.logger import get_logger
 from utils import ROOT_utils, plotting_tools
@@ -1317,174 +1318,21 @@ class Analysis:
         :param systematic: which systematic to apply fakes estimate to
         :param save_intermediates: Whether to save intermediate fakes calculation histograms
         """
-        ff_var = fakes_source_var
-        if name:
-            prefix = name + "_"
-        else:
-            prefix = ""
-
-        if not self.data_sample:
-            raise ValueError(
-                "No data sample in analysis! "
-                "How are you going to perform a data-driven fakes estimate?"
-            )
-
-        info_msg = "Calculating fake factors for %s"
-        if name:
-            info_msg += " with name: '%s'"
-            msg_args = (ff_var, name)
-        else:
-            msg_args = (ff_var,)
-        info_msg += "..."
-        self.logger.info(info_msg, *msg_args)
-
-        # data histograms
-        hCR_passID_data = self.get_hist(
-            variable=ff_var,
-            dataset=self.data_sample,
+        build_fake_factor_batched(
+            self,
+            fakes_source=fakes_source_var,
+            target_vars=tuple(fakes_target_vars),
+            cr_pass_selection=CR_passID_data,
+            cr_fail_selection=CR_failID_data,
+            sr_pass_selection=SR_passID_data,
+            sr_fail_selection=SR_failID_data,
+            true_cr_pass_selection=CR_passID_mc,
+            true_cr_fail_selection=CR_failID_mc,
+            true_sr_fail_selection=SR_failID_mc,
+            output_prefix=name,
             systematic=systematic,
-            selection=CR_passID_data,
-            allow_generation=True,
+            save_intermediates=save_intermediates,
         )
-        hCR_failID_data = self.get_hist(
-            variable=ff_var,
-            dataset=self.data_sample,
-            systematic=systematic,
-            selection=CR_failID_data,
-            allow_generation=True,
-        )
-        hSR_failID_data = self.get_hist(
-            variable=ff_var,
-            dataset=self.data_sample,
-            systematic=systematic,
-            selection=SR_failID_data,
-            allow_generation=True,
-        )
-
-        # mc truth matched histograms
-        hCR_passID_mc = self.sum_hists(
-            [
-                self.get_hist(
-                    variable=ff_var,
-                    dataset=mc_ds,
-                    systematic=systematic,
-                    selection=CR_passID_mc,
-                    allow_generation=True,
-                )
-                for mc_ds in self.mc_samples
-            ]
-        )
-        hCR_failID_mc = self.sum_hists(
-            [
-                self.get_hist(
-                    variable=ff_var,
-                    dataset=mc_ds,
-                    systematic=systematic,
-                    selection=CR_failID_mc,
-                    allow_generation=True,
-                )
-                for mc_ds in self.mc_samples
-            ]
-        )
-        hSR_failID_mc = self.sum_hists(
-            [
-                self.get_hist(
-                    variable=ff_var,
-                    dataset=mc_ds,
-                    systematic=systematic,
-                    selection=SR_failID_mc,
-                    allow_generation=True,
-                )
-                for mc_ds in self.mc_samples
-            ]
-        )
-
-        # FF calculation
-        numerator = hCR_passID_data - hCR_passID_mc
-        denominator = hCR_failID_data - hCR_failID_mc
-        fakes_data_est = hSR_failID_data - hSR_failID_mc
-
-        h_FF = numerator / denominator
-        h_FF.SetName(f"{prefix}{ff_var}_FF")
-        h_SR_data_fakes = fakes_data_est * h_FF
-
-        self.histograms[f"{prefix}{ff_var}_FF"] = h_FF
-        self.histograms[f"{prefix}{ff_var}_fakes_bkg_{ff_var}"] = h_SR_data_fakes
-
-        # define fake-factor weights in the anti-ID signal region
-        ROOT.gInterpreter.Declare(
-            f"TH1F* FF_hist_{prefix}{ff_var} = reinterpret_cast<TH1F*>({ROOT.addressof(h_FF)});"
-        )
-        ff_weight = f"reco_weight * FF_hist_{prefix}{ff_var}->GetBinContent(FF_hist_{prefix}{ff_var}->FindBin({ff_var}))"
-        ff_weight_col = f"FF_weight_{prefix}{ff_var}"
-        self[self.data_sample].filters[systematic][SR_failID_data].df = (
-            self[self.data_sample]
-            .filters[systematic][SR_failID_data]
-            .df.Define(ff_weight_col, ff_weight)
-        )
-        for mc in self.mc_samples:
-            self[mc].filters[systematic][SR_failID_mc].df = (
-                self[mc].filters[systematic][SR_failID_mc].df.Define(ff_weight_col, ff_weight)
-            )
-
-        # background estimation in target variables
-        ff_hists: dict[str, tuple[HistResultPtr, dict[str, HistResultPtr]]] = {}
-        for target_var in fakes_target_vars:
-            # define target histogram
-            h_name = f"{prefix}{target_var}_fakes_bkg_{ff_var}_src"
-            h_bins = self[self.data_sample].get_binnings(target_var, SR_passID_data)
-            h_data_target_var_ff = ROOT.TH1F(
-                f"{h_name}_data", h_name, *ROOT_utils.get_TH1_bin_args(**h_bins)
-            )
-
-            data_ptr = (
-                self[self.data_sample]
-                .filters[systematic][SR_failID_data]
-                .df.Fill(h_data_target_var_ff, [target_var, ff_weight_col])
-            )
-
-            ptrs: dict[str, HistResultPtr] = {}
-            for mc in self.mc_samples:
-                h_mc_target_var_ff = ROOT.TH1F(
-                    f"{h_name}_{mc}", h_name, *ROOT_utils.get_TH1_bin_args(**h_bins)
-                )
-                ptrs[mc] = (
-                    self[mc]
-                    .filters[systematic][SR_failID_mc]
-                    .df.Fill(h_mc_target_var_ff, [target_var, ff_weight_col])
-                )
-            ff_hists[target_var] = (data_ptr, ptrs)
-
-        # rerun over dataframes (must be its own loop to avoid separating the runs)
-        for target_var, (data_ptr, mc_ptrs) in ff_hists.items():
-            info_msg = "Calculating fake background estimate for %s"
-            if name:
-                info_msg += " with name: '%s'"
-                msg_args = (target_var, name)
-            else:
-                msg_args = (target_var,)
-            info_msg += "..."
-            self.logger.info(info_msg, *msg_args)
-            truth_h = reduce(lambda x, y: x + y, [ptr.GetValue() for ptr in mc_ptrs.values()])
-            jet_est_h = data_ptr.GetValue() - truth_h
-            jet_est_h.SetName(f"{prefix}{target_var}_fakes_bkg_{ff_var}_src")
-            jet_est_h.SetTitle(f"{prefix}{target_var}_fakes_bkg_{ff_var}_src")
-
-            # set error at 10%
-            for i in range(jet_est_h.GetNbinsX()):
-                jet_est_h.SetBinError(i + 1, jet_est_h.GetBinContent(i + 1) * 0.1)
-
-            self.histograms[f"{prefix}{target_var}_fakes_bkg_{ff_var}_src"] = jet_est_h
-
-        if save_intermediates:
-            self.histograms[f"{prefix}all_mc_{ff_var}_{CR_passID_mc}"] = hCR_passID_mc
-            self.histograms[f"{prefix}all_mc_{ff_var}_{CR_failID_mc}"] = hCR_failID_mc
-            self.histograms[f"{prefix}all_mc_{ff_var}_{SR_failID_mc}"] = hSR_failID_mc
-            self.histograms[f"{prefix}{ff_var}_FF_numerator"] = numerator
-            self.histograms[f"{prefix}{ff_var}_FF_denominator"] = denominator
-            self.histograms[f"{prefix}{ff_var}_FF_fakes_data_est"] = fakes_data_est
-
-        self.logger.info("Completed fakes estimate")
 
     @staticmethod
     def get_bin_by_bin_correction(

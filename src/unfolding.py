@@ -1,9 +1,18 @@
+from typing import Protocol
+
 import numpy as np
 import ROOT
 
-from shadow_unfold.models import ResponseComponents
 from src.analysis import Analysis
 from utils.ROOT_utils import get_th1_bin_edges
+
+
+class ResponseLike(Protocol):
+    """Minimal response object interface needed by the unfolding helpers."""
+
+    response: ROOT.RooUnfoldResponse
+    reco: ROOT.TH1
+    truth: ROOT.TH1
 
 
 def crop_to_nominal_binning(source: ROOT.TH1, target: ROOT.TH1, name: str) -> ROOT.TH1:
@@ -49,7 +58,7 @@ def covariance_from_hist(h: ROOT.TH1, name: str) -> ROOT.TH2D:
 def unfold_histogram(
     analysis: Analysis,
     hist: ROOT.TH1,
-    response: ResponseComponents,
+    response: ResponseLike,
     iter_count: int,
 ) -> tuple[ROOT.TH1, ROOT.TH2]:
     """Unfold one histogram and return the unfolded histogram plus covariance."""

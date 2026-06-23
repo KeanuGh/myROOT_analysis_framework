@@ -2028,6 +2028,16 @@ For shared control regions, the script computes each nominal fake factor once pe
 
 Later shadow-bin configurations reuse the cached fake-factor histogram and only run the SR fail-ID application step for the current target selection. The cache key includes the `TauPt` fake-factor bin edges, so configurations with different `TauPt` shadow-bin source binnings do not accidentally reuse an incompatible fake factor. This does not change the fake-factor algebra or the nominal physics definition. It only avoids rescanning the same low-MET CR numerator and denominator repeatedly when the CR and source binning are genuinely identical.
 
+The first-time fake-factor build has also been consolidated into
+`src/fakes.py::build_fake_factor_batched`. The public
+`Analysis.do_fakes_estimate()` method now delegates to this implementation, so
+the framework no longer carries two separate fake-factor algorithms. The helper
+books the required `TauPt` CR/SR source histograms before collecting results.
+This keeps the same fake-factor equation but avoids the old `get_hist(...,
+allow_generation=True)` pattern where each missing source histogram could
+trigger its own ROOT event loop. The SR fail-ID target-variable application is
+still handled separately because it depends on the current target selection.
+
 The original thesis-style CR is commented out with `shared_across_configs=False`, because that CR depends on the shadow-bin thresholds and should not reuse fake factors across configurations without an explicit validation.
 
 Inclusive fake factors are no longer part of the main production script. They remain a validation-only comparison in `run/2017/validations/validate_inclusive_prong_fakes.py`.
