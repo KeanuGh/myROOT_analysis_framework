@@ -47,7 +47,8 @@ ITERATIONS = (
     # 8,
 )
 FAKES_SOURCE = "TauPt"
-LOAD_SAVED_HISTS = False  # Reuse saved ROOT histograms instead of rebuilding them.
+LOAD_SAVED_HISTS = True  # Reuse saved ROOT histograms instead of rebuilding them.
+USE_NONFAKE_BACKGROUND_SUBTRACTION = True  # Replace fake-like MC with data-driven fakes.
 DO_FULL_SYSTEMATICS = False  # Enable full systematic response variations; slow final-mode run.
 RUN_FAKE_WIDTH_SYSTEMATIC = True  # Propagate the validated 1-prong tau-width fake systematic.
 FAKE_WIDTH_VARIABLE = "TauTrackWidthPt1000PV"
@@ -90,6 +91,10 @@ PASS_TRUETAU = Cut(
     "MatchedTruthParticle_isHadronicTau == true || "
     "MatchedTruthParticle_isMuon == true || "
     "MatchedTruthParticle_isElectron == true",
+    # To test photon-matched candidates as nonfake MC, uncomment the line below
+    # and rebuild measured histograms. Cached trueTau histograms use this active
+    # definition and must not be mixed with a different nonfake definition.
+    # " || MatchedTruthParticle_isPhoton == true",
 )
 PASS_TRUTH = Cut(r"Pass Truth", r"(passTruth == 1)")
 TRUTH_HAD_TAU = Cut(
@@ -459,7 +464,21 @@ if __name__ == "__main__":
 
     closure_rows: list[tuple[str, str, int, float, float, float]] = []
     fake_budget_rows: list[
-        tuple[str, str, float, float, float, float, float, float, float, float]
+        tuple[
+            str,
+            str,
+            float,
+            float,
+            float,
+            float,
+            float,
+            float,
+            float,
+            float,
+            float,
+            float,
+            float,
+        ]
     ] = []
     fake_width_rows: list[
         tuple[str, str, str, int, float, float, float, float, float, float]
@@ -593,12 +612,22 @@ if __name__ == "__main__":
                 systematic=NOMINAL_NAME,
                 selection=sr_pass,
             )
-            backgrounds = [
+            all_backgrounds = [
                 measured_analysis.get_hist(
                     var,
                     dataset=background,
                     systematic=NOMINAL_NAME,
                     selection=sr_pass,
+                )
+                for background in measured_analysis.mc_samples
+                if background != "wtaunu_had"
+            ]
+            nonfake_backgrounds = [
+                measured_analysis.get_hist(
+                    var,
+                    dataset=background,
+                    systematic=NOMINAL_NAME,
+                    selection=true_sr_pass,
                 )
                 for background in measured_analysis.mc_samples
                 if background != "wtaunu_had"
@@ -649,24 +678,44 @@ if __name__ == "__main__":
                 100 * nonfiducial_fraction,
             )
 
-            background = sum_th1s(*(backgrounds + [fakes]))
+            all_background = sum_th1s(*all_backgrounds)
+            all_background.SetName(f"{config.label}_{var}_all_mc_background")
+            all_background.SetDirectory(0)
+            nonfake_background = sum_th1s(*nonfake_backgrounds)
+            nonfake_background.SetName(f"{config.label}_{var}_nonfake_mc_background")
+            nonfake_background.SetDirectory(0)
+            fake_like_background = all_background - nonfake_background
+            fake_like_background.SetName(f"{config.label}_{var}_fake_like_mc_background")
+            fake_like_background.SetDirectory(0)
+
+            nominal_background = (
+                nonfake_background if USE_NONFAKE_BACKGROUND_SUBTRACTION else all_background
+            )
+            background = sum_th1s(nominal_background, fakes)
             data_sig = data - background - nonfiducial_signal
             data_sig.SetName(f"{config.label}_{var}_data_minus_background_nonfiducial")
             signal = fiducial_reco_signal.Clone(f"{config.label}_{var}_fiducial_signal")
             signal.SetDirectory(0)
 
-            prompt_background = sum_th1s(*backgrounds)
-            data_sig_no_fake = data - prompt_background - nonfiducial_signal
-            data_sig_no_fake.SetName(f"{config.label}_{var}_data_minus_prompt_nonfiducial")
+            all_background_with_fakes = sum_th1s(all_background, fakes)
+            data_sig_all_bkg_with_fakes = data - all_background_with_fakes - nonfiducial_signal
+            data_sig_all_bkg_with_fakes.SetName(
+                f"{config.label}_{var}_data_minus_all_background_fakes_nonfiducial"
+            )
+            data_sig_no_fake = data - nonfake_background - nonfiducial_signal
+            data_sig_no_fake.SetName(f"{config.label}_{var}_data_minus_nonfake_nonfiducial")
             fake_budget_rows.append(
                 (
                     config.label,
                     var,
                     data.Integral(),
-                    prompt_background.Integral(),
+                    all_background.Integral(),
+                    nonfake_background.Integral(),
+                    fake_like_background.Integral(),
                     fakes.Integral(),
                     nonfiducial_signal.Integral(),
                     data_sig.Integral(),
+                    data_sig_all_bkg_with_fakes.Integral(),
                     data_sig_no_fake.Integral(),
                     fiducial_reco_signal.Integral(),
                     fiducial_reco_signal.Integral() / data_sig.Integral()
@@ -759,7 +808,7 @@ if __name__ == "__main__":
                 shifted_fakes.SetName(f"{config.label}_{width_var}_{var}_width_shifted_fakes")
                 shifted_fakes.SetDirectory(0)
 
-                shifted_background = sum_th1s(*(backgrounds + [shifted_fakes]))
+                shifted_background = sum_th1s(nominal_background, shifted_fakes)
                 shifted_data_sig = data - shifted_background - nonfiducial_signal
                 shifted_data_sig.SetName(f"{config.label}_{width_var}_{var}_width_shifted_data_sig")
                 shifted_data_sig.SetDirectory(0)
@@ -1127,11 +1176,26 @@ if __name__ == "__main__":
             "## Pre-unfolding budget",
             "",
             "`data_sig` is the nominal unfolded input before unfolding:",
-            "`data - prompt backgrounds - prong-split fake estimate - nonfiducial signal`.",
+            (
+                "`data - nonfake MC backgrounds - prong-split fake estimate - "
+                "nonfiducial signal`."
+                if USE_NONFAKE_BACKGROUND_SUBTRACTION
+                else (
+                    "`data - all MC backgrounds - prong-split fake estimate - "
+                    "nonfiducial signal`."
+                )
+            ),
             "",
-            "| Configuration | Variable | Data | Prompt bkg | Fakes | Nonfid signal | "
-            "Data sig | Data sig, no fakes | Fid reco signal | Fid reco / data sig |",
-            "|---|---|---:|---:|---:|---:|---:|---:|---:|---:|",
+            (
+                "`Data sig, all bkg + fakes diagnostic` preserves the old all-MC "
+                "background convention for comparison only."
+            ),
+            "",
+            "| Configuration | Variable | Data | All MC bkg | Nonfake MC bkg | "
+            "Fake-like MC bkg | Fakes | Nonfid signal | "
+            "Data sig, nonfake bkg + fakes | Data sig, all bkg + fakes diagnostic | "
+            "Data sig, no fakes | Fid reco signal | Fid reco / data sig |",
+            "|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|",
         ]
     )
     for row in fake_budget_rows:
@@ -1139,17 +1203,21 @@ if __name__ == "__main__":
             config_label,
             var,
             data_integral,
-            prompt_bkg,
+            all_bkg,
+            nonfake_bkg,
+            fake_like_bkg,
             fakes_integral,
             nonfid,
             data_sig,
+            data_sig_all_bkg_with_fakes,
             data_sig_no_fake,
             fid_reco,
             fid_over_data_sig,
         ) = row
         summary_lines.append(
-            f"| {config_label} | {var} | {data_integral:.3f} | {prompt_bkg:.3f} | "
-            f"{fakes_integral:.3f} | {nonfid:.3f} | {data_sig:.3f} | "
+            f"| {config_label} | {var} | {data_integral:.3f} | {all_bkg:.3f} | "
+            f"{nonfake_bkg:.3f} | {fake_like_bkg:.3f} | {fakes_integral:.3f} | "
+            f"{nonfid:.3f} | {data_sig:.3f} | {data_sig_all_bkg_with_fakes:.3f} | "
             f"{data_sig_no_fake:.3f} | {fid_reco:.3f} | {fid_over_data_sig:.3f} |"
         )
     summary_lines.extend(

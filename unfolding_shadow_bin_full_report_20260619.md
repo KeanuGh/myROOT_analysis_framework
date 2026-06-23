@@ -13,19 +13,24 @@ The key result is:
 - `MTW` signal-MC closure is at the per-mille level for no-shadow and all MTW shadow-bin configurations tested.
 - `TauPt` signal-MC closure was also demonstrated at the per-mille level during the diagnostic phase, but the cleaned production script now runs `MTW` only because that is the measured observable.
 - The earlier 10-30% closure failure was not caused primarily by the shadow-bin threshold itself. It was caused by unfolding reconstructed signal events that pass the reco selection but do not belong to the nominal truth fiducial phase space.
+- The latest run also fixes the reconstructed background bookkeeping: the nominal unfolded input now subtracts nonfake MC backgrounds plus data-driven fakes, rather than subtracting all MC backgrounds plus data-driven fakes. The old all-MC convention is retained only as a diagnostic row.
 
 The current implementation is therefore a defensible fiducial unfolding treatment:
 
 1. Build the measured input in the same reconstructed phase space as the response.
-2. Subtract ordinary backgrounds and fake estimates.
+2. Subtract nonfake MC backgrounds and data-driven jet-fake estimates.
 3. Subtract reconstructed `wtaunu_had` events that fail the nominal truth fiducial definition as a nonfiducial signal contribution.
 4. Unfold the remaining input with a response built from nominal truth-fiducial signal.
 
 The latest completed cleaned production run is:
 
-`outputs/analysis_shadow_unfold/logs/analysis_shadow_unfold_2026-06-23_16-38-32.log`
+`outputs/analysis_shadow_unfold/logs/analysis_shadow_unfold_2026-06-23_22-24-18.log`
 
 That log ends with `DONE.` and wrote the current cleaned `MTW` closure summary. It has `RUN_FAKE_WIDTH_SYSTEMATIC = True`, so it also propagates the validated 1-prong tau-width fake-source shift through the unfolded result. Earlier fake-diagnostic and split-closure sections in this report remain based on the dedicated validation runs listed in their sections.
+
+The previous all-MC-background output was archived before this bookkeeping change:
+
+`outputs/analysis_shadow_unfold_baseline_allmc_background_20260623/`
 
 ## Scope Of The Current Closure Test
 
@@ -78,6 +83,79 @@ Earlier pre-cleanup diagnostic runs also demonstrated the same per-mille `MTW` c
 
 This is a decisive improvement over the pre-correction variable-specific run, where Bayesian-unfolded signal MC overshot truth by roughly 9-15% in integral, and over the earlier full-shadow-response attempt, where the response and measured input were defined in inconsistent reconstructed phase spaces.
 
+## Nonfake Background Bookkeeping Correction
+
+Question:
+Should the data-driven fake estimate be added on top of all reconstructed MC
+backgrounds, or should it replace the fake-like part of the reconstructed MC
+background prediction?
+
+Implementation:
+- script: `run/2017/analysis_shadow_unfold.py`
+- archived baseline: `outputs/analysis_shadow_unfold_baseline_allmc_background_20260623/`
+- corrected output: `outputs/analysis_shadow_unfold/`
+- summary files:
+  - baseline: `outputs/analysis_shadow_unfold_baseline_allmc_background_20260623/closure_summary.md`
+  - corrected: `outputs/analysis_shadow_unfold/closure_summary.md`
+- mode: production-style central run, using cached measured/response histograms where possible.
+
+The corrected nominal input is now:
+
+```text
+data_sig = data
+         - nonfake MC backgrounds
+         - data-driven fakes
+         - nonfiducial signal
+```
+
+The old convention is still written in the corrected summary as:
+
+```text
+Data sig, all bkg + fakes diagnostic
+```
+
+This diagnostic reproduces the archived baseline values, so the before/after
+comparison is controlled.
+
+| Configuration | Old data sig, all MC bkg + fakes | Corrected data sig, nonfake bkg + fakes | Fake-like MC bkg restored | Fid reco signal | Fid reco / old data sig | Fid reco / corrected data sig | Fid reco / width-shifted corrected data sig |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| `no_shadow_bin` | `661.192` | `774.800` | `113.607` | `896.196` | `1.355` | `1.157` | `1.096` |
+| `MTW_shadow_bin_250` | `675.028` | `799.343` | `124.315` | `934.116` | `1.384` | `1.169` | `1.106` |
+
+The corrected pre-unfolding budget is:
+
+| Configuration | Data | All MC bkg | Nonfake MC bkg | Fake-like MC bkg | Fakes | Nonfid signal | Corrected data sig |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| `no_shadow_bin` | `1351.000` | `359.137` | `245.530` | `113.607` | `226.136` | `104.534` | `774.800` |
+| `MTW_shadow_bin_250` | `1428.000` | `388.381` | `264.066` | `124.315` | `243.815` | `120.776` | `799.343` |
+
+Representative corrected plots:
+- `outputs/analysis_shadow_unfold/plots/no_shadow_bin/MTW/no_shadow_bin_MTW_1iter_unfolded.png`
+- `outputs/analysis_shadow_unfold/plots/MTW_shadow_bin_250/MTW/MTW_shadow_bin_250_MTW_1iter_unfolded.png`
+- `outputs/analysis_shadow_unfold/plots/no_shadow_bin/MTW/fake_width_systematic/no_shadow_bin_MTW_TauTrackWidthPt1000PV_1iter_fake_width_shift.png`
+- `outputs/analysis_shadow_unfold/plots/MTW_shadow_bin_250/MTW/fake_width_systematic/MTW_shadow_bin_250_MTW_TauTrackWidthPt1000PV_1iter_fake_width_shift.png`
+
+Interpretation:
+the bookkeeping correction is material. It removes the double subtraction of
+fake-like reconstructed MC and improves the fiducial reco signal over
+background-subtracted data ratio from `1.355` to `1.157` for no-shadow and from
+`1.384` to `1.169` for `MTW_shadow_bin_250`. The validated 1-prong tau-width
+fake-source shift moves the ratios further to `1.096` and `1.106`.
+
+This is the most coherent result so far: the old all-MC subtraction was too
+aggressive once data-driven fakes were also applied. The corrected convention is
+closer to the fake-factor logic used in ATLAS analyses, where non-jet/nonfake
+contamination is subtracted and the data-driven fake estimate represents the
+jet-fake component.
+
+Recommendation:
+use the nonfake-background bookkeeping as the nominal central-value convention
+for this shadow-unfolding workflow. Keep the photon-expanded nonfake definition
+as a commented validation/systematic variant until a dedicated comparison is
+adopted. The remaining `10-17%` normalisation tension should be treated as a
+fake-modelling/systematic question, not as an unfolding-response closure
+failure.
+
 ## Nonfiducial Signal Correction
 
 The correction applied in the current script is:
@@ -123,17 +201,17 @@ Summary file:
 
 | Configuration | Nominal fakes | Width-shifted fakes | Nominal data sig | Shifted data sig | Fid reco / nominal data sig | Fid reco / shifted data sig |
 |---|---:|---:|---:|---:|---:|---:|
-| no_shadow_bin | 226.136 | 182.892 | 661.192 | 704.437 | 1.355 | 1.272 |
-| MTW_shadow_bin_250 | 243.815 | 198.235 | 675.028 | 720.608 | 1.384 | 1.296 |
+| no_shadow_bin | 226.136 | 182.892 | 774.800 | 818.044 | 1.157 | 1.096 |
+| MTW_shadow_bin_250 | 243.815 | 198.235 | 799.343 | 844.923 | 1.169 | 1.106 |
 
 The width shift therefore reduces the total fake estimate by about `19%` in the
 no-shadow configuration and about `18.7%` in the `MTW` 250 GeV shadow-bin
 configuration. It moves the data-derived signal input closer to the fiducial
 reco signal expectation, but it does not remove the normalisation tension:
 
-- no-shadow: fiducial reco / data signal improves from `1.355` to `1.272`;
-- `MTW_shadow_bin_250`: fiducial reco / data signal improves from `1.384` to
-  `1.296`.
+- no-shadow: fiducial reco / data signal improves from `1.157` to `1.096`;
+- `MTW_shadow_bin_250`: fiducial reco / data signal improves from `1.169` to
+  `1.106`.
 
 Representative current-run plots:
 
@@ -242,13 +320,16 @@ The current best interpretation is therefore:
    cancellation between missing real jet fakes and an over-large MC/nonfake
    prediction.
 
-### Open Double-Counting Check
+### Reconstructed Fake-like MC Bookkeeping Check
 
-The most important unresolved question is whether the current reconstructed
-stack double counts fake-like MC when the data-driven fake estimate is added.
+The reconstructed stack-composition validation and the latest production run now
+answer the bookkeeping question directly: adding the data-driven fake estimate
+on top of all reconstructed MC double counts fake-like MC. The central
+unfolding workflow should therefore subtract nonfake MC backgrounds and the
+data-driven fake estimate, while retaining the all-MC subtraction only as a
+diagnostic comparison.
 
-The needed diagnostic is a standard reconstructed-level stack comparison with
-the MC split by truth category:
+The diagnostic stack comparison is:
 
 ```text
 1. all MC, no data-driven fakes
@@ -2686,7 +2767,9 @@ The corrected variable-specific shadow-bin unfolding demonstrated signal-MC clos
 
 The previous failure to close was not evidence that shadow bins are intrinsically bad. It was evidence that the measured reconstructed input and the fiducial truth target were inconsistent. Once reconstructed nonfiducial signal is removed before unfolding, the closure problem essentially disappears.
 
-The latest fake diagnostics add an important second conclusion: the remaining unfolded-data deficit is not primarily a response-closure problem. It is driven by the background-subtracted measured input, especially the size of the fake estimate. With no fake subtraction, the pre-unfolding data-derived signal normalisation is close to fiducial reconstructed signal MC; with the full fake subtraction, it is substantially lower.
+The latest fake diagnostics add an important second conclusion: the remaining unfolded-data deficit is not primarily a response-closure problem. It is driven by the background-subtracted measured input, especially the size and bookkeeping of the fake estimate. The new nonfake-background convention fixes the clearest bookkeeping problem: data-driven fakes are no longer added on top of fake-like reconstructed MC. This improves the fiducial reco / data-signal ratio from `1.355` to `1.157` for no-shadow and from `1.384` to `1.169` for `MTW_shadow_bin_250`.
+
+The validated 1-prong tau-width fake-source shift improves those ratios further, to `1.096` and `1.106`, but it should still be treated as a systematic-style fake-source composition variation rather than a central correction until the fake-model prescription is finalised.
 
 The dedicated fake-validation script confirms this independently of unfolding. In the pass-ID signal selection, the prong-split fake prediction is larger than `data - nonfake MC` by factors of about `1.7` for no-shadow, `2.5` for the 200 GeV MTW shadow bin, and `2.1` for the 300 GeV MTW shadow bin.
 
@@ -2694,7 +2777,7 @@ The latest independent sideband transfer tests give the first clear direction fo
 
 The next physics decision is therefore split into two tracks:
 
-1. carry this correction into the main `unfolding_2017` workflow;
+1. carry the nonfiducial-signal and nonfake-background bookkeeping corrections into the main `unfolding_2017` workflow;
 2. enable full systematic variations in the same corrected phase space;
 3. test a stability-first MET-dependent fake model in the validation scripts, starting with coarser `TauPt` bins or a prong-dependent treatment in the upper-MET control slice;
 4. update the thesis unfolding chapter to describe the nonfiducial signal correction, split-sample closure validation, and fake-estimate diagnostics, making clear which studies are validation-only scripts rather than part of the central production runner.
