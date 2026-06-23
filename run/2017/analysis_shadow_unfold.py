@@ -22,7 +22,7 @@ LUMI = LUMI_YEAR[YEAR]
 WP = "medium"
 VARS = (
     "MTW",
-    "TauPt",
+    # "TauPt",
 )
 SHADOW_BINS = {
     "MTW": (
@@ -46,10 +46,10 @@ ITERATIONS = (
 FAKES_SOURCE = "TauPt"
 LOAD_SAVED_HISTS = False  # Reuse saved ROOT histograms instead of rebuilding them.
 RUN_FAKE_DIAGNOSTICS = True  # Master switch for fake-estimate validation outputs.
-BUILD_INCLUSIVE_FAKES = True  # Build inclusive fakes; nominal only if prong-split is disabled.
+BUILD_INCLUSIVE_FAKES = False  # Build inclusive fakes; nominal only if prong-split is disabled.
 USE_PRONG_SPLIT_FAKES = True  # Build and use the thesis prong-split fake estimate as nominal.
 RUN_FAKE_WIDTH_SYSTEMATIC = True  # Propagate the 1-prong tau-width fake-source uncertainty.
-RUN_WTAUNU_PRONG_SYSTEMATIC = False  # Test a prong-composition modelling shift for wtaunu_had.
+RUN_WTAUNU_PRONG_SYSTEMATIC = True  # Test a prong-composition modelling shift for wtaunu_had.
 DO_SPLIT_SAMPLE_CLOSURE = False  # Build even/odd MC closure samples for response validation.
 DO_FULL_SYSTEMATICS = False  # Enable full systematic response variations; slow final-mode run.
 FAKE_SCALE_SCAN = (0.0, 0.5, 1.0)  # Fake normalisation scales used in the diagnostic scan.
@@ -129,17 +129,19 @@ class FakeControlRegion:
     cuts: tuple[Cut, ...]
 
 
-FAKE_CONTROL_REGION = FakeControlRegion(
-    selection_tag="CR",
-    output_tag="",
-    cuts=(
-        PASS_RECO_PRESELECTION,
-        Cut(r"$p_T^\tau$ threshold", "TauPt > {taupt_min:g}"),
-        PASS_ETA,
-        Cut(r"$m_T^W$ threshold", "MTW > {mtw_min:g}"),
-        Cut(r"$E_T^{\mathrm{miss}}$ control region", "MET_met < {met_min:g}"),
-    ),
-)
+# Original thesis-style fake control region. Uncomment this block and comment
+# out the low-MET block below to compare against the current baseline.
+# FAKE_CONTROL_REGION = FakeControlRegion(
+#     selection_tag="CR",
+#     output_tag="",
+#     cuts=(
+#         PASS_RECO_PRESELECTION,
+#         Cut(r"$p_T^\tau$ threshold", "TauPt > {taupt_min:g}"),
+#         PASS_ETA,
+#         Cut(r"$m_T^W$ threshold", "MTW > {mtw_min:g}"),
+#         Cut(r"$E_T^{\mathrm{miss}}$ control region", "MET_met < {met_min:g}"),
+#     ),
+# )
 FAKE_CONTROL_REGION = FakeControlRegion(
     selection_tag="lowMET_CR",
     output_tag="_lowMET",
