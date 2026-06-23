@@ -49,7 +49,7 @@ ITERATIONS = (
 FAKES_SOURCE = "TauPt"
 LOAD_SAVED_HISTS = False  # Reuse saved ROOT histograms instead of rebuilding them.
 DO_FULL_SYSTEMATICS = False  # Enable full systematic response variations; slow final-mode run.
-RUN_FAKE_WIDTH_SYSTEMATIC = False  # Propagate the validated 1-prong tau-width fake systematic.
+RUN_FAKE_WIDTH_SYSTEMATIC = True  # Propagate the validated 1-prong tau-width fake systematic.
 FAKE_WIDTH_VARIABLE = "TauTrackWidthPt1000PV"
 
 SKIP_SYS = {
