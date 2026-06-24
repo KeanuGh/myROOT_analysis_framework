@@ -28,6 +28,9 @@ JET_FAKE_FF_STAT = "JET_FAKE_FF_STAT"
 JET_FAKE_MET_WINDOW = "JET_FAKE_MET_WINDOW"
 JET_FAKE_TAU_WIDTH_COMPOSITION = "JET_FAKE_TAU_WIDTH_COMPOSITION"
 TES_SYS_PATTERN = r"^TAUS_TRUEHADTAU_SME_TES_.*__(1up|1down)$"
+NON_TES_OR_NOMINAL_SYS_PATTERN = (
+    rf"^(?!{NOMINAL_NAME}$)(?!TAUS_TRUEHADTAU_SME_TES_.*__(1up|1down)$).*"
+)
 
 
 def _response_binnings(config) -> dict[str, np.ndarray]:
@@ -133,8 +136,10 @@ def build_tes_response_systematics(
             do_unweighted=True,
             systematics_for_selection={rf"^{re.escape(selection)}$"},
             # Only build TES systematics here. The main script already handles
-            # nominal and efficiency-weight response objects.
-            skip_sys=skip_sys | {r"^TAUS_TRUEHADTAU_EFF_.*", rf"^(?!{TES_SYS_PATTERN}).*"},
+            # nominal and efficiency-weight response objects. Keep the nominal
+            # tree unskipped so Dataset.init_sys() can identify the reference
+            # dataframe before it registers the TES shifted trees.
+            skip_sys=skip_sys | {r"^TAUS_TRUEHADTAU_EFF_.*", NON_TES_OR_NOMINAL_SYS_PATTERN},
             binnings=binnings,
         )
 
@@ -203,6 +208,25 @@ def quadrature_sum_histograms(hists: list[ROOT.TH1], *, name: str) -> ROOT.TH1:
         )
         total.SetBinError(bin_idx, 0.0)
     return total
+
+
+def histogram_has_finite_content(hist: ROOT.TH1 | ROOT.TH2) -> bool:
+    """Return whether a histogram has nonzero finite bin content."""
+    total = 0.0
+    if hist.InheritsFrom("TH2"):
+        for x_bin in range(1, hist.GetNbinsX() + 1):
+            for y_bin in range(1, hist.GetNbinsY() + 1):
+                value = hist.GetBinContent(x_bin, y_bin)
+                if not np.isfinite(value):
+                    return False
+                total += abs(value)
+    else:
+        for bin_idx in range(1, hist.GetNbinsX() + 1):
+            value = hist.GetBinContent(bin_idx)
+            if not np.isfinite(value):
+                return False
+            total += abs(value)
+    return total > 0.0
 
 
 def _data_sig_from_fakes(

@@ -38,6 +38,7 @@ from shadow_unfold.systematics import (
     build_met_window_fake_systematic,
     build_tau_width_fake_systematic,
     build_tes_response_systematics,
+    histogram_has_finite_content,
     quadrature_sum_histograms,
 )
 
@@ -328,8 +329,6 @@ if __name__ == "__main__":
         fake_cr_fail = f"{config.label}_{WP}_{FAKE_CONTROL_REGION.selection_tag}_failID"
         true_sr_pass = f"trueTau_{sr_pass}"
         true_sr_fail = f"trueTau_{sr_fail}"
-        true_fake_cr_pass = f"trueTau_{fake_cr_pass}"
-        true_fake_cr_fail = f"trueTau_{fake_cr_fail}"
         prong_names = {
             prong: {
                 "sr_pass": f"{config.label}_{WP}_{prong}prong_SR_passID",
@@ -603,9 +602,9 @@ if __name__ == "__main__":
     # cache is not polluted with background/fake-control selections.
     #
     # TES response systematics that need nominal truth-fiducial event masks are
-    # built by ``build_shadow_response_tes_systematics.py`` and written into the
-    # same response ROOT cache. Keep LOAD_SAVED_HISTS=True for the final
-    # systematics run so those helper-built histograms are imported here.
+    # prebuilt above and written into the same response ROOT cache. Keep
+    # LOAD_SAVED_HISTS=True for the final systematics run so those helper-built
+    # histograms are imported here.
     rebuild_response_hists = not LOAD_SAVED_HISTS
     response_analysis = Analysis(
         {"wtaunu_had": signal_sample(selections=response_selections)},
@@ -739,18 +738,9 @@ if __name__ == "__main__":
         fake_cr_fail = f"{config.label}_{WP}_{FAKE_CONTROL_REGION.selection_tag}_failID"
         true_sr_pass = f"trueTau_{sr_pass}"
         true_sr_fail = f"trueTau_{sr_fail}"
-        true_fake_cr_pass = f"trueTau_{fake_cr_pass}"
-        true_fake_cr_fail = f"trueTau_{fake_cr_fail}"
         truth_selection = f"{config.label}_truth_tau"
         reco_selection = f"{config.label}_{WP}_reco_tau"
         truth_reco_selection = f"{config.label}_{WP}_truth_reco_tau"
-        response_prong_names = {
-            prong: {
-                "reco": f"{config.label}_{WP}_{prong}prong_reco_tau",
-                "truth_reco": f"{config.label}_{WP}_{prong}prong_truth_reco_tau",
-            }
-            for prong in (1, 3)
-        }
         fakes_name = f"{config.label}_{WP}{FAKE_CONTROL_REGION.output_tag}"
 
         plotter.logger.info("Running variable-specific shadow-bin closure for %s", config.label)
@@ -1837,6 +1827,13 @@ if __name__ == "__main__":
                             systematic=down,
                             selection=truth_reco_selection,
                         )
+                        if not all(
+                            histogram_has_finite_content(hist)
+                            for hist in (reco_up, reco_down, matrix_up, matrix_down)
+                        ):
+                            raise ValueError(
+                                "one or more varied response histograms are empty or non-finite"
+                            )
                     except (KeyError, ValueError) as exc:
                         skipped_response_systematics.append(sys_name)
                         plotter.logger.warning(
