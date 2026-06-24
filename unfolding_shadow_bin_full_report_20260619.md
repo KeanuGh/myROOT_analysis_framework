@@ -2,7 +2,7 @@
 
 Initial check: 2026-06-19
 
-Updated: 2026-06-23
+Updated: 2026-06-24
 
 ## Executive Summary
 
@@ -24,9 +24,15 @@ The current implementation is therefore a defensible fiducial unfolding treatmen
 
 The latest completed cleaned production run is:
 
-`outputs/analysis_shadow_unfold/logs/analysis_shadow_unfold_2026-06-23_22-24-18.log`
+`outputs/analysis_shadow_unfold/logs/analysis_shadow_unfold_2026-06-24_14-22-21.log`
 
-That log ends with `DONE.` and wrote the current cleaned `MTW` closure summary. It has `RUN_FAKE_WIDTH_SYSTEMATIC = True`, so it also propagates the validated 1-prong tau-width fake-source shift through the unfolded result. Earlier fake-diagnostic and split-closure sections in this report remain based on the dedicated validation runs listed in their sections.
+That log ends with `DONE.` and wrote the current cleaned `MTW` closure summary. It has the high-priority fake-source systematics enabled:
+
+- `JET_FAKE_FF_STAT`;
+- `JET_FAKE_MET_WINDOW`;
+- `JET_FAKE_TAU_WIDTH_COMPOSITION`.
+
+It also attempts the response-systematic pass. The response cache was correctly rebuilt after stale cutflows were detected, but the TES response variations are still skipped because the full up/down response objects are unavailable. Earlier fake-diagnostic and split-closure sections in this report remain based on the dedicated validation runs listed in their sections.
 
 The previous all-MC-background output was archived before this bookkeeping change:
 
@@ -70,7 +76,7 @@ After the 2026-06-23 cleanup, the production script is intentionally narrow:
 - tau ID: `medium`
 - prongs: inclusive `1+3`, with prong-split fake factors
 - variable: `MTW`
-- systematics: disabled, `DO_FULL_SYSTEMATICS = False`
+- systematics: enabled for the latest smoke run, `DO_FULL_SYSTEMATICS = True`
 - 1-prong tau-width fake-source shift: enabled, `RUN_FAKE_WIDTH_SYSTEMATIC = True`
 - fake-factor source: `TauPt`
 - fake control region: `TauPt > 170` and `MET_met < 100`
@@ -2977,16 +2983,21 @@ full set of response variations needed for a final uncertainty band?
 Implementation:
 - script: `run/2017/analysis_shadow_unfold.py`
 - mode: full-systematics smoke run
-- log: `outputs/analysis_shadow_unfold/logs/analysis_shadow_unfold_2026-06-24_12-51-41.log`
+- log: `outputs/analysis_shadow_unfold/logs/analysis_shadow_unfold_2026-06-24_14-22-21.log`
 - summary: `outputs/analysis_shadow_unfold/closure_summary.md`
 - response plots:
   - `outputs/analysis_shadow_unfold/plots/no_shadow_bin/MTW/systematics/no_shadow_bin_MTW_response_systematics.png`
   - `outputs/analysis_shadow_unfold/plots/MTW_shadow_bin_250/MTW/systematics/MTW_shadow_bin_250_MTW_response_systematics.png`
 
 Result:
-The run completed and produced response-systematic plots for both active
-configurations. However, the response-systematics result is not complete. The
-script skipped the same eight TES response variations for both configurations:
+The `2026-06-24 14:22` run completed and produced fresh central unfolding,
+fake-source systematic, response-matrix, covariance, and response-systematic
+plots for both active configurations. The response cache guard also worked: it
+detected stale cached truth-selection cutflows and rebuilt the response cache
+before importing it.
+
+However, the response-systematics result is still not complete. The script
+skipped the same eight TES response variations for both configurations:
 
 | Skipped response systematic group |
 | --- |
@@ -2999,25 +3010,26 @@ script skipped the same eight TES response variations for both configurations:
 | `TAUS_TRUEHADTAU_SME_TES_MODEL_CLOSURE` |
 | `TAUS_TRUEHADTAU_SME_TES_PHYSICSLIST` |
 
-The response ROOT file confirms the problem: these TES shifted trees have
-`*_medium_reco_tau` histograms, but not the corresponding
-`*_medium_truth_reco_tau` histograms required to build a full varied response
-matrix. In contrast, the tau efficiency weight variations, for example
-`TAUS_TRUEHADTAU_EFF_ELEOLR_TOTAL__1up`, do contain both `reco_tau` and
-`truth_reco_tau`.
+The latest logs show the reason explicitly: the TES shifted trees emit warnings
+that the truth columns needed for `TruthMTW` are unavailable, and the varied
+response objects are then empty or non-finite. The current response-systematic
+plots therefore do not represent a complete detector/response uncertainty band.
+They should be treated as a diagnostic of the plotting path only.
 
-The response plots therefore show only the available efficiency/weight response
-systematics. Visually, the dominant included response contribution is the
-trigger statistical data uncertainty at about `7%`, followed by trigger
-statistical MC at about `3%`, with reco/electron-overlap/syst trigger terms
-below the percent-to-subpercent level.
+The visual form of the current response-systematic plot is also not thesis
+ready: the included curves sit near `100%` on an axis labelled "Response
+uncertainty / %". That is not a physically interpretable final uncertainty
+presentation. Before quoting this figure, the plotting convention needs to be
+checked so it shows an actual fractional deviation from nominal, not a
+nominal-normalised ratio plotted as a percent.
 
-Fake-source systematics in the same run remain consistent with the previous
-central run. With the 4-iteration setting now enabled, the dominant fake-source
-contribution is still the tau-width composition envelope; the combined
-fake-source uncertainty reaches roughly `20-25%` in the lowest MTW bin and
-about `10-12%` in the sparse high-MTW tail. The labels in the diagnostic plots
-are too long for thesis use and should be cleaned before final figure export.
+Fake-source systematics in the same run are usable and remain consistent with
+the previous central run. With the 4-iteration setting enabled, the dominant
+fake-source contribution is still the tau-width composition envelope. The
+combined fake-source uncertainty reaches roughly `20-25%` in the lowest `MTW`
+bin and about `10-12%` in the sparse high-`MTW` tail. The labels in the
+diagnostic plots are too long for thesis use and should be cleaned before final
+figure export.
 
 Representative fake-source plots:
 - `outputs/analysis_shadow_unfold/plots/no_shadow_bin/MTW/fake_source_systematics/no_shadow_bin_MTW_4iter_combined_fake_source_uncertainty.png`

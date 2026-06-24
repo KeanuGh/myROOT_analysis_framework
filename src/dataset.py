@@ -372,6 +372,18 @@ class Dataset:
                         sys_name,
                     )
                     continue
+                if hists["cutflow"].GetNbinsX() != len(
+                    self.selections_by_systematic[sys_name][selection]
+                ):
+                    self.logger.debug(
+                        "Skipping imported cutflow for selection '%s' in systematic '%s': "
+                        "cached cutflow has %d bins, current selection has %d cuts",
+                        selection,
+                        sys_name,
+                        hists["cutflow"].GetNbinsX(),
+                        len(self.selections_by_systematic[sys_name][selection]),
+                    )
+                    continue
 
                 self.cutflows[sys_name][selection].import_cutflow(
                     hists["cutflow"],

@@ -81,6 +81,37 @@ ITERATIONS = (
 )
 FAKES_SOURCE = "TauPt"
 
+
+def response_cache_mismatches_selections(
+    cache_file: Path,
+    selections: dict[str, list[Cut]],
+) -> list[str]:
+    """Return response selections whose cached cutflow no longer matches the script."""
+    if not cache_file.is_file():
+        return [f"{cache_file} is missing"]
+
+    mismatches: list[str] = []
+    with ROOT.TFile(str(cache_file), "READ") as root_file:
+        for selection, cuts in selections.items():
+            cutflow = root_file.Get(f"{NOMINAL_NAME}/{selection}/cutflow")
+            if not cutflow:
+                mismatches.append(f"{selection}: missing nominal cutflow")
+                continue
+            if selection.endswith("_truth_reco_tau"):
+                # The TES helper stores the fiducial truth requirement as a
+                # hard cut for this matched response selection, so its cutflow
+                # can have fewer displayed filter bins while representing the
+                # same selected phase space. The separate truth_tau and reco_tau
+                # selections catch stale truth/reco definitions.
+                continue
+            if cutflow.GetNbinsX() != len(cuts):
+                mismatches.append(
+                    f"{selection}: cached cutflow has {cutflow.GetNbinsX()} bins, "
+                    f"current selection has {len(cuts)} cuts"
+                )
+    return mismatches
+
+
 # Runtime switches. The fake-source switches are intentionally independent:
 # they do not change the nominal fake estimate, they only build uncertainty
 # envelopes around it.
@@ -579,45 +610,34 @@ if __name__ == "__main__":
     load_measured_analysis_hists = LOAD_SAVED_HISTS and measured_analysis.load_hists_if_available()
     measured_analysis.print_metadata_table(datasets=measured_analysis.mc_samples)
 
-    # TES shifted trees need nominal truth-fiducial event masks before their
-    # full response objects can be written. Build those missing response
-    # histograms into the normal response cache automatically in full-systematics
-    # mode, so the main analysis never depends on a remembered manual pre-step.
-    if DO_FULL_SYSTEMATICS:
-        plotter.logger.info("Ensuring TES response-systematic histograms are available...")
-        build_tes_response_systematics(
-            configs=CONFIGS,
-            vars_to_build=VARS,
-            pass_medium=PASS_MEDIUM,
-            skip_sys=SKIP_SYS,
-            output_root=output_root,
-            wp=WP,
-            year=YEAR,
-            log_out="both",
-        )
-
     # response_analysis owns only the signal sample and all histograms required
     # to build the response matrix. It is intentionally separate so the response
     # cache is not polluted with background/fake-control selections.
     #
-    # TES response systematics that need nominal truth-fiducial event masks are
-    # prebuilt above and written into the same response ROOT cache. Keep
-    # LOAD_SAVED_HISTS=True for the final systematics run so those helper-built
-    # histograms are imported here.
-    rebuild_response_hists = not LOAD_SAVED_HISTS
-    response_analysis = Analysis(
-        {"wtaunu_had": signal_sample(selections=response_selections)},
-        year=YEAR,
-        rerun=rebuild_response_hists,
-        regen_histograms=rebuild_response_hists,
-        do_systematics=DO_FULL_SYSTEMATICS,
-        metadata_cache=DSID_METADATA_CACHE,
-        ttree=NOMINAL_NAME,
-        analysis_label="analysis_shadow_unfold_response",
-        output_dir=output_root / "response",
-        log_level=10,
-        log_out="both",
-        extract_vars={
+    # The response cache must match the exact current selection definitions.
+    # Selection names are deliberately stable, so a stale ROOT cache can contain
+    # a same-named cutflow from an older definition. Rebuild the response cache
+    # once when that happens; do not import stale response histograms.
+    response_cache_file = output_root / "response/root/wtaunu_had.root"
+    response_cache_mismatches = (
+        response_cache_mismatches_selections(response_cache_file, response_selections)
+        if LOAD_SAVED_HISTS
+        else []
+    )
+    for mismatch in response_cache_mismatches:
+        plotter.logger.warning("Response cache mismatch: %s", mismatch)
+    rebuild_response_hists = (not LOAD_SAVED_HISTS) or bool(response_cache_mismatches)
+
+    response_analysis_kwargs = {
+        "data_dict": {"wtaunu_had": signal_sample(selections=response_selections)},
+        "year": YEAR,
+        "do_systematics": DO_FULL_SYSTEMATICS,
+        "metadata_cache": DSID_METADATA_CACHE,
+        "ttree": NOMINAL_NAME,
+        "output_dir": output_root / "response",
+        "log_level": 10,
+        "log_out": "both",
+        "extract_vars": {
             "MTW",
             "TauPt",
             "MET_met",
@@ -633,10 +653,10 @@ if __name__ == "__main__":
             "TruthTau_isHadronic",
             "eventNumber",
         },
-        import_missing_columns_as_nan=True,
-        snapshot=False,
-        histogram_vars=set(VARS) | truth_histogram_vars,
-        hists_2d={
+        "import_missing_columns_as_nan": True,
+        "snapshot": False,
+        "histogram_vars": set(VARS) | truth_histogram_vars,
+        "hists_2d": {
             f"{var}_{variable_data[var]['truth']}": Hist2dOpts(
                 var,
                 variable_data[var]["truth"],
@@ -644,12 +664,46 @@ if __name__ == "__main__":
             )
             for var in VARS
         },
-        do_unweighted=True,
-        systematics_for_selection={rf"^({label_regex})_{WP}_(reco_tau|truth_reco_tau)$"}
+        "do_unweighted": True,
+        "systematics_for_selection": {rf"^({label_regex})_{WP}_(reco_tau|truth_reco_tau)$"}
         if DO_FULL_SYSTEMATICS
         else set(),
-        skip_sys=SKIP_SYS,
-        binnings=selection_binnings,
+        "skip_sys": SKIP_SYS,
+        "binnings": selection_binnings,
+    }
+
+    if rebuild_response_hists:
+        plotter.logger.info("Rebuilding response histogram cache before import.")
+        Analysis(
+            analysis_label="analysis_shadow_unfold_response_build",
+            rerun=True,
+            regen_histograms=True,
+            **response_analysis_kwargs,
+        )
+
+    # TES shifted trees need nominal truth-fiducial event masks before their
+    # full response objects can be written. Build those response histograms into
+    # the normal response cache automatically in full-systematics mode. The
+    # final response_analysis import below then sees both the standard response
+    # histograms and the helper-built TES response histograms.
+    if DO_FULL_SYSTEMATICS:
+        plotter.logger.info("Ensuring TES response-systematic histograms are available...")
+        build_tes_response_systematics(
+            configs=CONFIGS,
+            vars_to_build=VARS,
+            pass_medium=PASS_MEDIUM,
+            skip_sys=SKIP_SYS,
+            output_root=output_root,
+            wp=WP,
+            year=YEAR,
+            log_out="both",
+        )
+
+    response_analysis = Analysis(
+        analysis_label="analysis_shadow_unfold_response",
+        rerun=False,
+        regen_histograms=False,
+        **response_analysis_kwargs,
     )
 
     # The no-shadow nominal truth histogram is the reference truth spectrum for
