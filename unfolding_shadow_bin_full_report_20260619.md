@@ -2768,6 +2768,280 @@ The original thesis-style CR is commented out with `shared_across_configs=False`
 
 Inclusive fake factors are no longer part of the main production script. They remain a validation-only comparison in `run/2017/validations/validate_inclusive_prong_fakes.py`.
 
+### 10. Central low-MET fake-model rerun
+
+Question:
+Does the current central `analysis_shadow_unfold.py` configuration give a coherent
+MTW unfolding after the bookkeeping cleanup?
+
+Implementation:
+- script: `run/2017/analysis_shadow_unfold.py`
+- mode: cached central-value rerun, no full systematics
+- log: `outputs/analysis_shadow_unfold/logs/analysis_shadow_unfold_2026-06-24_09-12-13.log`
+- summary: `outputs/analysis_shadow_unfold/closure_summary.md`
+- active fake-factor determination region: `TauPt > 170`, `MET_met < 100`
+- active fake model: prong-split `TauPt` fake factor
+- active bookkeeping: MC-contamination subtraction plus data-driven jet-fake estimate
+- active fake-source variation: 1-prong `TauTrackWidthPt1000PV` application-to-lowMET shape shift
+
+Result:
+
+| Configuration | Signal-MC closure integral | Data | MC-contam bkg | Jet-fake-like MC bkg | Fakes | Nonfid signal | Nominal data sig | Fid reco / nominal data sig | Width-shifted data sig | Fid reco / width-shifted data sig |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| no_shadow_bin | 1.000 | 1351.000 | 245.530 | 113.607 | 226.136 | 104.534 | 774.800 | 1.157 | 818.044 | 1.096 |
+| MTW_shadow_bin_250 | 1.000 | 1428.000 | 264.066 | 124.315 | 243.815 | 120.776 | 799.343 | 1.169 | 844.923 | 1.106 |
+
+Representative outputs:
+- nominal no-shadow unfolded MTW:
+  `outputs/analysis_shadow_unfold/plots/no_shadow_bin/MTW/no_shadow_bin_MTW_2iter_unfolded.png`
+- nominal MTW shadow-bin 250 unfolded MTW:
+  `outputs/analysis_shadow_unfold/plots/MTW_shadow_bin_250/MTW/MTW_shadow_bin_250_MTW_2iter_unfolded.png`
+- no-shadow tau-width shift:
+  `outputs/analysis_shadow_unfold/plots/no_shadow_bin/MTW/fake_width_systematic/no_shadow_bin_MTW_TauTrackWidthPt1000PV_2iter_fake_width_shift.png`
+- MTW shadow-bin 250 tau-width shift:
+  `outputs/analysis_shadow_unfold/plots/MTW_shadow_bin_250/MTW/fake_width_systematic/MTW_shadow_bin_250_MTW_TauTrackWidthPt1000PV_2iter_fake_width_shift.png`
+
+Interpretation:
+The central signal-MC self-closure remains exact at the integral level and at
+the per-mille/bin-percent level for the iterative checks. The remaining issue
+is therefore not the response machinery. It is the measured input normalisation.
+
+The MC-contamination bookkeeping correction has kept the result in a much more
+reasonable range than the old all-MC-background convention, but the nominal
+data input is still low relative to the fiducial reconstructed signal by about
+`16-17%`. The validated 1-prong tau-width fake-source shift reduces that
+deficit to about `10%`. Visually, the shifted unfolded data points move toward
+the truth/signal-MC curve, especially in the populated low-to-mid MTW bins, but
+this should still be described as a fake-source composition variation rather
+than a final central correction.
+
+Recommendation:
+This run is good enough to use as the current central comparison point. The
+next expensive step should not be another fake-validation sweep. The next useful
+production step is a full-systematics rerun only if we accept the current
+central prescription as the working model. Otherwise, the remaining analysis
+decision is whether the tau-width shift becomes a systematic envelope, a central
+fake-model correction, or remains validation-only.
+
+## Implemented High-Priority Fake-Source Systematics
+
+Question:
+Which fake-source uncertainties are now implemented in the cleaned
+`analysis_shadow_unfold.py` workflow?
+
+Implementation:
+- script: `run/2017/analysis_shadow_unfold.py`
+- module: `run/2017/shadow_unfold/systematics.py`
+- mode: production analysis support; no new result has been produced from this
+  code change yet
+- DTA input data: read-only; no writes are made under `/mnt/D/data/DTA_outputs`
+
+The shadow-unfold workflow now has three fake-source systematic switches:
+
+| Switch | Systematic name | Meaning |
+|---|---|---|
+| `RUN_FAKE_FF_STAT_SYSTEMATIC` | `JET_FAKE_FF_STAT` | shifts each fake-factor bin by its statistical uncertainty and unfolds the shifted inputs |
+| `RUN_FAKE_MET_WINDOW_SYSTEMATIC` | `JET_FAKE_MET_WINDOW` | envelopes alternate low-MET fake-factor regions `[30,100]`, `[50,100]`, `[70,100]`, and `[0,150]` GeV against the nominal `[0,100]` GeV region |
+| `RUN_FAKE_WIDTH_SYSTEMATIC` | `JET_FAKE_TAU_WIDTH_COMPOSITION` | applies the validated 1-prong `TauTrackWidthPt1000PV` fake-source composition shift as an uncertainty envelope |
+
+Representative outputs expected after the next completed run:
+- closure/systematic table:
+  `outputs/analysis_shadow_unfold/closure_summary.md`
+- fake-factor statistical uncertainty plots and supporting checks:
+  `outputs/analysis_shadow_unfold/plots/<config>/MTW/fake_source_systematics/*fake_factor_stat_uncertainty.png`
+  `outputs/analysis_shadow_unfold/plots/<config>/MTW/fake_source_systematics/*fake_factor_stat_source.png`
+  `outputs/analysis_shadow_unfold/plots/<config>/MTW/fake_source_systematics/*fake_factor_stat_fake_yield.png`
+  `outputs/analysis_shadow_unfold/plots/<config>/MTW/fake_source_systematics/*fake_factor_stat_data_sig.png`
+  `outputs/analysis_shadow_unfold/plots/<config>/MTW/fake_source_systematics/*fake_factor_stat_unfolded_shift.png`
+- MET-window uncertainty plots and supporting checks:
+  `outputs/analysis_shadow_unfold/plots/<config>/MTW/fake_source_systematics/*met_window_uncertainty.png`
+  `outputs/analysis_shadow_unfold/plots/<config>/MTW/fake_source_systematics/*met_window_fake_factors.png`
+  `outputs/analysis_shadow_unfold/plots/<config>/MTW/fake_source_systematics/*met_window_fake_yield.png`
+  `outputs/analysis_shadow_unfold/plots/<config>/MTW/fake_source_systematics/*met_window_data_sig.png`
+  `outputs/analysis_shadow_unfold/plots/<config>/MTW/fake_source_systematics/*met_window_unfolded_shift.png`
+- tau-width uncertainty plots and supporting checks:
+  `outputs/analysis_shadow_unfold/plots/<config>/MTW/fake_width_systematic/*fake_width_uncertainty.png`
+  `outputs/analysis_shadow_unfold/plots/<config>/MTW/fake_width_systematic/*transfer_weight.png`
+  `outputs/analysis_shadow_unfold/plots/<config>/MTW/fake_width_systematic/*fake_yield.png`
+  `outputs/analysis_shadow_unfold/plots/<config>/MTW/fake_width_systematic/*data_sig.png`
+- combined fake-source uncertainty:
+  `outputs/analysis_shadow_unfold/plots/<config>/MTW/fake_source_systematics/*combined_fake_source_uncertainty.png`
+
+Interpretation:
+These are uncertainty envelopes, not central fake-model changes. The nominal
+unfolded data still uses the central prong-split, low-MET, `TauPt`-sourced fake
+estimate. The shifted fake predictions are unfolded with the same nominal
+response and compared bin-by-bin to the nominal unfolded result.
+
+The supporting plots are intended to verify the direction of the uncertainty
+propagation. A shifted fake factor should first change the predicted fake yield,
+then shift the background-subtracted `data_sig` in the opposite direction, and
+only then move the unfolded spectrum. This mirrors the thesis prescription of
+checking the source variation before interpreting the final percentage
+uncertainty.
+
+Recommendation:
+Run `analysis_shadow_unfold.py` once with the three fake-source systematic
+switches enabled and `DO_FULL_SYSTEMATICS = False`. If the fake-source
+uncertainties are numerically stable, the next extension is the separate
+detector/response systematic run controlled by `DO_FULL_SYSTEMATICS`.
+
+## Completed Fake-Source Systematics Rerun
+
+Question:
+After implementing the high-priority fake-source systematics, does the current
+central shadow-unfold result behave coherently, and which uncertainty dominates?
+
+Implementation:
+- script: `run/2017/analysis_shadow_unfold.py`
+- mode: production-style central run with fake-source systematic envelopes
+- log: `outputs/analysis_shadow_unfold/logs/analysis_shadow_unfold_2026-06-24_10-33-32.log`
+- summary: `outputs/analysis_shadow_unfold/closure_summary.md`
+- active fake-factor derivation region: `TauPt > 170`, `MET_met < 100`
+- active fake model: prong-split `TauPt` fake factor
+- active systematics:
+  - `JET_FAKE_FF_STAT`
+  - `JET_FAKE_MET_WINDOW`
+  - `JET_FAKE_TAU_WIDTH_COMPOSITION`
+- response systematics: not enabled in this run (`DO_FULL_SYSTEMATICS = False`)
+
+Central pre-unfolding budget:
+
+| Configuration | Data | All MC bkg | MC-contam bkg | Jet-fake-like MC bkg | Fakes | Nonfid signal | Nominal data sig | Old all-MC diagnostic data sig | Data sig, no fakes | Fid reco / data sig |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| no_shadow_bin | 1351.000 | 359.137 | 245.530 | 113.607 | 226.136 | 104.534 | 774.800 | 661.192 | 1000.936 | 1.157 |
+| MTW_shadow_bin_250 | 1428.000 | 388.381 | 264.066 | 124.315 | 243.815 | 120.776 | 799.343 | 675.028 | 1043.158 | 1.169 |
+
+Fake-source uncertainty summary:
+
+| Configuration | Systematic | Iteration | Fake-yield change | Data-sig change | Unfolded relative integral shift |
+|---|---|---:|---:|---:|---:|
+| no_shadow_bin | `JET_FAKE_FF_STAT` | 2 | `226.136 -> 228.357 / 223.915` | `774.800 -> 772.579 / 777.021` | 0.3% |
+| no_shadow_bin | `JET_FAKE_MET_WINDOW` | 2 | `226.136 -> 226.498 / 216.482` | `774.800 -> 774.438 / 784.454` | 1.2% |
+| no_shadow_bin | `JET_FAKE_TAU_WIDTH_COMPOSITION` | 2 | `226.136 -> 182.892` | `774.800 -> 818.044` | 6.6% |
+| MTW_shadow_bin_250 | `JET_FAKE_FF_STAT` | 2 | `243.815 -> 246.102 / 241.528` | `799.343 -> 797.056 / 801.630` | 0.3% |
+| MTW_shadow_bin_250 | `JET_FAKE_MET_WINDOW` | 2 | `243.815 -> 244.198 / 233.721` | `799.343 -> 798.960 / 809.437` | 1.2% |
+| MTW_shadow_bin_250 | `JET_FAKE_TAU_WIDTH_COMPOSITION` | 2 | `243.815 -> 198.235` | `799.343 -> 844.923` | 6.5% |
+
+Representative outputs:
+- nominal no-shadow unfolded MTW:
+  `outputs/analysis_shadow_unfold/plots/no_shadow_bin/MTW/no_shadow_bin_MTW_2iter_unfolded.png`
+- nominal MTW shadow-bin 250 unfolded MTW:
+  `outputs/analysis_shadow_unfold/plots/MTW_shadow_bin_250/MTW/MTW_shadow_bin_250_MTW_2iter_unfolded.png`
+- combined no-shadow fake-source uncertainty:
+  `outputs/analysis_shadow_unfold/plots/no_shadow_bin/MTW/fake_source_systematics/no_shadow_bin_MTW_2iter_combined_fake_source_uncertainty.png`
+- combined MTW shadow-bin 250 fake-source uncertainty:
+  `outputs/analysis_shadow_unfold/plots/MTW_shadow_bin_250/MTW/fake_source_systematics/MTW_shadow_bin_250_MTW_2iter_combined_fake_source_uncertainty.png`
+- no-shadow tau-width shifted unfolded spectrum:
+  `outputs/analysis_shadow_unfold/plots/no_shadow_bin/MTW/fake_width_systematic/no_shadow_bin_MTW_TauTrackWidthPt1000PV_2iter_fake_width_shift.png`
+- MTW shadow-bin 250 tau-width shifted unfolded spectrum:
+  `outputs/analysis_shadow_unfold/plots/MTW_shadow_bin_250/MTW/fake_width_systematic/MTW_shadow_bin_250_MTW_TauTrackWidthPt1000PV_2iter_fake_width_shift.png`
+
+Interpretation:
+The same-sample signal-MC closure remains essentially exact: the closure summary
+gives integral ratio `1.000` for both configurations and all tested iterations,
+with per-bin deviations at the per-mille to percent level. The response and
+RooUnfold bookkeeping therefore look internally consistent.
+
+The measured data input remains low relative to the fiducial reconstructed
+signal. With the current MC-contamination plus data-driven fake bookkeeping,
+`Fid reco / data sig` is `1.157` for no-shadow MTW and `1.169` for the
+MTW-shadow-250 configuration. The old all-MC-background diagnostic is worse
+(`661.192` and `675.028` data-sig integrals), so the bookkeeping correction is
+still the right direction.
+
+The fake-factor statistical uncertainty is negligible at the analysis scale.
+The MET-window envelope is visible but modest. The 1-prong tau-width
+composition envelope is the dominant fake-source systematic: it reduces the
+predicted fake yield by roughly `43-46` events, raises the background-subtracted
+data input, and moves the unfolded data toward the signal-MC/truth spectrum.
+Even after that shift, the fiducial reco/data-sig ratio remains above unity
+(`1.096` and `1.106`), so the tau-width effect improves but does not fully solve
+the data/MC normalisation difference.
+
+Recommendation:
+Use this run as the current central fake-source systematic reference. The next
+physics-producing run should be a detector/response systematic pass only if the
+current central prescription is accepted as the working model. Before that, the
+open analysis judgement is whether `JET_FAKE_TAU_WIDTH_COMPOSITION` should stay
+as a systematic envelope, or whether more evidence is needed before it can be
+promoted to a central fake-model correction. The current evidence supports it
+as an uncertainty envelope, not a central correction.
+
+## Full-Systematics Smoke Run
+
+Question:
+When `DO_FULL_SYSTEMATICS = True`, do the response-systematic plots contain the
+full set of response variations needed for a final uncertainty band?
+
+Implementation:
+- script: `run/2017/analysis_shadow_unfold.py`
+- mode: full-systematics smoke run
+- log: `outputs/analysis_shadow_unfold/logs/analysis_shadow_unfold_2026-06-24_12-51-41.log`
+- summary: `outputs/analysis_shadow_unfold/closure_summary.md`
+- response plots:
+  - `outputs/analysis_shadow_unfold/plots/no_shadow_bin/MTW/systematics/no_shadow_bin_MTW_response_systematics.png`
+  - `outputs/analysis_shadow_unfold/plots/MTW_shadow_bin_250/MTW/systematics/MTW_shadow_bin_250_MTW_response_systematics.png`
+
+Result:
+The run completed and produced response-systematic plots for both active
+configurations. However, the response-systematics result is not complete. The
+script skipped the same eight TES response variations for both configurations:
+
+| Skipped response systematic group |
+| --- |
+| `TAUS_TRUEHADTAU_SME_TES_DETECTOR_Barrel_HighPt` |
+| `TAUS_TRUEHADTAU_SME_TES_DETECTOR_Barrel_LowPt` |
+| `TAUS_TRUEHADTAU_SME_TES_DETECTOR_Endcap_HighPt` |
+| `TAUS_TRUEHADTAU_SME_TES_DETECTOR_Endcap_LowPt` |
+| `TAUS_TRUEHADTAU_SME_TES_INSITUEXP` |
+| `TAUS_TRUEHADTAU_SME_TES_INSITUFIT` |
+| `TAUS_TRUEHADTAU_SME_TES_MODEL_CLOSURE` |
+| `TAUS_TRUEHADTAU_SME_TES_PHYSICSLIST` |
+
+The response ROOT file confirms the problem: these TES shifted trees have
+`*_medium_reco_tau` histograms, but not the corresponding
+`*_medium_truth_reco_tau` histograms required to build a full varied response
+matrix. In contrast, the tau efficiency weight variations, for example
+`TAUS_TRUEHADTAU_EFF_ELEOLR_TOTAL__1up`, do contain both `reco_tau` and
+`truth_reco_tau`.
+
+The response plots therefore show only the available efficiency/weight response
+systematics. Visually, the dominant included response contribution is the
+trigger statistical data uncertainty at about `7%`, followed by trigger
+statistical MC at about `3%`, with reco/electron-overlap/syst trigger terms
+below the percent-to-subpercent level.
+
+Fake-source systematics in the same run remain consistent with the previous
+central run. With the 4-iteration setting now enabled, the dominant fake-source
+contribution is still the tau-width composition envelope; the combined
+fake-source uncertainty reaches roughly `20-25%` in the lowest MTW bin and
+about `10-12%` in the sparse high-MTW tail. The labels in the diagnostic plots
+are too long for thesis use and should be cleaned before final figure export.
+
+Representative fake-source plots:
+- `outputs/analysis_shadow_unfold/plots/no_shadow_bin/MTW/fake_source_systematics/no_shadow_bin_MTW_4iter_combined_fake_source_uncertainty.png`
+- `outputs/analysis_shadow_unfold/plots/MTW_shadow_bin_250/MTW/fake_source_systematics/MTW_shadow_bin_250_MTW_4iter_combined_fake_source_uncertainty.png`
+
+Interpretation:
+This is a successful smoke run, not a final full-systematics result. It proves
+that the response-systematic plotting path works for complete response
+variations, and it protects us from silently including incomplete TES response
+objects. It also shows that the current response uncertainty plot is missing the
+TES component, which is too important to omit without a dedicated justification.
+
+Recommendation:
+Do not quote the current response-systematic plot as the final detector/response
+uncertainty. The next response-systematics task is to decide how TES variations
+should be propagated through the response:
+
+- regenerate or book TES `truth_reco_tau` response histograms if the shifted
+  trees can support the truth+reco selection; or
+- implement a defensible reco-only TES response treatment if the shifted trees
+  cannot provide matched truth+reco objects; or
+- explicitly exclude TES from this response plot only after documenting why it
+  is handled elsewhere.
+
 ## Comparison With Thesis Snapshot
 
 The thesis unfolding images live under:
