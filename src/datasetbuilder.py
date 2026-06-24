@@ -65,6 +65,7 @@ class DatasetBuilder:
     do_systematics: bool = False
     skip_sys: set[str] = field(default_factory=set)
     nominal_tree_name: str = "T_s1thv_NOMINAL"
+    nominal_lookup_columns_for_systematics: set[str] = field(default_factory=set)
 
     _subsamples: set[str] = field(init=False, default_factory=set)
     _vars_to_calc: set[str] = field(init=False, default_factory=set)
@@ -190,6 +191,7 @@ class DatasetBuilder:
             tree_set: set[str],
             hard_cuts: dict[str, str],
             hard_cut_masks: dict[str, str] | None = None,
+            nominal_lookup_maps: dict[str, str] | None = None,
         ) -> ROOT.RDataFrame:
             return self.__build_dataset(
                 sample_paths=sample_paths,
@@ -198,6 +200,7 @@ class DatasetBuilder:
                 calculate_variables=self._vars_to_calc,
                 hard_cuts=hard_cuts,
                 hard_cut_masks=hard_cut_masks,
+                nominal_lookup_maps=nominal_lookup_maps,
             )
 
         # Nominal-only: builds one dataframe and apply hard cuts.
@@ -231,6 +234,10 @@ class DatasetBuilder:
                 if needs_systematic_hard_cut_masks
                 else nominal_rdf
             )
+            nominal_lookup_maps = self.__build_nominal_lookup_maps(
+                nominal_dataframe,
+                self.nominal_lookup_columns_for_systematics,
+            )
             dataframes = {
                 self.nominal_tree_name: nominal_dataframe,
             }
@@ -239,6 +246,7 @@ class DatasetBuilder:
                     tree_set,
                     hard_cuts,
                     hard_cut_masks=hard_cut_masks,
+                    nominal_lookup_maps=nominal_lookup_maps,
                 )
                 for systematic_name, tree_set in systematic_tree_sets.items()
                 if systematic_name != self.nominal_tree_name
@@ -321,10 +329,58 @@ class DatasetBuilder:
             """
         )
 
+    @staticmethod
+    def __declare_nominal_lookup_functions() -> None:
+        """Declare C++ helpers used to attach nominal values to shifted trees."""
+
+        ROOT.gInterpreter.Declare(
+            """
+            #ifndef NOMINAL_LOOKUP_HELPERS_DECLARED
+            #define NOMINAL_LOOKUP_HELPERS_DECLARED
+            #include <limits>
+            #include <stdexcept>
+            #include <unordered_map>
+            #include <vector>
+
+            void fillDoubleLookup(
+                std::unordered_map<ULong64_t, double>& lookup,
+                const std::vector<ULong64_t>& keys,
+                const std::vector<double>& values
+            ) {
+                if (keys.size() != values.size()) {
+                    throw std::runtime_error("Lookup key/value size mismatch");
+                }
+                lookup.reserve(lookup.size() + keys.size());
+                for (std::size_t idx = 0; idx < keys.size(); ++idx) {
+                    lookup[keys[idx]] = values[idx];
+                }
+            }
+
+            double lookupNominalDouble(
+                const std::unordered_map<ULong64_t, double>& lookup,
+                UInt_t mcChannel,
+                UInt_t eventNumber
+            ) {
+                const auto key = makeMcEventKey(mcChannel, eventNumber);
+                const auto found = lookup.find(key);
+                if (found == lookup.end()) {
+                    return std::numeric_limits<double>::quiet_NaN();
+                }
+                return found->second;
+            }
+            #endif
+            """
+        )
+
     def __hard_cut_mask_name(self, sample_name: str) -> str:
         safe_name = re.sub(r"\W+", "_", self.name)
         safe_sample = re.sub(r"\W+", "_", sample_name)
         return f"hardCutMask_{safe_name}_{safe_sample}"
+
+    def __nominal_lookup_name(self, column: str) -> str:
+        safe_name = re.sub(r"\W+", "_", self.name)
+        safe_column = re.sub(r"\W+", "_", column)
+        return f"nominalLookup_{safe_name}_{safe_column}"
 
     def __build_nominal_hard_cut_masks(
         self,
@@ -386,6 +442,68 @@ class DatasetBuilder:
 
         return mask_expressions
 
+    def __build_nominal_lookup_maps(
+        self,
+        nominal_rdf: ROOT.RDataFrame,
+        columns: set[str],
+    ) -> dict[str, str]:
+        """Build nominal value maps that shifted systematic trees can query by event key."""
+
+        if not columns:
+            return {}
+
+        self.__declare_event_mask_functions()
+        self.__declare_nominal_lookup_functions()
+
+        available_columns = {str(column) for column in nominal_rdf.GetColumnNames()}
+        lookup_maps: dict[str, str] = {}
+        for column in sorted(columns):
+            if column not in available_columns:
+                raise ValueError(
+                    f"Cannot build nominal lookup for '{column}' because it is not "
+                    "available in the nominal dataframe."
+                )
+
+            lookup_name = self.__nominal_lookup_name(column)
+            if not hasattr(ROOT, lookup_name):
+                ROOT.gInterpreter.Declare(
+                    "#include <unordered_map>\n"
+                    f"std::unordered_map<ULong64_t, double> {lookup_name};"
+                )
+            else:
+                getattr(ROOT, lookup_name).clear()
+
+            self.logger.info("Building nominal event lookup for column '%s'...", column)
+            lookup_rdf = (
+                nominal_rdf.Define("NominalLookupEventKey", "makeMcEventKey(mcChannel, eventNumber)")
+                .Define(f"{column}_lookup_value", f"static_cast<double>({column})")
+                .Filter(f"{column}_lookup_value == {column}_lookup_value")
+            )
+            keys = lookup_rdf.Take["ULong64_t"]("NominalLookupEventKey").GetValue()
+            values = lookup_rdf.Take["double"](f"{column}_lookup_value").GetValue()
+
+            unique_keys = len(set(int(key) for key in keys))
+            if unique_keys != len(keys):
+                self.logger.warning(
+                    "Nominal lookup for '%s' has %d duplicate event keys out of %d entries; "
+                    "later values will overwrite earlier values.",
+                    column,
+                    len(keys) - unique_keys,
+                    len(keys),
+                )
+            if not keys:
+                raise ValueError(f"Nominal lookup for '{column}' is empty.")
+
+            ROOT.fillDoubleLookup(getattr(ROOT, lookup_name), keys, values)
+            self.logger.info(
+                "Built nominal event lookup for column '%s' with %d entries.",
+                column,
+                len(keys),
+            )
+            lookup_maps[column] = lookup_name
+
+        return lookup_maps
+
     def __apply_hard_cuts(
         self,
         rdf: ROOT.RDataFrame,
@@ -409,11 +527,13 @@ class DatasetBuilder:
         calculate_variables: set[str],
         hard_cuts: dict[str, str],
         hard_cut_masks: dict[str, str] | None = None,
+        nominal_lookup_maps: dict[str, str] | None = None,
     ) -> ROOT.RDataFrame:
         """Build DataFrame from given files and TTree/branch combinations from DTA output"""
 
         extract_variables = set(extract_variables)
         calculate_variables = set(calculate_variables)
+        nominal_lookup_maps = nominal_lookup_maps or {}
         extract_variables.add("passReco")  # we'll need this later
         is_nominal = all(["nominal" in tree.lower() for tree in ttrees])
 
@@ -449,6 +569,17 @@ class DatasetBuilder:
                 f"(weight * {self.lumi} * dsid_pmgf[mcChannel]) / dsid_sumw[mcChannel]",
             )
 
+        if (not is_nominal) and nominal_lookup_maps:
+            existing_columns = {str(column) for column in Rdf.GetColumnNames()}
+            for column, lookup_name in nominal_lookup_maps.items():
+                if column in existing_columns:
+                    continue
+                Rdf = Rdf.Define(
+                    column,
+                    f"lookupNominalDouble({lookup_name}, mcChannel, eventNumber)",
+                )
+                existing_columns.add(column)
+
         # systematics weights
         if is_nominal and self.do_systematics:
             # factor systematic weights with reco weight
@@ -471,6 +602,8 @@ class DatasetBuilder:
         # calculate derived variables
         if calculate_variables:
             for derived_var in calculate_variables:
+                if derived_var in {str(column) for column in Rdf.GetColumnNames()}:
+                    continue
                 self.logger.debug("defining variable calculation for: %s", derived_var)
                 function = derived_vars[derived_var]["cfunc"]
                 args = derived_vars[derived_var]["var_args"]

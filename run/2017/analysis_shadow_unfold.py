@@ -39,6 +39,7 @@ from shadow_unfold.systematics import (
     build_tau_width_fake_systematic,
     build_tes_response_systematics,
     histogram_has_finite_content,
+    histogram_normalization_is_compatible,
     quadrature_sum_histograms,
 )
 
@@ -115,7 +116,7 @@ def response_cache_mismatches_selections(
 # Runtime switches. The fake-source switches are intentionally independent:
 # they do not change the nominal fake estimate, they only build uncertainty
 # envelopes around it.
-LOAD_SAVED_HISTS = True  # Reuse saved ROOT histograms instead of rebuilding them.
+LOAD_SAVED_HISTS = False  # Reuse saved ROOT histograms instead of rebuilding them.
 USE_MC_CONTAMINATION_SUBTRACTION = True  # Replace jet-fake-like MC with data-driven fakes.
 DO_FULL_SYSTEMATICS = True  # Enable full systematic response variations; slow final-mode run.
 RUN_FAKE_FF_STAT_SYSTEMATIC = True  # Propagate fake-factor bin statistical uncertainty.
@@ -1886,6 +1887,25 @@ if __name__ == "__main__":
                             raise ValueError(
                                 "one or more varied response histograms are empty or non-finite"
                             )
+                        normalization_checks = [
+                            ("reco up", reco_up, response.reco),
+                            ("reco down", reco_down, response.reco),
+                            ("matrix up", matrix_up, response.matrix),
+                            ("matrix down", matrix_down, response.matrix),
+                        ]
+                        incompatible = []
+                        for check_label, varied_hist, nominal_hist in normalization_checks:
+                            compatible, ratio = histogram_normalization_is_compatible(
+                                varied_hist,
+                                nominal_hist,
+                            )
+                            if not compatible:
+                                incompatible.append(f"{check_label} ratio={ratio:.3g}")
+                        if incompatible:
+                            raise ValueError(
+                                "varied response normalization is incompatible with nominal: "
+                                + ", ".join(incompatible)
+                            )
                     except (KeyError, ValueError) as exc:
                         skipped_response_systematics.append(sys_name)
                         plotter.logger.warning(
@@ -1957,10 +1977,19 @@ if __name__ == "__main__":
                         ", ".join(skipped_response_systematics[:5]),
                     )
                 if not response_uncertainties:
-                    raise RuntimeError(
-                        f"DO_FULL_SYSTEMATICS is enabled, but no complete response "
-                        f"systematic variations were available for {config.label} {var}."
+                    plotter.logger.warning(
+                        "No complete response systematic variations survived validation "
+                        "for %s %s; writing a placeholder response-systematics plot.",
+                        config.label,
+                        var,
                     )
+                    placeholder = nominal_unfolded.Clone(
+                        f"{config.label}_{var}_no_valid_response_systematics"
+                    )
+                    placeholder.SetDirectory(0)
+                    placeholder.Reset()
+                    response_uncertainties = [placeholder]
+                    response_uncertainty_labels = ["No valid complete response systematics"]
 
                 plotter.paths.plot_dir = (
                     plotter.paths.output_dir / "plots" / config.label / var / "systematics"

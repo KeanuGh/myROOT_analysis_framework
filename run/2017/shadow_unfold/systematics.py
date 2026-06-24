@@ -66,10 +66,10 @@ def build_tes_response_systematics(
 ) -> None:
     """Build TES response histograms into the normal response ROOT cache.
 
-    TES shifted trees cannot evaluate the full truth+reco response selection
-    directly because the generic builder strips truth-tagged variables from
-    non-nominal trees. This uses nominal hard-cut event masks for the fiducial
-    truth phase space, then applies only reco cuts in the shifted trees.
+    TES shifted trees do not carry the truth-axis inputs needed to calculate
+    TruthMTW. This uses nominal hard-cut event masks for the fiducial truth
+    phase space, attaches nominal TruthMTW to shifted TES events by event key,
+    and then applies the shifted reco cuts in the TES trees.
     """
     if set(vars_to_build) != {"MTW"}:
         raise RuntimeError(
@@ -135,6 +135,7 @@ def build_tes_response_systematics(
             },
             do_unweighted=True,
             systematics_for_selection={rf"^{re.escape(selection)}$"},
+            nominal_lookup_columns_for_systematics={"TruthMTW"},
             # Only build TES systematics here. The main script already handles
             # nominal and efficiency-weight response objects. Keep the nominal
             # tree unskipped so Dataset.init_sys() can identify the reference
@@ -227,6 +228,28 @@ def histogram_has_finite_content(hist: ROOT.TH1 | ROOT.TH2) -> bool:
                 return False
             total += abs(value)
     return total > 0.0
+
+
+def histogram_normalization_is_compatible(
+    varied: ROOT.TH1 | ROOT.TH2,
+    nominal: ROOT.TH1 | ROOT.TH2,
+    *,
+    min_ratio: float = 0.2,
+    max_ratio: float = 5.0,
+) -> tuple[bool, float]:
+    """Check whether a varied response object has a plausible normalization.
+
+    This is a guardrail against mixing response objects produced by different
+    selection/weight conventions. It is deliberately loose: ordinary detector
+    and efficiency variations should be close to one, while catastrophic cache
+    or weighting mismatches are orders of magnitude away.
+    """
+    nominal_integral = float(abs(nominal.Integral()))
+    varied_integral = float(abs(varied.Integral()))
+    if nominal_integral == 0:
+        return False, float("inf")
+    ratio = varied_integral / nominal_integral
+    return min_ratio <= ratio <= max_ratio, ratio
 
 
 def _data_sig_from_fakes(

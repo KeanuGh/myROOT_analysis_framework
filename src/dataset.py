@@ -890,12 +890,10 @@ class Dataset:
                         and (weight == "reco_weight")
                         and include_systematic_selection(selection)
                     ):
-                        for sys_wgt in [
-                            str(wgt)
-                            for wgt in self.rdataframes[self.nominal_name].GetColumnNames()
-                            if wgt.startswith("weight_TAUS_TRUEHADTAU_EFF_")
-                        ]:
-                            eff_sys_name = sys_wgt.removeprefix("weight_")
+                        for eff_sys_name in sorted(self.eff_sys_set):
+                            sys_wgt = f"weight_{eff_sys_name}"
+                            if sys_wgt not in available_columns:
+                                continue
                             hist_name = smart_join(eff_sys_name, selection, variable_name)
                             th1 = self.define_th1(
                                 variable_name,
@@ -968,12 +966,10 @@ class Dataset:
                         and (hist2d_opts.weight == "reco_weight")
                         and include_systematic_selection(selection)
                     ):
-                        for sys_wgt in [
-                            str(wgt)
-                            for wgt in self.rdataframes[self.nominal_name].GetColumnNames()
-                            if wgt.startswith("weight_TAUS_TRUEHADTAU_EFF_")
-                        ]:
-                            eff_sys_name = sys_wgt.removeprefix("weight_")
+                        for eff_sys_name in sorted(self.eff_sys_set):
+                            sys_wgt = f"weight_{eff_sys_name}"
+                            if sys_wgt not in available_columns:
+                                continue
                             hist_name = smart_join(
                                 eff_sys_name,
                                 selection,

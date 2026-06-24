@@ -3054,6 +3054,165 @@ should be propagated through the response:
 - explicitly exclude TES from this response plot only after documenting why it
   is handled elsewhere.
 
+### Response-systematic Failure Diagnosis
+
+Question:
+Why are the TES response systematics skipped, and why do the currently included
+response-systematic curves sit near `100%`?
+
+Implementation:
+- script inspected: `run/2017/analysis_shadow_unfold.py`
+- helper inspected: `run/2017/shadow_unfold/systematics.py`
+- diagnostic script: `run/2017/validations/validate_response_weight_normalisation.py`
+- TES truth-axis diagnostic: `run/2017/validations/validate_tes_response_truth_axis.py`
+- ROOT cache inspected: `outputs/analysis_shadow_unfold/response/root/wtaunu_had.root`
+- diagnostic outputs:
+  - `outputs/validate_shadow_fakes/response_weight_normalisation/response_weight_normalisation_summary.md`
+  - `outputs/validate_shadow_fakes/response_weight_normalisation/response_weight_normalisation.csv`
+  - fresh response cache: `outputs/validate_shadow_fakes/response_weight_normalisation/fresh_standard_response/root/wtaunu_had.root`
+  - `outputs/validate_shadow_fakes/tes_response_truth_axis/tes_response_truth_axis_summary.md`
+  - `outputs/validate_shadow_fakes/tes_response_truth_axis/tes_response_truth_axis_tree_checks.csv`
+- logs inspected:
+  - `outputs/analysis_shadow_unfold/logs/analysis_shadow_unfold_2026-06-24_14-22-21.log`
+  - `outputs/analysis_shadow_unfold/response/logs/analysis_shadow_unfold_response_build_2026-06-24_14-22-52.log`
+  - `outputs/analysis_shadow_unfold/response/logs/build_shadow_response_tes_no_shadow_bin_2026-06-24_14-24-25.log`
+  - `outputs/analysis_shadow_unfold/response/logs/build_shadow_response_tes_MTW_shadow_bin_250_2026-06-24_14-25-05.log`
+
+Result:
+
+| Check | Result | Interpretation |
+|---|---:|---|
+| TES shifted `MTW` reco histogram, no-shadow | `898.854` | reco projection exists and is finite |
+| TES shifted `MTW_TruthMTW` matrix, no-shadow | `0.000` | full TES response matrix is absent/empty |
+| TES shifted `MTW` reco histogram, `MTW_shadow_bin_250` | `935.888` | reco projection exists and is finite |
+| TES shifted `MTW_TruthMTW` matrix, `MTW_shadow_bin_250` | `0.000` | full TES response matrix is absent/empty |
+| Nominal no-shadow `truth_reco_tau` `MTW` | `896.196` | central response normalization |
+| `TAUS_TRUEHADTAU_EFF_TRIGGER_STATDATA161718__1up` no-shadow `truth_reco_tau` `MTW` | `59420.415` | `66.3x` nominal; not a physical response uncertainty |
+| Nominal no-shadow reco-only `MTW` | `1000.730` | reco-only control selection |
+| `TAUS_TRUEHADTAU_EFF_TRIGGER_STATDATA161718__1up` reco-only `MTW` | `1061.025` | `1.06x` nominal; physically plausible |
+
+The TES truth-axis diagnostic then inspected the shifted input trees and current
+response cache directly:
+
+| TES diagnostic check | Result | Interpretation |
+|---|---:|---|
+| Representative TES missing truth inputs | `VisTruthTauPt`, `VisTruthTauPhi`, `TruthNeutrinoPt`, `TruthNeutrinoPhi`, `VisTruthTauEta`, `TruthTau_nChargedTracks` | shifted TES trees do not carry the inputs needed for `TruthMTW` |
+| Representative TES missing reco inputs | none | shifted TES trees do carry the reconstructed inputs needed for shifted `MTW` |
+| TES entries matched to nominal event keys | `1.000-1.000` | nominal truth lookup by `(mcChannel,eventNumber)` is feasible |
+| TES response reco histograms with non-zero integral | `32` | shifted reco projections exist in the current cache |
+| TES response matrices with non-zero integral | `0` | full shifted migration matrices are not currently built |
+
+The targeted diagnostic was then rerun with a fresh standard response cache
+after fixing the systematic histogram booking in `src/dataset.py`. The important
+comparison is:
+
+| Source | Selection | EFF variations checked | Incompatible variations | Min varied/nominal | Max varied/nominal |
+|---|---|---:|---:|---:|---:|
+| current main response cache | `no_shadow_bin_medium_truth_reco_tau` | 30 | 30 | `58.68` | `66.30` |
+| current main response cache | `MTW_shadow_bin_250_medium_truth_reco_tau` | 30 | 30 | `57.31` | `64.77` |
+| fresh standard response cache after fix | `no_shadow_bin_medium_truth_reco_tau` | 10 | 0 | `0.935` | `1.060` |
+| fresh standard response cache after fix | `MTW_shadow_bin_250_medium_truth_reco_tau` | 10 | 0 | `0.935` | `1.061` |
+
+Two separate problems are therefore present.
+
+First, the TES shifted trees can provide shifted reconstructed observables, but
+they cannot fill the `MTW_TruthMTW` migration matrix in the current builder. The
+shifted input trees genuinely do not carry the truth branches needed to compute
+`TruthMTW`. The TES helper recovers the fiducial event set using nominal event
+masks, but it does not yet attach nominal truth-axis values to the shifted
+events. This is why TES response reco projections are finite but the
+`MTW_TruthMTW` matrices have zero integral and are skipped. The diagnostic also
+showed that TES entries match nominal event keys, so this is fixable by adding a
+truth-value lookup keyed by `(mcChannel,eventNumber)`.
+
+Second, the response-systematic plot near `100%` was caused by invalid
+efficiency-weight response histograms in the existing main response cache. The
+root cause was not the allowed trigger/reconstruction/ELEOLR tau-efficiency
+weight formula itself. The fresh diagnostic showed that these allowed
+efficiency variations are physically sized (`0.935-1.061` of nominal) when the
+response cache is rebuilt cleanly.
+
+The actual code bug was in histogram booking: `Dataset.init_sys()` correctly
+builds `self.eff_sys_set` after applying `skip_sys`, but
+`Dataset.gen_all_histograms()` previously looped over every
+`weight_TAUS_TRUEHADTAU_EFF_*` branch again when filling 1D and 2D systematic
+histograms. That reintroduced skipped raw `JETID`/`RNNID` branches and wrote
+order-one per-event factors as if they were full luminosity-normalised event
+weights. The current main response cache still contains those old pathological
+histograms, which is why it continues to show `~60x` variations until rebuilt.
+
+Interpretation:
+the efficiency-weight response issue is now a solved code-booking problem, not
+a physics uncertainty. The fix in `src/dataset.py` makes both the 1D and 2D
+systematic histogram loops use the filtered `self.eff_sys_set`, so skipped
+`JETID`/`RNNID` branches are no longer written. A fresh response build confirms
+that the remaining allowed efficiency variations are well normalised.
+
+The existing `outputs/analysis_shadow_unfold/response/root/wtaunu_had.root`
+cache is stale for this purpose and must be regenerated before using response
+systematic plots. The TES response-matrix issue remains separate: the shifted
+TES reco histograms exist, but the full `MTW_TruthMTW` matrices are still empty.
+
+Recommendation:
+before the next full-systematics run:
+
+1. Rebuild the main response cache from scratch with the fixed
+   `src/dataset.py`.
+2. Keep the response-normalisation guard in `analysis_shadow_unfold.py`; it is
+   still useful as a safety check against stale or malformed response inputs.
+3. For TES, attach or recover the nominal truth-axis value for each shifted
+   event if a full varied migration matrix is required. A full TES response
+   matrix cannot be obtained from the current shifted tree alone, but the
+   event-key diagnostic indicates that a nominal truth lookup should be
+   feasible.
+4. After the response cache is regenerated, rerun
+   `run/2017/validations/validate_response_weight_normalisation.py` in
+   cache-only mode to confirm that the main response cache now matches the
+   fresh diagnostic.
+
+Follow-up implementation:
+The response-systematic loop now rejects varied response objects whose reco or
+matrix normalization is grossly incompatible with the nominal response. This
+protects against stale or malformed response inputs. The underlying
+efficiency-weight booking bug has also been fixed in `src/dataset.py`: the
+systematic histogram loops now iterate over the filtered `self.eff_sys_set`
+rather than every raw `weight_TAUS_TRUEHADTAU_EFF_*` branch.
+
+TES response-matrix follow-up:
+The TES response-matrix problem has now been addressed in code. The shifted TES
+trees contain the shifted reconstructed variables, but not the truth-axis inputs
+needed to calculate `TruthMTW`. The fix is to build a nominal-event lookup keyed
+by `(mcChannel, eventNumber)` and attach nominal `TruthMTW` to each shifted TES
+event before filling the varied migration matrix.
+
+Implementation:
+- framework support: `src/datasetbuilder.py`
+- TES response builder: `run/2017/shadow_unfold/systematics.py`
+- smoke-test output:
+  `outputs/validate_shadow_fakes/tes_response_lookup_build_test/response/root/wtaunu_had.root`
+
+Smoke-test result:
+| Systematic | Reco `MTW` integral | `MTW_TruthMTW` integral |
+|---|---:|---:|
+| `T_s1thv_NOMINAL` | 936.10 | 935.92 |
+| `TAUS_TRUEHADTAU_SME_TES_DETECTOR_Barrel_LowPt__1down` | 861.27 | 854.62 |
+| `TAUS_TRUEHADTAU_SME_TES_DETECTOR_Barrel_LowPt__1up` | 990.26 | 982.60 |
+| `TAUS_TRUEHADTAU_SME_TES_PHYSICSLIST__1down` | 909.48 | 902.35 |
+| `TAUS_TRUEHADTAU_SME_TES_PHYSICSLIST__1up` | 960.98 | 953.51 |
+
+Interpretation:
+The shifted TES matrices are no longer empty. Their matrix integrals now track
+the corresponding shifted reco integrals closely, with the expected small
+difference from the fiducial truth axis and migration bookkeeping. This means
+TES response systematics can be rebuilt into the main response cache rather than
+being skipped as structurally unavailable.
+
+Recommendation:
+Regenerate the main response cache before the next full-systematics production
+run. The current fix has only been smoke-tested in a dedicated output directory;
+the old `outputs/analysis_shadow_unfold/response/root/wtaunu_had.root` cache
+should still be treated as stale for TES response systematics.
+
 ## Comparison With Thesis Snapshot
 
 The thesis unfolding images live under:

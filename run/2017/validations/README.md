@@ -33,6 +33,8 @@ referenced later.
 | `validate_failid_truth_categories.py` | Focused SR anti-ID truth-category audit. It decomposes the `TauPt` application population into hadronic tau, leptonic tau, electron, muon, photon, and jet-like/unmatched categories for `no_shadow_bin` and `MTW_shadow_bin_250`. | minutes first run, seconds cached |
 | `validate_photon_nonfake_subtraction.py` | Validation-only fake-estimate variant that adds photon-matched candidates, and optionally leptonic tau, to the MC-contamination subtraction. It tests whether photon treatment materially reduces the fake yield and reconstructed stack overshoot. | minutes first run, seconds cached |
 | `validate_note_like_loose_fake_factor.py` | Validation-only comparison to the ATLAS high-mass `tau + MET` note. It builds Loose/VeryLoose-proxy fake factors in `MET < 100` and compares the `350-500` and `500-1000` GeV bins to Table 14. | minutes first run, seconds cached |
+| `validate_response_weight_normalisation.py` | Response-systematic weight audit. By default it reads the current response cache and checks whether tau-efficiency shifted response histograms are normalised like nominal or like unweighted event counts. Set `RUN_FRESH_STANDARD_RESPONSE_BUILD = True` inside the script for a targeted fresh response build that distinguishes cache mixing from a weight-formula problem. | seconds cache-only, minutes fresh build |
+| `validate_tes_response_truth_axis.py` | TES response-matrix diagnostic. It checks whether TES shifted trees contain the truth-axis inputs needed for `MTW_TruthMTW`, whether TES events can be matched back to nominal events by `(mcChannel,eventNumber)`, and whether the current response cache has non-zero TES matrices. | seconds |
 
 ## Next Script To Run
 
