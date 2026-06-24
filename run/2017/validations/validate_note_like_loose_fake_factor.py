@@ -185,7 +185,6 @@ if __name__ == "__main__":
                     SR_failID_data=fail_selection,
                     CR_passID_mc=f"trueTau_{pass_selection}",
                     CR_failID_mc=f"trueTau_{fail_selection}",
-                    SR_passID_mc=f"trueTau_{pass_selection}",
                     SR_failID_mc=f"trueTau_{fail_selection}",
                     name=f"note_like_{model.key}_{prong}prong",
                     systematic=NOMINAL_NAME,

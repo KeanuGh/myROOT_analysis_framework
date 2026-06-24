@@ -101,8 +101,7 @@ SKIP_SYS = {
 # ========================================================================
 # Naming convention:
 # - passID/failID are reconstructed tau-ID regions;
-# - trueTau_* is historical code naming for MC-contamination subtraction, not
-#   the fiducial signal truth selection;
+# - trueTau_* selections subtract MC contamination in the fake-factor method;
 # - truth_tau/truth_reco_tau are the fiducial response selections.
 
 PASS_MEDIUM = Cut(
@@ -124,8 +123,8 @@ PASS_TRUETAU = Cut(
     "MatchedTruthParticle_isMuon == true || "
     "MatchedTruthParticle_isElectron == true",
     # This selection defines the MC contamination subtracted in the fake-factor
-    # method. The historical "trueTau_" histogram prefix is kept for cache
-    # compatibility; it is not the fiducial signal truth definition.
+    # method. The "trueTau_" histogram prefix is a saved-histogram name, not
+    # the fiducial signal truth definition.
     # To test photon-matched candidates as MC contamination, uncomment the line below
     # and rebuild measured histograms. Cached trueTau histograms use this active
     # definition and must not be mixed with a different contamination definition.
@@ -838,7 +837,6 @@ if __name__ == "__main__":
                         prong_sr_fail,
                         f"trueTau_{prong_fake_cr_pass}",
                         f"trueTau_{prong_fake_cr_fail}",
-                        f"trueTau_{config.label}_{WP}_{prong}prong_SR_passID",
                         true_prong_sr_fail,
                         name=prong_fakes_name,
                         systematic=NOMINAL_NAME,
@@ -866,8 +864,8 @@ if __name__ == "__main__":
             #   data - MC-contamination backgrounds - data-driven jet fakes
             #        - reconstructed nonfiducial signal.
             #
-            # ``all_background`` is retained only as a diagnostic of the old
-            # all-MC-background convention.
+            # ``all_background`` is retained only as an all-MC background
+            # subtraction diagnostic.
             truth_var = variable_data[var]["truth"]
             response_matrix_name = f"{var}_{truth_var}"
             data = measured_analysis.get_hist(
@@ -960,8 +958,8 @@ if __name__ == "__main__":
 
             # Literature-aligned bookkeeping: the data-driven fake estimate
             # replaces the jet-fake-like MC component. Setting
-            # USE_MC_CONTAMINATION_SUBTRACTION=False keeps the old convention
-            # available for comparison/debugging.
+            # USE_MC_CONTAMINATION_SUBTRACTION=False switches to all-MC
+            # background subtraction for comparison/debugging.
             nominal_background = (
                 mc_contamination_background if USE_MC_CONTAMINATION_SUBTRACTION else all_background
             )
@@ -2100,8 +2098,8 @@ if __name__ == "__main__":
             ),
             "",
             (
-                "`Data sig, all bkg + fakes diagnostic` preserves the old all-MC "
-                "background convention for comparison only."
+                "`Data sig, all bkg + fakes diagnostic` records the all-MC "
+                "background subtraction cross-check for comparison only."
             ),
             "",
             "| Configuration | Variable | Data | All MC bkg | MC-contam bkg | "

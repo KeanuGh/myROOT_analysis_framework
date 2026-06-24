@@ -46,11 +46,9 @@ def build_fake_factor_batched(
 ) -> ROOT.TH1:
     """Build a fake factor while batching the source histograms per dataset.
 
-    The standard Analysis.do_fakes_estimate path asks for each source histogram
-    through get_hist(..., allow_generation=True), which immediately evaluates
-    each histogram. Here we book the CR/SR source histograms first, then collect
-    the results, so ROOT can evaluate the booked actions together for each
-    dataset graph.
+    Analysis.do_fakes_estimate delegates here. The source and application
+    histograms are booked first, then collected together, so ROOT can evaluate
+    the booked actions together for each dataset graph.
     """
     if not analysis.data_sample:
         raise ValueError("Cannot build a data-driven fake estimate without a data sample.")

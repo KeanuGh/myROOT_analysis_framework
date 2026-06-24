@@ -422,7 +422,6 @@ if __name__ == "__main__":
                     f"{nprong}{wp}_SR_failID",
                     f"trueTau_{nprong}{wp}_CR_passID",
                     f"trueTau_{nprong}{wp}_CR_failID",
-                    f"trueTau_{nprong}{wp}_SR_passID",
                     f"trueTau_{nprong}{wp}_SR_failID",
                     name=f"{nprong}{wp}",
                     systematic=NOMINAL_NAME,

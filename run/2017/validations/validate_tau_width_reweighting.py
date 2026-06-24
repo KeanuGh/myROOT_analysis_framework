@@ -322,7 +322,6 @@ if __name__ == "__main__":
                 target_fail,
                 f"trueTau_{derive_pass}",
                 f"trueTau_{derive_fail}",
-                f"trueTau_{target_pass}",
                 f"trueTau_{target_fail}",
                 name=estimate_name,
                 systematic=NOMINAL_NAME,

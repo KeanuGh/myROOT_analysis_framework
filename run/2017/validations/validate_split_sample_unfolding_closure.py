@@ -35,7 +35,7 @@ def split_pseudo_hist(selection: str, variable: str) -> ROOT.TH1:
 if __name__ == "__main__":
     if not SPLIT_RESPONSE_ROOT.is_file() or not SPLIT_PSEUDO_ROOT.is_file():
         raise FileNotFoundError(
-            "Missing split-sample ROOT output. This validation needs the historical "
+            "Missing split-sample ROOT output. This validation needs the archived "
             "`outputs/analysis_shadow_unfold/split_*` caches or a dedicated producer rerun."
         )
 

@@ -1295,7 +1295,6 @@ class Analysis:
             SR_failID_data: str = "SR_failID",
             CR_passID_mc: str = "trueTau_CR_passID",
             CR_failID_mc: str = "trueTau_CR_failID",
-            SR_passID_mc: str = "trueTau_SR_passID",
             SR_failID_mc: str = "trueTau_SR_failID",
             name: str = "",
             systematic: str = "T_s1hv_NOMINAL",
@@ -1312,7 +1311,6 @@ class Analysis:
         :param SR_failID_data: Signal region failing ID in data
         :param CR_passID_mc: Control region passing ID in mc
         :param CR_failID_mc: Control region failing ID in mc
-        :param SR_passID_mc: Signal region passing ID in mc
         :param SR_failID_mc: Signal region failing ID in mc
         :param name: prefix to histogram naming for estimation
         :param systematic: which systematic to apply fakes estimate to

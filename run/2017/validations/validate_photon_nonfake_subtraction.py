@@ -272,7 +272,6 @@ if __name__ == "__main__":
                         SR_failID_data=sr_fail,
                         CR_passID_mc=nonfake_selection(model, cr_pass),
                         CR_failID_mc=nonfake_selection(model, cr_fail),
-                        SR_passID_mc=nonfake_selection(model, sr_pass),
                         SR_failID_mc=nonfake_selection(model, sr_fail),
                         name=fake_prefix(config, prong, model),
                         systematic=NOMINAL_NAME,
