@@ -1,6 +1,5 @@
 import copy
 import inspect
-import itertools
 from collections.abc import Callable, Generator, Sequence
 from copy import deepcopy
 from functools import reduce
@@ -1066,8 +1065,13 @@ class Analysis:
             # colours
             if var_dict["colours"][i] is None:
                 if all(c is None for c in var_dict["colours"]):
-                    # just do all at once
-                    var_dict["colours"] = list(itertools.islice(c_iter, len(var_dict["colours"])))
+                    # just do all at once, repeating the default colour cycle
+                    # when there are more histograms than built-in colours.
+                    colour_cycle = plt.rcParams["axes.prop_cycle"].by_key()["color"]
+                    var_dict["colours"] = [
+                        colour_cycle[j % len(colour_cycle)]
+                        for j in range(len(var_dict["colours"]))
+                    ]
 
                 elif var_dict["datasets"][i] and (len(set(var_dict["datasets"])) > 1):
                     var_dict["colours"][i] = self[var_dict["datasets"][i]].colour

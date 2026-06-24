@@ -116,7 +116,7 @@ def response_cache_mismatches_selections(
 # Runtime switches. The fake-source switches are intentionally independent:
 # they do not change the nominal fake estimate, they only build uncertainty
 # envelopes around it.
-LOAD_SAVED_HISTS = False  # Reuse saved ROOT histograms instead of rebuilding them.
+LOAD_SAVED_HISTS = True  # Reuse saved ROOT histograms instead of rebuilding them.
 USE_MC_CONTAMINATION_SUBTRACTION = True  # Replace jet-fake-like MC with data-driven fakes.
 DO_FULL_SYSTEMATICS = True  # Enable full systematic response variations; slow final-mode run.
 RUN_FAKE_FF_STAT_SYSTEMATIC = True  # Propagate fake-factor bin statistical uncertainty.

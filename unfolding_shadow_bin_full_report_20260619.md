@@ -3213,6 +3213,82 @@ run. The current fix has only been smoke-tested in a dedicated output directory;
 the old `outputs/analysis_shadow_unfold/response/root/wtaunu_had.root` cache
 should still be treated as stale for TES response systematics.
 
+### Full Systematics Rerun After TES And EFF Fixes
+
+Question:
+Check whether the two response-systematic blockers are solved in the production
+`analysis_shadow_unfold` output:
+
+- EFF response variations were previously contaminated by skipped raw
+  `JETID`/`RNNID` weights with pathological normalization.
+- TES shifted trees previously had nonzero reco histograms but empty
+  `MTW_TruthMTW` response matrices.
+
+Implementation:
+- script: `run/2017/analysis_shadow_unfold.py`
+- mode: full systematics enabled, saved histograms reused after the response
+  cache rebuild
+- main log:
+  `outputs/analysis_shadow_unfold/logs/analysis_shadow_unfold_2026-06-24_18-14-32.log`
+- summary:
+  `outputs/analysis_shadow_unfold/closure_summary.md`
+
+Result:
+The run completed successfully with `DONE` in the log. Both production
+configurations were processed:
+
+| Configuration | Valid response variations | Skipped response variations | Reco ratio range | Matrix ratio range |
+|---|---:|---:|---:|---:|
+| `no_shadow_bin` | 26 | 0 | 0.920-1.060 | 0.913-1.060 |
+| `MTW_shadow_bin_250` | 26 | 0 | 0.928-1.060 | 0.920-1.060 |
+
+This confirms that the response-systematic cache now contains usable EFF and
+TES response objects for the active configurations. The skipped raw
+`JETID`/`RNNID` objects may still exist in older ROOT files, but they are not
+included in the active response-systematic set.
+
+Representative outputs:
+- no-shadow unfolded result:
+  `outputs/analysis_shadow_unfold/plots/no_shadow_bin/MTW/no_shadow_bin_MTW_4iter_unfolded_logy.png`
+- shadow-bin unfolded result:
+  `outputs/analysis_shadow_unfold/plots/MTW_shadow_bin_250/MTW/MTW_shadow_bin_250_MTW_4iter_unfolded_logy.png`
+- no-shadow response systematics:
+  `outputs/analysis_shadow_unfold/plots/no_shadow_bin/MTW/systematics/no_shadow_bin_MTW_response_systematics.png`
+- shadow-bin response systematics:
+  `outputs/analysis_shadow_unfold/plots/MTW_shadow_bin_250/MTW/systematics/MTW_shadow_bin_250_MTW_response_systematics.png`
+- no-shadow combined fake-source uncertainty:
+  `outputs/analysis_shadow_unfold/plots/no_shadow_bin/MTW/fake_source_systematics/no_shadow_bin_MTW_4iter_combined_fake_source_uncertainty.png`
+- shadow-bin combined fake-source uncertainty:
+  `outputs/analysis_shadow_unfold/plots/MTW_shadow_bin_250/MTW/fake_source_systematics/MTW_shadow_bin_250_MTW_4iter_combined_fake_source_uncertainty.png`
+
+Interpretation:
+The technical response-systematic questions are now answered: EFF response
+normalisation is sane for the allowed EFF variations, TES response matrices are
+filled, and the response-systematics plots are produced rather than skipped or
+placeholdered.
+
+The physics normalisation question is not fully solved. In the 4-iteration
+unfolded plots, unfolded data remain generally below the signal-MC truth and
+unfolded-signal closure reference in the populated `MTW` bins. The pre-unfolding
+budget remains:
+
+| Configuration | Data sig | Fid reco signal | Fid reco / data sig |
+|---|---:|---:|---:|
+| `no_shadow_bin` | 774.800 | 896.196 | 1.157 |
+| `MTW_shadow_bin_250` | 799.343 | 934.116 | 1.169 |
+
+The tau-width fake-source envelope remains the largest fake-source uncertainty:
+at four iterations it gives relative unfolded shifts of about `6.9%` for
+`no_shadow_bin` and `6.7%` for `MTW_shadow_bin_250`. The FF-stat uncertainty is
+small, about `0.3%`, and the MET-window envelope is about `1.2%`.
+
+Recommendation:
+The response-systematic implementation is now ready for thesis-level diagnostic
+plots. The next physics decision should focus on the remaining data/MC
+normalisation tension rather than response-cache validity. The response
+systematics plots are technically useful but need cosmetic legend cleanup before
+being copied directly into the thesis.
+
 ## Comparison With Thesis Snapshot
 
 The thesis unfolding images live under:
