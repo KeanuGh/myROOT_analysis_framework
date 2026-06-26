@@ -42,7 +42,7 @@ _DATA_SAMPLE: Sample = {
 _MC_SAMPLES: dict[str, Sample] = {
     "wtaunu_had": {
         "data_path": {
-            "lm_cut": DTA_PATH / "*Sh_2211_Wtaunu_*_maxHTpTV2*/*.root",
+            "lm_cut": DTA_PATH / "*Sh_2211_Wtaunu_H_maxHTpTV2*/*.root",
             "full": DTA_PATH / "*Sh_2211_Wtaunu_mW_120*/*.root",
         },
         "hard_cut": {
@@ -55,7 +55,7 @@ _MC_SAMPLES: dict[str, Sample] = {
     },
     "wtaunu_lep": {
         "data_path": {
-            "lm_cut": DTA_PATH / "*Sh_2211_Wtaunu_*_maxHTpTV2*/*.root",
+            "lm_cut": DTA_PATH / "*Sh_2211_Wtaunu_L_maxHTpTV2*/*.root",
             "full": DTA_PATH / "*Sh_2211_Wtaunu_mW_120*/*.root",
         },
         "hard_cut": {
