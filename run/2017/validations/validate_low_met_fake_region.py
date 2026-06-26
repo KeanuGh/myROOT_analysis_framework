@@ -41,7 +41,7 @@ PRONGS = (1, 3)
 LOAD_SAVED_HISTS = True
 RUN_EVENT_LOOPS_IF_CACHE_MISSING = True
 PLOT_TRANSFER_COMPARISON = True
-PLOT_FAKE_ENRICHMENT = True
+PLOT_FAKE_ENRICHMENT = False
 PLOT_THESIS_LIKE_REGION_STACKS = True
 THESIS_LIKE_STACK_VARS = ("TauRNNJetScore", "TauBDTEleScore", "TauNCoreTracks")
 OUTPUT_DIR = VALIDATION_OUTPUT / "low_met_fake_region"
@@ -458,7 +458,7 @@ if __name__ == "__main__":
             "do_stat": True,
             "do_syst": False,
             "ratio_plot": True,
-            "ratio_axlim": (0.0, 2.0),
+            "ratio_axlim": (0.8, 1.2),
             "kind": "stack",
             "logy": True,
             "label_params": {"llabel": "", "loc": 1},
