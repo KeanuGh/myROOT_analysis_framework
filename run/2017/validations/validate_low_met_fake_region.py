@@ -41,6 +41,9 @@ PRONGS = (1, 3)
 LOAD_SAVED_HISTS = True
 RUN_EVENT_LOOPS_IF_CACHE_MISSING = True
 PLOT_TRANSFER_COMPARISON = True
+PLOT_FAKE_ENRICHMENT = True
+PLOT_THESIS_LIKE_REGION_STACKS = True
+THESIS_LIKE_STACK_VARS = ("TauRNNJetScore", "TauBDTEleScore", "TauNCoreTracks")
 OUTPUT_DIR = VALIDATION_OUTPUT / "low_met_fake_region"
 SUMMARY_PATH = OUTPUT_DIR / "low_met_fake_region_summary.md"
 CACHE_FILE = OUTPUT_DIR / "root" / "validate_low_met_fake_region.root"
@@ -119,6 +122,41 @@ def validation_target(analysis: Analysis, selection: str) -> ROOT.TH1:
     return target
 
 
+def fake_enrichment_components(
+    analysis: Analysis,
+    selection: str,
+    variable: str,
+) -> tuple[ROOT.TH1, ROOT.TH1, ROOT.TH1]:
+    data = analysis.get_hist(
+        variable,
+        dataset=analysis.data_sample,
+        systematic=NOMINAL_NAME,
+        selection=selection,
+        allow_generation=True,
+    )
+    nonfake = sum_th1s(
+        *[
+            analysis.get_hist(
+                variable,
+                dataset=mc_sample,
+                systematic=NOMINAL_NAME,
+                selection=f"trueTau_{selection}",
+                allow_generation=True,
+            )
+            for mc_sample in MC_SAMPLES
+        ]
+    )
+    fake_like = data - nonfake
+    for hist, suffix in (
+        (data, "data"),
+        (nonfake, "nonfake_mc"),
+        (fake_like, "data_minus_nonfake"),
+    ):
+        hist.SetName(f"{selection}_{variable}_{suffix}")
+        hist.SetDirectory(0)
+    return data, nonfake, fake_like
+
+
 if __name__ == "__main__":
     base_cuts = [
         PASS_RECO_PRESELECTION,
@@ -185,6 +223,21 @@ if __name__ == "__main__":
                 base_cuts + list(target.cuts) + [FAIL_MEDIUM, prong_cut]
             )
 
+    thesis_like_stack_selections = {
+        f"{CONFIG_LABEL}_low_met_{WP}_CR_passID": (
+            base_cuts + [Cut("MET < 100", "MET_met < 100"), PASS_MEDIUM]
+        ),
+        f"{CONFIG_LABEL}_signal_like_{WP}_SR_passID": (
+            base_cuts
+            + [
+                Cut(r"$m_T^W >= 350$", f"MTW >= {MTW_NOMINAL_MIN:g}"),
+                Cut("MET >= 170", "MET_met >= 170"),
+                PASS_MEDIUM,
+            ]
+        ),
+    }
+    data_selections.update(thesis_like_stack_selections)
+
     for selection, cuts in data_selections.items():
         mc_selections[selection] = cuts
         mc_selections[f"trueTau_{selection}"] = cuts + [PASS_TRUETAU]
@@ -216,7 +269,7 @@ if __name__ == "__main__":
         },
         import_missing_columns_as_nan=True,
         snapshot=False,
-        histogram_vars={VARIABLE, FAKES_SOURCE},
+        histogram_vars={VARIABLE, FAKES_SOURCE, *THESIS_LIKE_STACK_VARS},
         binnings={"": BINNINGS},
     )
 
@@ -250,6 +303,10 @@ if __name__ == "__main__":
     ]
 
     comparison_hists: dict[tuple[str, int], list[tuple[str, ROOT.TH1]]] = {}
+    fake_enrichment_hists: dict[
+        tuple[int, str],
+        tuple[ROOT.TH1, ROOT.TH1, ROOT.TH1],
+    ] = {}
 
     for target in validation_targets:
         for prong in PRONGS:
@@ -304,6 +361,50 @@ if __name__ == "__main__":
                 )
                 comparison_hists[(target.key, prong)].append((method.label, prediction))
 
+    low_met_method = next(
+        method for method in derivation_methods if method.key == "low_met_fake_enriched"
+    )
+    lines.extend(
+        [
+            "",
+            "## Low-MET control-region fake enrichment",
+            "",
+            "The fake-like component is computed as data minus the simulated nonfake "
+            "contamination in the same region. A small nonfake fraction indicates a "
+            "region dominated by jets misidentified as tau candidates.",
+            "",
+            "| Region | Prong | Data | Simulated nonfake contamination | "
+            "Inferred jet-fake-like component | Fake-like / data | Nonfake / data |",
+            "|---|---:|---:|---:|---:|---:|---:|",
+        ]
+    )
+    for prong in PRONGS:
+        method_prefix = f"{CONFIG_LABEL}_{low_met_method.key}_{WP}_{prong}prong"
+        for region_key, region_label in (
+            ("derive_passID", "Pass-ID numerator"),
+            ("derive_failID", "Anti-ID denominator"),
+        ):
+            selection = f"{method_prefix}_{region_key}"
+            data_hist, nonfake_hist, fake_like_hist = fake_enrichment_components(
+                analysis,
+                selection,
+                FAKES_SOURCE,
+            )
+            fake_enrichment_hists[(prong, region_key)] = (
+                data_hist,
+                nonfake_hist,
+                fake_like_hist,
+            )
+            data_yield = hist_integral(data_hist)
+            nonfake_yield = hist_integral(nonfake_hist)
+            fake_like_yield = hist_integral(fake_like_hist)
+            lines.append(
+                f"| {region_label} | {prong} | {data_yield:.3f} | "
+                f"{nonfake_yield:.3f} | {fake_like_yield:.3f} | "
+                f"{ratio(fake_like_yield, data_yield):.3f} | "
+                f"{ratio(nonfake_yield, data_yield):.3f} |"
+            )
+
     lines.extend(
         [
             "",
@@ -346,6 +447,81 @@ if __name__ == "__main__":
                 label_params={"llabel": "", "loc": 1},
                 legend_params={"fontsize": 10, "loc": "upper right"},
                 filename=filename,
+            )
+            lines.append(f"- `{analysis.paths.plot_dir / filename}`")
+
+    if PLOT_THESIS_LIKE_REGION_STACKS:
+        lines.extend(["", "## Thesis-like CR/SR stack plots", ""])
+        thesis_plot_dir = OUTPUT_DIR / "plots" / "thesis_like_region_stacks"
+        stack_plot_args = {
+            "dataset": [analysis.data_sample, *MC_SAMPLES],
+            "do_stat": True,
+            "do_syst": False,
+            "ratio_plot": True,
+            "ratio_axlim": (0.0, 2.0),
+            "kind": "stack",
+            "logy": True,
+            "label_params": {"llabel": "", "loc": 1},
+            "legend_params": {"fontsize": 9, "loc": "upper right"},
+        }
+        for selection, region_label in (
+            (f"{CONFIG_LABEL}_low_met_{WP}_CR_passID", "low-MET control region"),
+            (f"{CONFIG_LABEL}_signal_like_{WP}_SR_passID", "signal region"),
+        ):
+            analysis.paths.plot_dir = thesis_plot_dir / selection
+            analysis.paths.plot_dir.mkdir(parents=True, exist_ok=True)
+            for variable in THESIS_LIKE_STACK_VARS:
+                filename = f"{WP}_{variable}_stack_no_fakes_log.png"
+                analysis.plot(
+                    val=variable,
+                    selection=selection,
+                    xlabel=variable_data[variable]["name"],
+                    ylabel="Events",
+                    title=f"Medium tau ID | {region_label}",
+                    filename=filename,
+                    **stack_plot_args,
+                )
+                lines.append(f"- `{analysis.paths.plot_dir / filename}`")
+
+    if PLOT_FAKE_ENRICHMENT:
+        analysis.paths.plot_dir = OUTPUT_DIR / "plots" / "fake_enrichment"
+        analysis.paths.plot_dir.mkdir(parents=True, exist_ok=True)
+        lines.extend(["", "## Fake-enrichment plots", ""])
+        for (prong, region_key), (
+            data_hist,
+            nonfake_hist,
+            fake_like_hist,
+        ) in fake_enrichment_hists.items():
+            region_label = (
+                "pass-ID numerator"
+                if region_key == "derive_passID"
+                else "anti-ID denominator"
+            )
+            filename = (
+                f"{CONFIG_LABEL}_low_met_{region_key}_{prong}prong_"
+                f"{FAKES_SOURCE}_fake_enrichment.png"
+            )
+            analysis.plot(
+                [fake_like_hist, nonfake_hist],
+                label=[
+                    "Inferred jet-fake-like component",
+                    "Simulated nonfake contamination",
+                ],
+                colour=["tab:orange", "tab:blue"],
+                plot_as_data=data_hist,
+                data_label="Data",
+                xlabel=variable_data[FAKES_SOURCE]["name"] + " [GeV]",
+                ylabel="Events",
+                title=f"Low-MET control region | {region_label} | {prong}-prong",
+                kind="stack",
+                do_stat=False,
+                do_syst=False,
+                logx=True,
+                logy=True,
+                label_params={"llabel": "", "loc": 1},
+                legend_params={"fontsize": 10, "loc": "upper right"},
+                filename=filename,
+                sort=False,
             )
             lines.append(f"- `{analysis.paths.plot_dir / filename}`")
 
