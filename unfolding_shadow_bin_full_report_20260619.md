@@ -3867,3 +3867,295 @@ Use the copied split plots under `images/uncertainties/current/` for Chapter 9
 figure replacements. Do not use old paths containing `analysis_simple_2017` or
 `systematic_alt_binning`, and do not use `MTW_shadow_bin_250` plots before the
 shadow-bin method is introduced.
+
+### Chapter 10 Data-Simulation Comparison Audit
+
+Question:
+Audit the current Chapter 10 data-simulation comparison text and figure blocks
+against the corrected Medium-ID shadow-unfolding/fake-factor workflow.
+
+Implementation:
+- mode: thesis-writing audit only
+- update note:
+  `thesis/updates/chapter_10_data_simulation_comparisons_updates.md`
+- thesis source inspected:
+  `/mnt/B/Uni_Stuff_Queen_Mary/Documents/Thesis/thesis.tex`, lines `4543-5030`
+- current comparison outputs:
+  `outputs/validate_shadow_fakes/low_met_fake_region/plots/current_data_mc_fakes_stacks/`
+- thesis copies:
+  `images/truth_and_fakes/medium_current/current_data_mc_fakes_stacks/`
+
+Result:
+Chapter 10 is still dominated by stale `analysis_simple_2017` stack plots and
+old "full MC + fakes" wording. The only current, thesis-ready data/MC/fake
+comparison plots found are the inclusive Medium-ID line-overlay plots for
+`MTW`, `MET_met`, `TauPt`, and `TauNCoreTracks`. These show data, MC signal plus
+simulated backgrounds before adding the data-driven jet-fake estimate, and the
+same MC prediction after adding the data-driven jet-to-tau fake estimate.
+
+Current recommended figure inputs:
+- `medium_MTW_current_signal_background_fakes_liny.png`
+- `medium_MET_met_current_signal_background_fakes_liny.png`
+- `medium_TauPt_current_signal_background_fakes_liny.png`
+- `medium_TauNCoreTracks_current_signal_background_fakes_liny.png`
+
+Interpretation:
+The inclusive Medium-ID figure block can be updated now using existing copied
+thesis images. The old prong-split and charge-split comparison figures should
+not be retained as current evidence; no current replacements were found. If the
+thesis needs those sections, they require a current plotting extension using
+the same line-overlay comparison style and corrected fake bookkeeping.
+
+Recommendation:
+Use the Chapter 10 update note to replace the opening paragraph, remove the
+misplaced uncertainty equations/tables, replace the inclusive Medium figure
+block, and remove or regenerate prong/charge comparison sections. Standardise
+captions on "data-driven jet-to-tau fake estimate" and avoid "full MC + fakes"
+wording.
+
+### Chapter 10 Current Prong And Charge Comparison Plots
+
+Question:
+Regenerate the Chapter 10 data/MC comparison plots so the current Medium-ID
+comparison can be shown inclusively, split by one-prong and three-prong tau
+candidates, and split by reconstructed tau charge.
+
+Implementation:
+- script: `run/2017/validations/validate_low_met_fake_region.py`
+- mode: validation plotting with additional cached histogram generation
+- command:
+  `MPLCONFIGDIR=/tmp/matplotlib-cache pixi run python run/2017/validations/validate_low_met_fake_region.py`
+- output summary:
+  `outputs/validate_shadow_fakes/low_met_fake_region/low_met_fake_region_summary.md`
+- plot output:
+  `outputs/validate_shadow_fakes/low_met_fake_region/plots/current_data_mc_fakes_stacks/`
+- thesis-copy destination:
+  `images/truth_and_fakes/medium_current/current_data_mc_fakes_stacks/`
+
+Result:
+The current comparison plots now exist for the same six observables used in the
+old Chapter 10 figure blocks:
+
+| Group | Variables |
+| --- | --- |
+| Inclusive Medium | `MTW`, `MET_met`, `TauPt`, `TauEta`, `AbsDeltaPhi_tau_met`, `TauPhi` |
+| 1-prong Medium | `MTW`, `MET_met`, `TauPt`, `TauEta`, `AbsDeltaPhi_tau_met`, `TauPhi` |
+| 3-prong Medium | `MTW`, `MET_met`, `TauPt`, `TauEta`, `AbsDeltaPhi_tau_met`, `TauPhi` |
+| Positive tau Medium | `MTW`, `MET_met`, `TauPt`, `TauEta`, `AbsDeltaPhi_tau_met`, `TauPhi` |
+| Negative tau Medium | `MTW`, `MET_met`, `TauPt`, `TauEta`, `AbsDeltaPhi_tau_met`, `TauPhi` |
+
+The line overlays show data, MC signal plus simulated backgrounds without the
+data-driven jet-to-tau fake estimate, and the same prediction after adding the
+data-driven jet-to-tau fake estimate. Both linear-y and log-y versions were
+generated; use the linear-y plots for the main Chapter 10 replacements unless
+the text explicitly discusses high-tail behaviour.
+
+Representative copied plot paths:
+- inclusive: `images/truth_and_fakes/medium_current/current_data_mc_fakes_stacks/medium_MTW_current_signal_background_fakes_liny.png`
+- 1-prong: `images/truth_and_fakes/medium_current/current_data_mc_fakes_stacks/prong_split/medium_1prong_MTW_current_signal_background_fakes_liny.png`
+- 3-prong: `images/truth_and_fakes/medium_current/current_data_mc_fakes_stacks/prong_split/medium_3prong_MTW_current_signal_background_fakes_liny.png`
+- positive tau: `images/truth_and_fakes/medium_current/current_data_mc_fakes_stacks/charge_split/medium_tauplus_MTW_current_signal_background_fakes_liny.png`
+- negative tau: `images/truth_and_fakes/medium_current/current_data_mc_fakes_stacks/charge_split/medium_tauminus_MTW_current_signal_background_fakes_liny.png`
+
+Interpretation:
+The charge split is useful as a current validation cross-check because
+proton-proton collisions produce different positive- and negative-W yields. The
+new plots make that validation possible without reusing stale
+`analysis_simple_2017` stack plots. The old event-count tables, cutflows, and
+pie charts remain stale and should still be removed or regenerated separately.
+
+Recommendation:
+Replace the inclusive, prong-split, and charge-split Chapter 10 figure blocks
+with the copied Medium line-overlay plots. Do not use the old
+`analysis_simple_2017` images as current evidence.
+
+### Chapter 10 Thesis-Style Stack Plot Replacements
+
+Question:
+Replace the temporary Chapter 10 line-overlay diagnostics with thesis-style
+stack plots that preserve the original data/MC composition view while using the
+current Medium-ID fake estimate and corrected fake bookkeeping.
+
+Implementation:
+- script: `run/2017/validations/validate_low_met_fake_region.py`
+- mode: current Chapter 10 stack plotting with batched fake-yield reuse
+- output summary:
+  `outputs/validate_shadow_fakes/low_met_fake_region/low_met_fake_region_summary.md`
+- plot output:
+  `outputs/validate_shadow_fakes/low_met_fake_region/plots/chapter10_current_stacks/`
+- thesis-copy destination:
+  `images/truth_and_fakes/medium_current/chapter10_current_stacks/`
+
+Result:
+The new Chapter 10 stack output contains 30 thesis-ready plots: six observables
+for the inclusive Medium-ID signal region, one-prong and three-prong regions,
+and positive- and negative-charge regions. The plotted observables are `MTW`,
+`MET_met`, `TauPt`, `TauEta`, `AbsDeltaPhi_tau_met`, and `TauPhi`.
+
+The plots now restore the original Chapter 10 visual structure:
+- data are drawn as points;
+- the red signal line follows the top of the full prediction, matching the
+  original thesis stack-plot convention in `src/analysis.py`;
+- simulated real-object background components are stacked by process group;
+- the data-driven jet-to-tau fake estimate is a stacked background component;
+- axes are bin-width scaled, with `Events / GeV` for energy observables and
+  `Events / Bin Width` otherwise;
+- `MTW`, `MET_met`, and `TauPt` use logarithmic x and y axes;
+- `AbsDeltaPhi_tau_met` uses a logarithmic y-axis;
+- `TauEta` and `TauPhi` use linear y-axis output names ending in `liny`.
+
+Cache/event-loop behaviour:
+The first corrected run found the Chapter 10 nominal histograms missing for
+several validation variables and rebuilt those caches in batched dataset-level
+passes. The subsequent rerun reported `Chapter 10 cache regeneration: none`,
+confirming the new plotting path can redraw from cache. The cache fills were
+read-only with respect to `/mnt/D/data/DTA_outputs` and wrote only to
+`outputs/validate_shadow_fakes/low_met_fake_region/root/`.
+
+Representative copied plot paths:
+- inclusive: `images/truth_and_fakes/medium_current/chapter10_current_stacks/inclusive/medium_MTW_current_stack_fakes_log.png`
+- 1-prong: `images/truth_and_fakes/medium_current/chapter10_current_stacks/prong_split/1prong/medium_1prong_MTW_current_stack_fakes_log.png`
+- 3-prong: `images/truth_and_fakes/medium_current/chapter10_current_stacks/prong_split/3prong/medium_3prong_MTW_current_stack_fakes_log.png`
+- positive tau: `images/truth_and_fakes/medium_current/chapter10_current_stacks/charge_split/tauplus/medium_tauplus_MTW_current_stack_fakes_log.png`
+- negative tau: `images/truth_and_fakes/medium_current/chapter10_current_stacks/charge_split/tauminus/medium_tauminus_MTW_current_stack_fakes_log.png`
+
+Interpretation:
+These stack plots supersede the temporary line-overlay plots for Chapter 10.
+They are closer to the original thesis figures and are better suited for
+showing data/MC composition and the contribution of the data-driven fake
+estimate. The uncertainty band is currently statistical only, including the
+propagated statistical uncertainty of the stacked prediction and fake estimate;
+it should not be captioned as a full stat+systematic band unless a dedicated
+systematic-variation cache is produced for the same Chapter 10 variables.
+
+Follow-up correction:
+The first manual Chapter 10 stack implementation drew the red signal line as a
+signal-only histogram. This did not match the original thesis plotting code,
+where the signal sample is added to the background stack and the red line is
+drawn along the top of the full prediction. The corrected plots now use the
+full prediction for the red top line, so the line aligns with the uncertainty
+band in the same way as the original `analysis_simple_2017` stack figures.
+
+Recommendation:
+Use `images/truth_and_fakes/medium_current/chapter10_current_stacks/` for the
+Chapter 10 replacements. Do not use the earlier
+`current_data_mc_fakes_stacks/` line-overlay plots as the main Chapter 10
+figures.
+
+### Chapter 10 Tau Eta Stack Binning Fix
+
+Question:
+The regenerated Chapter 10 `TauEta` stack plot appeared to show entries in the
+barrel-endcap transition region, even though the event selection excludes
+`1.37 < |TauEta| < 1.52`.
+
+Implementation:
+- script: `run/2017/validations/validate_low_met_fake_region.py`
+- mode: nominal validation-cache rebuild for the affected Chapter 10 `TauEta`
+  histograms, followed by plot regeneration
+- output plots:
+  `outputs/validate_shadow_fakes/low_met_fake_region/plots/chapter10_current_stacks/`
+- thesis-copy destination:
+  `images/truth_and_fakes/medium_current/chapter10_current_stacks/`
+
+Result:
+The problem was not the selection. The previous Chapter 10 eta histograms used
+uniform bins from `-2.5` to `2.5`, so several bins straddled the excluded
+transition interval. Selected events on either side of the crack were therefore
+drawn across part of the forbidden region. The Chapter 10 eta binning now
+includes explicit edges at `-1.52`, `-1.37`, `1.37`, and `1.52`, producing
+zero-content bins in the excluded intervals.
+
+The corrected cached data histogram for the inclusive Medium-ID signal region
+has 17 bins with edges:
+`[-2.5, -2.1667, -1.8333, -1.52, -1.37, -1.1667, -0.8333, -0.5, -0.1667,
+0.1667, 0.5, 0.8333, 1.1667, 1.37, 1.52, 1.8333, 2.1667, 2.5]`.
+The bins `[-1.52, -1.37]` and `[1.37, 1.52]` have zero data yield, as expected.
+The one-prong, three-prong, positive-charge, and negative-charge fake-yield
+histograms were also regenerated with the same eta binning.
+
+Corrected thesis-copy paths:
+- inclusive: `images/truth_and_fakes/medium_current/chapter10_current_stacks/inclusive/medium_TauEta_current_stack_fakes_liny.png`
+- 1-prong: `images/truth_and_fakes/medium_current/chapter10_current_stacks/prong_split/1prong/medium_1prong_TauEta_current_stack_fakes_liny.png`
+- 3-prong: `images/truth_and_fakes/medium_current/chapter10_current_stacks/prong_split/3prong/medium_3prong_TauEta_current_stack_fakes_liny.png`
+- positive tau: `images/truth_and_fakes/medium_current/chapter10_current_stacks/charge_split/tauplus/medium_tauplus_TauEta_current_stack_fakes_liny.png`
+- negative tau: `images/truth_and_fakes/medium_current/chapter10_current_stacks/charge_split/tauminus/medium_tauminus_TauEta_current_stack_fakes_liny.png`
+
+Interpretation:
+The corrected eta plots now show the detector acceptance crack explicitly and
+are suitable for Chapter 10. The stale `TauEta_current_stack_fakes_log.png`
+files that remain in the output tree are historical leftovers from the earlier
+run; the thesis-ready eta outputs are the `liny` files listed above.
+
+### Chapter 10 Current Yield Tables And Composition Pie Charts
+
+Question:
+Regenerate the Chapter 10 event-count tables and pie charts so they match the
+current Medium-ID low-MET fake-factor bookkeeping used by the corrected stack
+plots.
+
+Implementation:
+- script: `run/2017/validations/validate_low_met_fake_region.py`
+- mode: cache-only table and pie generation from the existing final-region
+  histograms and fake-yield histograms
+- table outputs:
+  `outputs/validate_shadow_fakes/low_met_fake_region/tables/chapter10_current/`
+- pie outputs:
+  `outputs/validate_shadow_fakes/low_met_fake_region/plots/chapter10_current_pies/`
+- thesis-copy destinations:
+  `images/truth_and_fakes/medium_current/chapter10_current_tables/`
+  and `images/truth_and_fakes/medium_current/chapter10_current_pies/`
+
+Result:
+The script now writes weighted final selected-region yield tables for the
+1-prong/3-prong and positive/negative tau splits. The table rows use the
+current process definitions:
+- `W -> tau nu -> had` signal,
+- `W -> tau nu -> ell nu` leptonic tau background,
+- `W -> (e/mu) nu`,
+- `Z/gamma* -> ll/nu nu`,
+- top,
+- diboson,
+- data-driven jet-to-tau fakes.
+
+The copied thesis-ready table files are:
+- `images/truth_and_fakes/medium_current/chapter10_current_tables/chapter10_medium_event_counts_prongs.tex`
+- `images/truth_and_fakes/medium_current/chapter10_current_tables/chapter10_medium_event_counts_plusminus.tex`
+- Markdown copies with the same names and `.md` suffixes.
+
+The copied thesis-ready pie chart files are:
+- `images/truth_and_fakes/medium_current/chapter10_current_pies/prong_split/medium_1prong_current_prediction_pie.png`
+- `images/truth_and_fakes/medium_current/chapter10_current_pies/prong_split/medium_3prong_current_prediction_pie.png`
+- `images/truth_and_fakes/medium_current/chapter10_current_pies/charge_split/medium_tauplus_current_prediction_pie.png`
+- `images/truth_and_fakes/medium_current/chapter10_current_pies/charge_split/medium_tauminus_current_prediction_pie.png`
+
+Representative final-region yields:
+
+| Process | 1-prong | 3-prong |
+| --- | ---: | ---: |
+| Signal | 710.67 +/- 9.28 | 289.61 +/- 6.79 |
+| Jet-to-tau fakes | 211.24 +/- 7.87 | 15.31 +/- 0.51 |
+| Total background | 392.24 +/- 9.81 | 78.67 +/- 3.33 |
+| Total prediction | 1102.91 +/- 13.51 | 368.28 +/- 7.56 |
+| Data 2017 | 1056 +/- 32.50 | 295 +/- 17.18 |
+
+| Process | tau+ | tau- |
+| --- | ---: | ---: |
+| Signal | 642.36 +/- 8.85 | 357.92 +/- 7.34 |
+| Jet-to-tau fakes | 133.30 +/- 4.44 | 93.25 +/- 3.49 |
+| Total background | 259.53 +/- 6.09 | 211.37 +/- 6.33 |
+| Total prediction | 901.89 +/- 10.74 | 569.30 +/- 9.69 |
+| Data 2017 | 881 +/- 29.68 | 470 +/- 21.68 |
+
+Interpretation:
+These tables and pies replace the old `analysis_simple_2017` Chapter 10
+assets. They include the current data-driven jet-to-tau fake estimate as a
+background component and avoid double-counting the jet-fake-like MC component.
+They are weighted final-region summaries with statistical uncertainties only.
+
+Important limitation:
+These are not regenerated raw sequential cutflow tables. The current cache used
+for Chapter 10 contains final-region histograms and fake-yield histograms, not
+the old per-cut unweighted event counts. Producing an updated true cutflow would
+require a targeted event-loop/cutflow run and should be treated as a separate
+task if the thesis still needs a cutflow table.
