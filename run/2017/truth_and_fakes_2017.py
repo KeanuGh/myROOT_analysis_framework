@@ -68,9 +68,9 @@ pass_met170 = Cut(
     r"$E_T^{\mathrm{miss}} > 170$",
     r"MET_met > 170",
 )
-pass_150met = Cut(
-    r"$E_T^{\mathrm{miss}} < 150$",
-    r"MET_met < 150",
+pass_low_met100 = Cut(
+    r"$E_T^{\mathrm{miss}} < 100$",
+    r"MET_met < 100",
 )
 
 selections_loose: dict[str, list[Cut]] = {
@@ -94,17 +94,15 @@ selections_loose: dict[str, list[Cut]] = {
         pass_presel,
         pass_taupt170,
         pass_eta,
-        pass_mtw350,
         pass_loose,
-        pass_150met,
+        pass_low_met100,
     ],
     "loose_CR_failID": [
         pass_presel,
         pass_taupt170,
         pass_eta,
-        pass_mtw350,
         fail_loose,
-        pass_150met,
+        pass_low_met100,
     ],
 }
 selections_medium: dict[str, list[Cut]] = {
@@ -128,17 +126,15 @@ selections_medium: dict[str, list[Cut]] = {
         pass_presel,
         pass_taupt170,
         pass_eta,
-        pass_mtw350,
         pass_medium,
-        pass_150met,
+        pass_low_met100,
     ],
     "medium_CR_failID": [
         pass_presel,
         pass_taupt170,
         pass_eta,
-        pass_mtw350,
         fail_medium,
-        pass_150met,
+        pass_low_met100,
     ],
 }
 selections_tight: dict[str, list[Cut]] = {
@@ -162,17 +158,15 @@ selections_tight: dict[str, list[Cut]] = {
         pass_presel,
         pass_taupt170,
         pass_eta,
-        pass_mtw350,
         pass_tight,
-        pass_150met,
+        pass_low_met100,
     ],
     "tight_CR_failID": [
         pass_presel,
         pass_taupt170,
         pass_eta,
-        pass_mtw350,
         fail_tight,
-        pass_150met,
+        pass_low_met100,
     ],
 }
 selections = selections_loose | selections_medium | selections_tight
@@ -239,7 +233,7 @@ binnings = {
         "TauNCoreTracks": np.linspace(0, 4, 5),
     },
     ".*_CR_.*ID": {
-        "MET_met": np.geomspace(1, 150, 51),
+        "MET_met": np.geomspace(10, 100, 51),
     },
     "loose_.*failID": {
         "TauRNNJetScore": np.linspace(0, 0.3, 41),

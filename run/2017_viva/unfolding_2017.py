@@ -158,7 +158,7 @@ if __name__ == "__main__":
                 hline_at=1,
                 vline_at=[0, 0, 250, 300] if var == "MTW" else None,
                 logx=True if var in measurement_vars_mass else False,
-                label_params={"llabel": "Preliminary"},
+                label_params={"llabel": ""},
                 filename=f"{wp}_{var}_shadow_bins.png",
             )
 
@@ -308,7 +308,7 @@ if __name__ == "__main__":
                         "ratio_plot": True,
                         "ratio_label": "Data / MC",
                         "ratio_axlim": (0.5, 1.5),
-                        "label_params": {"llabel": "Preliminary", "loc": 1},
+                        "label_params": {"llabel": "", "loc": 1},
                     }
 
                     def unfold_scale(h) -> ROOT.TH1D:
@@ -514,7 +514,7 @@ if __name__ == "__main__":
                         + (" [fb / GeV]" if var in measurement_vars_mass else " [fb]")
                     ),
                     logx=True if var in measurement_vars_mass else False,
-                    label_params={"llabel": "Preliminary", "loc": 1},
+                    label_params={"llabel": "", "loc": 1},
                     filename=f"{sh_bin_label}_i_iter_compare.png",
                 )
 
@@ -542,7 +542,7 @@ if __name__ == "__main__":
                         + (" [fb / GeV]" if var in measurement_vars_mass else " [fb]")
                     ),
                     logx=True if var in measurement_vars_mass else False,
-                    label_params={"llabel": "Preliminary", "loc": 1},
+                    label_params={"llabel": "", "loc": 1},
                     filename=f"shadow_bin_{i}_iter_compare.png",
                 )
 

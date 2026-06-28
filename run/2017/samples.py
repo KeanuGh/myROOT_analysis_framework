@@ -62,7 +62,7 @@ _MC_SAMPLES: dict[str, Sample] = {
             "lm_cut": "(TruthBosonM < 120) && !(TruthTau_isHadronic)",
             "full": "!(TruthTau_isHadronic)",
         },
-        "label": r"$W\rightarrow\tau\nu\rightarrow\ell$",
+        "label": r"$W\rightarrow\tau\nu\rightarrow\ell\nu$",
         "metadata_alias": "wtaunu",
     },
     "wlnu": {

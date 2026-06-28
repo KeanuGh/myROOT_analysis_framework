@@ -800,7 +800,7 @@ class Histogram1D(bh.Histogram, family=None):
 
         ax.axhline(1.0, linestyle="--", linewidth=1.0, c="k")
         if histtype == "errorbar":
-            kwargs.update({"capsize": 6})
+            kwargs.setdefault("capsize", 6)
         eb = ax.errorbar(
             h_ratio.bin_centres,
             h_ratio.bin_values(),

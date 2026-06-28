@@ -904,6 +904,36 @@ if __name__ == "__main__":
                         cached_ff.SetDirectory(0)
                         fake_factor_cache[cache_key] = cached_ff
 
+        nominal_ff_hists = []
+        for prong in (3, 1):
+            prong_fakes_name = f"{config.label}_{WP}_{prong}prong{FAKE_CONTROL_REGION.output_tag}"
+            hist_name = f"{prong_fakes_name}_{FAKES_SOURCE}_FF"
+            if hist_name in measured_analysis.histograms:
+                nominal_ff_hists.append(measured_analysis.histograms[hist_name])
+
+        if len(nominal_ff_hists) == 2:
+            plotter.paths.plot_dir = plotter.paths.output_dir / "plots" / config.label / "fake_factors"
+            plotter.paths.plot_dir.mkdir(parents=True, exist_ok=True)
+            plotter.plot(
+                nominal_ff_hists,
+                label=["3-prong", "1-prong"],
+                colour=["tab:orange", "tab:blue"],
+                histstyle=["step", "step"],
+                xlabel=variable_data[FAKES_SOURCE]["name"] + " [GeV]",
+                kind="overlay",
+                do_stat=False,
+                do_syst=False,
+                title=smart_join(
+                    config.label,
+                    "low-MET prong-split fake factors",
+                    sep=" | ",
+                ),
+                scale_by_bin_width=False,
+                ylabel="Fake factor",
+                label_params={"llabel": "", "loc": 0},
+                filename=f"{config.label}_{FAKES_SOURCE}_lowMET_prong_fake_factors.png",
+            )
+
         # CENTRAL-VALUE MODE NOTICE
         # --------------------------------------------------------------------
         if not DO_FULL_SYSTEMATICS:

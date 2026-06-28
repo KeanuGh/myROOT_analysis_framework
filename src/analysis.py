@@ -585,8 +585,11 @@ class Analysis:
                     errs[0, :] += sys_down
                     errs[1, :] += sys_up
 
+                hist_kwargs = dict(kwargs)
                 if per_hist_vars["histstyles"][i] == "errorbar":
-                    kwargs.update({"capsize": 6})
+                    hist_kwargs.setdefault("capsize", 6)
+                else:
+                    hist_kwargs.pop("capsize", None)
                 hist.plot(
                     ax=ax,
                     yerr=errs,
@@ -599,7 +602,7 @@ class Analysis:
                         if per_hist_vars["histstyles"][i] != "errorbar"
                         else "none"
                     ),
-                    **kwargs,
+                    **hist_kwargs,
                 )
                 if ratio_plot and (n_plottables > 1) and (i > 0):
                     # ratio of first histogram to this one
@@ -618,6 +621,7 @@ class Analysis:
                         fit=ratio_fit,
                         yax_lim=ratio_axlim,
                         display_stats=len(per_hist_vars["hists"]) <= 3,
+                        **hist_kwargs,
                     )
 
         else:

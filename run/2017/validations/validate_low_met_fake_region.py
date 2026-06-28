@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -28,7 +29,7 @@ from samples import DSID_METADATA_CACHE, NOMINAL_NAME, analysis_samples  # noqa:
 
 from src.analysis import Analysis  # noqa: E402
 from src.cutting import Cut  # noqa: E402
-from utils.ROOT_utils import sum_th1s  # noqa: E402
+from utils.ROOT_utils import get_th1_bin_errors, sum_th1s  # noqa: E402
 from utils.variable_names import variable_data  # noqa: E402
 
 YEAR = 2017
@@ -39,14 +40,36 @@ MTW_NOMINAL_MIN = 350
 TAUPT_MIN = 170
 PRONGS = (1, 3)
 LOAD_SAVED_HISTS = True
+FORCE_REBUILD_HISTS = os.environ.get("VALIDATE_LOW_MET_FORCE_REBUILD") == "1"
 RUN_EVENT_LOOPS_IF_CACHE_MISSING = True
 PLOT_TRANSFER_COMPARISON = True
-PLOT_FAKE_ENRICHMENT = False
+PLOT_FAKE_ENRICHMENT = True
+PLOT_MEDIUM_FAKE_CONTAMINATION = True
 PLOT_THESIS_LIKE_REGION_STACKS = True
+PLOT_THESIS_LIKE_PRONG_STACKS = True
+PLOT_NOMINAL_LOW_MET_FAKE_FACTORS = True
+PLOT_CURRENT_DATA_MC_FAKES_STACKS = True
 THESIS_LIKE_STACK_VARS = ("TauRNNJetScore", "TauBDTEleScore", "TauNCoreTracks")
+THESIS_DATA_MC_STACK_VARS = (
+    "MTW",
+    "MET_met",
+    "TauPt",
+    "TauRNNJetScore",
+    "TauBDTEleScore",
+    "TauNCoreTracks",
+)
+FAKE_CONTAMINATION_VARS = ("MET_met", "TauRNNJetScore", "TauBDTEleScore")
 OUTPUT_DIR = VALIDATION_OUTPUT / "low_met_fake_region"
 SUMMARY_PATH = OUTPUT_DIR / "low_met_fake_region_summary.md"
 CACHE_FILE = OUTPUT_DIR / "root" / "validate_low_met_fake_region.root"
+NOMINAL_MEASURED_ROOT = (
+    REPO_ROOT
+    / "outputs"
+    / "analysis_shadow_unfold"
+    / "measured"
+    / "root"
+    / "analysis_shadow_unfold_measured.root"
+)
 
 
 @dataclass(frozen=True)
@@ -157,6 +180,99 @@ def fake_enrichment_components(
     return data, nonfake, fake_like
 
 
+def sum_fake_enrichment_components(
+    analysis: Analysis,
+    selections: tuple[str, ...],
+    variable: str,
+    name: str,
+) -> tuple[ROOT.TH1, ROOT.TH1, ROOT.TH1]:
+    components = [
+        fake_enrichment_components(analysis, selection, variable)
+        for selection in selections
+    ]
+    data = sum_th1s(*[component[0] for component in components])
+    nonfake = sum_th1s(*[component[1] for component in components])
+    fake_like = sum_th1s(*[component[2] for component in components])
+    for hist, suffix in (
+        (data, "data"),
+        (nonfake, "nonfake_mc"),
+        (fake_like, "data_minus_nonfake"),
+    ):
+        hist.SetName(f"{name}_{variable}_{suffix}")
+        hist.SetDirectory(0)
+    return data, nonfake, fake_like
+
+
+def load_root_histograms(root_file_path: Path, hist_names: tuple[str, ...]) -> list[ROOT.TH1]:
+    loaded_hists: list[ROOT.TH1] = []
+    root_file = ROOT.TFile.Open(str(root_file_path), "READ")
+    if not root_file or root_file.IsZombie():
+        raise FileNotFoundError(f"Could not open ROOT file: {root_file_path}")
+    try:
+        for hist_name in hist_names:
+            hist = root_file.Get(hist_name)
+            if not hist:
+                raise KeyError(f"Missing histogram '{hist_name}' in {root_file_path}")
+            cloned_hist = hist.Clone(hist_name)
+            cloned_hist.SetDirectory(0)
+            loaded_hists.append(cloned_hist)
+    finally:
+        root_file.Close()
+    return loaded_hists
+
+
+def variable_label(variable: str) -> str:
+    label = variable_data[variable]["name"]
+    if variable in {"MTW", "MET_met", "TauPt"}:
+        label += " [GeV]"
+    return label
+
+
+def current_data_mc_fakes_components(
+    analysis: Analysis,
+    selection: str,
+    variable: str,
+    fake_hists: tuple[ROOT.TH1, ...],
+) -> tuple[ROOT.TH1, ROOT.TH1, ROOT.TH1, ROOT.TH1]:
+    signal = analysis.get_hist(
+        variable,
+        dataset="wtaunu_had",
+        systematic=NOMINAL_NAME,
+        selection=selection,
+        allow_generation=True,
+    )
+    signal.SetName(f"{selection}_{variable}_signal")
+    signal.SetDirectory(0)
+    simulated_background = sum_th1s(
+        *[
+            analysis.get_hist(
+                variable,
+                dataset=mc_sample,
+                systematic=NOMINAL_NAME,
+                selection=f"trueTau_{selection}",
+                allow_generation=True,
+            )
+            for mc_sample in MC_SAMPLES
+            if mc_sample != "wtaunu_had"
+        ]
+    )
+    simulated_background.SetName(f"{selection}_{variable}_simulated_background")
+    simulated_background.SetDirectory(0)
+    fakes = sum_th1s(*fake_hists)
+    fakes.SetName(f"{selection}_{variable}_data_driven_jet_fakes")
+    fakes.SetDirectory(0)
+    data = analysis.get_hist(
+        variable,
+        dataset=analysis.data_sample,
+        systematic=NOMINAL_NAME,
+        selection=selection,
+        allow_generation=True,
+    )
+    data.SetName(f"{selection}_{variable}_data")
+    data.SetDirectory(0)
+    return signal, simulated_background, fakes, data
+
+
 if __name__ == "__main__":
     base_cuts = [
         PASS_RECO_PRESELECTION,
@@ -243,7 +359,9 @@ if __name__ == "__main__":
         mc_selections[f"trueTau_{selection}"] = cuts + [PASS_TRUETAU]
 
     cache_exists = CACHE_FILE.is_file()
-    run_event_loops = RUN_EVENT_LOOPS_IF_CACHE_MISSING and (not LOAD_SAVED_HISTS or not cache_exists)
+    run_event_loops = FORCE_REBUILD_HISTS or (
+        RUN_EVENT_LOOPS_IF_CACHE_MISSING and (not LOAD_SAVED_HISTS or not cache_exists)
+    )
 
     analysis = Analysis(
         analysis_samples(mc_selections, data_selections=data_selections, snapshot=False),
@@ -269,11 +387,20 @@ if __name__ == "__main__":
         },
         import_missing_columns_as_nan=True,
         snapshot=False,
-        histogram_vars={VARIABLE, FAKES_SOURCE, *THESIS_LIKE_STACK_VARS},
+        histogram_vars={
+            VARIABLE,
+            FAKES_SOURCE,
+            *THESIS_LIKE_STACK_VARS,
+            *FAKE_CONTAMINATION_VARS,
+        },
         binnings={"": BINNINGS},
     )
 
-    loaded_hists = LOAD_SAVED_HISTS and analysis.load_hists_if_available(CACHE_FILE)
+    loaded_hists = (
+        LOAD_SAVED_HISTS
+        and not FORCE_REBUILD_HISTS
+        and analysis.load_hists_if_available(CACHE_FILE)
+    )
     if not loaded_hists and not run_event_loops:
         raise FileNotFoundError(
             "Missing low-MET fake-region cache and event loops are disabled: "
@@ -314,7 +441,9 @@ if __name__ == "__main__":
             validate_pass = f"{target_prefix}_validate_passID"
             validate_fail = f"{target_prefix}_validate_failID"
             target_hist = validation_target(analysis, validate_pass)
-            comparison_hists[(target.key, prong)] = [("Data - nonfake MC", target_hist)]
+            comparison_hists[(target.key, prong)] = [
+                ("Data - simulated backgrounds", target_hist)
+            ]
 
             for method in derivation_methods:
                 method_prefix = f"{CONFIG_LABEL}_{method.key}_{WP}_{prong}prong"
@@ -369,12 +498,12 @@ if __name__ == "__main__":
             "",
             "## Low-MET control-region fake enrichment",
             "",
-            "The fake-like component is computed as data minus the simulated nonfake "
-            "contamination in the same region. A small nonfake fraction indicates a "
+            "The fake-like component is computed as data minus the simulated "
+            "backgrounds in the same region. A small simulated-background fraction indicates a "
             "region dominated by jets misidentified as tau candidates.",
             "",
-            "| Region | Prong | Data | Simulated nonfake contamination | "
-            "Inferred jet-fake-like component | Fake-like / data | Nonfake / data |",
+            "| Region | Prong | Data | Simulated backgrounds | "
+            "Inferred jet-fake component | Fake-like / data | Simulated background / data |",
             "|---|---:|---:|---:|---:|---:|---:|",
         ]
     )
@@ -450,6 +579,130 @@ if __name__ == "__main__":
             )
             lines.append(f"- `{analysis.paths.plot_dir / filename}`")
 
+    if PLOT_NOMINAL_LOW_MET_FAKE_FACTORS:
+        analysis.paths.plot_dir = OUTPUT_DIR / "plots" / "fake_factors"
+        analysis.paths.plot_dir.mkdir(parents=True, exist_ok=True)
+        lines.extend(["", "## Nominal low-MET fake-factor plots", ""])
+        low_met_fake_factors = load_root_histograms(
+            NOMINAL_MEASURED_ROOT,
+            (
+                "no_shadow_bin_medium_3prong_lowMET_TauPt_FF",
+                "no_shadow_bin_medium_1prong_lowMET_TauPt_FF",
+            ),
+        )
+        filename = "no_shadow_bin_medium_TauPt_lowMET_prong_fake_factors.png"
+        analysis.plot(
+            low_met_fake_factors,
+            label=["3-prong", "1-prong"],
+            colour=["tab:orange", "tab:blue"],
+            histstyle=["step", "step"],
+            xlabel=variable_data[FAKES_SOURCE]["name"] + " [GeV]",
+            ylabel="Fake factor",
+            title="No shadow bin | low-MET fake factors",
+            kind="overlay",
+            do_stat=False,
+            do_syst=False,
+            label_params={"llabel": "", "loc": 0},
+            legend_params={"fontsize": 10, "loc": "upper right"},
+            filename=filename,
+        )
+        lines.append(f"- `{analysis.paths.plot_dir / filename}`")
+
+    built_current_data_mc_fakes = False
+    if PLOT_CURRENT_DATA_MC_FAKES_STACKS:
+        analysis.paths.plot_dir = OUTPUT_DIR / "plots" / "current_data_mc_fakes_stacks"
+        analysis.paths.plot_dir.mkdir(parents=True, exist_ok=True)
+        lines.extend(["", "## Current data/MC plus fake-estimate stacks", ""])
+
+        signal_like_target = next(
+            target for target in validation_targets if target.key == "signal_like_metgt170"
+        )
+        fake_histograms: dict[tuple[str, int], ROOT.TH1] = {}
+        for prong in PRONGS:
+            method_prefix = f"{CONFIG_LABEL}_{low_met_method.key}_{WP}_{prong}prong"
+            target_prefix = f"{CONFIG_LABEL}_{signal_like_target.key}_{WP}_{prong}prong"
+            derive_pass = f"{method_prefix}_derive_passID"
+            derive_fail = f"{method_prefix}_derive_failID"
+            validate_pass = f"{target_prefix}_validate_passID"
+            validate_fail = f"{target_prefix}_validate_failID"
+            estimate_name = f"{method_prefix}_{signal_like_target.key}_{FAKES_SOURCE}_src"
+            missing_fakes = [
+                variable
+                for variable in THESIS_DATA_MC_STACK_VARS
+                if f"{estimate_name}_{variable}_fakes_bkg_{FAKES_SOURCE}_src"
+                not in analysis.histograms
+            ]
+            if missing_fakes:
+                built_current_data_mc_fakes = True
+                analysis.do_fakes_estimate(
+                    FAKES_SOURCE,
+                    tuple(THESIS_DATA_MC_STACK_VARS),
+                    derive_pass,
+                    derive_fail,
+                    validate_pass,
+                    validate_fail,
+                    f"trueTau_{derive_pass}",
+                    f"trueTau_{derive_fail}",
+                    f"trueTau_{validate_fail}",
+                    name=estimate_name,
+                    systematic=NOMINAL_NAME,
+                    save_intermediates=True,
+                )
+            for variable in THESIS_DATA_MC_STACK_VARS:
+                fake_histograms[(variable, prong)] = analysis.histograms[
+                    f"{estimate_name}_{variable}_fakes_bkg_{FAKES_SOURCE}_src"
+                ]
+
+        stack_selection = f"{CONFIG_LABEL}_signal_like_{WP}_SR_passID"
+        for variable in THESIS_DATA_MC_STACK_VARS:
+            signal, simulated_background, fakes, data = current_data_mc_fakes_components(
+                analysis,
+                stack_selection,
+                variable,
+                tuple(fake_histograms[(variable, prong)] for prong in PRONGS),
+            )
+            mc_no_fakes = sum_th1s(signal, simulated_background)
+            mc_no_fakes.SetName(f"{stack_selection}_{variable}_mc_signal_background")
+            mc_no_fakes.SetDirectory(0)
+            mc_with_fakes = sum_th1s(signal, simulated_background, fakes)
+            mc_with_fakes.SetName(
+                f"{stack_selection}_{variable}_mc_signal_background_fakes"
+            )
+            mc_with_fakes.SetDirectory(0)
+            for yscale, logy in (("liny", False), ("log", True)):
+                filename = f"{WP}_{variable}_current_signal_background_fakes_{yscale}.png"
+                analysis.plot(
+                    [data, mc_with_fakes, mc_no_fakes],
+                    label=[
+                        "Data",
+                        "MC (signal + backgrounds) + fakes",
+                        "MC (signal + backgrounds), no fakes",
+                    ],
+                    colour=["k", "tab:orange", "tab:blue"],
+                    histstyle=["errorbar", "step", "step"],
+                    uncert=[
+                        get_th1_bin_errors(data),
+                        get_th1_bin_errors(mc_with_fakes),
+                        get_th1_bin_errors(mc_no_fakes),
+                    ],
+                    xlabel=variable_label(variable),
+                    ylabel="Events",
+                    title="Medium tau ID | signal region",
+                    kind="overlay",
+                    do_stat=False,
+                    do_syst=False,
+                    ratio_plot=True,
+                    ratio_label="Prediction / Data",
+                    ratio_axlim=(0.5, 1.5),
+                    logy=logy,
+                    label_params={"llabel": "", "loc": 1},
+                    legend_params={"fontsize": 9, "loc": "upper right"},
+                    filename=filename,
+                    sort=False,
+                    capsize=0,
+                )
+                lines.append(f"- `{analysis.paths.plot_dir / filename}`")
+
     if PLOT_THESIS_LIKE_REGION_STACKS:
         lines.extend(["", "## Thesis-like CR/SR stack plots", ""])
         thesis_plot_dir = OUTPUT_DIR / "plots" / "thesis_like_region_stacks"
@@ -460,7 +713,6 @@ if __name__ == "__main__":
             "ratio_plot": True,
             "ratio_axlim": (0.8, 1.2),
             "kind": "stack",
-            "logy": True,
             "label_params": {"llabel": "", "loc": 1},
             "legend_params": {"fontsize": 9, "loc": "upper right"},
         }
@@ -471,17 +723,56 @@ if __name__ == "__main__":
             analysis.paths.plot_dir = thesis_plot_dir / selection
             analysis.paths.plot_dir.mkdir(parents=True, exist_ok=True)
             for variable in THESIS_LIKE_STACK_VARS:
-                filename = f"{WP}_{variable}_stack_no_fakes_log.png"
-                analysis.plot(
-                    val=variable,
-                    selection=selection,
-                    xlabel=variable_data[variable]["name"],
-                    ylabel="Events",
-                    title=f"Medium tau ID | {region_label}",
-                    filename=filename,
-                    **stack_plot_args,
-                )
-                lines.append(f"- `{analysis.paths.plot_dir / filename}`")
+                for yscale, logy in (("liny", False), ("log", True)):
+                    filename = f"{WP}_{variable}_stack_no_fakes_{yscale}.png"
+                    analysis.plot(
+                        val=variable,
+                        selection=selection,
+                        xlabel=variable_data[variable]["name"],
+                        ylabel="Events",
+                        title=f"Medium tau ID | {region_label}",
+                        filename=filename,
+                        logy=logy,
+                        **stack_plot_args,
+                    )
+                    lines.append(f"- `{analysis.paths.plot_dir / filename}`")
+
+    if PLOT_THESIS_LIKE_PRONG_STACKS:
+        lines.extend(["", "## Thesis-like prong-split signal-region stack plots", ""])
+        thesis_prong_plot_dir = OUTPUT_DIR / "plots" / "thesis_like_prong_stacks"
+        stack_plot_args = {
+            "dataset": [analysis.data_sample, *MC_SAMPLES],
+            "do_stat": True,
+            "do_syst": False,
+            "ratio_plot": True,
+            "ratio_axlim": (0.8, 1.2),
+            "kind": "stack",
+            "label_params": {"llabel": "", "loc": 1},
+            "legend_params": {"fontsize": 9, "loc": "upper right"},
+        }
+        for prong in PRONGS:
+            selection = (
+                f"{CONFIG_LABEL}_signal_like_metgt170_{WP}_{prong}prong_validate_passID"
+            )
+            analysis.paths.plot_dir = (
+                thesis_prong_plot_dir
+                / f"{CONFIG_LABEL}_signal_like_{WP}_SR_passID_{prong}prong"
+            )
+            analysis.paths.plot_dir.mkdir(parents=True, exist_ok=True)
+            for variable in ("TauRNNJetScore", "TauBDTEleScore"):
+                for yscale, logy in (("liny", False), ("log", True)):
+                    filename = f"{WP}_{prong}prong_{variable}_stack_no_fakes_{yscale}.png"
+                    analysis.plot(
+                        val=variable,
+                        selection=selection,
+                        xlabel=variable_data[variable]["name"],
+                        ylabel="Events",
+                        title=f"Medium tau ID | signal region | {prong}-prong",
+                        filename=filename,
+                        logy=logy,
+                        **stack_plot_args,
+                    )
+                    lines.append(f"- `{analysis.paths.plot_dir / filename}`")
 
     if PLOT_FAKE_ENRICHMENT:
         analysis.paths.plot_dir = OUTPUT_DIR / "plots" / "fake_enrichment"
@@ -504,8 +795,8 @@ if __name__ == "__main__":
             analysis.plot(
                 [fake_like_hist, nonfake_hist],
                 label=[
-                    "Inferred jet-fake-like component",
-                    "Simulated nonfake contamination",
+                    "Inferred jet-fake component",
+                    "Simulated backgrounds",
                 ],
                 colour=["tab:orange", "tab:blue"],
                 plot_as_data=data_hist,
@@ -525,7 +816,70 @@ if __name__ == "__main__":
             )
             lines.append(f"- `{analysis.paths.plot_dir / filename}`")
 
-    if run_event_loops:
+    if PLOT_MEDIUM_FAKE_CONTAMINATION:
+        analysis.paths.plot_dir = OUTPUT_DIR / "plots" / "medium_fake_contamination"
+        analysis.paths.plot_dir.mkdir(parents=True, exist_ok=True)
+        lines.extend(["", "## Medium fake-contamination plots", ""])
+        region_selections = {
+            "medium_CR_passID": tuple(
+                f"{CONFIG_LABEL}_low_met_fake_enriched_{WP}_{prong}prong_derive_passID"
+                for prong in PRONGS
+            ),
+            "medium_CR_failID": tuple(
+                f"{CONFIG_LABEL}_low_met_fake_enriched_{WP}_{prong}prong_derive_failID"
+                for prong in PRONGS
+            ),
+            "medium_SR_passID": tuple(
+                f"{CONFIG_LABEL}_signal_like_metgt170_{WP}_{prong}prong_validate_passID"
+                for prong in PRONGS
+            ),
+            "medium_SR_failID": tuple(
+                f"{CONFIG_LABEL}_signal_like_metgt170_{WP}_{prong}prong_validate_failID"
+                for prong in PRONGS
+            ),
+        }
+        region_titles = {
+            "medium_CR_passID": "Low-MET determination region | pass-ID",
+            "medium_CR_failID": "Low-MET determination region | anti-ID",
+            "medium_SR_passID": "Signal-like application region | pass-ID",
+            "medium_SR_failID": "Signal-like application region | anti-ID",
+        }
+        for region_key, selections in region_selections.items():
+            for variable in FAKE_CONTAMINATION_VARS:
+                data_hist, nonfake_hist, fake_like_hist = sum_fake_enrichment_components(
+                    analysis,
+                    selections,
+                    variable,
+                    region_key,
+                )
+                filename = f"all_mc_{variable}_{region_key}_fake_fractions.png"
+                xlabel = variable_data[variable]["name"]
+                if variable in {"MET_met"}:
+                    xlabel += " [GeV]"
+                analysis.plot(
+                    [fake_like_hist, nonfake_hist],
+                    label=[
+                        "Inferred jet-to-tau component",
+                        "Simulated backgrounds",
+                    ],
+                    colour=["tab:orange", "tab:blue"],
+                    plot_as_data=data_hist,
+                    data_label="Data",
+                    xlabel=xlabel,
+                    ylabel="Events",
+                    title=region_titles[region_key],
+                    kind="stack",
+                    do_stat=False,
+                    do_syst=False,
+                    logy=True,
+                    label_params={"llabel": "", "loc": 1},
+                    legend_params={"fontsize": 10, "loc": "upper right"},
+                    filename=filename,
+                    sort=False,
+                )
+                lines.append(f"- `{analysis.paths.plot_dir / filename}`")
+
+    if run_event_loops or FORCE_REBUILD_HISTS or built_current_data_mc_fakes:
         analysis.save_hists(filename=CACHE_FILE.name)
 
     write_markdown(SUMMARY_PATH, lines)

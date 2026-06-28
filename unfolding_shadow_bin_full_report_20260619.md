@@ -50,7 +50,7 @@ Preferred wording:
 | This report/code now says | Meaning | Older shorthand to avoid in prose |
 |---|---|---|
 | jet-fake estimate | data-driven estimate for jets misidentified as `tau_had-vis` | generic "fakes" when the source matters |
-| MC-contamination subtraction | simulated real-object/non-jet contamination subtracted before forming or applying fake factors | nonfake MC |
+| MC-contamination subtraction | simulated background contribution subtracted before forming or applying fake factors | nonfake MC |
 | fake-like or jet-fake-like residual | `data - MC contamination`, intended to be dominated by jet-to-tau fakes | truth / true tau |
 | ID subregion | tau candidate passes the analysis tau-ID requirement | pass-ID |
 | anti-ID subregion | tau candidate fails the analysis tau-ID but passes the anti-ID floor | fail-ID |
@@ -173,7 +173,7 @@ fake-source shift moves the ratios further to `1.096` and `1.106`.
 This is the most coherent result so far: the old all-MC subtraction was too
 aggressive once data-driven fakes were also applied. The corrected convention is
 closer to the fake-factor logic used in ATLAS analyses, where simulated
-real-object/non-jet contamination is subtracted and the data-driven fake estimate represents the
+background contributions are subtracted and the data-driven fake estimate represents the
 jet-fake component.
 
 Recommendation:
@@ -488,7 +488,7 @@ This does not prove that the true fake contribution is zero. It shows that the c
 
 The MC-only fake closure compares:
 
-- the known MC jet-fake-like component passing the signal selection;
+- the known MC jet-fake component passing the signal selection;
 - the fake-factor prediction for that same component.
 
 The integral ratios are:
@@ -1079,12 +1079,12 @@ The closest public analysis is the ATLAS high-mass `tau + MET` resonance search.
 - a low-MET multijet-enriched pass-ID region;
 - a low-MET multijet-enriched fail-ID region.
 
-The public paper defines the jet background as jets misidentified as tau candidates, estimated from data, while non-jet backgrounds are estimated from simulation. It measures transfer factors in tau-pT and prong bins and applies them to the anti-ID region after subtracting simulated non-jet contamination. The internal note gives the same structure more explicitly: the multijet fake-factor regions use `MET < 100 GeV`, remove the `tau pT / MET` balance requirement, pass/fail tau ID while still passing the VeryLoose ID, and subtract real-lepton/non-jet contamination from simulation.
+The public paper defines the jet background as jets misidentified as tau candidates and estimates it from data, while the remaining backgrounds are estimated from simulation. It measures transfer factors in tau-pT and prong bins and applies them to the anti-ID region after subtracting simulated background contributions. The internal note gives the same structure more explicitly: the multijet fake-factor regions use `MET < 100 GeV`, remove the `tau pT / MET` balance requirement, pass/fail tau ID while still passing the VeryLoose ID, and subtract simulated real-lepton/background contributions.
 
 That is very close to the current candidate `lowMET_CR` in `analysis_shadow_unfold.py`, but with an important distinction: in the ATLAS analysis, the low-MET region is not assumed to transfer exactly. The paper and note assign dedicated systematics for:
 
 - varying the low-MET fake-factor region, including changing the lower MET threshold from 0 to 30/50/70 GeV and the upper threshold from 100 to 150 GeV;
-- non-jet subtraction in the fake-factor regions;
+- subtraction of simulated background contributions in the fake-factor regions;
 - quark/gluon composition differences between the anti-ID application region and the fake-factor determination region;
 - high-tau-pT fake-factor extrapolation;
 - statistical uncertainties in the fake factors;
@@ -1103,7 +1103,7 @@ Implications for this analysis:
 | MET transfer | Low-MET determination region plus MET-window variations | Treat `lowMET_CR` as a candidate method and build an MET-window envelope, not a one-shot replacement. |
 | Prong dependence | Fake factors measured separately for 1-prong and 3-prong candidates | Keep prong-split fake factors as the baseline; inclusive-prong tests remain diagnostic. |
 | Fake-source composition | Tau jet seed width / tau-object width used to assess quark/gluon/source composition | Audit whether a tau seed-width or tau-width branch exists in the ntuples. If not, use MET-window and tauPt/MET variations as proxy composition systematics. |
-| MC-contamination subtraction | Non-jet/real contamination subtracted and assigned uncertainty | The negative high-MET 3-prong `data - MC-contamination` target should be treated as a subtraction/modelling limitation, not as evidence for negative fakes. |
+| Simulated-background subtraction | Simulated background contribution subtracted and assigned uncertainty | The negative high-MET 3-prong `data - MC-contamination` target should be treated as a subtraction/modelling limitation, not as evidence for negative fakes. |
 | High-pT fake factors | Constant high-pT transfer-factor treatment assigned an extrapolation uncertainty | Check the highest `TauPt` fake-factor bin and add a tail stability uncertainty if it matters. |
 | High-MET validation | Alternative high-MET validation region with `tau pT / MET < 0.7` and high `mT` | Add a validation-only region with high `MET_met`, high `MTW`, and `TauPt / MET_met < 0.7`. |
 | MTW fake shape | Search-specific high-`mT` fake-shape fit and extrapolation | Do not use an `MTW` fake factor as nominal in an `MTW` unfolding; keep it diagnostic to avoid sculpting the measured observable. |
@@ -1451,7 +1451,7 @@ is not stable after MC-contamination subtraction. In contrast, the lower-MET sli
 
 The ATLAS approach is therefore a useful conceptual guide. They do not derive the transfer factor as close as possible to the signal region at all costs. They derive it in a cleaner fake-enriched phase space, then validate the transfer and assign systematic uncertainties for the extrapolation to the signal region.
 
-They explicitly assign systematic uncertainties for possible residual correlations between the transfer factors and the control-region definitions. These include threshold variations, non-jet subtraction uncertainty, quark/gluon composition differences, and extrapolation uncertainties for the high-`MTW` shape.
+They explicitly assign systematic uncertainties for possible residual correlations between the transfer factors and the control-region definitions. These include threshold variations, simulated-background subtraction uncertainty, quark/gluon composition differences, and extrapolation uncertainties for the high-`MTW` shape.
 
 The corresponding lesson for this analysis is:
 
@@ -1739,7 +1739,7 @@ MatchedTruthParticle_isHadronicTau == true
 
 It does not remove photon-matched candidates, and the photon-matched component
 is large: about `28-31%` of the fail-ID MC in the relevant `TauPt` bins. If the
-analysis concept is "subtract real/prompt non-jet backgrounds from the anti-ID
+analysis concept is "subtract simulated background contributions from the anti-ID
 data before estimating jet fakes", photon-matched candidates may need explicit
 treatment rather than being folded into the data-driven fake estimate by
 default.
@@ -3327,3 +3327,478 @@ The next physics decision is therefore split into two tracks:
 4. update the thesis unfolding chapter to describe the nonfiducial signal correction, split-sample closure validation, and fake-estimate diagnostics, making clear which studies are validation-only scripts rather than part of the central production runner.
 
 The current result is strong enough to support moving forward with the corrected unfolding implementation, but not yet strong enough to claim that the unfolded data/MC normalisation tension is understood.
+
+## Chapter 7 Low-MET Control-Region Thesis Figures
+
+Question:
+What should replace the stale Chapter 7 Loose-ID control-region comparison
+plots, while preserving the visual style already used in the thesis?
+
+Implementation:
+- script: `run/2017/validations/validate_low_met_fake_region.py`
+- output summary:
+  `outputs/validate_shadow_fakes/low_met_fake_region/low_met_fake_region_summary.md`
+- mode: new validation histogram rebuild, then cached mode restored
+- thesis note updated:
+  `thesis/updates/chapter_7_object_event_selections_updates.md`
+
+The validation script now writes a thesis-like six-plot CR/SR stack set using
+the current Medium tau-identification selection:
+
+- low-`MET` control region: `MET < 100`, `pT_tau > 170`, Medium tau ID
+- signal region: `MET >= 170`, `mT^W >= 350`, `pT_tau > 170`, Medium tau ID
+- variables:
+  - tau jet-identification score
+  - electron-rejection score
+  - tau track multiplicity
+
+Representative outputs:
+- `outputs/validate_shadow_fakes/low_met_fake_region/plots/thesis_like_region_stacks/MTW_shadow_bin_300_low_met_medium_CR_passID/medium_TauRNNJetScore_stack_no_fakes_log.png`
+- `outputs/validate_shadow_fakes/low_met_fake_region/plots/thesis_like_region_stacks/MTW_shadow_bin_300_signal_like_medium_SR_passID/medium_TauRNNJetScore_stack_no_fakes_log.png`
+- `outputs/validate_shadow_fakes/low_met_fake_region/plots/thesis_like_region_stacks/MTW_shadow_bin_300_low_met_medium_CR_passID/medium_TauBDTEleScore_stack_no_fakes_log.png`
+- `outputs/validate_shadow_fakes/low_met_fake_region/plots/thesis_like_region_stacks/MTW_shadow_bin_300_signal_like_medium_SR_passID/medium_TauBDTEleScore_stack_no_fakes_log.png`
+- `outputs/validate_shadow_fakes/low_met_fake_region/plots/thesis_like_region_stacks/MTW_shadow_bin_300_low_met_medium_CR_passID/medium_TauNCoreTracks_stack_no_fakes_log.png`
+- `outputs/validate_shadow_fakes/low_met_fake_region/plots/thesis_like_region_stacks/MTW_shadow_bin_300_signal_like_medium_SR_passID/medium_TauNCoreTracks_stack_no_fakes_log.png`
+
+Interpretation:
+These are the right Chapter 7 replacements because they retain the thesis
+layout: the same CR/SR comparison and the same tau-candidate observables, but
+with the current Medium-ID and low-`MET` region definitions. The low-`MET`
+control-region plots show a large excess of data over simulated backgrounds
+before fake-factor correction, which is the intended visual
+motivation for deriving a jet-to-tau fake estimate from data.
+
+The earlier fake-enrichment decomposition plots remain useful diagnostics, but
+they should not be the main Chapter 7 replacement because they are visually less
+continuous with the existing thesis figure block.
+
+Recommendation:
+Replace the old six Loose-ID thesis images with the six thesis-like stack plots
+above. Keep `LOAD_SAVED_HISTS = True` for future redraws; the rebuilt cache now
+contains the required variables and selections.
+
+## Chapter 7/8 Medium-Working-Point Thesis Plot Refresh
+
+Question:
+Regenerate the current Medium-working-point plots that have been copied into
+the thesis so far, after updating the leptonic tau sample display label from
+`W->tau nu -> l` to `W->tau nu -> l nu`.
+
+Implementation:
+- changed label: `run/2017/samples.py`
+- regenerated low-MET fake-region validation:
+  `pixi run python run/2017/validations/validate_low_met_fake_region.py`
+- regenerated pre-unfolding stack-composition validation:
+  `pixi run python run/2017/validations/validate_preunfolding_stack_composition.py`
+- static checks:
+  `python -m py_compile run/2017/validations/validate_low_met_fake_region.py run/2017/validations/validate_preunfolding_stack_composition.py`
+  and
+  `pixi run ruff check run/2017/validations/validate_low_met_fake_region.py run/2017/validations/validate_preunfolding_stack_composition.py`
+- mode: cached histogram plotting; no DTA outputs were modified
+
+Result:
+The low-MET validation now produces:
+- CR/SR thesis-like stack plots in both linear-y and log-y forms;
+- prong-split signal-like Medium-ID JetRNN/eBDT score plots in both linear-y
+  and log-y forms;
+- fake-enrichment plots by prong and ID/anti-ID region.
+
+The pre-unfolding stack-composition plots were also regenerated from the
+analysis caches. The existing prong-split `TauPt` fake-factor comparison plot
+was recopied into the thesis tree; it was not regenerated in this pass because
+there is no current lightweight producer for that exact file and the sample
+label change does not affect that plot.
+
+Thesis copies refreshed:
+- `Documents/Thesis/images/object_event_selections/medium_lowmet_cr_compare/`
+- `Documents/Thesis/images/truth_and_fakes/medium_current/`
+
+Representative refreshed thesis images:
+- `Documents/Thesis/images/object_event_selections/medium_lowmet_cr_compare/medium_CR_TauRNNJetScore_stack_no_fakes_liny.png`
+- `Documents/Thesis/images/object_event_selections/medium_lowmet_cr_compare/medium_SR_TauRNNJetScore_stack_no_fakes_liny.png`
+- `Documents/Thesis/images/truth_and_fakes/medium_current/medium_1prong_signal_like_sr_TauRNNJetScore_stack_no_fakes_liny.png`
+- `Documents/Thesis/images/truth_and_fakes/medium_current/medium_3prong_signal_like_sr_TauBDTEleScore_stack_no_fakes_liny.png`
+- `Documents/Thesis/images/truth_and_fakes/medium_current/medium_lowmet_antiid_1prong_taupt_fake_enrichment.png`
+- `Documents/Thesis/images/truth_and_fakes/medium_current/medium_lowmet_antiid_3prong_taupt_fake_enrichment.png`
+- `Documents/Thesis/images/truth_and_fakes/medium_current/medium_no_shadow_preunfolding_background_bookkeeping.png`
+- `Documents/Thesis/images/truth_and_fakes/medium_current/medium_mtw_shadow250_preunfolding_background_bookkeeping.png`
+
+Interpretation:
+The thesis image tree now reflects the current Medium-ID, low-MET
+fake-factor workflow for the Chapter 7 selection-motivation plots and the
+Chapter 8 fake-estimation replacement plots. The refreshed plots also carry the
+correct leptonic tau sample label where relevant.
+
+Recommendation:
+Use the refreshed `medium_current` and `medium_lowmet_cr_compare` images for
+the Chapter 7 and Chapter 8 edits. Do not reuse the old Loose-ID
+`analysis_main/loose` or stale `truth_and_fakes/loose_*` images as current
+analysis evidence.
+
+## Chapter 8 Medium Truth-Origin Fake-Fraction Figure Refresh
+
+Question:
+Regenerate Medium-working-point replacements for `fig:CR_fakes_contamination`
+and `fig:SR_fakes_contamination`, preserving the existing Chapter 8 six-panel
+layout and preserving the original truth-origin fraction meaning.
+
+Implementation:
+- script: `run/2017/truth_and_fakes_2017.py`
+- output directory:
+  `outputs/truth_and_fakes_2017/plots/`
+- mode: corrected script rerun with full ROOT event loops, then copied into the thesis image tree
+
+Correction applied:
+- The Medium control-region selections now use the current low-\(\etmiss\)
+  fake-factor determination region: tau \(p_\mathrm{T}>170\) GeV, tau
+  fiducial \(\eta\) acceptance, Medium pass-ID or fail-ID, and
+  \(\etmiss<100\) GeV.
+- The obsolete control-region \(m_T^W>350\) requirement was removed from
+  the truth-origin diagnostic CR selections.
+- The control-region `MET_met` binning was restored to `10`--`100 GeV`.
+  A previous regenerated version used a `1`--`150 GeV` range inherited from
+  an obsolete control-region definition and should not be used.
+
+Result:
+The Medium truth-origin outputs provide twelve direct replacements for the old
+Loose figure panels:
+- Medium control region, anti-ID and ID:
+  `all_mc_{MET_met,TauRNNJetScore,TauBDTEleScore}_medium_CR_{failID,passID}_fake_fractions.png`
+- Medium signal region, anti-ID and ID:
+  `all_mc_{MET_met,TauRNNJetScore,TauBDTEleScore}_medium_SR_{failID,passID}_fake_fractions.png`
+
+These plots were copied into the thesis image tree:
+- `Documents/Thesis/images/truth_and_fakes/medium_CR_failID/fakes_distributions/`
+- `Documents/Thesis/images/truth_and_fakes/medium_CR_passID/fakes_distributions/`
+- `Documents/Thesis/images/truth_and_fakes/medium_SR_failID/fakes_distributions/`
+- `Documents/Thesis/images/truth_and_fakes/medium_SR_passID/fakes_distributions/`
+
+Copy verification:
+All twelve thesis PNGs byte-match the regenerated outputs under
+`outputs/truth_and_fakes_2017/plots/`.
+
+Interpretation:
+These are the correct replacements for the old plots because they keep the same
+semantic content: stacked MC truth-origin fractions for reconstructed tau
+candidates. The main analysis-facing changes are the Medium tau-identification
+working point and the updated origin split, which now separates leptonic-tau and
+hadronic-tau origins instead of using a single "True taus" category. The grey
+hadronic-tau band is part of the stack and can visually resemble the plot
+background, so the Chapter 8 caption should explicitly state that these are
+truth-origin fraction plots.
+
+Recommendation:
+Update the Chapter 8 `\includegraphics` paths for `fig:CR_fakes_contamination`
+and `fig:SR_fakes_contamination` to point at the `medium_CR_*` and `medium_SR_*`
+files. Rewrite the captions to remove Loose-ID wording, but keep the
+truth-origin-fraction interpretation.
+
+## Chapter 8 Plot Roles For Background-Estimation Motivation
+
+Question:
+Which regenerated plots should be used to motivate the background estimation,
+and why are the old Chapter 8 fake-composition plots not enough?
+
+Result:
+The old `fig:CR_fakes_contamination` and `fig:SR_fakes_contamination` plots are
+truth-origin diagnostics made from simulated samples. They can show what origin
+categories simulation assigns to reconstructed tau candidates, but they do not
+show the data-driven fake-factor estimate itself. They also used the old
+Loose-ID wording and old region definitions, so the stale versions are not
+representative of the current Medium-ID, low-\(\etmiss\), prong-split method.
+
+Recommended plot roles:
+- Motivation for a data-driven estimate:
+  use the thesis-like Medium CR/SR stack plots from
+  `outputs/validate_shadow_fakes/low_met_fake_region/plots/thesis_like_region_stacks/`.
+  These show data compared with simulated backgrounds in the low-MET
+  control region and signal-like region for tau-ID observables.
+- Motivation that the low-MET region is fake-enriched:
+  optionally use the fake-enrichment plots from
+  `outputs/validate_shadow_fakes/low_met_fake_region/plots/fake_enrichment/`.
+  These directly show the inferred jet-fake component after subtracting
+  simulated background contributions.
+- Documentation of the fake-factor method:
+  use the prong-split fake-factor plot
+  `outputs/validate_shadow_fakes/plots/no_shadow_bin/fake_factors/no_shadow_bin_lowMET_TauPt_prong_fake_factors.png`.
+  The older `no_shadow_bin_TauPt_prong_fake_factors.png` plot is a non-lowMET
+  diagnostic and contains the two negative 3-prong bins, so it should not be
+  used as the nominal Chapter 8 method figure.
+- Documentation of final background bookkeeping:
+  use the pre-unfolding stack-composition plots from
+  `outputs/validate_shadow_fakes/preunfolding_stack_composition/plots/`.
+- Optional diagnostic only:
+  the Medium truth-origin fraction plots from
+  `outputs/truth_and_fakes_2017/plots/medium_*` can replace the old
+  fake-composition figures if the thesis still wants that visual style, but
+  their caption must say that they are MC truth-origin fractions, not the
+  data-driven fake estimate.
+
+Recommendation:
+Do not use the old Loose-ID truth-origin plot block as the primary motivation
+for the background-estimation method. Use it only as an optional diagnostic
+after regeneration at Medium WP. The main narrative should be supported by the
+Medium CR/SR stack plots, the \(p_T^\tau\)-binned prong-split fake-factor plot,
+and the final pre-unfolding bookkeeping plot or table.
+
+Current Chapter 8 figure audit:
+- Lines 4195--4223 currently use Medium signal-region prong-split JetRNN/eBDT
+  score plots. These are useful for motivating prong splitting, but they do not
+  show the low-\(\etmiss\) fake-factor determination region.
+- Lines 4228--4311 currently use regenerated Medium MC truth-origin fraction
+  plots for CR and SR. These are valid as diagnostics if recaptioned, but they
+  should not be the main evidence for the data-driven method because they do
+  not show the data-driven estimate.
+- Lines 4353--4385 still point to old `analysis_main/medium` fake-factor
+  intermediate and comparison plots. These should be replaced by the current
+  prong-split \(p_T^\tau\) fake-factor plot.
+- Lines 4389--4475 still point to old `analysis_main/medium` data/MC plus fake
+  comparison stacks. These should be replaced by the current pre-unfolding
+  background-bookkeeping plot or a compact budget table.
+
+Recommended Chapter 8 visual sequence:
+1. Motivation figure: a two-by-two low-\(\etmiss\) CR versus SR comparison using
+   `medium_CR_TauRNNJetScore_stack_no_fakes_liny.png`,
+   `medium_SR_TauRNNJetScore_stack_no_fakes_liny.png`,
+   `medium_CR_TauBDTEleScore_stack_no_fakes_liny.png`, and
+   `medium_SR_TauBDTEleScore_stack_no_fakes_liny.png` from
+   `Documents/Thesis/images/object_event_selections/medium_lowmet_cr_compare/`.
+2. Optional diagnostic figure: the regenerated Medium truth-origin fraction
+   plots for CR and SR under `Documents/Thesis/images/truth_and_fakes/medium_*`.
+   Keep only if Chapter 8 needs to show simulated truth-origin composition.
+3. Method figure: `Documents/Thesis/images/truth_and_fakes/medium_current/medium_taupt_prong_split_fake_factors.png`.
+   This thesis image has been overwritten with the framework-generated
+   low-\(\etmiss\) fake-factor plot produced by
+   `run/2017/validations/validate_low_met_fake_region.py` and copied from
+   `outputs/validate_shadow_fakes/low_met_fake_region/plots/fake_factors/no_shadow_bin_medium_TauPt_lowMET_prong_fake_factors.png`.
+4. Final bookkeeping figure or table:
+   `Documents/Thesis/images/truth_and_fakes/medium_current/medium_no_shadow_preunfolding_background_bookkeeping.png`
+   and optionally the shadow-bin counterpart.
+
+Correction note:
+The first version copied into
+`Documents/Thesis/images/truth_and_fakes/medium_current/medium_taupt_prong_split_fake_factors.png`
+was incorrectly copied from the non-lowMET diagnostic plot. That version showed
+the old negative 3-prong bins and did not represent the current nominal
+low-\(\etmiss\) fake-factor method. It was then replaced with a quick
+standalone Matplotlib rendering of the correct low-\(\etmiss\) histograms, but
+that handmade plot did not match the thesis plotting style. On 2026-06-27 it
+was replaced again with a plot generated through the repository
+`Analysis.plot` machinery, so the font, ATLAS label, step rendering, and axis
+formatting now match the rest of the analysis figures.
+The thesis copy was regenerated once more with an empty `llabel`, so it shows
+the ATLAS label without the `Preliminary` tag. The current thesis convention is
+that no thesis plot should include `Preliminary`.
+
+### Chapter 8 Recommended Plot Audit After No-Preliminary Regeneration
+
+Question:
+Which Chapter 8 background-estimation plots should be used now, and are the
+recommended thesis copies up to date?
+
+Implementation:
+- script checked: `run/2017/validations/validate_low_met_fake_region.py`
+- source outputs: `outputs/validate_shadow_fakes/low_met_fake_region/plots/`
+- thesis copies: `Documents/Thesis/images/truth_and_fakes/medium_current/`
+  and `Documents/Thesis/images/object_event_selections/medium_lowmet_cr_compare/`
+- mode: cached plotting and file-hash audit; no DTA writes.
+
+Result:
+| Plot family | Status |
+| --- | --- |
+| Low-MET anti-ID fake-enrichment plots | Current source and thesis copies match. Best direct motivation for the data-driven fake-factor method. |
+| Low-MET prong-split fake-factor plot | Current source and thesis copies match. Shows no `Preliminary` label, uses the framework plotting style, and contains only the separate one-prong and three-prong fake factors. |
+| Pre-unfolding bookkeeping plots | Current source and thesis copies match, but the visual style is less thesis-polished than the framework ATLAS plots. A compact table is preferable unless the plot is restyled. |
+| Signal-region prong-split JetRNN/eBDT stack plots currently used near lines 4198--4217 | Source plots were regenerated without `Preliminary`; thesis copies are older and no longer byte-match. Recopy if this figure is retained. |
+| Low-MET CR/SR score-comparison plots | Source plots were regenerated without `Preliminary`; thesis copies are older and no longer byte-match. The CR ratio panel saturates and is not the clearest Chapter 8 motivation. |
+| Medium CR/SR truth-origin fraction plots | Source and thesis copies match, but these are diagnostic truth-origin plots rather than the clearest explanation of the nominal fake-factor method. |
+
+Recommendation:
+Use the following visual sequence in Chapter 8:
+1. Main motivation: the two anti-ID fake-enrichment plots:
+   `truth_and_fakes/medium_current/medium_lowmet_antiid_1prong_taupt_fake_enrichment.png`
+   and
+   `truth_and_fakes/medium_current/medium_lowmet_antiid_3prong_taupt_fake_enrichment.png`.
+2. Method: the low-MET prong-split fake-factor plot:
+   `truth_and_fakes/medium_current/medium_taupt_prong_split_fake_factors.png`.
+3. Bookkeeping: use the compact fake-budget table in the thesis text. Use
+   `truth_and_fakes/medium_current/medium_no_shadow_preunfolding_background_bookkeeping.png`
+   only if a visual diagnostic is needed, or regenerate it through the standard
+   `Analysis.plot` style before treating it as a final thesis figure.
+4. Optional context only: the Medium signal-region JetRNN/eBDT prong-split
+   stack plots. If kept, recopy the regenerated no-`Preliminary` source images
+   from `outputs/validate_shadow_fakes/low_met_fake_region/plots/thesis_like_prong_stacks/`
+   before recompiling the thesis.
+
+Do not use the old `analysis_main/medium` fake-factor intermediates or
+full-stack fake-comparison plots as current Chapter 8 evidence.
+
+Correction note:
+On 2026-06-27 the low-\(\etmiss\) fake-factor method plot was regenerated
+again to remove the inclusive fake-factor curve. The plot now shows only the
+one-prong and three-prong fake factors used by the nominal prong-split fake
+estimate. The source output is
+`outputs/validate_shadow_fakes/low_met_fake_region/plots/fake_factors/no_shadow_bin_medium_TauPt_lowMET_prong_fake_factors.png`
+and it was copied byte-for-byte to both thesis image aliases:
+`Documents/Thesis/images/truth_and_fakes/medium_current/medium_taupt_prong_split_fake_factors.png`
+and
+`Documents/Thesis/images/truth_and_fakes/medium_current/no_shadow_bin_medium_TauPt_lowMET_prong_fake_factors.png`.
+Because the current Chapter 8 LaTeX source still points the \(p_T^\tau\)
+fake-factor panel at the older path, the same regenerated image was also copied
+to
+`Documents/Thesis/images/analysis_main/medium/fake_factors/medium_TauPt_FF_prong_compare.png`.
+The SHA-256 checksum for the source output and all three thesis copies was
+`f4c3d6f963f1d45db9ce09680377e1ac16d17680c0a104e976b553ac983eda72`.
+
+## Negative Fake-Factor Bin Handling
+
+Question:
+Should negative fake-factor bins, especially in sparse three-prong regions, be
+capped to zero?
+
+Current implementation:
+`src/fakes.py` currently derives the fake factor directly as
+\[
+    \mathrm{FF} =
+    \frac{N_\mathrm{ID}^\mathrm{data} - N_\mathrm{ID}^\mathrm{sim\,contam}}
+         {N_\mathrm{antiID}^\mathrm{data} - N_\mathrm{antiID}^\mathrm{sim\,contam}}
+\]
+with no positivity clipping. The same raw factor is then applied to the
+anti-ID signal-region events.
+
+Current output check:
+The two negative bins are present in the old non-lowMET diagnostic
+`no_shadow_bin_medium_3prong_TauPt_FF`:
+
+| Bin | \(p_T^\tau\) range [GeV] | Fake factor |
+| --- | ---: | ---: |
+| 1 | 170--200 | -0.1315 |
+| 2 | 200--250 | -0.0416 |
+
+They are not present in the current nominal low-\(\etmiss\) three-prong fake
+factor. The nominal `no_shadow_bin_medium_3prong_lowMET_TauPt_FF` has positive
+bin contents in all \(p_T^\tau\) bins, with the first two bins equal to `0.0710`
+and `0.0591`. Its numerator and denominator are also positive in all bins.
+
+Interpretation:
+A negative fake factor or negative validation target is not a physical negative
+jet-fake rate. It usually means that the simulated-contamination subtraction is
+larger than the data yield in a statistically sparse bin or validation region.
+This was seen most clearly in the high-\(\etmiss\), signal-like three-prong
+validation target, where the post-subtraction target became negative. That
+region should not be used as evidence that the fake-factor method has failed;
+it is an unstable validation target.
+
+Recommendation:
+Do not silently cap negative bins to zero as an undocumented nominal fix. If a
+positivity constraint is introduced, it should be explicit and should be treated
+as an analysis prescription with an uncertainty. Safer options are:
+- merge or widen sparse bins until the subtracted numerator and denominator are
+  statistically stable;
+- use the low-\(\etmiss\) fake-enriched determination region as nominal and
+  treat high-\(\etmiss\)/composition differences as transfer systematics;
+- if clipping is required for robustness, clip only pathological per-bin fake
+  factors after subtraction, record which bins were clipped, and assign a
+  systematic comparing unclipped, clipped, and/or bin-merged alternatives.
+
+For the current thesis narrative, describe the negative three-prong validation
+target as a subtraction/statistics limitation in a sparse validation region, not
+as a physical negative fake rate. The nominal fake estimate should remain based
+on the stable low-\(\etmiss\), \(p_T^\tau\)-binned, prong-split determination.
+
+### Chapter 8 Current Data/MC Plus Fake-Estimate Stack Plots
+
+Question:
+Can the old Figure 8.5-style plots, described as "full MC signal + background
++ fakes estimate and data", be replaced with current Medium-ID plots?
+
+Implementation:
+- script updated and run:
+  `run/2017/validations/validate_low_met_fake_region.py`
+- output directory:
+  `outputs/validate_shadow_fakes/low_met_fake_region/plots/current_data_mc_fakes_stacks/`
+- thesis copy directory:
+  `Documents/Thesis/images/truth_and_fakes/medium_current/current_data_mc_fakes_stacks/`
+- mode: used cached validation histograms where available; filled missing
+  fake-estimate target histograms from read-only DTA inputs and wrote only to
+  `outputs/`.
+
+Result:
+The new plot family compares data with the corrected MC prediction before and
+after adding the data-driven jet-fake estimate:
+
+```text
+Data
+MC (signal + backgrounds), no fakes
+MC (signal + backgrounds) + fakes
+```
+
+This replaces the old "full MC + fakes" wording, which would double-count the
+jet-fake MC component under the corrected background bookkeeping. The plots are
+line overlays, not filled stacks. They now follow the old thesis comparison
+style by including a lower ratio panel. The ratio is `Prediction / Data`, so
+the two MC curves are compared directly to the observed data yield in each bin.
+Statistical uncertainties are shown for the data and both MC prediction curves;
+the MC error bars are small in most bins and are most visible in sparse
+high-\(m_T^W\) bins. Data point error bars are drawn without caps to avoid
+crowding in dense low-\(m_T^W\) and low-\(\etmiss\) bins.
+
+Generated plots:
+- `medium_MTW_current_signal_background_fakes_{liny,log}.png`
+- `medium_MET_met_current_signal_background_fakes_{liny,log}.png`
+- `medium_TauPt_current_signal_background_fakes_{liny,log}.png`
+- `medium_TauNCoreTracks_current_signal_background_fakes_{liny,log}.png`
+- `medium_TauRNNJetScore_current_signal_background_fakes_{liny,log}.png`
+- `medium_TauBDTEleScore_current_signal_background_fakes_{liny,log}.png`
+
+Interpretation:
+The kinematic panels (`MTW`, `MET_met`, and `TauPt`) and the charged-track
+panel are suitable replacements for the old thesis figure style. They show the
+current Medium-ID signal region, the low-\(\etmiss\) prong-split fake estimate,
+and the corrected background bookkeeping as a direct before/after comparison of
+the fake estimate.
+
+The tau-ID score panels are diagnostic only. Because the fake estimate is
+applied from anti-ID events, plotting the fake estimate against the ID-score
+variables themselves shows the anti-ID score shape rather than a physically
+meaningful post-ID score prediction. These panels can help debug the method,
+but they should not be used as the main "data versus prediction after fake
+estimate" thesis figure.
+
+Follow-up plot inspection:
+The current `medium_TauRNNJetScore_current_signal_background_fakes_{liny,log}.png`
+panels should not be used as thesis comparison plots. The orange
+`MC (signal + backgrounds) + fakes` curve has a large contribution at low
+TauRNN scores where the Medium-ID signal-region data have essentially no
+events. This happens because the fake estimate is built by applying a
+\(p_T^\tau\)-binned transfer factor to anti-ID events. For kinematic variables
+such as \(m_T^W\), \(\etmiss\), and \(p_T^\tau\), that gives a useful estimate
+of the jet-fake contribution in the signal-region phase space. For the ID
+discriminant itself, however, the anti-ID events retain their fail-ID TauRNN
+score distribution, so plotting them as a pass-ID signal-region prediction is
+conceptually misleading. The old thesis TauRNN plot did not show this low-score
+feature because it used the older fake-estimate bookkeeping and should not be
+treated as a template for the corrected method.
+
+Recommendation:
+For a revised Figure 8.5, use a four-panel figure with:
+- `medium_MTW_current_signal_background_fakes_liny.png`
+- `medium_MET_met_current_signal_background_fakes_liny.png`
+- `medium_TauPt_current_signal_background_fakes_liny.png`
+- `medium_TauNCoreTracks_current_signal_background_fakes_liny.png`
+
+Use the caption:
+
+> Comparisons between data and the corrected reconstructed prediction in the
+> Medium tau-identification signal region. The MC prediction is shown before
+> and after adding the data-driven jet-fake estimate derived from the
+> low-\(\etmiss\) determination region. The lower panels show the prediction
+> divided by the data. Error bars show statistical uncertainties.
+
+Terminology note:
+Use "simulated backgrounds" in thesis captions and plot legends. In equations
+or method prose, use "simulated background contribution" when referring to the
+component subtracted before deriving or applying the fake factor. Avoid
+introducing new "non-jet background" terminology into the thesis, even though
+ATLAS papers sometimes describe this bookkeeping as separating jet backgrounds
+from other backgrounds estimated with simulation.
