@@ -3802,3 +3802,68 @@ component subtracted before deriving or applying the fake factor. Avoid
 introducing new "non-jet background" terminology into the thesis, even though
 ATLAS papers sometimes describe this bookkeeping as separating jet backgrounds
 from other backgrounds estimated with simulation.
+
+### Chapter 9 Uncertainty Plot Regeneration
+
+Question:
+Refresh the Chapter 9 uncertainty figures using the current shadow-unfolding
+outputs, without relying on stale `systematic_alt_binning` or
+`analysis_simple_2017` plot images, and without using the unreadable all-in-one
+response-systematic plot.
+
+Implementation:
+- script: `run/2017/plot_chapter9_uncertainty_figures.py`
+- mode: cached-output plotting only
+- command:
+  `MPLCONFIGDIR=/tmp/mplconfig-chapter9 pixi run python run/2017/plot_chapter9_uncertainty_figures.py`
+- thesis-copy destination:
+  `/mnt/B/Uni_Stuff_Queen_Mary/Documents/Thesis/images/uncertainties/current/`
+- note: the script reads cached ROOT files under `outputs/analysis_shadow_unfold`;
+  it does not open DTA ntuples or run event loops.
+- note: only plot files were copied into the thesis image tree; `thesis.tex`
+  was not edited and the thesis was not recompiled.
+
+Result:
+The cached-output plotting script wrote clean, thesis-facing no-shadow
+uncertainty plots under
+`outputs/analysis_shadow_unfold/plots/no_shadow_bin/MTW/chapter9_uncertainties/`
+and copied them to `images/uncertainties/current/`.
+
+Outputs copied for Chapter 9:
+- `no_shadow_bin_MTW_response_tes_calibration_uncertainty.png`
+- `no_shadow_bin_MTW_response_tes_detector_uncertainty.png`
+- `no_shadow_bin_MTW_response_reconstruction_uncertainty.png`
+- `no_shadow_bin_MTW_response_trigger_uncertainty.png`
+- `no_shadow_bin_MTW_response_tau_efficiency_uncertainty.png`
+- `no_shadow_bin_MTW_fake_factor_stat_uncertainty_clean.png`
+- `no_shadow_bin_MTW_met_window_transfer_uncertainty_clean.png`
+- `no_shadow_bin_MTW_tau_width_composition_uncertainty_clean.png`
+
+Interpretation:
+The production all-in-one response plot is current but not thesis-readable: it
+contains too many lines, raw systematic labels, and an overflowing legend. The
+Chapter 9 figures should therefore use split component-family plots instead:
+tau energy-scale calibration/modelling, tau energy-scale detector response, tau
+reconstruction/overlap-removal efficiency, and tau trigger efficiency. Shadow-bin
+plots should not be used at this point in the thesis because the shadow-bin
+response has not yet been introduced.
+
+The standalone reconstruction/overlap-removal plot is technically correct but
+not very communicative because one component is sub-percent and the other is
+negligible. The preferred Chapter 9 tau-efficiency figure is therefore
+`no_shadow_bin_MTW_response_tau_efficiency_uncertainty.png`, which overlays tau
+reconstruction, electron overlap removal, and the three trigger-efficiency
+components in one readable plot. This makes the uncertainty hierarchy clear:
+the data statistical component of the trigger efficiency dominates this family,
+while reconstruction is small and electron overlap removal is negligible.
+
+For the data-driven jet-fake uncertainty section, use separate no-shadow plots
+for fake-factor statistics, low-\(E_T^{miss}\) control-region transfer, and
+tau-width composition. Do not use the combined fake-source plot in Chapter 9;
+its labels are too cluttered and it hides the individual uncertainty components.
+
+Recommendation:
+Use the copied split plots under `images/uncertainties/current/` for Chapter 9
+figure replacements. Do not use old paths containing `analysis_simple_2017` or
+`systematic_alt_binning`, and do not use `MTW_shadow_bin_250` plots before the
+shadow-bin method is introduced.
