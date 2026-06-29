@@ -44,7 +44,13 @@ TAUPT_MIN = 170
 PRONGS = (1, 3)
 LOAD_SAVED_HISTS = True
 FORCE_REBUILD_HISTS = os.environ.get("VALIDATE_LOW_MET_FORCE_REBUILD") == "1"
-RUN_EVENT_LOOPS_IF_CACHE_MISSING = True
+RUN_EVENT_LOOPS_IF_CACHE_MISSING = (
+    os.environ.get("VALIDATE_LOW_MET_RUN_EVENT_LOOPS_IF_CACHE_MISSING", "1") != "0"
+)
+BUILD_CHAPTER10_SYSTEMATIC_CACHE = (
+    os.environ.get("VALIDATE_LOW_MET_BUILD_CHAPTER10_SYSTEMATICS") == "1"
+)
+USE_CHAPTER10_SYSTEMATIC_BANDS = True
 PLOT_TRANSFER_COMPARISON = True
 PLOT_FAKE_ENRICHMENT = True
 PLOT_MEDIUM_FAKE_CONTAMINATION = True
@@ -115,7 +121,7 @@ CHAPTER10_PIE_LABELS = {
     "zll": r"$Z/\gamma^*$",
     "top": "Top",
     "diboson": "Diboson",
-    "fakes": "Fake jets",
+    "fakes": "Jet-to-tau fakes",
 }
 CHAPTER10_COMPONENT_COLOURS = {
     "signal": "tab:red",
@@ -127,6 +133,7 @@ CHAPTER10_COMPONENT_COLOURS = {
     "fakes": CHAPTER10_FAKES_COLOUR,
 }
 OUTPUT_DIR = VALIDATION_OUTPUT / "low_met_fake_region"
+CHAPTER10_SYSTEMATIC_OUTPUT = OUTPUT_DIR / "chapter10_systematics"
 SUMMARY_PATH = OUTPUT_DIR / "low_met_fake_region_summary.md"
 CACHE_FILE = OUTPUT_DIR / "root" / "validate_low_met_fake_region.root"
 NOMINAL_MEASURED_ROOT = (
@@ -428,6 +435,132 @@ def ensure_chapter10_histogram_cache(
     return regenerated
 
 
+def chapter10_systematic_cache_exists(datasets: tuple[str, ...]) -> bool:
+    return all((CHAPTER10_SYSTEMATIC_OUTPUT / "root" / f"{dataset}.root").is_file() for dataset in datasets)
+
+
+def chapter10_systematics_analysis(
+    *,
+    mc_selections: dict[str, list[Cut]],
+    variables: tuple[str, ...],
+    signal_selections: tuple[str, ...],
+    binnings: dict[str, np.ndarray],
+) -> Analysis | None:
+    """Return a targeted MC systematic analysis for Chapter 10 stack bands."""
+
+    datasets = ("wtaunu_had", *CHAPTER10_BACKGROUND_SAMPLES)
+    cache_exists = chapter10_systematic_cache_exists(datasets)
+    if not BUILD_CHAPTER10_SYSTEMATIC_CACHE and not cache_exists:
+        return None
+
+    selected_mc_selections: dict[str, list[Cut]] = {}
+    for selection in signal_selections:
+        selected_mc_selections[selection] = mc_selections[selection]
+        true_selection = f"trueTau_{selection}"
+        selected_mc_selections[true_selection] = mc_selections[true_selection]
+
+    samples = analysis_samples(selected_mc_selections, data_selections={}, snapshot=False)
+    samples = {name: sample for name, sample in samples.items() if name in datasets}
+    selection_regex = "|".join(
+        [
+            rf"^{selection}$"
+            for selection in selected_mc_selections
+        ]
+    )
+
+    return Analysis(
+        samples,
+        year=YEAR,
+        rerun=BUILD_CHAPTER10_SYSTEMATIC_CACHE,
+        regen_histograms=BUILD_CHAPTER10_SYSTEMATIC_CACHE,
+        do_systematics=True,
+        metadata_cache=DSID_METADATA_CACHE,
+        ttree=NOMINAL_NAME,
+        analysis_label="validate_low_met_chapter10_systematics",
+        output_dir=CHAPTER10_SYSTEMATIC_OUTPUT,
+        log_level=10,
+        log_out="both" if BUILD_CHAPTER10_SYSTEMATIC_CACHE else "console",
+        extract_vars={
+            "MTW",
+            "MET_met",
+            "TauPt",
+            "TauEta",
+            "TauRNNJetScore",
+            "TauBDTEleScore",
+            "TauNCoreTracks",
+            "TauCharge",
+            "TauPhi",
+            "MET_phi",
+            "AbsDeltaPhi_tau_met",
+            "MatchedTruthParticle_isHadronicTau",
+            "MatchedTruthParticle_isTau",
+            "MatchedTruthParticle_isMuon",
+            "MatchedTruthParticle_isElectron",
+            "MatchedTruthParticle_isPhoton",
+            "passReco",
+            "TauBaselineWP",
+            "passMetTrigger",
+            "badJet",
+            "TruthBosonM",
+            "TruthTau_isHadronic",
+        },
+        import_missing_columns_as_nan=True,
+        snapshot=False,
+        histogram_vars=set(variables),
+        systematics_for_selection={selection_regex},
+        binnings={"": binnings},
+    )
+
+
+def chapter10_mc_systematic_errors(
+    systematics_analysis: Analysis | None,
+    *,
+    selection: str,
+    variable: str,
+) -> np.ndarray | None:
+    """Return the combined MC systematic envelope for a Chapter 10 stack."""
+
+    if systematics_analysis is None:
+        return None
+
+    nominal = systematics_analysis.get_hist(
+        variable,
+        dataset="wtaunu_had",
+        systematic=NOMINAL_NAME,
+        selection=selection,
+        allow_generation=False,
+    )
+    errors_sq = np.zeros(nominal.GetNbinsX(), dtype=float)
+
+    for dataset, syst_selection in (
+        ("wtaunu_had", selection),
+        *(
+            (sample, f"trueTau_{selection}")
+            for sample in CHAPTER10_BACKGROUND_SAMPLES
+        ),
+    ):
+        sys_down, sys_up = systematics_analysis.get_systematic_uncertainty(
+            variable,
+            dataset,
+            syst_selection,
+        )
+        sys_down = np.asarray(sys_down, dtype=float)
+        sys_up = np.asarray(sys_up, dtype=float)
+        errors_sq += np.maximum(sys_down, sys_up) ** 2
+
+    return np.sqrt(errors_sq)
+
+
+def combine_chapter10_systematic_errors(errors: list[np.ndarray | None]) -> np.ndarray | None:
+    valid_errors = [error for error in errors if error is not None]
+    if not valid_errors:
+        return None
+    total = np.zeros_like(valid_errors[0], dtype=float)
+    for error in valid_errors:
+        total += error ** 2
+    return np.sqrt(total)
+
+
 def plot_chapter10_stack(
     *,
     output_path: Path,
@@ -437,6 +570,7 @@ def plot_chapter10_stack(
     signal: ROOT.TH1,
     backgrounds: list[tuple[str, ROOT.TH1, str]],
     fakes: ROOT.TH1,
+    systematic_errors: np.ndarray | None = None,
 ) -> None:
     """Draw a Chapter-10-style stack from cached/current histograms."""
 
@@ -457,7 +591,20 @@ def plot_chapter10_stack(
     data_values = th1_values(data, scale_by_bin_width=True)
     data_errors = th1_errors(data, scale_by_bin_width=True)
     total_values = th1_values(total_prediction, scale_by_bin_width=True)
-    total_errors = th1_errors(total_prediction, scale_by_bin_width=True)
+    total_stat_errors = th1_errors(total_prediction, scale_by_bin_width=True)
+    if systematic_errors is not None:
+        systematic_errors = np.asarray(systematic_errors, dtype=float)
+        if systematic_errors.shape != total_stat_errors.shape:
+            raise ValueError(
+                f"Systematic error shape {systematic_errors.shape} does not match "
+                f"{total_stat_errors.shape} for {output_path}"
+            )
+        scaled_syst_errors = systematic_errors / np.diff(edges)
+        total_errors = np.sqrt(total_stat_errors ** 2 + scaled_syst_errors ** 2)
+        uncertainty_label = "Stat. + Syst. Err."
+    else:
+        total_errors = total_stat_errors
+        uncertainty_label = "Stat. Err."
 
     fig, (ax, ratio_ax) = plt.subplots(
         2,
@@ -499,7 +646,7 @@ def plot_chapter10_stack(
         color="grey",
         alpha=0.3,
         hatch="/",
-        label="Stat. Err.",
+        label=uncertainty_label,
     )
 
     centres = 0.5 * (edges[:-1] + edges[1:])
@@ -926,7 +1073,7 @@ def plot_chapter10_composition_pie(
         for key, keep in zip(ordered_keys, positive)
         if keep
     ]
-    fig, ax = plt.subplots(figsize=(6.0, 5.0))
+    fig, ax = plt.subplots(figsize=(7.0, 5.8))
     wedges, texts, autotexts = ax.pie(
         plot_values,
         labels=plot_labels,
@@ -934,14 +1081,15 @@ def plot_chapter10_composition_pie(
         autopct=lambda pct: f"{pct:.1f}%" if pct >= 1.0 else "",
         startangle=90,
         counterclock=False,
-        textprops={"fontsize": 9},
-        pctdistance=0.72,
+        textprops={"fontsize": 12},
+        pctdistance=0.68,
+        labeldistance=1.08,
     )
     for autotext in autotexts:
-        autotext.set_fontsize(8)
+        autotext.set_fontsize(10)
         autotext.set_color("white")
     ax.axis("equal")
-    ax.set_title(title, fontsize=11)
+    ax.set_title(title, fontsize=13)
     fig.tight_layout()
     output_path.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(output_path, dpi=200)
@@ -1127,6 +1275,16 @@ if __name__ == "__main__":
             variables=THESIS_DATA_MC_STACK_VARS,
             signal_selections=chapter10_signal_selections,
         )
+    chapter10_syst_analysis = (
+        chapter10_systematics_analysis(
+            mc_selections=mc_selections,
+            variables=THESIS_DATA_MC_STACK_VARS,
+            signal_selections=chapter10_signal_selections,
+            binnings=chapter10_binnings,
+        )
+        if USE_CHAPTER10_SYSTEMATIC_BANDS
+        else None
+    )
 
     lines = [
         "# Low-MET fake-enriched fake-factor validation",
@@ -1145,6 +1303,12 @@ if __name__ == "__main__":
             "`" + "`, `".join(chapter10_regenerated_datasets) + "`"
             if chapter10_regenerated_datasets
             else "`none`"
+        ),
+        "- Chapter 10 systematic cache: "
+        + (
+            "`available`"
+            if chapter10_syst_analysis is not None
+            else "`not available`"
         ),
         "",
         "## Transfer summary",
@@ -1659,6 +1823,11 @@ if __name__ == "__main__":
                     signal=signal,
                     backgrounds=backgrounds,
                     fakes=fakes,
+                    systematic_errors=chapter10_mc_systematic_errors(
+                        chapter10_syst_analysis,
+                        selection=stack_selection,
+                        variable=variable,
+                    ),
                 )
                 lines.append(f"- `{inclusive_plot_dir / filename}`")
 
@@ -1701,6 +1870,11 @@ if __name__ == "__main__":
                         signal=signal,
                         backgrounds=backgrounds,
                         fakes=fakes,
+                        systematic_errors=chapter10_mc_systematic_errors(
+                            chapter10_syst_analysis,
+                            selection=prong_selection,
+                            variable=variable,
+                        ),
                     )
                     lines.append(f"- `{prong_plot_dir / filename}`")
 
@@ -1751,6 +1925,19 @@ if __name__ == "__main__":
                         signal=signal,
                         backgrounds=backgrounds,
                         fakes=fakes,
+                        systematic_errors=combine_chapter10_systematic_errors(
+                            [
+                                chapter10_mc_systematic_errors(
+                                    chapter10_syst_analysis,
+                                    selection=(
+                                        f"{CONFIG_LABEL}_{signal_like_target.key}_{WP}_"
+                                        f"{charge_key}_{prong}prong_validate_passID"
+                                    ),
+                                    variable=variable,
+                                )
+                                for prong in PRONGS
+                            ]
+                        ),
                     )
                     lines.append(f"- `{charge_plot_dir / filename}`")
 

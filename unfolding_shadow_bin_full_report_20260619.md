@@ -4159,3 +4159,205 @@ for Chapter 10 contains final-region histograms and fake-yield histograms, not
 the old per-cut unweighted event counts. Producing an updated true cutflow would
 require a targeted event-loop/cutflow run and should be treated as a separate
 task if the thesis still needs a cutflow table.
+
+### Chapter 10 Stack Plots With Full Systematic Bands
+
+Question:
+Add full systematic uncertainty bands to the current Chapter 10 thesis-style
+Medium-ID validation stack plots.
+
+Implementation:
+- script: `run/2017/validations/validate_low_met_fake_region.py`
+- command:
+  `VALIDATE_LOW_MET_BUILD_CHAPTER10_SYSTEMATICS=1 pixi run python run/2017/validations/validate_low_met_fake_region.py`
+- targeted systematic cache:
+  `outputs/validate_shadow_fakes/low_met_fake_region/chapter10_systematics/root/`
+- cached MC groups:
+  `wtaunu_had.root`, `wtaunu_lep.root`, `wlnu.root`, `zll.root`, `top.root`,
+  and `diboson.root`
+- plot outputs:
+  `outputs/validate_shadow_fakes/low_met_fake_region/plots/chapter10_current_stacks/`
+- thesis-copy destination:
+  `images/truth_and_fakes/medium_current/chapter10_current_stacks/`
+
+Result:
+The Chapter 10 stack plots now include a grey `Stat. + Syst. Err.` band in the
+main panel and the corresponding uncertainty band in the `Data / MC` ratio
+panel. Forty thesis-style stack plots were regenerated and copied into the
+thesis image tree:
+- inclusive Medium-ID signal-region plots,
+- 1-prong and 3-prong plots,
+- positive-tau and negative-tau charge-split plots.
+
+The plotted variables are:
+- `MTW`,
+- `MET_met`,
+- `TauPt`,
+- `TauEta`,
+- `AbsDeltaPhi_tau_met`,
+- `TauPhi`.
+
+The thesis-ready eta plots are the linear-y versions:
+- `images/truth_and_fakes/medium_current/chapter10_current_stacks/inclusive/medium_TauEta_current_stack_fakes_liny.png`
+- `images/truth_and_fakes/medium_current/chapter10_current_stacks/prong_split/1prong/medium_1prong_TauEta_current_stack_fakes_liny.png`
+- `images/truth_and_fakes/medium_current/chapter10_current_stacks/prong_split/3prong/medium_3prong_TauEta_current_stack_fakes_liny.png`
+- `images/truth_and_fakes/medium_current/chapter10_current_stacks/charge_split/tauplus/medium_tauplus_TauEta_current_stack_fakes_liny.png`
+- `images/truth_and_fakes/medium_current/chapter10_current_stacks/charge_split/tauminus/medium_tauminus_TauEta_current_stack_fakes_liny.png`
+
+Interpretation:
+The uncertainty band combines the nominal MC statistical uncertainty, the
+propagated statistical uncertainty on the data-driven jet-to-tau fake histogram,
+and the MC response/systematic envelope available in the targeted Chapter 10
+systematic cache. This is the appropriate current replacement for the old
+Chapter 10 stack-plot uncertainty bands.
+
+Important limitation:
+The Chapter 10 band does not yet include the dedicated fake-source shape
+variations from the low-`MET` window envelope or tau-width composition envelope
+for every displayed validation variable. Those variations are still treated in
+the uncertainty/background-estimation workflow, but the current Chapter 10
+validation stack band should be described as the statistical plus MC systematic
+band with the propagated fake-yield statistical uncertainty.
+
+### Chapter 10 Correction Note Update
+
+Question:
+Update the Chapter 10 thesis-correction note after the current stack plots,
+yield tables, and composition pie charts were regenerated.
+
+Implementation:
+- note: `thesis/updates/chapter_10_data_simulation_comparisons_updates.md`
+- source chapter: `/mnt/B/Uni_Stuff_Queen_Mary/Documents/Thesis/thesis.tex`, lines
+  `4619-5030`
+- current plot family:
+  `outputs/validate_shadow_fakes/low_met_fake_region/plots/chapter10_current_stacks/`
+- current table family:
+  `outputs/validate_shadow_fakes/low_met_fake_region/tables/chapter10_current/`
+- current pie family:
+  `outputs/validate_shadow_fakes/low_met_fake_region/plots/chapter10_current_pies/`
+
+Result:
+The Chapter 10 note now recommends the regenerated thesis-style stack plots
+rather than the superseded line-overlay plots. It gives direct path
+replacements for inclusive, prong-split, and charge-split figures, and it
+points the event-count tables and pie charts to the regenerated
+`chapter10_current_*` assets. It also records that the old prong and charge
+cutflow tables should be removed unless a current sequential cutflow is
+regenerated.
+
+Interpretation:
+Chapter 10 should present the data-driven jet-to-tau fake estimate as a
+background component in the reconstructed prediction, with the hadronic
+`W -> tau nu` signal overlaid as a line. The figure captions should describe the
+grey band as the statistical plus MC systematic uncertainty components
+available for the validation plots, not as the complete fake-source uncertainty
+model for every variable.
+
+### Chapter 9 Plot-Text Consistency Check
+
+Question:
+Whether the current Chapter 9 prose describing uncertainty plots still applies,
+especially the paragraph claiming that the TES detector uncertainty is the
+largest total systematic and reaches roughly 100% above about 600 GeV.
+
+Evidence checked:
+- thesis source: `/mnt/B/Uni_Stuff_Queen_Mary/Documents/Thesis/thesis.tex`,
+  lines `4498-4616`
+- current Chapter 9 uncertainty plots:
+  `outputs/analysis_shadow_unfold/plots/no_shadow_bin/MTW/chapter9_uncertainties/`
+- copied thesis image directory:
+  `/mnt/B/Uni_Stuff_Queen_Mary/Documents/Thesis/images/uncertainties/current/`
+
+Result:
+The old TES detector paragraph does not apply as written. The current
+`no_shadow_bin_MTW_response_tes_detector_uncertainty.png` plot supports saying
+that detector-response TES components are important, but it does not support the
+old statement that they are the largest total systematic uncertainty or that the
+propagated uncertainty reaches about 100% above 600 GeV. The current plot shows
+detector-response components mostly at the few-to-20% level, with the barrel
+high-pT component becoming large in the high-`mT` bins.
+
+The tau-efficiency section also needs softer wording. The current combined
+tau-efficiency plot supports saying that the trigger statistical component from
+data dominates the tau-efficiency group and is about 6-7% in the propagated
+unfolded spectrum. It does not support the older prong-specific 30%/15%
+statement in the inclusive Chapter 9 figure.
+
+The current fake-source uncertainty text is broadly aligned with the split fake
+plots, but wording should consistently use "jet-to-tau fake background" or
+"data-driven jet-to-tau fake estimate" rather than "fake-jet" or a generic
+"fake estimate".
+
+Follow-up:
+The three split Chapter 9 jet-to-tau fake-source uncertainty plots were combined
+into a single thesis-ready component plot without running any ntuple event loop.
+The cached plotting script
+`run/2017/plot_chapter9_uncertainty_figures.py` now writes:
+`outputs/analysis_shadow_unfold/plots/no_shadow_bin/MTW/chapter9_uncertainties/no_shadow_bin_MTW_combined_fake_source_components_uncertainty.png`.
+The plot was copied to:
+`/mnt/B/Uni_Stuff_Queen_Mary/Documents/Thesis/images/uncertainties/current/no_shadow_bin_MTW_combined_fake_source_components_uncertainty.png`.
+
+This combined plot should replace the three-subfigure Chapter 9 block for
+`fig:jet_fake_uncertainty_components`.
+
+### Chapter 10 Narrative Sufficiency Check
+
+Question:
+Whether the current Chapter 10 text is sufficiently descriptive and still
+correct after the regenerated Medium-ID stack plots, tables, and pie charts were
+introduced.
+
+Evidence checked:
+- thesis source: `/mnt/B/Uni_Stuff_Queen_Mary/Documents/Thesis/thesis.tex`,
+  lines `4617-4940`
+- Chapter 10 update note:
+  `thesis/updates/chapter_10_data_simulation_comparisons_updates.md`
+- current Chapter 10 stacks:
+  `outputs/validate_shadow_fakes/low_met_fake_region/plots/chapter10_current_stacks/`
+- current Chapter 10 yield tables:
+  `outputs/validate_shadow_fakes/low_met_fake_region/tables/chapter10_current/`
+
+Result:
+Chapter 10 is currently too bare-bones for a validation chapter. The current
+plots are good enough to support a real narrative, but the text mostly lists the
+figures and does not explain what each comparison validates.
+
+Specific stale/inaccurate statements:
+- line `4619`: says the MC prediction is shown before and after adding the
+  data-driven fake estimate. The current figures show the prediction with the
+  data-driven jet-to-tau fake estimate included as a stacked component.
+- line `4619`: says "total uncertainties"; this is too strong for the Chapter
+  10 validation band.
+- line `4666`: old background-fraction claims are no longer correct. In the
+  current prong table, jet-to-tau fakes are the largest one-prong background.
+- line `4691`: says there is an under-estimation at low mass for 3-prong
+  selection, but the current 3-prong `mT` plot mostly shows data below the
+  prediction in the populated low-mass region.
+- line `4829`: the charge-asymmetry explanation should be based on the proton
+  parton content, not "positive p+p colliding particles"; the claim that some
+  background rates are nearly doubled in the negative channel is not supported
+  by the current charge-split table.
+
+Recommendation:
+Add a short inclusive-validation paragraph after the inclusive figure, rewrite
+the prong section as a prong-split validation section, rewrite the charge section
+as a charge-split validation section, and add a brief closing paragraph before
+the unfolding chapter explaining what the validation demonstrates and which
+residual tensions remain.
+
+Follow-up:
+The Chapter 10 composition pie charts were regenerated with larger label fonts
+from the cached Chapter 10 yield tables, without opening ROOT files or DTA
+ntuples. A helper script was added:
+`run/2017/plot_chapter10_pies_from_tables.py`.
+
+Regenerated outputs:
+- `outputs/validate_shadow_fakes/low_met_fake_region/plots/chapter10_current_pies/prong_split/medium_1prong_current_prediction_pie.png`
+- `outputs/validate_shadow_fakes/low_met_fake_region/plots/chapter10_current_pies/prong_split/medium_3prong_current_prediction_pie.png`
+- `outputs/validate_shadow_fakes/low_met_fake_region/plots/chapter10_current_pies/charge_split/medium_tauplus_current_prediction_pie.png`
+- `outputs/validate_shadow_fakes/low_met_fake_region/plots/chapter10_current_pies/charge_split/medium_tauminus_current_prediction_pie.png`
+
+The same four files were copied to the corresponding
+`/mnt/B/Uni_Stuff_Queen_Mary/Documents/Thesis/images/truth_and_fakes/medium_current/chapter10_current_pies/`
+paths. The pie label for the data-driven fake contribution now uses
+"Jet-to-tau fakes" rather than "Fake jets".
